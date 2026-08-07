@@ -94,7 +94,7 @@ const PHASE_SEQUENCES: string[][] = [
   ["Budget – Concept", "Budget – SD", "Budget – DD"],
 ];
 
-async function main() {
+export async function seedDemoData() {
   console.log("Clearing existing data…");
   await db.delete(customColumnValues);
   await db.delete(customColumns);
@@ -442,9 +442,16 @@ async function main() {
   console.log(`Done. Seeded ${totalRounds} estimate rounds across 42 jobs.`);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+const isCli =
+  typeof process !== "undefined" &&
+  process.argv[1] &&
+  /seed\.(ts|js|mjs|cjs)$/.test(process.argv[1]);
+
+if (isCli) {
+  seedDemoData()
+    .then(() => process.exit(0))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}

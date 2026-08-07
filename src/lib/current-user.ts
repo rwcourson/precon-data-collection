@@ -1,5 +1,5 @@
 import { cookies, headers } from "next/headers";
-import { db } from "@/db";
+import { db, ensureDbReady } from "@/db";
 import { users } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import type { User } from "@/db/schema";
@@ -14,6 +14,8 @@ const COOKIE = "demo-user-id";
  * the first seeded persona (PCM).
  */
 export async function getCurrentUser(): Promise<User> {
+  await ensureDbReady();
+
   if (authMode() === "sso") {
     const identity = readSsoIdentity(await headers());
     if (!identity) throw new Error("Not signed in.");
@@ -30,6 +32,7 @@ export async function getCurrentUser(): Promise<User> {
 }
 
 export async function getAllUsers(): Promise<User[]> {
+  await ensureDbReady();
   return db.select().from(users).orderBy(asc(users.id));
 }
 
