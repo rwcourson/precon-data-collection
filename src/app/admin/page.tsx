@@ -506,7 +506,7 @@ export default async function AdminPage({
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Destini post-bid import</CardTitle>
               <CardDescription>
-                Paste a Destini estimating CSV export to update round fields. Also available at{" "}
+                Upload a Destini XLSX/CSV report with preview before write. Also at{" "}
                 <Link href="/admin/destini" className="underline">
                   /admin/destini
                 </Link>
