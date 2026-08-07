@@ -15,7 +15,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const previewOnly = req.nextUrl.searchParams.get("preview") === "1";
+  // Default preview-only — warehouse writes require DATABRICKS_ALLOW_WRITE=true
+  // and an explicit push (preview≠1). Production is read/pull only.
+  const previewOnly = req.nextUrl.searchParams.get("preview") !== "0";
   const result = await runDatabricksFeed({ previewOnly });
   return NextResponse.json(
     { ranAt: new Date().toISOString(), ...result },

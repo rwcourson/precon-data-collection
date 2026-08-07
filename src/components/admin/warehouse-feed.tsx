@@ -24,6 +24,7 @@ export function WarehouseFeed({
   connectMode,
   lastRunLabel,
   canRun,
+  writesAllowed = false,
 }: {
   state: FeedState;
   configured: boolean;
@@ -31,6 +32,8 @@ export function WarehouseFeed({
   connectMode: "mock" | "rest";
   lastRunLabel: string | null;
   canRun: boolean;
+  /** Requires DATABRICKS_ALLOW_WRITE=true. Default off — read/pull only. */
+  writesAllowed?: boolean;
 }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -99,7 +102,8 @@ export function WarehouseFeed({
           B&amp;G Connect lookups are currently served by the{" "}
           {connectMode === "rest" ? "live REST facade" : "seeded mirror"} — set{" "}
           <code className="rounded bg-muted px-1 py-0.5 text-2xs">CONNECT_MODE=rest</code>{" "}
-          with an endpoint to switch.
+          with an endpoint to switch. This feed is preview-only unless warehouse
+          writes are explicitly enabled.
         </p>
 
         {canRun && (
@@ -117,8 +121,13 @@ export function WarehouseFeed({
             <Button
               size="sm"
               className="gap-1.5"
-              disabled={pending || !configured}
+              disabled={pending || !configured || !writesAllowed}
               onClick={() => run(false)}
+              title={
+                writesAllowed
+                  ? "Push rows to Databricks"
+                  : "Blocked — DATABRICKS_ALLOW_WRITE is not true"
+              }
             >
               {pending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
               Push to warehouse

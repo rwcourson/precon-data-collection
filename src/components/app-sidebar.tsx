@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import type { ComponentType } from "react";
 import {
   CalendarRange,
   ChevronDown,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { MagnusIcon } from "@/components/magnus-icon";
 import { useSidebar } from "@/components/sidebar-context";
 import {
   DropdownMenu,
@@ -35,7 +37,7 @@ type SubItem = {
 type NavItem = {
   href: string;
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: ComponentType<{ className?: string }>;
   exact?: boolean;
   children?: SubItem[];
 };
@@ -174,11 +176,20 @@ const NAV: NavItem[] = [
       },
     ],
   },
+  {
+    href: "/dashboards/copilot",
+    label: "Magnus AI",
+    icon: MagnusIcon,
+  },
 ];
 
 function isSectionActive(item: NavItem, pathname: string) {
   if (item.exact) return pathname === item.href;
   if (item.href === "/") return pathname === "/";
+  // Copilot is its own top-level section; don't also light up Dashboards.
+  if (item.href === "/dashboards" && pathname.startsWith("/dashboards/copilot")) {
+    return false;
+  }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 

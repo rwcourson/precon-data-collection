@@ -80,8 +80,12 @@ export const widgetKindSchema = z.enum([
   "kpi",
   "table",
   "bar",
+  "horizontal_bar",
+  "stacked_bar",
   "line",
   "area",
+  "pie",
+  "donut",
   "projection",
   "reconciliation",
 ]);

@@ -12,9 +12,11 @@ Demo is live; several roadmap trust/distribution paths remain incomplete.
 ## Done for Neon / deploy
 
 - [x] App uses Neon when `DATABASE_URL` is set (`postgres.js`, `prepare: false`)
-- [x] Schema migrated + demo seed (6 users, 108 rounds)
-- [x] Env vars on Vercel (Neon integration + refreshed URLs)
+- [x] Schema migrated; **Smartsheet import into Neon** (626 jobs / 1,058 rounds; 33 pursuit views)
+- [x] Env vars on Vercel (Neon + Databricks read + Smartsheet read; `DATABRICKS_ALLOW_WRITE=false`)
 - [x] Local `.env.local` (gitignored)
+- [x] Databricks SELECT probes verified (~10.6k Destini estimates, Build master, etc.)
+- [x] Smartsheet token verified (read-only; 42+ precon sheets visible)
 
 ---
 
@@ -26,7 +28,7 @@ Demo is live; several roadmap trust/distribution paths remain incomplete.
 2. **Vercel Deployment Protection / SSO** — `precon.brasfieldgorrie.app` may require Vercel login; invite Bryan or relax protection for the demo.
 3. **SMTP / Resend** — `RESEND_API_KEY`, `EMAIL_FROM`, Bryan’s distribution lists.
 4. **Salesforce / Connect** — API access, stages, `CONNECT_MODE=rest` + `CONNECT_API_URL`.
-5. **Databricks** — warehouse creds; confirm DMR feed vs CSV-only.
+5. **Databricks / Smartsheet** — tokens are on Vercel (read-only). Rotate both (pasted in chat). Do **not** set `DATABRICKS_ALLOW_WRITE=true` unless IT approves outbound push.
 6. **SSO cutover** — `AUTH_MODE=sso`, IdP headers, SPD→RPD group map (leave demo cookie for now).
 7. **Cron** — set `CRON_SECRET` and schedule reminders / SF sync / distribution / snapshots.
 8. **Object storage** — PDFs/snapshots (today local/stub).

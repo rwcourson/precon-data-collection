@@ -41,6 +41,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { AccessSettingsPanel } from "@/components/admin/access-settings";
 import { MigrationPanel } from "@/components/admin/migration-panel";
 import { WarehouseFeed } from "@/components/admin/warehouse-feed";
+import { SourceProbes } from "@/components/admin/source-probes";
 import { DestiniImport } from "@/components/admin/destini-import";
 import { FieldPromotionsPanel } from "@/components/admin/field-promotions";
 import { DistributionListsPanel } from "@/components/admin/distribution-lists-panel";
@@ -52,6 +53,8 @@ import { emailProvider } from "@/lib/email";
 import { connectMode } from "@/lib/integrations/connect";
 import { databricksConfig } from "@/lib/integrations/databricks/client";
 import { getFeedState } from "@/lib/integrations/databricks/feed";
+import { databricksWritesAllowed } from "@/lib/integrations/databricks/read";
+import { smartsheetConfig } from "@/lib/integrations/smartsheet/client";
 import { buildMigrationReport, cutoverChecklist, getImportSource } from "@/lib/migration";
 import { getRoundsWithJobs } from "@/lib/queries";
 import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
@@ -484,6 +487,12 @@ export default async function AdminPage({
         )}
 
         <TabsContent value="integrations" className="space-y-4 pt-3">
+          <SourceProbes
+            databricksConfigured={Boolean(dbCfg)}
+            smartsheetConfigured={Boolean(smartsheetConfig())}
+            writesAllowed={databricksWritesAllowed()}
+            canRun={user.role === "corporate_admin"}
+          />
           <WarehouseFeed
             state={feedState}
             configured={Boolean(dbCfg)}
@@ -491,6 +500,7 @@ export default async function AdminPage({
             connectMode={connectMode()}
             lastRunLabel={feedState.lastRunAt ? fmtDateTime(new Date(feedState.lastRunAt)) : null}
             canRun={user.role === "corporate_admin"}
+            writesAllowed={databricksWritesAllowed()}
           />
           <Card>
             <CardHeader className="pb-2">

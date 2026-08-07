@@ -32,18 +32,18 @@ export function NotificationsBell({ items }: { items: Item[] }) {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className="relative size-10"
             aria-label={
               unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
             }
           />
         }
       >
-        <Bell className="size-4" />
+        <Bell className="size-5" />
         {unread > 0 && (
           <span
             aria-hidden
-            className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-2xs font-semibold text-white tabular-nums"
+            className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-2xs font-semibold text-white tabular-nums"
           >
             {unread}
           </span>

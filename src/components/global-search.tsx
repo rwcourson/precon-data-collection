@@ -141,13 +141,13 @@ export function GlobalSearch() {
       <Button
         type="button"
         variant="outline"
-        size="default"
+        size="lg"
         onClick={() => setOpenSafe(true)}
-        className="hidden gap-2 border-border/80 bg-card px-2.5 text-muted-foreground sm:inline-flex"
+        className="hidden h-10 min-w-[14rem] gap-2.5 border-border/80 bg-card px-3 text-muted-foreground sm:inline-flex"
       >
-        <Search className="size-3.5" />
-        <span className="text-xs">Search…</span>
-        <kbd className="pointer-events-none ml-1 hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-2xs text-muted-foreground md:inline">
+        <Search className="size-4" />
+        <span className="text-sm">Search…</span>
+        <kbd className="pointer-events-none ml-auto hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground md:inline">
           ⌘K
         </kbd>
       </Button>
@@ -156,10 +156,10 @@ export function GlobalSearch() {
         variant="ghost"
         size="icon"
         onClick={() => setOpenSafe(true)}
-        className="sm:hidden"
+        className="size-10 sm:hidden"
         aria-label="Search"
       >
-        <Search className="size-4" />
+        <Search className="size-5" />
       </Button>
 
       <Dialog open={open} onOpenChange={setOpenSafe}>

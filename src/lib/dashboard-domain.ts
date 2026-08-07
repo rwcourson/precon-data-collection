@@ -56,6 +56,7 @@ const ALLOWED_GROUP_BY = new Set([
   "bidYear",
   "status",
   "outcome",
+  "sizeBucket",
 ]);
 
 export function assertWidgetQueryBounds(config: z.infer<typeof widgetConfigSchema>): void {

@@ -1,24 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateBearer, requireScopes } from "@/lib/api-auth";
+import { AI_MODEL_ID } from "@/lib/ai/gateway";
+import { planDashboardWithOptionalLlm } from "@/lib/dashboard-copilot";
 
 const bodySchema = z.object({
   prompt: z.string().trim().min(1).max(500),
 });
 
-const ALLOWED_FIELDS = [
-  "region",
-  "preconDepartment",
-  "marketSector",
-  "estimatePhase",
-  "bidYear",
-  "status",
-  "outcome",
-  "estimateValue",
-] as const;
-
 /**
- * Schema-aware view suggestion. Never writes — caller must review/save.
+ * Schema-aware view suggestion via Claude Opus 5 + ZDR.
+ * Never writes — caller must review/save.
  */
 export async function POST(req: Request) {
   const auth = await authenticateBearer(req.headers.get("authorization"));
@@ -31,24 +23,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const prompt = parsed.data.prompt.toLowerCase();
-  const groupBy = ALLOWED_FIELDS.find((f) => prompt.includes(f.toLowerCase())) ?? "region";
-  const metricKey = prompt.includes("fee") ? "feeExpected" : "estimateValue";
+  const plan = await planDashboardWithOptionalLlm(parsed.data.prompt);
 
   return NextResponse.json({
     suggestion: {
-      name: `Suggested: ${groupBy} × ${metricKey}`,
-      scope: "personal",
-      widgets: [
-        {
-          title: `${metricKey} by ${groupBy}`,
-          kind: "bar",
-          metricKey,
-          groupBy,
-        },
-      ],
+      name: plan.name,
+      description: plan.description,
+      scope: plan.scope,
+      widgets: plan.widgets,
+      rationale: plan.rationale,
+      engine: plan.engine,
+      model: AI_MODEL_ID,
+      zeroDataRetention: true,
     },
-    allowlistedFields: ALLOWED_FIELDS,
     requiresHumanSave: true,
   });
 }

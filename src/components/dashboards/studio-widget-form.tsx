@@ -16,7 +16,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const WIDGET_KINDS = ["kpi", "bar", "line", "area", "table", "projection"] as const;
+const WIDGET_KINDS = [
+  "kpi",
+  "bar",
+  "horizontal_bar",
+  "stacked_bar",
+  "line",
+  "area",
+  "pie",
+  "donut",
+  "table",
+  "projection",
+] as const;
+
 const METRIC_KEYS = [
   "estimateValue",
   "feeExpected",
@@ -26,10 +38,21 @@ const METRIC_KEYS = [
   "winRate",
 ] as const;
 
+const GROUP_BY = [
+  "region",
+  "preconDepartment",
+  "marketSector",
+  "estimatePhase",
+  "bidYear",
+  "status",
+  "outcome",
+] as const;
+
 export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
   const [pending, startTransition] = useTransition();
-  const [kind, setKind] = useState<(typeof WIDGET_KINDS)[number]>("kpi");
+  const [kind, setKind] = useState<(typeof WIDGET_KINDS)[number]>("bar");
   const [metricKey, setMetricKey] = useState<string>(METRIC_KEYS[0]);
+  const [groupBy, setGroupBy] = useState<string>(GROUP_BY[0]);
   const router = useRouter();
 
   return (
@@ -49,6 +72,13 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
               title,
               kind,
               metricKey: metricKey || null,
+              groupBy: kind === "kpi" ? null : groupBy,
+              layout: {
+                w: kind === "kpi" ? 3 : kind === "table" ? 12 : 6,
+                h: kind === "kpi" ? 2 : 4,
+                x: 0,
+                y: 0,
+              },
             });
             toast.success("Widget added.");
             (e.target as HTMLFormElement).reset();
@@ -66,13 +96,13 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
       <div className="space-y-1.5">
         <Label>Kind</Label>
         <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {WIDGET_KINDS.map((k) => (
               <SelectItem key={k} value={k}>
-                {k}
+                {k.replaceAll("_", " ")}
               </SelectItem>
             ))}
           </SelectContent>
@@ -93,6 +123,23 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
           </SelectContent>
         </Select>
       </div>
+      {kind !== "kpi" && (
+        <div className="space-y-1.5">
+          <Label>Group by</Label>
+          <Select value={groupBy} onValueChange={(v) => v && setGroupBy(v)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {GROUP_BY.map((k) => (
+                <SelectItem key={k} value={k}>
+                  {k}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <Button type="submit" size="sm" className="gap-1.5" disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
         Add widget

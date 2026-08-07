@@ -69,6 +69,7 @@ const NAV: {
       { href: "/trash", label: "Trash", match: (_, p) => p.startsWith("/trash") },
     ],
   },
+  { href: "/dashboards/copilot", label: "Magnus AI" },
 ];
 
 export function MobileNav() {

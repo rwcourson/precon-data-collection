@@ -5,7 +5,8 @@ import { useCallback, useSyncExternalStore } from "react";
 export type Theme = "light" | "dark" | "system";
 type Resolved = "light" | "dark";
 
-export const THEME_STORAGE_KEY = "theme";
+/** Bumped so prior light-mode preference does not stick after dark becomes default. */
+export const THEME_STORAGE_KEY = "precon-theme";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 /*
@@ -32,7 +33,7 @@ function readStored(): Theme {
   } catch {
     /* Storage is unavailable in private mode; fall through to the default. */
   }
-  return "system";
+  return "dark";
 }
 
 function readSystem(): Resolved {
@@ -79,7 +80,7 @@ function subscribe(listener: () => void) {
 
 /* Snapshots stay primitives so React can compare them without caching. */
 const themeSnapshot = () => readStored();
-const serverTheme = (): Theme => "system";
+const serverTheme = (): Theme => "dark";
 const resolvedSnapshot = () => resolve(readStored());
 /* The server cannot know the OS preference, so callers get `undefined` until
    hydration rather than a guess that flashes the wrong colours. */
@@ -110,4 +111,4 @@ export function useTheme() {
  * Runs before first paint so the page never flashes the wrong theme. Inlined
  * into <head> as a plain string, which keeps it out of React's client render.
  */
-export const themeScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}")||"system";var d=t==="dark"||(t==="system"&&matchMedia("${DARK_QUERY}").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){}})()`;
+export const themeScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}")||"dark";var d=t==="dark"||(t==="system"&&matchMedia("${DARK_QUERY}").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}})()`;

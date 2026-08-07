@@ -655,7 +655,18 @@ export const dashboardScopeEnum = pgEnum("dashboard_scope", [
 
 export type DashboardWidgetConfig = {
   title: string;
-  kind: "kpi" | "table" | "bar" | "line" | "area" | "projection" | "reconciliation";
+  kind:
+    | "kpi"
+    | "table"
+    | "bar"
+    | "horizontal_bar"
+    | "stacked_bar"
+    | "line"
+    | "area"
+    | "pie"
+    | "donut"
+    | "projection"
+    | "reconciliation";
   savedReportId?: number | null;
   metricKey?: string | null;
   groupBy?: string | null;

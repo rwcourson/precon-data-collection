@@ -10,6 +10,7 @@ import {
   getRoundsWithJobs,
 } from "@/lib/queries";
 import { databricksConfig, runStatement } from "./client";
+import { databricksWritesAllowed } from "./read";
 
 /**
  * Outbound feed of locked and in-flight rounds to the warehouse (BRD Section 12), so
@@ -19,6 +20,9 @@ import { databricksConfig, runStatement } from "./client";
  * Estimate Summary sheets already have — with the two-tier custom columns
  * carried as a JSON map so a Region adding a column never requires a schema
  * change on the warehouse side.
+ *
+ * Writes are OFF by default. Set DATABRICKS_ALLOW_WRITE=true to enable
+ * CREATE/TRUNCATE/INSERT. Production should pull from Databricks only.
  */
 
 export const FEED_STATE_KEY = "databricksFeed";
@@ -132,13 +136,18 @@ export async function runDatabricksFeed(
 ): Promise<FeedResult> {
   const rows = await buildFeedRows();
   const cfg = databricksConfig();
+  const allowWrite = databricksWritesAllowed();
 
-  if (!cfg || opts.previewOnly) {
+  if (!cfg || opts.previewOnly || !allowWrite) {
     const state: FeedState = {
       lastRunAt: new Date().toISOString(),
       lastRowCount: rows.length,
       lastStatus: "preview",
-      lastError: cfg ? null : "Databricks credentials are not configured.",
+      lastError: !cfg
+        ? "Databricks credentials are not configured."
+        : !allowWrite
+          ? "Warehouse writes disabled (DATABRICKS_ALLOW_WRITE≠true). Read-only mode."
+          : null,
     };
     await setFeedState(state);
     return {
@@ -147,6 +156,7 @@ export async function runDatabricksFeed(
       status: "preview",
       table: cfg?.table,
       preview: rows.slice(0, 3),
+      error: state.lastError ?? undefined,
     };
   }
 

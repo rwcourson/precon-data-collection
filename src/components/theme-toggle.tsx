@@ -15,7 +15,7 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon"
-      className="text-muted-foreground"
+      className="size-10 text-muted-foreground"
       aria-label={
         resolvedTheme
           ? isDark
@@ -27,12 +27,12 @@ export function ThemeToggle() {
     >
       {resolvedTheme ? (
         isDark ? (
-          <Sun className="size-4" />
+          <Sun className="size-5" />
         ) : (
-          <Moon className="size-4" />
+          <Moon className="size-5" />
         )
       ) : (
-        <span className="size-4" />
+        <span className="size-5" />
       )}
     </Button>
   );

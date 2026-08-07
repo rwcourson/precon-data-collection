@@ -25,21 +25,21 @@ export function RoleSwitcher({ users, current }: { users: User[]; current: User 
         render={
           <Button
             variant="outline"
-            className="gap-2 border-border bg-card pl-1.5"
+            className="h-10 gap-2.5 border-border bg-card py-1.5 pl-2 pr-2.5"
             disabled={pending}
           />
         }
       >
-        <span className="flex size-6 items-center justify-center rounded bg-muted text-muted-foreground">
-          <UserRound className="size-3.5" />
+        <span className="flex size-7 items-center justify-center rounded bg-muted text-muted-foreground">
+          <UserRound className="size-4" />
         </span>
         <span className="flex flex-col items-start leading-tight">
-          <span className="text-xs font-medium">{current.name}</span>
-          <span className="text-2xs text-muted-foreground">
+          <span className="text-sm font-medium">{current.name}</span>
+          <span className="text-xs text-muted-foreground">
             {ROLE_LABELS[current.role]}
           </span>
         </span>
-        <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+        <ChevronsUpDown className="size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
