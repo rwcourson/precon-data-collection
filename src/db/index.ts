@@ -1,34 +1,70 @@
 import path from "path";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { count } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 import { users } from "./schema";
 
-/**
- * Local: `./.pglite/data`. On Vercel the app FS is read-only, so use `/tmp`.
- * Hosted Postgres cutover: set DATABASE_URL (see docs/postgres-cutover.md).
- */
-function dataDir(): string {
-  if (process.env.PGLITE_DATA_DIR) return process.env.PGLITE_DATA_DIR;
-  if (process.env.VERCEL) return "/tmp/precon-pglite";
-  return path.join(process.cwd(), ".pglite", "data");
-}
+export type AppDb = PostgresJsDatabase<typeof schema>;
 
 const globalForDb = globalThis as unknown as {
-  __pglite?: PGlite;
+  __preconDb?: AppDb;
   __preconDbReady?: Promise<void>;
+  __preconPg?: import("postgres").Sql;
+  __pglite?: import("@electric-sql/pglite").PGlite;
 };
 
-const client = globalForDb.__pglite ?? new PGlite(dataDir());
-globalForDb.__pglite = client;
+function usingPostgres(): boolean {
+  const url = process.env.DATABASE_URL?.trim();
+  return Boolean(url && !url.startsWith("pglite:"));
+}
 
-export const db = drizzle(client, { schema });
+function createDb(): AppDb {
+  if (usingPostgres()) {
+    // Neon pooled connections require prepare: false (PgBouncer transaction mode).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const postgres = require("postgres") as typeof import("postgres");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { drizzle } = require("drizzle-orm/postgres-js") as typeof import("drizzle-orm/postgres-js");
+    const client =
+      globalForDb.__preconPg ??
+      postgres(process.env.DATABASE_URL!, {
+        prepare: false,
+        max: process.env.VERCEL ? 1 : 10,
+        idle_timeout: 20,
+        connect_timeout: 15,
+      });
+    globalForDb.__preconPg = client;
+    return drizzle(client, { schema }) as AppDb;
+  }
+
+  // Local fallback without DATABASE_URL: embedded PGlite (cast for shared AppDb surface).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PGlite } = require("@electric-sql/pglite") as typeof import("@electric-sql/pglite");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { drizzle } = require("drizzle-orm/pglite") as typeof import("drizzle-orm/pglite");
+  const dataDir =
+    process.env.PGLITE_DATA_DIR ??
+    (process.env.VERCEL ? "/tmp/precon-pglite" : path.join(process.cwd(), ".pglite", "data"));
+  const client = globalForDb.__pglite ?? new PGlite(dataDir);
+  globalForDb.__pglite = client;
+  return drizzle(client, { schema }) as unknown as AppDb;
+}
+
+export const db: AppDb = globalForDb.__preconDb ?? createDb();
+globalForDb.__preconDb = db;
 export * as schema from "./schema";
 
 async function bootstrap(): Promise<void> {
-  await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  if (usingPostgres()) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { migrate } = require("drizzle-orm/postgres-js/migrator") as typeof import("drizzle-orm/postgres-js/migrator");
+    await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { migrate } = require("drizzle-orm/pglite/migrator") as typeof import("drizzle-orm/pglite/migrator");
+    await migrate(db as never, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  }
+
   const [{ n }] = await db.select({ n: count() }).from(users);
   if ((n ?? 0) === 0) {
     const { seedDemoData } = await import("./seed");

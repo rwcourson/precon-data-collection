@@ -1,28 +1,25 @@
 # Postgres cutover (PGlite → hosted Postgres)
 
-PGlite is demo-local only. Production should use hosted Postgres with PITR.
+When `DATABASE_URL` is set, the app uses Neon/Postgres via `postgres.js`
+(`prepare: false` for the pooler). Without it, local PGlite is the fallback.
 
-## Adapter readiness
+## Commands
 
-1. Set `DATABASE_URL=postgres://...` (Drizzle already targets Postgres dialect).
-2. Replace the PGlite client bootstrap in `src/db` with `postgres.js` / `pg` pool
-   when `DATABASE_URL` is present; keep PGlite as the local fallback.
-3. Run `npm run db:push` (or migrate journal once introduced) against the target.
-4. Seed only non-production environments.
-5. Point snapshot storage at private object storage (S3/R2) — local adapter writes
-   `.data/snapshots/` today (`src/lib/recovery.ts`).
-6. Configure cron with `CRON_SECRET`:
-   - `POST /api/jobs/reminders`
-   - `POST /api/jobs/distribution`
-   - `POST /api/jobs/salesforce-sync`
-   - `POST /api/jobs/snapshots`
-   - `POST /api/jobs/databricks-sync`
+```bash
+# Load Neon URLs into the shell, then:
+npx drizzle-kit migrate          # apply drizzle/ migrations (prefer UNPOOLED URL)
+npm run db:seed                  # demo personas + sample rounds
+```
+
+Prefer `DATABASE_URL_UNPOOLED` for migrate/push. App runtime uses the pooled
+`DATABASE_URL`.
 
 ## Checklist
 
-- [ ] Hosted Postgres + credentials from IT
+- [x] Hosted Postgres (Neon) + `DATABASE_URL` on Vercel
 - [ ] Object storage for PDFs/snapshots
 - [ ] SMTP / Resend (`RESEND_API_KEY`, `EMAIL_FROM`)
 - [ ] Salesforce / Connect REST (`CONNECT_MODE=rest`, `CONNECT_API_URL`)
 - [ ] Databricks warehouse credentials
 - [ ] SSO headers (`AUTH_MODE=sso`) including SPD→RPD group map
+- [ ] Cron with `CRON_SECRET` for reminders / SF sync / distribution / snapshots
