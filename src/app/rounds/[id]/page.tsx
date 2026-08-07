@@ -1,0 +1,369 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { asc, desc, eq } from "drizzle-orm";
+import { AlertTriangle, ArrowLeft, History, Lock } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StatusMenu } from "@/components/bid-schedule/status-menu";
+import { EntryForm } from "@/components/rounds/entry-form";
+import { ApproveLockButton } from "@/components/rounds/approve-lock-button";
+import { OutcomeSelect } from "@/components/rounds/outcome-select";
+import { db } from "@/db";
+import { auditLog, statusTransitions, users } from "@/db/schema";
+import { getCurrentUser } from "@/lib/current-user";
+import {
+  getAllCustomColumns,
+  getCustomValuesForRounds,
+  getMultiValues,
+  getReferenceValues,
+  getRoundWithJob,
+} from "@/lib/queries";
+import {
+  allowedTransitions,
+  canApproveLock,
+  canEditAfterLock,
+  canEnterPostBid,
+  STATUS_LABELS,
+} from "@/lib/permissions";
+import {
+  FIELD_DEFS,
+  MULTI_FIELD_KEYS,
+  REQUIRED_FIELD_KEYS,
+  ROUND_COLUMN_KEYS,
+} from "@/lib/fields";
+
+const FIELD_LABELS: Record<string, string> = Object.fromEntries(
+  FIELD_DEFS.map((f) => [f.key, f.label]),
+);
+import { METRIC_DEFS, METRIC_GROUPS, formatMetricValue } from "@/lib/metrics";
+import { missingRequiredFields } from "@/lib/validation";
+import { fmtDateTime } from "@/lib/format";
+
+export default async function RoundPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const row = await getRoundWithJob(Number(id));
+  if (!row) notFound();
+  const { round, job, estimateLeadName } = row;
+
+  const [user, multi, lists, allUsers, customColsAll, transitions, audits] =
+    await Promise.all([
+      getCurrentUser(),
+      getMultiValues(round.id),
+      getReferenceValues(),
+      db.select().from(users).orderBy(asc(users.id)),
+      getAllCustomColumns(),
+      db
+        .select()
+        .from(statusTransitions)
+        .where(eq(statusTransitions.roundId, round.id))
+        .orderBy(desc(statusTransitions.createdAt)),
+      db
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.roundId, round.id))
+        .orderBy(desc(auditLog.createdAt)),
+    ]);
+
+  const customCols = customColsAll.filter(
+    (c) => c.scope === "company" || c.region === round.region,
+  );
+  const customValues =
+    (await getCustomValuesForRounds([round.id])).get(round.id) ?? {};
+
+  const missing = missingRequiredFields(round, multi, {
+    jobNumber: job.jobNumber,
+    jobName: job.jobName,
+    estimateLeadName,
+  });
+  const missingKeys = REQUIRED_FIELD_KEYS.filter((k) =>
+    missing.includes(FIELD_LABELS[k]),
+  );
+
+  const locked = round.status === "locked";
+  const canEdit = locked
+    ? canEditAfterLock(user, round)
+    : canEnterPostBid(user, round) ||
+      ["active", "upcoming", "outstanding"].includes(round.status);
+
+  const initialValues: Record<string, string> = {};
+  for (const key of ROUND_COLUMN_KEYS) {
+    const v = (round as unknown as Record<string, unknown>)[key];
+    initialValues[key] = v == null ? "" : String(v);
+  }
+  const initialMulti: Record<string, string[]> = {};
+  for (const key of MULTI_FIELD_KEYS) initialMulti[key] = multi[key] ?? [];
+
+  const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
+  const headlineMetrics = METRIC_DEFS.filter((m) => m.headline).map((m) => ({
+    label: m.label,
+    value: formatMetricValue(m.calc(round), m.format),
+  }));
+  const metricGroups = METRIC_GROUPS.map((group) => ({
+    group,
+    metrics: METRIC_DEFS.filter((m) => m.group === group).map((m) => ({
+      label: m.label,
+      value: formatMetricValue(m.calc(round), m.format),
+      note: m.note,
+    })),
+  }));
+
+  return (
+    <div className="space-y-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2.5 gap-1.5 px-2.5 text-muted-foreground"
+        nativeButton={false}
+        render={
+          <Link
+            href={
+              locked || round.status === "post_bid" || round.status === "submitted"
+                ? "/post-bid"
+                : "/bid-schedule"
+            }
+          />
+        }
+      >
+        <ArrowLeft className="size-4" /> Back
+      </Button>
+
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg font-medium">{job.jobName}</h1>
+            <StatusMenu
+              roundId={round.id}
+              status={round.status}
+              allowed={allowedTransitions(user, round)}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Job #{job.jobNumber} · Round {round.roundNumber} — {round.estimatePhase} ·
+            Bid Year {round.bidYear} · {round.region} / {round.preconDepartment}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            <OutcomeSelect
+              roundId={round.id}
+              outcome={round.outcome}
+              disabled={locked && !canEditAfterLock(user, round)}
+            />
+            {round.status === "post_bid" && canApproveLock(user, round) && (
+              <ApproveLockButton roundId={round.id} />
+            )}
+          </div>
+          {locked && (
+            <p className="max-w-xs text-right text-2xs text-muted-foreground">
+              {canEditAfterLock(user, round)
+                ? "Post-lock outcome correction (RPD/SPD) — changes are audited."
+                : "Outcome is locked. Ask the regional RPD/SPD to correct it."}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {locked && (
+        <Alert variant="success">
+          <Lock className="size-4" />
+          <AlertTitle>
+            RPD / SPD Approved / Locked{" "}
+            {round.lockedAt ? `— ${fmtDateTime(round.lockedAt)}` : ""}
+          </AlertTitle>
+          <AlertDescription>
+            Estimate Leads and Admins can no longer edit this record. The RPD/SPD can
+            still correct the outcome and other fields; every post-lock change is
+            captured in the audit log below.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!locked && missing.length > 0 && ["submitted", "post_bid"].includes(round.status) && (
+        <Alert variant="warning">
+          <AlertTriangle className="size-4" />
+          <AlertTitle>
+            {missing.length} required field{missing.length === 1 ? "" : "s"} remaining
+          </AlertTitle>
+          <AlertDescription>
+            $0 or N/A are acceptable — blanks are not. The record cannot reach RPD /
+            SPD Approved / Locked until every required field is filled:{" "}
+            {missing.slice(0, 6).join(", ")}
+            {missing.length > 6 ? ` and ${missing.length - 6} more` : ""}.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5">
+        {headlineMetrics.map((m) => (
+          <div key={m.label} className="bg-card px-3 py-2.5">
+            <p className="text-2xs text-muted-foreground">{m.label}</p>
+            <p className="font-mono text-base font-medium tabular-nums">{m.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <Tabs defaultValue="data">
+        <TabsList>
+          <TabsTrigger value="data">Estimate Data</TabsTrigger>
+          <TabsTrigger value="metrics">
+            Calculated Metrics
+            <Badge variant="secondary" size="sm" className="ml-1.5">
+              {METRIC_DEFS.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            History &amp; Audit
+            <Badge variant="secondary" size="sm" className="ml-1.5">
+              {transitions.length + audits.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="data" className="pt-2">
+          <EntryForm
+            roundId={round.id}
+            jobNumber={job.jobNumber}
+            jobName={job.jobName}
+            jobLinked={job.isLinked}
+            initialValues={initialValues}
+            initialMulti={initialMulti}
+            initialCustom={customValues as Record<number, string>}
+            estimateLeadId={round.estimateLeadId}
+            users={allUsers.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
+            lists={lists}
+            customCols={customCols.filter((c) => c.scope === "region")}
+            canEdit={canEdit}
+            locked={locked}
+            missingKeys={missingKeys}
+          />
+        </TabsContent>
+
+        <TabsContent value="metrics" className="pt-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Server-side calculated metrics</CardTitle>
+              <CardDescription>
+                The Project Estimate Summary formula set — always derived from the
+                underlying fields, never entered separately, so they reconcile with
+                source values. Blank inputs yield “—” rather than a misleading zero.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {metricGroups.map((g) => (
+                <section key={g.group}>
+                  <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {g.group}
+                  </h3>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {g.metrics.map((m) => (
+                      <div key={m.label} className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">{m.label}</p>
+                        <p className="mt-0.5 text-lg font-semibold tabular-nums">{m.value}</p>
+                        {m.note && <p className="text-2xs text-muted-foreground">{m.note}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4 pt-2">
+          {audits.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Lock className="size-4" /> Post-lock audit log
+                </CardTitle>
+                <CardDescription>
+                  Who changed what field, old value, new value, and when.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {audits.map((a) => (
+                  <div key={a.id} className="rounded-md border bg-muted/30 p-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">
+                        {FIELD_LABELS[a.field ?? ""] ?? a.field}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {userMap.get(a.userId ?? -1) ?? "System"} · {fmtDateTime(a.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs">
+                      <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-800 line-through">
+                        {a.oldValue || "—"}
+                      </span>{" "}
+                      →{" "}
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
+                        {a.newValue || "—"}
+                      </span>
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="size-4" /> Status lifecycle history
+              </CardTitle>
+              <CardDescription>
+                Every transition is validated against the state machine and logged.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-0">
+                {transitions.map((t, i) => (
+                  <div key={t.id} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <span className="mt-1.5 size-2 rounded-full bg-primary" />
+                      {i < transitions.length - 1 && <span className="w-px flex-1 bg-border" />}
+                    </div>
+                    <div className="pb-4">
+                      <p className="text-sm">
+                        {t.fromStatus ? (
+                          <>
+                            <span className="text-muted-foreground">
+                              {STATUS_LABELS[t.fromStatus as keyof typeof STATUS_LABELS] ?? t.fromStatus}
+                            </span>{" "}
+                            →{" "}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">Created as </span>
+                        )}
+                        <span className="font-medium">
+                          {STATUS_LABELS[t.toStatus as keyof typeof STATUS_LABELS] ?? t.toStatus}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {userMap.get(t.userId ?? -1) ?? "System"} · {fmtDateTime(t.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
