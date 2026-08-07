@@ -126,9 +126,9 @@ export function MigrationPanel({
               className="flex items-start gap-2.5 rounded-md border p-3"
             >
               {item.done ? (
-                <Check className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <Check className="mt-0.5 size-4 shrink-0 text-success" />
               ) : item.blocker ? (
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
               ) : (
                 <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               )}
@@ -240,7 +240,7 @@ export function MigrationPanel({
                     <span
                       className={
                         m.computable === 0
-                          ? "text-amber-700 dark:text-amber-300"
+                          ? "text-warning-foreground"
                           : "text-muted-foreground"
                       }
                     >

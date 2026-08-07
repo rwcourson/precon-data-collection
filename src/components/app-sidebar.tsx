@@ -208,8 +208,8 @@ function CollapsedFlyout({
   const hasChildren = Boolean(children?.length);
 
   const triggerClass = cn(
-    "flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-    active && "bg-muted text-foreground",
+    "flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    active && "bg-info-soft text-primary",
   );
 
   return (
@@ -301,17 +301,16 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
     >
       <div
         className={cn(
-          "flex h-12 items-center border-b",
+          "flex h-12 items-center border-b border-sidebar-border",
           collapsed ? "justify-center px-2" : "gap-2.5 px-3.5",
         )}
       >
         <span
           aria-hidden
-          className="size-8 shrink-0 rounded"
+          className="size-8 shrink-0 rounded-sm bg-primary"
           style={{
             mask: 'url("/bg-ampersand.png") center / 72% no-repeat',
             WebkitMask: 'url("/bg-ampersand.png") center / 72% no-repeat',
-            backgroundColor: "var(--primary)",
           }}
         />
         <div
@@ -320,7 +319,7 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
             collapsed ? "w-0 opacity-0" : "flex-1 opacity-100",
           )}
         >
-          <p className="truncate whitespace-nowrap text-sm font-medium">
+          <p className="truncate whitespace-nowrap text-sm font-semibold tracking-tight">
             B&amp;G Precon
           </p>
           <p className="truncate whitespace-nowrap text-2xs text-muted-foreground">
@@ -342,23 +341,38 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
 
           if (collapsed) {
             return (
-              <CollapsedFlyout
+              <div
                 key={href}
-                item={item}
-                active={active}
-                search={search}
-                pathname={pathname}
-              />
+                className={cn(
+                  href === "/dashboards/copilot" &&
+                    "mt-1.5 border-t border-sidebar-border pt-1.5",
+                )}
+              >
+                <CollapsedFlyout
+                  item={item}
+                  active={active}
+                  search={search}
+                  pathname={pathname}
+                />
+              </div>
             );
           }
 
+          const isMagnus = href === "/dashboards/copilot";
           const className = cn(
-            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            active && "bg-muted font-medium text-foreground",
+            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            active && "bg-info-soft font-medium text-primary",
+            isMagnus && !active && "text-foreground/80",
           );
 
           return (
-            <div key={href} className="space-y-0.5">
+            <div
+              key={href}
+              className={cn(
+                "space-y-0.5",
+                isMagnus && "mt-2 border-t border-sidebar-border pt-2",
+              )}
+            >
               <Link href={href} className={className}>
                 <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
                 <span className="min-w-0 flex-1 truncate leading-none">{label}</span>
@@ -393,9 +407,8 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
                             key={sub.href}
                             href={sub.href}
                             className={cn(
-                              "block rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                              subActive &&
-                                "bg-muted/80 font-medium text-foreground",
+                              "block rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                              subActive && "bg-info-soft font-medium text-primary",
                             )}
                           >
                             {sub.label}

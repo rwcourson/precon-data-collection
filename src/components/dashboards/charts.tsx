@@ -20,8 +20,9 @@ import {
   YAxis,
 } from "recharts";
 
-const LIGHT_COLORS = ["#0c2048", "#3b6db0", "#7aa3d4", "#c9762b", "#5f8f5a", "#8b6bb0", "#94a3b8"];
-const DARK_COLORS = ["#93a9d6", "#6b8fc4", "#d4a06a", "#7cb087", "#adbfe4", "#b8a0d4", "#8b9bb0"];
+/* B&G chart series — navy / steel / copper / forest (no purple). */
+const LIGHT_COLORS = ["#0c2048", "#2456a0", "#5b8ac9", "#c9762b", "#5f8f5a", "#4a6fa5", "#8a9bb0"];
+const DARK_COLORS = ["#93a9d6", "#6b8fc4", "#adbfe4", "#d4a06a", "#7cb087", "#b8c8e4", "#8b9bb0"];
 
 export const dollarsCompact = (v: number) =>
   Math.abs(v) >= 1_000_000_000
@@ -38,19 +39,19 @@ function useChartTheme() {
   return useMemo(
     () => ({
       colors: dark ? DARK_COLORS : LIGHT_COLORS,
-      grid: dark ? "rgba(255,255,255,0.08)" : "#e2e8f0",
-      tick: dark ? "#a2acbd" : "#64748b",
-      muted: dark ? "#6b7588" : "#94a3b8",
+      grid: dark ? "rgba(173,191,228,0.12)" : "#dce4f0",
+      tick: dark ? "#adbfe4" : "#4a5d7a",
+      muted: dark ? "#6b7a94" : "#8a9bb0",
       tooltip: {
         fontSize: 12,
-        borderRadius: 8,
-        border: dark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #e2e8f0",
+        borderRadius: 6,
+        border: dark ? "1px solid rgba(147,169,214,0.22)" : "1px solid #d5deec",
         boxShadow: dark
-          ? "0 8px 24px rgba(0,0,0,0.35)"
-          : "0 4px 16px rgba(15, 23, 42, 0.08)",
+          ? "0 10px 28px rgba(10, 22, 40, 0.45)"
+          : "0 6px 20px rgba(12, 32, 72, 0.1)",
         background: dark ? "#1f2839" : "#ffffff",
         padding: "8px 10px",
-        color: dark ? "#f4f6fa" : "#334155",
+        color: dark ? "#f4f6fa" : "#0c2048",
       },
     }),
     [dark],

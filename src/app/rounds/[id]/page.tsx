@@ -305,11 +305,11 @@ export default async function RoundPage({
                       </span>
                     </div>
                     <p className="mt-1 text-xs">
-                      <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-800 line-through">
+                      <span className="tone-danger rounded px-1.5 py-0.5 line-through">
                         {a.oldValue || "—"}
                       </span>{" "}
                       →{" "}
-                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
+                      <span className="tone-success rounded px-1.5 py-0.5">
                         {a.newValue || "—"}
                       </span>
                     </p>

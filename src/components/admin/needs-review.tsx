@@ -362,7 +362,7 @@ function ResolvedCell({ row, canTriage }: { row: ReviewRow; canTriage: boolean }
   return (
     <div className="flex items-center justify-end gap-2">
       <div className="text-right">
-        <p className="text-2xs font-medium text-emerald-700 dark:text-emerald-300">
+        <p className="text-2xs font-medium text-success-foreground">
           Reviewed by {row.resolvedByName ?? "—"}
         </p>
         {row.resolutionNote && (

@@ -76,7 +76,7 @@ export function WidgetCanvas({
           <article
             key={`${w.config.title}-${idx}`}
             className={cn(
-              "overflow-hidden rounded-lg border bg-card shadow-[0_1px_0_rgba(15,23,42,0.04)]",
+              "overflow-hidden rounded-md border bg-card",
               wide ? "sm:col-span-1 lg:col-span-3" : spanClass(w.config.layout?.w),
             )}
           >
@@ -88,7 +88,7 @@ export function WidgetCanvas({
                   {w.config.groupBy ? ` · by ${w.config.groupBy}` : ""}
                 </p>
               </div>
-              <Badge variant="outline" size="sm" className="shrink-0 capitalize">
+              <Badge variant="secondary" size="sm" className="shrink-0 capitalize">
                 {kind.replaceAll("_", " ")}
               </Badge>
             </header>
@@ -96,8 +96,10 @@ export function WidgetCanvas({
               {w.empty ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">No data for this filter.</p>
               ) : kind === "kpi" && w.kpi ? (
-                <div className="px-1 py-3">
-                  <p className="text-3xl font-semibold tracking-tight tabular-nums">{w.kpi.value}</p>
+                <div className="border-l-2 border-primary px-3 py-2.5">
+                  <p className="text-3xl font-semibold tracking-tight tabular-nums">
+                    {w.kpi.value}
+                  </p>
                   {w.kpi.sub && (
                     <p className="mt-1.5 text-xs text-muted-foreground">{w.kpi.sub}</p>
                   )}

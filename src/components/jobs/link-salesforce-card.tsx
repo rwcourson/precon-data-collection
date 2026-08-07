@@ -36,10 +36,10 @@ export function LinkSalesforceCard({
   const router = useRouter();
 
   return (
-    <Card className="border-amber-300 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/10">
+    <Card className="tone-warning border">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Link2 className="size-4 text-amber-700" />
+          <Link2 className="size-4 text-warning" />
           Unlinked job — candidate Salesforce matches found
         </CardTitle>
         <CardDescription>

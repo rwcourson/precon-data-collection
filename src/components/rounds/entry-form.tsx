@@ -246,7 +246,7 @@ export function EntryForm({
                         ))}
                       </SelectContent>
                     </Select>
-                    {hint && <p className="text-2xs text-sky-700 dark:text-sky-300">{hint}</p>}
+                    {hint && <p className="text-2xs text-info-foreground">{hint}</p>}
                   </div>
                 );
               }
@@ -270,7 +270,7 @@ export function EntryForm({
                       placeholder={f.type === "dollars" ? "0" : undefined}
                     />
                   </div>
-                  {hint && <p className="text-2xs text-sky-700 dark:text-sky-300">{hint}</p>}
+                  {hint && <p className="text-2xs text-info-foreground">{hint}</p>}
                 </div>
               );
             })}
@@ -344,9 +344,9 @@ export function EntryForm({
 function FieldLabel({ def, missing }: { def: FieldDef; missing: boolean }) {
   return (
     <div className="flex items-center gap-1.5">
-      <Label className={`text-xs font-medium ${missing ? "text-red-600" : ""}`}>
+      <Label className={`text-xs font-medium ${missing ? "text-destructive" : ""}`}>
         {def.label}
-        {def.tier === "required" && <span className="ml-0.5 text-red-500">*</span>}
+        {def.tier === "required" && <span className="ml-0.5 text-destructive">*</span>}
       </Label>
       {def.source && (
         <Tooltip>

@@ -107,7 +107,7 @@ export default async function PostBidPage({
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                           <div
-                            className={`h-full rounded-full ${pct === 100 ? "bg-emerald-500" : "bg-amber-500"}`}
+                            className={`h-full rounded-full ${pct === 100 ? "bg-success" : "bg-warning"}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>

@@ -165,7 +165,7 @@ export function GlobalSearch() {
       <Dialog open={open} onOpenChange={setOpenSafe}>
         <DialogContent
           showCloseButton={false}
-          className="top-[18%] w-full max-w-[calc(100%-2rem)] translate-y-0 gap-0 overflow-hidden rounded-xl p-0 sm:max-w-lg"
+          className="top-[18%] w-full max-w-[calc(100%-2rem)] translate-y-0 gap-0 overflow-hidden rounded-md p-0 sm:max-w-lg"
           aria-labelledby={titleId}
         >
           <DialogHeader className="sr-only">
@@ -175,7 +175,7 @@ export function GlobalSearch() {
             </DialogDescription>
           </DialogHeader>
 
-          <Command shouldFilter={false} loop className="rounded-xl border-0">
+          <Command shouldFilter={false} loop className="rounded-md border-0">
             <div className="relative">
               <CommandInput
                 placeholder="Search jobs, rounds, pages…"

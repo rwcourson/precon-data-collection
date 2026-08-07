@@ -13,7 +13,8 @@ export function ApproveLockButton({ roundId }: { roundId: number }) {
   return (
     <Button
       size="sm"
-      className="gap-1.5 bg-emerald-700 text-white hover:bg-emerald-700/90 dark:bg-emerald-600 dark:hover:bg-emerald-600/90"
+      variant="success"
+      className="gap-1.5"
       disabled={pending}
       onClick={() =>
         startTransition(async () => {

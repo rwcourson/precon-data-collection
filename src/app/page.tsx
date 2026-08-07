@@ -146,10 +146,10 @@ export default async function OverviewPage() {
                 <CardHeader className="gap-1.5">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Icon className="size-3.5 text-muted-foreground" />
+                      <Icon className="size-3.5 text-muted-foreground transition-colors group-hover:text-primary" />
                       <CardTitle>{title}</CardTitle>
                     </div>
-                    <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                   </div>
                   <CardDescription>{desc}</CardDescription>
                 </CardHeader>

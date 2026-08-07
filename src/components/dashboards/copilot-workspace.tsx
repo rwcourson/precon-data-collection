@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Loader2, Save } from "lucide-react";
+import { ArrowUp, Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   askMagnus,
@@ -23,6 +23,12 @@ type ChatItem =
       preview?: CopilotPreviewResult | null;
       engine?: string;
     };
+
+const SUGGESTIONS = [
+  "What's our win rate in Florida?",
+  "Build a region scorecard",
+  "Pursuit volume by year",
+];
 
 export function CopilotWorkspace() {
   const [prompt, setPrompt] = useState("");
@@ -80,12 +86,14 @@ export function CopilotWorkspace() {
   };
 
   return (
-    <div className="grid min-h-[70vh] gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="flex min-h-[420px] flex-col overflow-hidden rounded-lg border bg-card lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)]">
-        <div className="flex items-center gap-2.5 border-b px-3.5 py-3">
-          <MagnusIcon className="size-4 text-foreground" />
+    <div className="grid min-h-[70vh] gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="flex min-h-[420px] flex-col overflow-hidden rounded-md border bg-card lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)]">
+        <div className="flex items-center gap-2.5 border-b bg-muted/40 px-3.5 py-3">
+          <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <MagnusIcon className="size-4" />
+          </span>
           <div className="min-w-0">
-            <p className="text-sm font-medium tracking-tight">Magnus AI</p>
+            <p className="text-sm font-semibold tracking-tight">Magnus AI</p>
             <p className="text-2xs text-muted-foreground">Claude Opus 5 · ZDR</p>
           </div>
         </div>
@@ -96,13 +104,13 @@ export function CopilotWorkspace() {
               key={i}
               className={
                 m.role === "user"
-                  ? "ml-8 rounded-md bg-foreground px-3 py-2 text-xs leading-relaxed text-background"
-                  : "rounded-md px-1 py-1.5 text-xs leading-relaxed text-foreground/85"
+                  ? "ml-6 rounded-md bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground"
+                  : "rounded-md bg-muted/50 px-3 py-2 text-xs leading-relaxed text-foreground/90"
               }
             >
               <p className="whitespace-pre-wrap">{m.text}</p>
               {m.role === "assistant" && m.preview && (
-                <ul className="mt-2 space-y-1 border-t border-border/50 pt-2 text-2xs text-muted-foreground">
+                <ul className="mt-2 space-y-1 border-t border-border/60 pt-2 text-2xs text-muted-foreground">
                   {m.preview.plan.widgets.slice(0, 5).map((w) => (
                     <li key={w.title} className="truncate">
                       {w.title}
@@ -112,15 +120,37 @@ export function CopilotWorkspace() {
               )}
             </div>
           ))}
+          {pending && (
+            <div className="flex items-center gap-2 px-1 text-2xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin text-primary" />
+              Thinking…
+            </div>
+          )}
           <div ref={bottomRef} />
         </div>
+
+        {chat.length <= 1 && (
+          <div className="flex flex-wrap gap-1.5 border-t px-3.5 py-2.5">
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                disabled={pending}
+                onClick={() => run(s)}
+                className="rounded-md border bg-background px-2 py-1 text-2xs text-muted-foreground transition-colors hover:border-info-border hover:bg-info-soft hover:text-foreground"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="space-y-2 border-t p-3.5">
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Ask a question, or describe a dashboard…"
-            className="min-h-[88px] resize-none border-border/80 bg-background text-sm"
+            className="min-h-[88px] resize-none text-sm"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -161,7 +191,7 @@ export function CopilotWorkspace() {
               <Badge variant="outline" size="sm">
                 {preview.plan.widgets.length} widgets
               </Badge>
-              <Badge variant="secondary" size="sm">
+              <Badge variant="info" size="sm">
                 {preview.plan.engine === "opus5-zdr" ? "Opus 5 · ZDR" : "Rules"}
               </Badge>
               <Button size="sm" className="gap-1.5" disabled={pending} onClick={save}>
@@ -178,9 +208,11 @@ export function CopilotWorkspace() {
         {preview ? (
           <WidgetCanvas widgets={preview.widgets} />
         ) : (
-          <div className="rounded-lg border border-dashed px-6 py-16 text-center">
-            <MagnusIcon className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">
+          <div className="flex flex-col items-center justify-center rounded-md border border-dashed bg-muted/30 px-6 py-20 text-center">
+            <span className="flex size-11 items-center justify-center rounded-md bg-info-soft text-primary">
+              <Sparkles className="size-5" />
+            </span>
+            <p className="mt-4 max-w-sm text-sm text-muted-foreground">
               Ask something like “What’s our win rate in Florida?” or “Build a region scorecard.”
             </p>
           </div>

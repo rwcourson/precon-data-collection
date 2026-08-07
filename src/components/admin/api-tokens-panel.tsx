@@ -160,8 +160,8 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
           </Button>
 
           {plaintext && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-              <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+            <div className="tone-warning rounded-md border p-3">
+              <p className="text-xs font-medium">
                 Copy this token now — it will not be shown again
               </p>
               <div className="mt-2 flex items-center gap-2">

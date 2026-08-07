@@ -22,16 +22,19 @@ export async function AppHeader() {
     .limit(20);
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b bg-card/90 px-6 backdrop-blur-sm md:px-10 xl:px-14">
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b bg-card/90 px-6 backdrop-blur-md md:px-10 xl:px-14">
       <div className="flex items-center gap-2.5">
         <Suspense fallback={null}>
           <MobileNav />
         </Suspense>
-        <p className="hidden text-sm text-muted-foreground sm:block">
-          Preconstruction Data Collection
-        </p>
+        <div className="hidden items-center gap-2.5 sm:flex">
+          <span aria-hidden className="h-4 w-px bg-border" />
+          <p className="text-sm text-muted-foreground">
+            Preconstruction Data Collection
+          </p>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <GlobalSearch />
         {authMode() === "demo" ? (
           <RoleSwitcher users={users} current={user} />
@@ -48,7 +51,7 @@ export async function AppHeader() {
 /** Under SSO the identity is fixed, so it is shown rather than offered. */
 function SignedInUser({ user }: { user: User }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-md border px-3 py-1.5">
+    <div className="flex items-center gap-2.5 rounded-md border bg-muted/50 px-3 py-1.5">
       <span className="text-sm font-medium">{user.name}</span>
       <span className="hidden text-xs text-muted-foreground sm:inline">
         {ROLE_LABELS[user.role]}
