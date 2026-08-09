@@ -110,13 +110,16 @@ export function CopilotWorkspace() {
             >
               <p className="whitespace-pre-wrap">{m.text}</p>
               {m.role === "assistant" && m.preview && (
-                <ul className="mt-2 space-y-1 border-t border-border/60 pt-2 text-2xs text-muted-foreground">
-                  {m.preview.plan.widgets.slice(0, 5).map((w) => (
-                    <li key={w.title} className="truncate">
-                      {w.title}
-                    </li>
-                  ))}
-                </ul>
+                <p className="mt-2 border-t border-border/60 pt-2 text-2xs text-muted-foreground">
+                  Canvas updated with {m.preview.plan.widgets.length} widgets
+                  {m.preview.plan.widgets[0]
+                    ? ` · ${m.preview.plan.widgets
+                        .slice(0, 3)
+                        .map((w) => w.title)
+                        .join(", ")}`
+                    : ""}
+                  .
+                </p>
               )}
             </div>
           ))}
@@ -183,7 +186,7 @@ export function CopilotWorkspace() {
             <p className="mt-0.5 text-xs text-muted-foreground">
               {preview
                 ? preview.plan.description
-                : "Answers stay in chat. Dashboard builds appear here when you ask for a view."}
+                : "Ask about win rate, volume, or fees — answers stay in chat and a Power BI–style view appears here."}
             </p>
           </div>
           {preview && (

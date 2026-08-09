@@ -194,3 +194,7 @@ Tailwind 4 + shadcn/ui (Base UI) · Recharts · ExcelJS
 - `src/lib/report-engine.ts` — filter/group/aggregate engine behind the report builder and exports
 - `src/actions/*` — server actions (pursuits, post-bid, admin, reports, templates, access, integrations)
 - `src/app/*` — Bid Schedule, Post-Bid queue, round detail, dashboards, report builder, admin
+
+## Native iOS (SwiftUI)
+
+See [apps/ios/README.md](apps/ios/README.md) for the native Precon client (same `/api/v1/mobile` as Expo).

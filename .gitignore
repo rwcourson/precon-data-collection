@@ -46,3 +46,11 @@ data/smartsheet/
 .goalgraph-wt/
 .supergoal/
 .claude/
+
+# monorepo / mobile
+node_modules/
+apps/**/node_modules/
+apps/**/dist/
+apps/**/.expo/
+**/xcuserdata/
+*.xcuserstate

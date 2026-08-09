@@ -119,6 +119,62 @@ function normalizeMetric(metric: string | null | undefined): string {
   return "estimateValue";
 }
 
+const METRIC_LABELS: Record<string, string> = {
+  estimateValue: "Pursuit volume",
+  feeExpected: "Expected fee",
+  feeExpectedPct: "Fee percentage",
+  contingencyTotal: "Contingency",
+  roundCount: "Estimate rounds",
+  winRate: "Win rate",
+};
+
+const GROUP_LABELS: Record<string, string> = {
+  region: "Region",
+  preconDepartment: "Precon department",
+  marketSector: "Market sector",
+  estimatePhase: "Estimate phase",
+  bidYear: "Bid year",
+  status: "Status",
+  outcome: "Outcome",
+  sizeBucket: "Pursuit size",
+};
+
+/** Rewrite camelCase / raw-key titles into human labels. */
+function polishTitle(
+  title: string,
+  metricKey: string,
+  groupBy: string | null,
+  kind: string,
+): string {
+  const trimmed = title.trim();
+  const looksRaw =
+    !trimmed ||
+    /[a-z][A-Z]/.test(trimmed) ||
+    /\b(estimateValue|feeExpected|roundCount|winRate|sizeBucket|marketSector|bidYear|preconDepartment)\b/.test(
+      trimmed,
+    );
+  if (!looksRaw) return trimmed;
+
+  const metric = METRIC_LABELS[metricKey] ?? metricKey;
+  const group = groupBy ? GROUP_LABELS[groupBy] ?? groupBy : null;
+  switch (kind) {
+    case "kpi":
+      return metric;
+    case "pie":
+    case "donut":
+      return group ? `${metric} mix by ${group}` : `${metric} mix`;
+    case "line":
+    case "area":
+      return `${metric} over time`;
+    case "table":
+      return group ? `${group} detail` : `${metric} detail`;
+    case "projection":
+      return "Volume projection";
+    default:
+      return group ? `${metric} by ${group}` : metric;
+  }
+}
+
 export function sanitizeWidgetConfig(config: DashboardWidgetConfig): DashboardWidgetConfig {
   const filters = (config.filters ?? [])
     .map((f) => {
@@ -134,11 +190,13 @@ export function sanitizeWidgetConfig(config: DashboardWidgetConfig): DashboardWi
     })
     .filter((f): f is NonNullable<typeof f> => Boolean(f));
 
+  const metricKey = normalizeMetric(config.metricKey);
+  const groupBy = normalizeGroupBy(config.groupBy);
   return {
     ...config,
-    title: config.title.trim() || "Untitled widget",
-    metricKey: normalizeMetric(config.metricKey),
-    groupBy: normalizeGroupBy(config.groupBy),
+    title: polishTitle(config.title, metricKey, groupBy, config.kind),
+    metricKey,
+    groupBy,
     filters: filters.length ? filters : undefined,
   };
 }

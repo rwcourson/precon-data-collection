@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import type { User } from "@/db/schema";
 import { authMode, readSsoIdentity, resolveSsoUser } from "./auth";
+import { getMobileContext } from "./mobile-context";
 
 const COOKIE = "demo-user-id";
 
@@ -12,9 +13,15 @@ const COOKIE = "demo-user-id";
  * from the identity provider via the authenticating proxy. In demo mode the
  * role switcher sets a cookie and server code reads it here, falling back to
  * the first seeded persona (PCM).
+ *
+ * Mobile REST handlers inject the principal via AsyncLocalStorage
+ * (`runWithMobileContext`) so server actions reuse this path without cookies.
  */
 export async function getCurrentUser(): Promise<User> {
   await ensureDbReady();
+
+  const mobile = getMobileContext();
+  if (mobile?.user) return mobile.user;
 
   if (authMode() === "sso") {
     const identity = readSsoIdentity(await headers());

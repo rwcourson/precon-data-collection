@@ -41,7 +41,7 @@ export type SheetListItem = {
 /** Lists sheets visible to the token (paginated). Read-only. */
 export async function listSheets(token: string): Promise<SheetListItem[]> {
   const out: SheetListItem[] = [];
-  let url = "/sheets?includeAll=true";
+  const url = "/sheets?includeAll=true";
   // Smartsheet returns { data, pageNumber, totalPages } for some endpoints;
   // includeAll=true collapses pagination for sheets list.
   const body = (await ssFetch(url, token)) as {

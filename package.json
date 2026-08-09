@@ -20,7 +20,9 @@
     "db:reset:smartsheet": "rm -rf .pglite && mkdir -p .pglite && npm run db:push && npm run db:import-smartsheet",
     "smoke": "node scripts/smoke.mjs",
     "smoke:approval": "node scripts/verify-approval.mjs",
-    "audit:ui": "node scripts/ui-audit.mjs"
+    "audit:ui": "node scripts/ui-audit.mjs",
+    "mobile": "npm --prefix apps/mobile start",
+    "mobile:typecheck": "npm --prefix apps/mobile exec tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.45",
