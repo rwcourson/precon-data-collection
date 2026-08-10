@@ -27,12 +27,32 @@ function trustedOrigins(): string[] {
   return [...new Set(fromList)];
 }
 
+/**
+ * Canonical public origin for OAuth redirects.
+ * Prefer APP_ORIGIN / BETTER_AUTH_URL so production always uses the stable
+ * host registered in Entra (never a one-off *.vercel.app deployment URL).
+ */
 function baseURL(): string {
-  return (
+  const explicit =
     env("BETTER_AUTH_URL") ||
     env("APP_ORIGIN") ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3001")
-  );
+    env("NEXT_PUBLIC_APP_URL");
+  if (explicit) {
+    try {
+      return new URL(explicit).origin;
+    } catch {
+      return explicit.replace(/\/$/, "");
+    }
+  }
+  // Vercel production hostname (custom domain / stable project URL), not dpl_*.
+  const prodHost = env("VERCEL_PROJECT_PRODUCTION_URL");
+  if (prodHost) {
+    return prodHost.startsWith("http") ? prodHost.replace(/\/$/, "") : `https://${prodHost}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+  }
+  return "http://localhost:3001";
 }
 
 /**
