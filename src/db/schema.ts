@@ -729,7 +729,9 @@ export type DashboardWidgetConfig = {
     | "pie"
     | "donut"
     | "projection"
-    | "reconciliation";
+    | "reconciliation"
+    | "combo"
+    | "waterfall";
   savedReportId?: number | null;
   metricKey?: string | null;
   groupBy?: string | null;

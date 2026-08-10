@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Loader2, Save, Sparkles } from "lucide-react";
+import { ArrowUp, Download, Loader2, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   saveCopilotDashboard,
@@ -110,6 +110,7 @@ export function CopilotWorkspace() {
   const [preview, setPreview] = useState<CopilotPreviewResult | null>(null);
   const previewRef = useRef<CopilotPreviewResult | null>(null);
   const [savePending, startSave] = useTransition();
+  const [exportPending, setExportPending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -181,6 +182,50 @@ export function CopilotWorkspace() {
         toast.error(e instanceof Error ? e.message : "Save failed");
       }
     });
+  };
+
+  const exportPptx = async () => {
+    if (!preview?.plan || !preview.widgets?.length) {
+      toast.error("Build a canvas first, then export.");
+      return;
+    }
+    setExportPending(true);
+    try {
+      const res = await fetch("/api/export/pptx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "canvas",
+          planName: preview.plan.name,
+          planDescription: preview.plan.description,
+          widgets: preview.widgets,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          typeof err?.error === "string" ? err.error : `Export failed (${res.status})`,
+        );
+      }
+      const blob = await res.blob();
+      if (blob.size < 1024) throw new Error("Export file was empty");
+      const cd = res.headers.get("Content-Disposition") ?? "";
+      const match = /filename="([^"]+)"/.exec(cd);
+      const filename = match?.[1] ?? `${preview.plan.name.replace(/\s+/g, "-")}.pptx`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("PowerPoint downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "PPTX export failed");
+    } finally {
+      setExportPending(false);
+    }
   };
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
@@ -316,13 +361,28 @@ export function CopilotWorkspace() {
             ) : null}
           </div>
           {preview && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" size="sm">
                 {preview.plan.widgets.length} widgets
               </Badge>
               <Badge variant="info" size="sm">
                 {preview.plan.engine === "opus5-zdr" ? "Opus 5 · ZDR" : "Rules"}
               </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                disabled={exportPending || pending || !preview.widgets.length}
+                onClick={() => void exportPptx()}
+                data-testid="magnus-export-pptx"
+              >
+                {exportPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                Export PPTX
+              </Button>
               <Button
                 size="sm"
                 className="gap-1.5"

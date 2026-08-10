@@ -3,12 +3,14 @@
 import {
   AreaMetricChart,
   CeDataTable,
+  ComboMetricChart,
   HorizontalBarChart,
   KpiMetricCard,
   MetricLineChart,
   PieDonutMetricChart,
   StackedBarChart,
   VerticalBarChart,
+  WaterfallMetricChart,
 } from "@/components/dashboards/ce-charts";
 import { Badge } from "@/components/ui/badge";
 import type { WidgetResolved } from "@/lib/dashboard-query";
@@ -164,6 +166,15 @@ export function WidgetCanvas({
                   }
                   percent={percent && (w.trendKeys?.length ?? 1) === 1}
                 />
+              ) : kind === "combo" && w.combo ? (
+                <ComboMetricChart
+                  rows={w.combo.rows}
+                  categoryKey={w.combo.categoryKey}
+                  barKeys={w.combo.barKeys}
+                  lineKeys={w.combo.lineKeys}
+                />
+              ) : kind === "waterfall" && w.waterfall ? (
+                <WaterfallMetricChart points={w.waterfall.points} />
               ) : kind === "table" || kind === "reconciliation" ? (
                 <div className="max-h-96 overflow-auto rounded-md border border-border/60">
                   <CeDataTable

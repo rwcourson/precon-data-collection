@@ -38,6 +38,17 @@ describe("chart-format", () => {
     expect(formatTableCell("Pursuit volume", 3_300_000_000)).toBe("$3.3B");
   });
 
+  it("keeps count columns non-currency (Estimate rounds / roundCount)", () => {
+    // Regression: "estimate" used to steal "Estimate rounds" into dollarsCompact → "$4"
+    expect(formatTableCell("Estimate rounds", 4)).toBe("4");
+    expect(formatTableCell("Estimate rounds", 12)).toBe("12");
+    expect(formatTableCell("Rounds", 3)).toBe("3");
+    expect(formatTableCell("roundCount", 8)).toBe("8");
+    // Volume / fee columns still currency
+    expect(formatTableCell("Estimate value", 50_000_000)).toBe("$50M");
+    expect(formatTableCell("Fee expected", 2_000_000)).toBe("$2M");
+  });
+
   it("formats percent labels from ratios", () => {
     expect(percentLabel(0.026)).toBe("2.6%");
   });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import PptxGenJS from "pptxgenjs";
+import { z } from "zod";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getWorkspace } from "@/lib/workspace-server";
@@ -7,9 +8,81 @@ import {
   buildForecastSeries,
   DEFAULT_FORECAST_ASSUMPTIONS,
 } from "@/lib/forecast";
+import { buildCanvasPptx, safeFilename } from "@/lib/pptx-canvas";
+import { resolveWidgets, type WidgetResolved } from "@/lib/dashboard-query";
+import { widgetConfigSchema } from "@/lib/dashboard-domain";
+import type { EstimateRound } from "@/db/schema";
 
-/** 16:9 dashboard / forecast slide export. */
-export async function GET() {
+const canvasBodySchema = z.object({
+  source: z.enum(["canvas", "forecast"]).optional(),
+  planName: z.string().trim().min(1).max(120).optional(),
+  planDescription: z.string().trim().max(500).optional(),
+  widgets: z
+    .array(
+      z.object({
+        config: widgetConfigSchema,
+        empty: z.boolean().optional(),
+        kpi: z
+          .object({
+            value: z.string(),
+            sub: z.string().optional(),
+            raw: z.number().nullable().optional(),
+          })
+          .optional(),
+        series: z
+          .array(
+            z.object({
+              name: z.string(),
+              value: z.number(),
+              secondary: z.number().optional(),
+            }),
+          )
+          .optional(),
+        trend: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))).optional(),
+        trendKeys: z
+          .array(z.object({ key: z.string(), label: z.string() }))
+          .optional(),
+        stacked: z
+          .object({
+            rows: z.array(z.record(z.string(), z.union([z.string(), z.number()]))),
+            series: z.array(z.string()),
+          })
+          .optional(),
+        table: z
+          .object({
+            columns: z.array(z.string()),
+            rows: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))),
+          })
+          .optional(),
+        combo: z
+          .object({
+            rows: z.array(z.record(z.string(), z.union([z.string(), z.number()]))),
+            categoryKey: z.string(),
+            barKeys: z.array(z.string()),
+            lineKeys: z.array(z.string()),
+          })
+          .optional(),
+        waterfall: z
+          .object({
+            points: z.array(
+              z.object({
+                name: z.string(),
+                value: z.number(),
+                type: z.enum(["increase", "decrease", "total"]),
+              }),
+            ),
+          })
+          .optional(),
+      }),
+    )
+    .max(20)
+    .optional(),
+  /** If only configs are sent, re-resolve against live rounds. */
+  widgetConfigs: z.array(widgetConfigSchema).max(20).optional(),
+});
+
+/** Forecast-only deck (legacy GET). */
+async function forecastPptx() {
   const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
   const rounds = await listRoundsWithJobsForPrincipal(principal);
 
@@ -56,24 +129,28 @@ export async function GET() {
     bold: true,
   });
   const labels = series.months.map((m) => m.month);
-  chart.addChart(pptx.ChartType.line, [
+  chart.addChart(
+    pptx.ChartType.line,
+    [
+      {
+        name: "Objective (100% win)",
+        labels,
+        values: series.months.map((m) => m.objective),
+      },
+      {
+        name: "Risk-adjusted",
+        labels,
+        values: series.months.map((m) => m.adjusted),
+      },
+    ],
     {
-      name: "Objective (100% win)",
-      labels,
-      values: series.months.map((m) => m.objective),
+      x: 0.5,
+      y: 1,
+      w: 12.3,
+      h: 5.5,
+      showLegend: true,
     },
-    {
-      name: "Risk-adjusted",
-      labels,
-      values: series.months.map((m) => m.adjusted),
-    },
-  ], {
-    x: 0.5,
-    y: 1,
-    w: 12.3,
-    h: 5.5,
-    showLegend: true,
-  });
+  );
 
   const assumptions = pptx.addSlide();
   assumptions.addText("Assumptions (raw data unchanged)", {
@@ -101,6 +178,82 @@ export async function GET() {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "Content-Disposition": 'attachment; filename="precon-projection.pptx"',
+    },
+  });
+}
+
+/** GET keeps forecast projection deck for Forecast page. */
+export async function GET() {
+  return forecastPptx();
+}
+
+/**
+ * POST builds a deck from the Magnus canvas (resolved widgets or configs).
+ * Body: { planName, planDescription?, widgets? | widgetConfigs? }
+ */
+export async function POST(req: Request) {
+  const principal = await getWebPrincipal();
+  const workspace = await getWorkspace();
+  let body: unknown = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+  const parsed = canvasBodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid canvas export payload", issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  if (parsed.data.source === "forecast") {
+    return forecastPptx();
+  }
+
+  let widgets: WidgetResolved[] = [];
+  if (parsed.data.widgets?.length) {
+    widgets = parsed.data.widgets.map((w) => ({
+      config: w.config,
+      empty: w.empty ?? false,
+      kpi: w.kpi
+        ? { value: w.kpi.value, sub: w.kpi.sub, raw: w.kpi.raw ?? null }
+        : undefined,
+      series: w.series,
+      trend: w.trend as WidgetResolved["trend"],
+      trendKeys: w.trendKeys,
+      stacked: w.stacked,
+      table: w.table,
+      combo: w.combo,
+      waterfall: w.waterfall,
+    }));
+  } else if (parsed.data.widgetConfigs?.length) {
+    const withJobs = await listRoundsWithJobsForPrincipal(principal);
+    const rounds = withJobs.map((r) => r.round) as EstimateRound[];
+    widgets = resolveWidgets(parsed.data.widgetConfigs, rounds);
+  } else {
+    return NextResponse.json(
+      { error: "Provide widgets or widgetConfigs for canvas export" },
+      { status: 400 },
+    );
+  }
+
+  const { buffer, filename } = await buildCanvasPptx({
+    planName: parsed.data.planName ?? "Magnus canvas",
+    planDescription: parsed.data.planDescription,
+    widgets,
+    scopeLabel: workspace.region ?? "Corporate",
+  });
+
+  // Filename already sanitized in builder; belt-and-suspenders for Content-Disposition.
+  const safe = safeFilename(filename.replace(/\.pptx$/i, "")) + ".pptx";
+
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type":
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "Content-Disposition": `attachment; filename="${safe}"`,
     },
   });
 }

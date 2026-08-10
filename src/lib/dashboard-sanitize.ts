@@ -166,6 +166,10 @@ function polishTitle(
     case "line":
     case "area":
       return `${metric} over time`;
+    case "combo":
+      return "Volume & win rate by Bid year";
+    case "waterfall":
+      return "Pipeline bridge (won · pending · lost)";
     case "table":
       return group ? `${group} detail` : `${metric} detail`;
     case "projection":
@@ -212,6 +216,8 @@ export function sanitizePlan(plan: CopilotPlan): CopilotPlan {
 export const MAGNUS_DATA_CONTRACT = `
 Allowlisted metrics: estimateValue, feeExpected, feeExpectedPct, contingencyTotal, roundCount, winRate.
 Allowlisted groupBy: region, preconDepartment, marketSector, estimatePhase, bidYear, status, outcome, sizeBucket.
+Widget kinds: kpi, table, bar, horizontal_bar, stacked_bar, line, area, pie, donut, projection, reconciliation, combo, waterfall.
+combo = volume bars + win-rate line by bid year. waterfall = won/pending/lost/total pipeline bridge.
 sizeBucket = pursuit value bands (<$10M, $10–50M, $50–100M, $100–250M, $250M+).
 status values ONLY: active | upcoming | outstanding | submitted | post_bid | locked.
 outcome values ONLY: pending | successful | unsuccessful.

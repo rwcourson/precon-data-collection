@@ -8,8 +8,10 @@
 import {
   BarColumnChart,
   ChartFrame,
+  ComboChart,
   LineAreaChart,
   PieDonutChart,
+  WaterfallChart,
 } from "@rwcourson/chart-elements/charts";
 import { ModernCard } from "@rwcourson/chart-elements/cards";
 import { DataTable } from "@rwcourson/chart-elements/tables";
@@ -27,6 +29,15 @@ export { dollarsCompact };
 
 function kindFromPercent(percent?: boolean): ScaleKind {
   return percent ? "percent" : "currency";
+}
+
+/** Shared empty-state for short/empty series — never throw on blank canvas. */
+export function ChartEmptyState({ label = "No data for this view." }: { label?: string }) {
+  return (
+    <div className="flex h-[240px] w-full items-center justify-center rounded-md border border-dashed bg-muted/20 px-4 text-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
 }
 
 export function CeChartShell({
@@ -181,6 +192,7 @@ export function HorizontalBarChart({
   valueLabel?: string;
   percent?: boolean;
 }) {
+  if (!data.length) return <ChartEmptyState />;
   const sorted = [...data].sort((a, b) => b.value - a.value);
   const scaled = scaleForMetric(
     sorted.map((d) => d.value),
@@ -212,6 +224,7 @@ export function VerticalBarChart({
   data: { name: string; value: number }[];
   percent?: boolean;
 }) {
+  if (!data.length) return <ChartEmptyState />;
   const scaled = scaleForMetric(
     data.map((d) => d.value),
     kindFromPercent(percent),
@@ -308,12 +321,14 @@ export function PieDonutMetricChart({
   donut?: boolean;
   percent?: boolean;
 }) {
+  if (!data.length) return <ChartEmptyState />;
   // Collapse tiny slices + humanize labels so callouts don't pile up.
   const total = data.reduce((s, d) => s + (Number.isFinite(d.value) ? d.value : 0), 0);
   const cleaned = data
     .map((d) => ({ name: humanizeCategory(d.name), value: d.value }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
+  if (!cleaned.length) return <ChartEmptyState label="No positive values to chart." />;
   const top = cleaned.slice(0, 6);
   const rest = cleaned.slice(6);
   const restSum = rest.reduce((s, d) => s + d.value, 0);
@@ -336,11 +351,67 @@ export function PieDonutMetricChart({
   );
 }
 
-/** @deprecated alias — prefer PieDonutMetricChart */
-export function PieDonutChartCompat(
-  props: Parameters<typeof PieDonutMetricChart>[0],
-) {
-  return <PieDonutMetricChart {...props} />;
+export function ComboMetricChart({
+  rows,
+  categoryKey = "year",
+  barKeys = ["volume"],
+  lineKeys = ["winRate"],
+}: {
+  rows: Record<string, string | number>[];
+  categoryKey?: string;
+  barKeys?: string[];
+  lineKeys?: string[];
+}) {
+  if (!rows.length || !barKeys.length) return <ChartEmptyState />;
+  const volumeRaw = rows.map((r) => Number(r[barKeys[0]!] ?? 0));
+  const scaled = scaleForMetric(volumeRaw, "currency");
+  const data = rows.map((r, i) => {
+    const next: Record<string, string | number> = {
+      [categoryKey]: String(r[categoryKey] ?? ""),
+    };
+    for (const k of barKeys) {
+      next[k] = k === barKeys[0] ? (scaled.values[i] ?? 0) : Number(r[k] ?? 0);
+    }
+    for (const k of lineKeys) {
+      // winRate already stored as percentage points (0–100) from resolveWidget
+      next[k] = Number(r[k] ?? 0);
+    }
+    return next;
+  });
+  return (
+    <div className="h-[320px] w-full min-h-[260px]">
+      <ComboChart
+        data={data}
+        categoryKey={categoryKey}
+        barKeys={barKeys}
+        lineKeys={lineKeys}
+        variant="line-clustered-column"
+      />
+    </div>
+  );
+}
+
+export function WaterfallMetricChart({
+  points,
+}: {
+  points: { name: string; value: number; type: "increase" | "decrease" | "total" }[];
+}) {
+  if (!points.length) return <ChartEmptyState />;
+  const finite = points.filter((p) => Number.isFinite(p.value));
+  if (!finite.length) return <ChartEmptyState />;
+  return (
+    <div className="h-[320px] w-full min-h-[260px]">
+      <WaterfallChart
+        data={finite.map((p) => ({
+          name: humanizeCategory(p.name),
+          value: p.value,
+          type: p.type,
+        }))}
+        totalMode="absolute"
+        valueFormatter={dollarsCompact}
+      />
+    </div>
+  );
 }
 
 export function MetricLineChart({

@@ -164,17 +164,29 @@ export function formatTableCell(
     const ratio = Math.abs(value) <= 1.5 ? value : value / 100;
     return percentLabel(ratio, k.includes("fee") ? 1 : 0);
   }
+  // Counts before currency: "Estimate rounds" contains "estimate" and must not
+  // fall into dollarsCompact ($4 for a round count).
+  if (
+    k.includes("round") ||
+    k.includes("count") ||
+    k === "rounds" ||
+    k.includes("roundcount")
+  ) {
+    return countLabel(value);
+  }
   if (
     k.includes("volume") ||
-    k.includes("fee") ||
+    k.includes("fee expected") ||
+    k.includes("fee $") ||
     k.includes("$") ||
-    k.includes("estimate") ||
-    k.includes("contingenc")
+    k.includes("estimate value") ||
+    k.includes("pursuit") ||
+    k.includes("contingenc") ||
+    // Bare "fee" (not already handled as fee %) and bare "estimate" (not rounds)
+    (k.includes("fee") && !k.includes("%")) ||
+    (k.includes("estimate") && !k.includes("round"))
   ) {
     return dollarsCompact(value);
-  }
-  if (k.includes("round") || k.includes("count")) {
-    return countLabel(value);
   }
   if (Math.abs(value) > 0 && Math.abs(value) < 1) {
     return percentLabel(value);

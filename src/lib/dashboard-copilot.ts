@@ -126,6 +126,10 @@ function humanWidgetTitle(
       return g ? `Top pursuits by ${g.toLowerCase()}` : "Pursuit detail table";
     case "projection":
       return "Volume projection";
+    case "combo":
+      return "Volume & win rate by Bid year";
+    case "waterfall":
+      return "Pipeline bridge (won · pending · lost)";
     default:
       return g ? `${m} · ${g}` : m;
   }
@@ -211,9 +215,13 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
   const wantsMix = /mix|share|composition|breakdown|pie|donut|distribution/i.test(trimmed);
   const wantsTrend = /trend|over time|timeline|history|year|forecast|project/i.test(trimmed);
   const wantsTable = /table|grid|list|detail/i.test(trimmed);
+  // Short prompts default to exec scorecard, unless the user asked for a focused
+  // composition/pipeline view (avoid overloading "pipeline mix by status").
   const wantsExec =
     /executive|overview|summary|full|dashboard|scorecard|kpi/i.test(trimmed) ||
-    trimmed.split(/\s+/).length < 6;
+    (trimmed.split(/\s+/).length < 6 &&
+      !wantsMix &&
+      !/pipeline|waterfall|bridge/i.test(trimmed));
 
   const widgets: DashboardWidgetConfig[] = [];
   const rationale: string[] = [];
@@ -277,11 +285,11 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
   }
 
   if (wantsTrend || wantsExec) {
-    const trendKind = /area|fill/i.test(trimmed) ? "area" : "line";
+    // Dual-axis combo: volume bars + win rate line by year (Power BI classic).
     widgets.push({
-      title: humanWidgetTitle(trendKind, metric, "bidYear"),
-      kind: trendKind,
-      metricKey: metric,
+      title: "Volume & win rate by Bid year",
+      kind: "combo",
+      metricKey: "estimateValue",
       groupBy: "bidYear",
       filters,
       layout: { w: 8, h: 4, x: 0, y: 6 },
@@ -295,7 +303,7 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
       filters,
       layout: { w: 4, h: 4, x: 8, y: 6 },
     });
-    rationale.push("Time series + stacked year composition for trajectory.");
+    rationale.push("Combo volume/win-rate trend + stacked composition.");
   }
 
   if (wantsTable || wantsExec) {
@@ -310,14 +318,26 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
     rationale.push("Detail table for exportable numbers.");
   }
 
-  if (/forecast|projection|pipeline/i.test(trimmed)) {
+  if (/waterfall|bridge|won.?lost|pipeline/i.test(trimmed) || wantsExec) {
+    widgets.push({
+      title: "Pipeline bridge (won · pending · lost)",
+      kind: "waterfall",
+      metricKey: "estimateValue",
+      groupBy: "outcome",
+      filters,
+      layout: { w: 6, h: 4, x: 0, y: 14 },
+    });
+    rationale.push("Waterfall bridge of outcome volumes.");
+  }
+
+  if (/forecast|projection/i.test(trimmed)) {
     widgets.push({
       title: humanWidgetTitle("projection", "estimateValue", "bidYear"),
       kind: "projection",
       metricKey: "estimateValue",
       groupBy: "bidYear",
       filters,
-      layout: { w: 12, h: 4, x: 0, y: 14 },
+      layout: { w: 6, h: 4, x: 6, y: 14 },
     });
     rationale.push("Projection widget for forward-looking volume.");
   }

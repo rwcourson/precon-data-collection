@@ -100,4 +100,8 @@ export const widgetKindSchema = z.enum([
   "donut",
   "projection",
   "reconciliation",
+  /** Volume bars + win-rate line by bid year (chart-elements ComboChart). */
+  "combo",
+  /** Portfolio bridge: won / pending / lost / total (chart-elements WaterfallChart). */
+  "waterfall",
 ]);

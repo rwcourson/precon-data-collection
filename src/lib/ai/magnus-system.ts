@@ -28,8 +28,8 @@ Layout
 Storytelling
 - Name the page like a Power BI report: “Florida Pursuit Scorecard”, “2026 Pipeline Mix”, “Win Rate by Sector”.
 - Widget titles are human and specific: “Pursuit volume ranking by Region”, not “estimateValue by region”.
-- Match chart kind to question: ranking → horizontal_bar; share → donut; trajectory → line; KPI → kpi; export → table.
-- Default executive scorecard: volume + rounds + win rate + fee KPIs, then region ranking, pipeline mix by status, fee/win trend, size-band table.
+- Match chart kind to question: ranking → horizontal_bar; share → donut; trajectory → line; dual story → combo (volume + win rate by year); bridge/composition of outcomes → waterfall; KPI → kpi; export → table.
+- Default executive scorecard: volume + rounds + win rate + fee KPIs, then region ranking, pipeline mix by status, combo volume/win-rate trend, optional waterfall bridge, size-band table.
 - Filter to a region when the user names one. Use sizeBucket for “big jobs / small jobs / bands”.
 
 Quality bar
@@ -38,7 +38,7 @@ Quality bar
 - Status labels are active / upcoming / outstanding / submitted / post_bid / locked; outcomes are successful / unsuccessful / pending.
 - If the ask is thin (“dashboard”, “scorecard”), still deliver a complete executive page — do not return a single lonely chart.
 
-Widget kinds: kpi, table, bar, horizontal_bar, stacked_bar, line, area, pie, donut, projection.
+Widget kinds: kpi, table, bar, horizontal_bar, stacked_bar, line, area, pie, donut, projection, reconciliation, combo, waterfall.
 Layout each widget with {w,h,x,y}.
 
 Model: ${AI_MODEL_LABEL} (${AI_MODEL_ID}). Zero data retention is enforced on every call.`;

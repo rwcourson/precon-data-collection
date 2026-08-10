@@ -15,6 +15,17 @@ export type WidgetResolved = {
   trendKeys?: { key: string; label: string }[];
   stacked?: { rows: Record<string, string | number>[]; series: string[] };
   table?: { columns: string[]; rows: WidgetTableRow[] };
+  /** ComboChart: category + bar metric + line metric. */
+  combo?: {
+    rows: Record<string, string | number>[];
+    categoryKey: string;
+    barKeys: string[];
+    lineKeys: string[];
+  };
+  /** WaterfallChart points (increase / decrease / total). */
+  waterfall?: {
+    points: { name: string; value: number; type: "increase" | "decrease" | "total" }[];
+  };
 };
 
 type MetricKey =
@@ -235,6 +246,48 @@ export function resolveWidget(
       config,
       empty: rows.length === 0 || rounds.length === 0,
       stacked: { rows, series: groups },
+    };
+  }
+
+  if (config.kind === "combo") {
+    // Dual-axis story: volume (bars) + win rate (line) by bid year.
+    const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
+    const rows = years.map((y) => {
+      const stats = computeStats(String(y), rounds.filter((r) => r.bidYear === y));
+      return {
+        year: String(y),
+        volume: stats.volume,
+        winRate: (stats.winRate ?? 0) * 100,
+      };
+    });
+    return {
+      config,
+      empty: rows.length === 0 || rounds.length === 0,
+      combo: {
+        rows,
+        categoryKey: "year",
+        barKeys: ["volume"],
+        lineKeys: ["winRate"],
+      },
+    };
+  }
+
+  if (config.kind === "waterfall") {
+    // Portfolio bridge by outcome — increase/decrease then total.
+    const won = computeStats("won", rounds.filter((r) => r.outcome === "successful"));
+    const lost = computeStats("lost", rounds.filter((r) => r.outcome === "unsuccessful"));
+    const pending = computeStats("pending", rounds.filter((r) => r.outcome === "pending"));
+    const total = computeStats("all", rounds);
+    const points: NonNullable<WidgetResolved["waterfall"]>["points"] = [
+      { name: "Won", value: won.volume, type: "increase" },
+      { name: "Pending", value: pending.volume, type: "increase" },
+      { name: "Lost", value: lost.volume, type: "decrease" },
+      { name: "Total pipeline", value: total.volume, type: "total" },
+    ];
+    return {
+      config,
+      empty: rounds.length === 0 || points.every((p) => p.value === 0),
+      waterfall: { points },
     };
   }
 
