@@ -5,43 +5,17 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { savedReports, type SavedReportConfig } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
+import { getFlatDataset } from "@/lib/export-helpers";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
-  getAllCustomColumns,
-  getCustomValuesForRounds,
-  getMultiValuesForRounds,
-  getRoundsWithJobs,
-} from "@/lib/queries";
-import {
-  buildFieldCatalog,
-  flattenRound,
   runReportEngine,
   type ReportResult,
 } from "@/lib/report-engine";
-import { getWorkspace } from "@/lib/workspace-server";
 
 export async function runReport(config: SavedReportConfig): Promise<ReportResult> {
-  const workspace = await getWorkspace();
-  const [rows, customCols] = await Promise.all([
-    getRoundsWithJobs(workspace),
-    getAllCustomColumns(),
-  ]);
-  const ids = rows.map((r) => r.round.id);
-  const [multiMap, customMap] = await Promise.all([
-    getMultiValuesForRounds(ids),
-    getCustomValuesForRounds(ids),
-  ]);
-
-  const flat = rows.map((r) =>
-    flattenRound(
-      r.round,
-      r.job,
-      r.estimateLeadName,
-      multiMap.get(r.round.id) ?? {},
-      customMap.get(r.round.id) ?? {},
-    ),
-  );
-  const catalog = buildFieldCatalog(customCols);
-  const result = runReportEngine(flat, config, catalog);
+  const principal = await getWebPrincipal();
+  const { rows, catalog } = await getFlatDataset(principal);
+  const result = runReportEngine(rows, config, catalog);
   // Cap on-screen rows for responsiveness
   return { ...result, rows: result.rows.slice(0, 500) };
 }

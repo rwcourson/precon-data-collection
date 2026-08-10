@@ -1,0 +1,58 @@
+/**
+ * Stable cursor pagination for SQL-backed lists.
+ * Cursor encodes the last seen (sortValue, id) pair.
+ */
+
+export type PageCursor = {
+  sortValue: string | number | null;
+  id: number;
+};
+
+export type PageResult<T> = {
+  items: T[];
+  nextCursor: string | null;
+  pageSize: number;
+};
+
+export const DEFAULT_PAGE_SIZE = 50;
+export const MAX_PAGE_SIZE = 200;
+
+export function clampPageSize(raw: number | undefined | null): number {
+  if (!raw || !Number.isFinite(raw)) return DEFAULT_PAGE_SIZE;
+  return Math.max(1, Math.min(MAX_PAGE_SIZE, Math.floor(raw)));
+}
+
+export function encodeCursor(cursor: PageCursor): string {
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+export function decodeCursor(raw: string | null | undefined): PageCursor | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as PageCursor;
+    if (typeof parsed.id !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function pageFromRows<T extends { id: number }>(
+  rows: T[],
+  pageSize: number,
+  sortValueOf: (row: T) => string | number | null,
+): PageResult<T> {
+  const size = clampPageSize(pageSize);
+  const slice = rows.slice(0, size + 1);
+  const hasMore = slice.length > size;
+  const items = hasMore ? slice.slice(0, size) : slice;
+  const last = items[items.length - 1];
+  return {
+    items,
+    pageSize: size,
+    nextCursor:
+      hasMore && last
+        ? encodeCursor({ id: last.id, sortValue: sortValueOf(last) })
+        : null,
+  };
+}

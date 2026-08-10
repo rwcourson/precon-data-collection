@@ -73,7 +73,8 @@ export function TrashActions({
           <DialogHeader>
             <DialogTitle>Permanently delete?</DialogTitle>
             <DialogDescription>
-              This cannot be undone. Type <strong>DELETE</strong> to confirm permanent removal.
+              This cannot be undone. Only corporate admins can permanently delete already soft-deleted
+              items. Type <strong>PERMANENTLY DELETE</strong> to confirm.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -82,7 +83,7 @@ export function TrashActions({
               id={`delete-confirm-${entityId}`}
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
-              placeholder="DELETE"
+              placeholder="PERMANENTLY DELETE"
               autoComplete="off"
             />
           </div>
@@ -93,7 +94,7 @@ export function TrashActions({
             <Button
               type="button"
               variant="destructive"
-              disabled={pending || confirmation !== "DELETE"}
+              disabled={pending || confirmation !== "PERMANENTLY DELETE"}
               onClick={() =>
                 startTransition(async () => {
                   try {

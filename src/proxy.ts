@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { inspectRuntimeConfig, runtimeDiagnostics } from "@/lib/runtime-config";
+import { verifySsoRequest } from "@/lib/sso-trust";
 
 /**
  * Gate for SSO mode. The authenticating proxy in front of the app is what
@@ -9,16 +11,27 @@ import { NextResponse, type NextRequest } from "next/server";
  * The scheduler endpoints are exempt because they authenticate with
  * `CRON_SECRET` rather than a user identity.
  */
-const EMAIL_HEADER = process.env.SSO_EMAIL_HEADER ?? "x-forwarded-email";
 const EXEMPT = ["/api/jobs/"];
+const HEALTH_EXEMPT = ["/api/health/live", "/api/health/ready"];
 
 export function proxy(req: NextRequest) {
-  if (process.env.AUTH_MODE !== "sso") return NextResponse.next();
+  if (HEALTH_EXEMPT.includes(req.nextUrl.pathname)) return NextResponse.next();
+
+  const status = inspectRuntimeConfig();
+  if (!status.ok) {
+    return NextResponse.json(
+      { error: "Service configuration is unavailable.", diagnostics: runtimeDiagnostics(status) },
+      { status: 503 },
+    );
+  }
+
+  if (status.config.authMode !== "sso") return NextResponse.next();
   if (EXEMPT.some((p) => req.nextUrl.pathname.startsWith(p))) return NextResponse.next();
 
-  if (!req.headers.get(EMAIL_HEADER)) {
+  const trust = verifySsoRequest(req.headers, status.config);
+  if (!trust.ok) {
     return NextResponse.json(
-      { error: "Not signed in. This deployment requires SSO through the B&G proxy." },
+      { error: "Not signed in. This deployment requires the trusted B&G SSO proxy." },
       { status: 401 },
     );
   }

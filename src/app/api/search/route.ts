@@ -1,8 +1,13 @@
 import { and, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { estimateRounds, jobs, sheets, users } from "@/db/schema";
-import { getWorkspace } from "@/lib/workspace-server";
+import { estimateRounds, jobs, users } from "@/db/schema";
+import {
+  listAdminSectionsForPrincipal,
+  principalRegionPredicate,
+  searchSheetsForPrincipal,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 const PAGES = [
   { href: "/", label: "Overview", keywords: ["home", "overview", "start"] },
@@ -63,6 +68,7 @@ function sanitizeQuery(raw: string) {
 }
 
 export async function GET(request: Request) {
+  const principal = await getWebPrincipal();
   const { searchParams } = new URL(request.url);
   const q = sanitizeQuery(searchParams.get("q") ?? "");
   if (q.length < 1) {
@@ -71,9 +77,11 @@ export async function GET(request: Request) {
 
   const pattern = `%${q}%`;
   const qLower = q.toLowerCase();
-  const { region } = await getWorkspace();
+  const adminSections = await listAdminSectionsForPrincipal(principal);
 
-  const pages = PAGES.filter((p) => {
+  const pages = PAGES.filter(
+    (page) => !page.href.startsWith("/admin") || adminSections.length > 0,
+  ).filter((p) => {
     if (p.label.toLowerCase().includes(qLower)) return true;
     return p.keywords.some((k) => k.includes(qLower) || qLower.includes(k));
   }).map(({ href, label }) => ({ href, label }));
@@ -95,7 +103,8 @@ export async function GET(request: Request) {
       .from(jobs)
       .where(
         and(
-          region ? eq(jobs.region, region) : undefined,
+          isNull(jobs.deletedAt),
+          principalRegionPredicate(jobs.region, principal),
           or(
             ilike(jobs.jobNumber, pattern),
             ilike(jobs.jobName, pattern),
@@ -125,7 +134,9 @@ export async function GET(request: Request) {
       .leftJoin(users, eq(users.id, estimateRounds.estimateLeadId))
       .where(
         and(
-          region ? eq(estimateRounds.region, region) : undefined,
+          isNull(estimateRounds.deletedAt),
+          isNull(jobs.deletedAt),
+          principalRegionPredicate(estimateRounds.region, principal),
           or(
             ilike(jobs.jobNumber, pattern),
             ilike(jobs.jobName, pattern),
@@ -143,27 +154,12 @@ export async function GET(request: Request) {
       )
       .orderBy(jobs.jobNumber)
       .limit(12),
-    db
-      .select()
-      .from(sheets)
-      .where(
-        and(
-          isNull(sheets.archivedAt),
-          or(
-            ilike(sheets.name, pattern),
-            ilike(sheets.folder, pattern),
-            ilike(sheets.description, pattern),
-          ),
-        ),
-      )
-      .orderBy(sheets.name)
-      .limit(10),
+    searchSheetsForPrincipal(principal, pattern, 10),
   ]);
 
   return NextResponse.json({
     pages,
     sheets: sheetHits
-      .filter((s) => s.region == null || region == null || s.region === region)
       .map((s) => ({
         href: `/sheets/${s.id}`,
         label: s.name,

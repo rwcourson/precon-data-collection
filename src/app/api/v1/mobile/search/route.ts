@@ -1,20 +1,16 @@
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { listSheets } from "@/lib/sheets-server";
-import { getCurrentUser } from "@/lib/current-user";
-import { getWorkspace } from "@/lib/workspace-server";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: ["read:pursuits", "read:sheets"] }, async (principal) => {
     const q = (new URL(req.url).searchParams.get("q") ?? "").trim().toLowerCase();
     if (!q) {
       return jsonOk({ data: [], empty: true, message: "Enter a search term" });
     }
-    const workspace = await getWorkspace();
-    const user = await getCurrentUser();
     const [rounds, sheets] = await Promise.all([
-      getRoundsWithJobs(workspace),
-      listSheets(workspace, user),
+      listRoundsWithJobsForPrincipal(principal.authorization),
+      listSheets(principal.authorization),
     ]);
 
     const jobHits = rounds

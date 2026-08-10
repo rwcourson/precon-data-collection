@@ -29,7 +29,7 @@ export function WarehouseFeed({
   state: FeedState;
   configured: boolean;
   table: string;
-  connectMode: "mock" | "rest";
+  connectMode: "disabled" | "mock" | "rest";
   lastRunLabel: string | null;
   canRun: boolean;
   /** Requires DATABRICKS_ALLOW_WRITE=true. Default off — read/pull only. */

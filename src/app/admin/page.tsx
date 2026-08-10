@@ -37,7 +37,6 @@ import {
   salesforceSyncRuns,
   users,
 } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
 import { AccessSettingsPanel } from "@/components/admin/access-settings";
 import { MigrationPanel } from "@/components/admin/migration-panel";
 import { WarehouseFeed } from "@/components/admin/warehouse-feed";
@@ -56,7 +55,7 @@ import { getFeedState } from "@/lib/integrations/databricks/feed";
 import { databricksWritesAllowed } from "@/lib/integrations/databricks/read";
 import { smartsheetConfig } from "@/lib/integrations/smartsheet/client";
 import { buildMigrationReport, cutoverChecklist, getImportSource } from "@/lib/migration";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
 import { getWorkspace } from "@/lib/workspace-server";
 import {
@@ -68,7 +67,13 @@ import {
 } from "@/lib/permissions";
 import { fmtDateTime } from "@/lib/format";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import {
+  listAdminSectionsForPrincipal,
+  type AdminSection,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 const VALID_TABS = new Set([
   "columns",
@@ -91,9 +96,12 @@ export default async function AdminPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
+  const principal = await getWebPrincipal();
+  const allowedSections = new Set(await listAdminSectionsForPrincipal(principal));
+  if (allowedSections.size === 0) notFound();
   const workspace = await getWorkspace();
+  const user = principal.user;
   const [
-    user,
     lists,
     listValues,
     cols,
@@ -110,35 +118,60 @@ export default async function AdminPage({
     tokens,
     allJobs,
   ] = await Promise.all([
-      getCurrentUser(),
-      db.select().from(referenceLists).orderBy(asc(referenceLists.key)),
-      db.select().from(referenceListValues).orderBy(asc(referenceListValues.sortOrder)),
-      db.select().from(customColumns).orderBy(asc(customColumns.id)),
+      allowedSections.has("lists")
+        ? db.select().from(referenceLists).orderBy(asc(referenceLists.key))
+        : Promise.resolve([]),
+      allowedSections.has("lists")
+        ? db.select().from(referenceListValues).orderBy(asc(referenceListValues.sortOrder))
+        : Promise.resolve([]),
+      allowedSections.has("columns") || allowedSections.has("promotions")
+        ? db.select().from(customColumns).orderBy(asc(customColumns.id))
+        : Promise.resolve([]),
       db.select().from(users).orderBy(asc(users.id)),
-      db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(100),
-      db.select().from(dataQualityFlags).orderBy(desc(dataQualityFlags.firstSeenAt)),
-      getRoundsWithJobs(workspace),
+      allowedSections.has("audit")
+        ? db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(100)
+        : Promise.resolve([]),
+      allowedSections.has("review")
+        ? db.select().from(dataQualityFlags).orderBy(desc(dataQualityFlags.firstSeenAt))
+        : Promise.resolve([]),
+      allowedSections.has("review")
+        ? listRoundsWithJobsForPrincipal(principal)
+        : Promise.resolve([]),
       getNotificationSettings(),
-      db.select().from(emailOutbox).orderBy(desc(emailOutbox.createdAt)).limit(25),
-      db.select().from(fieldPromotions).orderBy(desc(fieldPromotions.proposedAt)),
-      db
-        .select()
-        .from(distributionLists)
-        .where(isNull(distributionLists.deletedAt))
-        .orderBy(asc(distributionLists.name)),
-      db
-        .select()
-        .from(salesforceMatchCandidates)
-        .where(eq(salesforceMatchCandidates.status, "pending"))
-        .orderBy(desc(salesforceMatchCandidates.score)),
-      db.select().from(salesforceSyncRuns).orderBy(desc(salesforceSyncRuns.startedAt)).limit(1),
-      db.select().from(apiTokens).orderBy(desc(apiTokens.createdAt)),
-      db.select().from(jobs),
+      allowedSections.has("notifications")
+        ? db.select().from(emailOutbox).orderBy(desc(emailOutbox.createdAt)).limit(25)
+        : Promise.resolve([]),
+      allowedSections.has("promotions")
+        ? db.select().from(fieldPromotions).orderBy(desc(fieldPromotions.proposedAt))
+        : Promise.resolve([]),
+      allowedSections.has("distribution")
+        ? db
+            .select()
+            .from(distributionLists)
+            .where(isNull(distributionLists.deletedAt))
+            .orderBy(asc(distributionLists.name))
+        : Promise.resolve([]),
+      allowedSections.has("salesforce")
+        ? db
+            .select()
+            .from(salesforceMatchCandidates)
+            .where(eq(salesforceMatchCandidates.status, "pending"))
+            .orderBy(desc(salesforceMatchCandidates.score))
+        : Promise.resolve([]),
+      allowedSections.has("salesforce")
+        ? db.select().from(salesforceSyncRuns).orderBy(desc(salesforceSyncRuns.startedAt)).limit(1)
+        : Promise.resolve([]),
+      allowedSections.has("tokens")
+        ? db.select().from(apiTokens).orderBy(desc(apiTokens.createdAt))
+        : Promise.resolve([]),
+      allowedSections.has("salesforce") ? db.select().from(jobs) : Promise.resolve([]),
     ]);
 
   const showAudit = canViewAudit(user);
   let tab = VALID_TABS.has(params.tab ?? "") ? (params.tab as string) : "columns";
-  if (tab === "audit" && !showAudit) tab = "columns";
+  if (!allowedSections.has(tab as AdminSection) || (tab === "audit" && !showAudit)) {
+    tab = allowedSections.has("columns") ? "columns" : [...allowedSections][0]!;
+  }
 
   const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
   const colMap = new Map(cols.map((c) => [c.id, c]));

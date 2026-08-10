@@ -19,7 +19,11 @@ export function ApproveLockButton({ roundId }: { roundId: number }) {
       onClick={() =>
         startTransition(async () => {
           try {
-            await approveAndLock(roundId);
+            const result = await approveAndLock(roundId);
+            if (!result.ok) {
+              toast.error(result.error, { duration: 6000 });
+              return;
+            }
             toast.success(
               "Approved and locked by RPD/SPD. The record now rolls into the Estimate Summary.",
             );

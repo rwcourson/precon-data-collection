@@ -1,18 +1,22 @@
 import { PageHeader } from "@/components/page-header";
 import { SheetBrowser } from "@/components/sheets/sheet-browser";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { canCreateSheet } from "@/lib/sheets";
 import { listArchivedSheets, listFolders, listSheets } from "@/lib/sheets-server";
-import { getWorkspace } from "@/lib/workspace-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SheetsPage() {
-  const [user, workspace] = await Promise.all([getCurrentUser(), getWorkspace()]);
+  const principal = await getWebPrincipal();
+  const user = principal.user;
+  const workspace = {
+    region: principal.workspace.region,
+    label: principal.workspace.region ?? "Corporate",
+  };
   const [sheets, folders, archived] = await Promise.all([
-    listSheets(workspace, user),
-    listFolders(workspace),
-    listArchivedSheets(workspace, user),
+    listSheets(principal),
+    listFolders(principal),
+    listArchivedSheets(principal),
   ]);
 
   return (

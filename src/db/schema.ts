@@ -9,6 +9,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const roundStatusEnum = pgEnum("round_status", [
@@ -81,6 +82,7 @@ export const jobs = pgTable("jobs", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   deletedById: integer("deleted_by_id").references(() => users.id),
+  deletionBatchId: integer("deletion_batch_id"),
 });
 
 export const estimateRounds = pgTable("estimate_rounds", {
@@ -156,6 +158,7 @@ export const estimateRounds = pgTable("estimate_rounds", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   deletedById: integer("deleted_by_id").references(() => users.id),
+  deletionBatchId: integer("deletion_batch_id"),
 });
 
 /** Repeatable one-to-many fields (Self-Perform Work Type, Utilized Support Services). */
@@ -197,16 +200,20 @@ export const customColumns = pgTable("custom_columns", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const customColumnValues = pgTable("custom_column_values", {
-  id: serial("id").primaryKey(),
-  columnId: integer("column_id")
-    .notNull()
-    .references(() => customColumns.id),
-  roundId: integer("round_id")
-    .notNull()
-    .references(() => estimateRounds.id),
-  value: text("value"),
-});
+export const customColumnValues = pgTable(
+  "custom_column_values",
+  {
+    id: serial("id").primaryKey(),
+    columnId: integer("column_id")
+      .notNull()
+      .references(() => customColumns.id),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id),
+    value: text("value"),
+  },
+  (table) => [uniqueIndex("custom_column_values_column_round_unique").on(table.columnId, table.roundId)],
+);
 
 export const statusTransitions = pgTable("status_transitions", {
   id: serial("id").primaryKey(),
@@ -293,12 +300,36 @@ export const emailOutbox = pgTable("email_outbox", {
   /** Base64 or storage key for PDF attachment (stub stores inline). */
   attachmentName: text("attachment_name"),
   attachmentStorageKey: text("attachment_storage_key"),
-  /** "queued" | "sent" | "failed" */
+  /** "queued" | "claimed" | "previewed" | "sent" | "failed" */
   status: text("status").notNull().default("queued"),
   provider: text("provider").notNull().default("stub"),
   error: text("error"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  logicalDeliveryKey: text("logical_delivery_key"),
+  providerMessageId: text("provider_message_id"),
+  nextAttemptAt: timestamp("next_attempt_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   sentAt: timestamp("sent_at"),
+});
+
+export const deletionBatches = pgTable("deletion_batches", {
+  id: serial("id").primaryKey(),
+  actorId: integer("actor_id").references(() => users.id),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const reportArtifacts = pgTable("report_artifacts", {
+  id: serial("id").primaryKey(),
+  reportKey: text("report_key").notNull(),
+  checksum: text("checksum").notNull(),
+  byteSize: integer("byte_size").notNull(),
+  contentType: text("content_type").notNull().default("application/pdf"),
+  storageKey: text("storage_key").notNull(),
+  region: text("region"),
+  ownerId: integer("owner_id").references(() => users.id),
+  parameters: jsonb("parameters").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export type ExportTemplateConfig = {
@@ -403,19 +434,24 @@ export const sheets = pgTable("sheets", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   deletedById: integer("deleted_by_id").references(() => users.id),
+  deletionBatchId: integer("deletion_batch_id"),
 });
 
 /** Per-user favourites, surfaced under Sheets in the sidebar. */
-export const sheetPins = pgTable("sheet_pins", {
-  id: serial("id").primaryKey(),
-  sheetId: integer("sheet_id")
-    .notNull()
-    .references(() => sheets.id, { onDelete: "cascade" }),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const sheetPins = pgTable(
+  "sheet_pins",
+  {
+    id: serial("id").primaryKey(),
+    sheetId: integer("sheet_id")
+      .notNull()
+      .references(() => sheets.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("sheet_pins_sheet_user_unique").on(table.sheetId, table.userId)],
+);
 
 /** Columns of a `grid` sheet. View sheets draw columns from the field catalog. */
 export const sheetColumns = pgTable("sheet_columns", {
@@ -444,6 +480,7 @@ export const sheetRows = pgTable("sheet_rows", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
   deletedById: integer("deleted_by_id").references(() => users.id),
+  deletionBatchId: integer("deletion_batch_id"),
 });
 
 // ---------------------------------------------------------------------------
@@ -527,17 +564,26 @@ export const distributionLists = pgTable("distribution_lists", {
   deletedAt: timestamp("deleted_at"),
 });
 
-export const distributionRuns = pgTable("distribution_runs", {
-  id: serial("id").primaryKey(),
-  distributionListId: integer("distribution_list_id")
-    .notNull()
-    .references(() => distributionLists.id),
-  periodKey: text("period_key").notNull(),
-  status: text("status").notNull().default("queued"),
-  outboxIds: jsonb("outbox_ids").$type<number[]>().default([]),
-  error: text("error"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const distributionRuns = pgTable(
+  "distribution_runs",
+  {
+    id: serial("id").primaryKey(),
+    distributionListId: integer("distribution_list_id")
+      .notNull()
+      .references(() => distributionLists.id),
+    periodKey: text("period_key").notNull(),
+    status: text("status").notNull().default("queued"),
+    outboxIds: jsonb("outbox_ids").$type<number[]>().default([]),
+    error: text("error"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("distribution_runs_list_period_unique").on(
+      table.distributionListId,
+      table.periodKey,
+    ),
+  ],
+);
 
 export const salesforceSyncRuns = pgTable("salesforce_sync_runs", {
   id: serial("id").primaryKey(),
@@ -587,15 +633,25 @@ export const salesforceMatchSuppressions = pgTable("salesforce_match_suppression
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const entityVersions = pgTable("entity_versions", {
-  id: serial("id").primaryKey(),
-  entityType: text("entity_type").notNull(), // round | sheet_row | job | sheet
-  entityId: integer("entity_id").notNull(),
-  version: integer("version").notNull(),
-  snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
-  changedById: integer("changed_by_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const entityVersions = pgTable(
+  "entity_versions",
+  {
+    id: serial("id").primaryKey(),
+    entityType: text("entity_type").notNull(), // round | sheet_row | job | sheet
+    entityId: integer("entity_id").notNull(),
+    version: integer("version").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    changedById: integer("changed_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("entity_versions_entity_version_unique").on(
+      table.entityType,
+      table.entityId,
+      table.version,
+    ),
+  ],
+);
 
 export const dataSnapshots = pgTable("data_snapshots", {
   id: serial("id").primaryKey(),
@@ -622,7 +678,7 @@ export const apiTokens = pgTable("api_tokens", {
   revokedAt: timestamp("revoked_at"),
   lastUsedAt: timestamp("last_used_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [uniqueIndex("api_tokens_token_hash_unique").on(table.tokenHash)]);
 
 export const apiIdempotencyKeys = pgTable("api_idempotency_keys", {
   id: serial("id").primaryKey(),
@@ -630,22 +686,29 @@ export const apiIdempotencyKeys = pgTable("api_idempotency_keys", {
     .notNull()
     .references(() => apiTokens.id),
   key: text("key").notNull(),
+  operation: text("operation").notNull(),
+  payloadHash: text("payload_hash").notNull(),
   responseStatus: integer("response_status").notNull(),
   responseBody: jsonb("response_body").$type<Record<string, unknown>>().notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [uniqueIndex("api_idempotency_token_key_unique").on(table.tokenId, table.key)]);
 
 export const apiDestructiveChallenges = pgTable("api_destructive_challenges", {
   id: serial("id").primaryKey(),
   tokenId: integer("token_id")
     .notNull()
     .references(() => apiTokens.id),
-  challenge: text("challenge").notNull(),
+  actorId: integer("actor_id")
+    .notNull()
+    .references(() => users.id),
+  challengeHash: text("challenge_hash").notNull(),
   operation: text("operation").notNull(),
+  target: text("target").notNull(),
+  payloadHash: text("payload_hash").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [uniqueIndex("api_destructive_challenge_hash_unique").on(table.challengeHash)]);
 
 export const dashboardScopeEnum = pgEnum("dashboard_scope", [
   "personal",

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { desc, isNull } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -18,16 +17,13 @@ import {
 } from "@/components/ui/table";
 import { StudioCreateForm } from "@/components/dashboards/studio-create-form";
 import { PageHeader } from "@/components/page-header";
-import { db } from "@/db";
-import { dashboards } from "@/db/schema";
+import { listDashboardsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDateTime } from "@/lib/format";
 
 export default async function DashboardStudioPage() {
-  const rows = await db
-    .select()
-    .from(dashboards)
-    .where(isNull(dashboards.deletedAt))
-    .orderBy(desc(dashboards.updatedAt));
+  const principal = await getWebPrincipal();
+  const rows = await listDashboardsForPrincipal(principal);
 
   return (
     <div className="space-y-5">

@@ -61,3 +61,26 @@ export function mapIdentity(
 
   return { role, region };
 }
+
+const REGION_BOUND_ROLES: Role[] = ["pcm", "estimate_lead", "admin_jsa", "rpd"];
+
+export type StrictIdentityMapping =
+  | { ok: true; role: Role; region: string | null }
+  | { ok: false; reason: "unmapped-role" | "missing-region" };
+
+/** Production mapping never falls back to a default role. */
+export function mapIdentityStrict(
+  identity: SsoIdentity,
+  access: AccessSettings,
+): StrictIdentityMapping {
+  const matched = identity.groups
+    .map((group) => access.groupRoles[group])
+    .filter((role): role is Role => Boolean(role));
+  const role = ROLE_PRIVILEGE.find((candidate) => matched.includes(candidate));
+  if (!role) return { ok: false, reason: "unmapped-role" };
+  const region = identity.groups.map((group) => access.groupRegions[group]).find(Boolean) ?? null;
+  if (REGION_BOUND_ROLES.includes(role) && !region) {
+    return { ok: false, reason: "missing-region" };
+  }
+  return { ok: true, role, region };
+}

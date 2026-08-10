@@ -1,95 +1,93 @@
-/* Focused verification of the RPD approve/lock validation + audit flow. */
+import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const BASE = process.env.BASE_URL ?? "http://localhost:3001";
+const baseUrl = process.env.BASE_URL;
+assert.match(baseUrl ?? "", /^http:\/\/127\.0\.0\.1:\d+$/, "BASE_URL must target the isolated local server");
+
+const errors = [];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-const log = (s) => console.log(`✓ ${s}`);
+page.on("pageerror", (error) => errors.push(`${page.url()} pageerror: ${error.message}`));
+page.on("console", (message) => {
+  if (message.type() === "error") errors.push(`${page.url()} console: ${message.text()}`);
+});
+const report = (message) => process.stdout.write(`PASS ${message}\n`);
 
 async function pickPersona(name) {
-  await page.locator("header").getByRole("button").last().click();
-  await page.getByRole("menuitem").filter({ hasText: name }).click();
-  await page.waitForTimeout(800);
+  const trigger = page.locator('header [data-slot="dropdown-menu-trigger"]');
+  await trigger.click();
+  const item = page.getByRole("menuitem").filter({ hasText: name });
+  await item.waitFor({ state: "visible" });
+  await item.click();
+  await trigger.getByText(name, { exact: true }).waitFor({ state: "visible" });
 }
 
-await page.goto(BASE + "/post-bid");
-await page.waitForLoadState("networkidle");
-await pickPersona("Bryan Myers");
-await page.goto(BASE + "/post-bid");
-await page.waitForLoadState("networkidle");
+try {
+  await page.goto(`${baseUrl}/post-bid`);
+  await page.waitForLoadState("networkidle");
+  await pickPersona("Bryan Myers");
+  await page.goto(`${baseUrl}/post-bid`);
+  await page.waitForLoadState("networkidle");
 
-// Collect queue rows: href + completion text
-const rows = await page.$$eval("table tbody tr", (trs) =>
-  trs
-    .map((tr) => {
-      const a = tr.querySelector("td a");
-      const prog = tr.querySelector("td:nth-child(6)")?.textContent ?? "";
-      const status = tr.querySelector("td:nth-child(7)")?.textContent ?? "";
-      return a ? { href: a.getAttribute("href"), prog, status } : null;
-    })
-    .filter(Boolean),
-);
-const postBidRows = rows.filter((r) => r.status.includes("Post-Bid"));
-const incomplete = postBidRows.find((r) => {
-  const m = r.prog.match(/(\d+)\/(\d+)/);
-  return m && Number(m[1]) < Number(m[2]);
-});
-const complete = postBidRows.find((r) => {
-  const m = r.prog.match(/(\d+)\/(\d+)/);
-  return m && Number(m[1]) === Number(m[2]);
-});
-console.log(`Queue: ${rows.length} rows, ${postBidRows.length} in post-bid, incomplete=${incomplete?.href}, complete=${complete?.href}`);
+  const rows = await page.$$eval("table tbody tr", (elements) =>
+    elements
+      .map((row) => {
+        const link = row.querySelector("td a");
+        return link
+          ? {
+              href: link.getAttribute("href"),
+              progress: row.querySelector("td:nth-child(6)")?.textContent ?? "",
+              status: row.querySelector("td:nth-child(7)")?.textContent ?? "",
+            }
+          : null;
+      })
+      .filter(Boolean),
+  );
+  const postBidRows = rows.filter((row) => row.status.includes("Post-Bid"));
+  const incomplete = postBidRows.find((row) => {
+    const progress = row.progress.match(/(\d+)\/(\d+)/);
+    return progress && Number(progress[1]) < Number(progress[2]);
+  });
+  const complete = postBidRows.find((row) => {
+    const progress = row.progress.match(/(\d+)\/(\d+)/);
+    return progress && Number(progress[1]) === Number(progress[2]);
+  });
+  assert.ok(incomplete?.href, "Seeded post-bid queue must include an incomplete round");
+  assert.ok(complete?.href, "Seeded post-bid queue must include a complete round");
 
-// 1. Approving an incomplete record must be blocked
-if (incomplete) {
-  await page.goto(BASE + incomplete.href);
+  await page.goto(`${baseUrl}${incomplete.href}`);
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Approve/ }).click();
-  await page.waitForTimeout(1500);
-  const toast = await page.locator("[data-sonner-toast]").textContent();
-  if (toast?.includes("Cannot lock")) log(`Incomplete record BLOCKED with: "${toast.slice(0, 110)}…"`);
-  else throw new Error(`Expected block toast, got: ${toast}`);
-  await page.screenshot({ path: ".smoke-shots/20-approve-blocked.png" });
-}
+  const blockedToast = page.locator("[data-sonner-toast]").last();
+  await blockedToast.waitFor({ state: "visible" });
+  assert.match((await blockedToast.textContent()) ?? "", /Cannot lock/);
+  report("incomplete approval is blocked");
 
-// 2. Approving a complete record must lock it
-if (complete) {
-  await page.goto(BASE + complete.href);
+  await page.goto(`${baseUrl}${complete.href}`);
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Approve/ }).click();
-  await page.waitForTimeout(1500);
-  const locked = await page.getByText("RPD Approved / Locked").first().isVisible();
-  log(`Complete record locked: ${locked}`);
-  await page.screenshot({ path: ".smoke-shots/21-approved-locked.png" });
+  await page.getByText(/RPD \/ SPD Approved \/ Locked/).first().waitFor({ state: "visible" });
+  report("complete approval locks the round");
 
-  // 3. Post-lock correction as RPD → audit entry
-  const evField = page
+  const estimateValue = page
     .locator("div.space-y-1", { has: page.getByText("Estimate Value $") })
     .locator("input")
     .first();
-  const current = await evField.inputValue();
-  await evField.fill(String(Number(current || "1000000") + 5000));
+  const current = await estimateValue.inputValue();
+  await estimateValue.fill(String(Number(current || "1000000") + 5000));
   await page.getByRole("button", { name: /Save Correction/ }).click();
-  await page.waitForTimeout(1500);
-  const toast2 = await page.locator("[data-sonner-toast]").last().textContent();
-  log(`Post-lock save toast: "${toast2}"`);
-
-  // Check audit tab
+  await page.locator("[data-sonner-toast]").last().waitFor({ state: "visible" });
   await page.getByRole("tab", { name: /History/ }).click();
-  await page.waitForTimeout(500);
-  const auditVisible = await page.getByText("Post-lock audit log").isVisible().catch(() => false);
-  log(`Audit log visible on round: ${auditVisible}`);
-  await page.screenshot({ path: ".smoke-shots/22-audit-trail.png" });
-}
+  await page.getByText("Post-lock audit log").waitFor({ state: "visible" });
+  report("post-lock correction creates visible audit history");
 
-// 4. Estimate Lead cannot edit a locked round
-if (complete) {
   await pickPersona("Marcus Webb");
-  await page.goto(BASE + complete.href);
+  await page.goto(`${baseUrl}${complete.href}`);
   await page.waitForLoadState("networkidle");
-  const saveBtn = await page.getByRole("button", { name: /Save/ }).count();
-  log(`Estimate Lead sees no save button on locked round: ${saveBtn === 0}`);
-}
+  assert.equal(await page.getByRole("button", { name: /Save/ }).count(), 0);
+  report("estimate lead cannot edit the locked round");
 
-await browser.close();
-console.log("Approval flow verification complete.");
+  assert.deepEqual(errors, [], `Browser errors detected:\n${errors.join("\n")}`);
+} finally {
+  await browser.close();
+}

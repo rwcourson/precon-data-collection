@@ -1,36 +1,29 @@
 import Link from "next/link";
-import { asc } from "drizzle-orm";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReportBuilder } from "@/components/reports/report-builder";
-import { db } from "@/db";
-import { savedReports, users } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import { getAllCustomColumns, getReferenceValues } from "@/lib/queries";
+import {
+  listCustomColumnsForPrincipal,
+  listDirectoryUsersForPrincipal,
+  listReportsForPrincipal,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { getReferenceValues } from "@/lib/queries";
 import { buildFieldCatalog } from "@/lib/report-engine";
 import { PageHeader } from "@/components/page-header";
 import { getWorkspace } from "@/lib/workspace-server";
 
 export default async function ReportsPage() {
-  const workspace = await getWorkspace();
-  const [user, allUsers, reports, customCols, lists] = await Promise.all([
-    getCurrentUser(),
-    db.select().from(users).orderBy(asc(users.id)),
-    db.select().from(savedReports).orderBy(asc(savedReports.id)),
-    getAllCustomColumns(),
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const user = principal.user;
+  const [allUsers, visible, customCols, lists] = await Promise.all([
+    listDirectoryUsersForPrincipal(principal),
+    listReportsForPrincipal(principal),
+    listCustomColumnsForPrincipal(principal),
     getReferenceValues(),
   ]);
 
   const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
-
-  // Visibility: own reports + reports shared with me or my Region
-  const visible = reports.filter(
-    (r) =>
-      r.ownerId === user.id ||
-      (r.sharedWithUserIds ?? []).includes(user.id) ||
-      (user.region != null && (r.sharedWithRegions ?? []).includes(user.region)) ||
-      user.role === "corporate_admin",
-  );
 
   const catalog = buildFieldCatalog(customCols);
 

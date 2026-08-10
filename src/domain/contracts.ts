@@ -48,11 +48,23 @@ export const distributionListSchema = z.object({
 export type DistributionListInput = z.infer<typeof distributionListSchema>;
 
 export const apiTokenScopeSchema = z.enum([
+  "profile:read",
   "read:pursuits",
   "read:reports",
   "read:dashboards",
+  "read:sheets",
+  "read:notifications",
+  "read:admin",
+  "read:trash",
   "write:pursuits",
+  "write:reports",
+  "write:dashboards",
+  "write:sheets",
+  "write:notifications",
+  "write:admin",
+  "write:trash",
   "write:destructive",
+  "integrate:connect",
   "admin:tokens",
 ]);
 
@@ -61,7 +73,7 @@ export type ApiTokenScope = z.infer<typeof apiTokenScopeSchema>;
 export const createApiTokenSchema = z.object({
   name: z.string().trim().min(1).max(80),
   scopes: z.array(apiTokenScopeSchema).min(1),
-  expiresAt: z.string().datetime().nullable().optional(),
+  expiresAt: z.string().datetime(),
   regionAllowlist: z.array(z.string().trim().min(1)).default([]),
 });
 

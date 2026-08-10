@@ -16,6 +16,7 @@ import {
   statusTransitions,
   users,
 } from "./schema";
+import { assertDemoSeedAllowed } from "@/lib/runtime-config";
 import { REFERENCE_LISTS } from "../lib/reference-data";
 import type { RoundStatus } from "./schema";
 
@@ -95,6 +96,7 @@ const PHASE_SEQUENCES: string[][] = [
 ];
 
 export async function seedDemoData() {
+  assertDemoSeedAllowed();
   console.log("Clearing existing data…");
   await db.delete(customColumnValues);
   await db.delete(customColumns);

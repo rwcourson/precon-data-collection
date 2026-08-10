@@ -34,80 +34,20 @@ import {
   reviewFieldPromotion,
 } from "@/actions/governance";
 import { saveNotificationSettings } from "@/actions/notifications-settings";
-import { db } from "@/db";
-import {
-  auditLog,
-  customColumns,
-  salesforceMatchCandidates,
-  referenceListValues,
-} from "@/db/schema";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import { isMobileAdminRole, readMobileAdminSection } from "@/lib/mobile-admin";
 import { canManageReferenceLists } from "@/lib/permissions";
-import { desc } from "drizzle-orm";
-
-/** Roles allowed to run admin mutations from the mobile API. */
-export const MOBILE_ADMIN_ROLES = new Set([
-  "corporate_admin",
-  "rpd",
-  "admin_jsa",
-]);
-
-export function isMobileAdminRole(role: string): boolean {
-  return MOBILE_ADMIN_ROLES.has(role);
-}
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async (principal) => {
+  return withMobileAuth(req, { scopes: "read:admin" }, async (principal) => {
     const section = new URL(req.url).searchParams.get("section") ?? "index";
-    const user = principal.user;
-
-    if (section === "index") {
-      return jsonOk({
-        sections: [
-          { key: "columns", label: "Data Columns" },
-          { key: "lists", label: "Reference Lists" },
-          { key: "audit", label: "Audit Log" },
-          { key: "integrations", label: "Integrations" },
-          { key: "salesforce", label: "Salesforce Inbox" },
-          { key: "distribution", label: "Distribution" },
-          { key: "destini", label: "Destini import" },
-          { key: "trash", label: "Trash" },
-          { key: "access", label: "Access & tokens" },
-          { key: "notifications", label: "Notifications" },
-          { key: "quality", label: "Data quality" },
-          { key: "promotions", label: "Field promotions" },
-        ],
-        role: user.role,
-      });
-    }
-
-    if (section === "lists") {
-      const rows = await db.select().from(referenceListValues);
-      return jsonOk({ data: rows });
-    }
-    if (section === "columns") {
-      const rows = await db.select().from(customColumns);
-      return jsonOk({ data: rows });
-    }
-    if (section === "audit") {
-      const rows = await db
-        .select()
-        .from(auditLog)
-        .orderBy(desc(auditLog.createdAt))
-        .limit(100);
-      return jsonOk({ data: rows });
-    }
-    if (section === "salesforce") {
-      const rows = await db.select().from(salesforceMatchCandidates).limit(100);
-      return jsonOk({ data: rows ?? [] });
-    }
-
-    return jsonOk({ section, data: [] });
+    const result = await readMobileAdminSection(principal.authorization, section);
+    return result.ok ? jsonOk(result.payload) : jsonError("Not found", result.status);
   });
 }
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async (principal) => {
+  return withMobileAuth(req, { scopes: "write:admin" }, async (principal) => {
     let body: Record<string, unknown>;
     try {
       body = await req.json();

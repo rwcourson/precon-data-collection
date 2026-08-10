@@ -1,12 +1,10 @@
 import { buildForecastSeries, resolveForecastTimingDate } from "@/lib/forecast";
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
-    const workspace = await getWorkspace();
-    const rows = await getRoundsWithJobs(workspace);
+  return withMobileAuth(req, { scopes: "read:dashboards" }, async (principal) => {
+    const rows = await listRoundsWithJobsForPrincipal(principal.authorization);
     const inputs = rows.map((r) => ({
       id: r.round.id,
       jobId: r.job.id,

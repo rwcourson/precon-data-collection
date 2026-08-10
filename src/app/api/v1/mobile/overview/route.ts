@@ -1,6 +1,5 @@
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { STATUS_ORDER } from "@/lib/permissions";
 import { fmtDollars } from "@/lib/format";
 import type { RoundStatus } from "@/db/schema";
@@ -11,9 +10,8 @@ const BID_YEAR = 2026;
  * Mobile home KPIs — same semantics as web `src/app/page.tsx`.
  */
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
-    const workspace = await getWorkspace();
-    const regionRows = await getRoundsWithJobs(workspace);
+  return withMobileAuth(req, { scopes: "read:pursuits" }, async (principal) => {
+    const regionRows = await listRoundsWithJobsForPrincipal(principal.authorization);
 
     const byStatus: Record<string, number> = {};
     for (const s of STATUS_ORDER) byStatus[s] = 0;
@@ -35,8 +33,8 @@ export async function GET(req: Request) {
 
     return jsonOk({
       workspace: {
-        region: workspace.region,
-        label: workspace.label,
+        region: principal.authorization.workspace.region,
+        label: principal.authorization.workspace.region ?? "Corporate",
       },
       bidYear: BID_YEAR,
       kpis: {

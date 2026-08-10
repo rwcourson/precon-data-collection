@@ -6,7 +6,8 @@ import { db } from "@/db";
 import { apiTokens, auditLog } from "@/db/schema";
 import { createApiTokenSchema } from "@/domain/contracts";
 import { getCurrentUser } from "@/lib/current-user";
-import { generateApiTokenSecret } from "@/lib/api-tokens";
+import { generateApiTokenSecret, validateTokenExpiry } from "@/lib/api-tokens";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 export async function createApiToken(raw: unknown) {
   const user = await getCurrentUser();
@@ -14,6 +15,9 @@ export async function createApiToken(raw: unknown) {
     throw new Error("Permission denied: only Corporate Admin can mint API tokens.");
   }
   const input = createApiTokenSchema.parse(raw);
+  const expiresAt = new Date(input.expiresAt);
+  const expiry = validateTokenExpiry(expiresAt, getRuntimeConfig().apiTokenMaxTtlDays);
+  if (!expiry.ok) throw new Error(expiry.reason);
   const { plaintext, prefix, hash } = generateApiTokenSecret();
   const [row] = await db
     .insert(apiTokens)
@@ -24,7 +28,7 @@ export async function createApiToken(raw: unknown) {
       scopes: input.scopes,
       regionAllowlist: input.regionAllowlist,
       createdById: user.id,
-      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+      expiresAt,
     })
     .returning();
 

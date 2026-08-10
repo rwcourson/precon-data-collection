@@ -5,12 +5,14 @@ import { ExportDialog } from "@/components/bid-schedule/export-dialog";
 import { BidScheduleSheet } from "@/components/bid-schedule/sheet-table";
 import { PageHeader } from "@/components/page-header";
 import { UrlSelect } from "@/components/url-select";
-import { getCurrentUser } from "@/lib/current-user";
 import {
-  getAllCustomColumns,
   getReferenceValues,
-  getRoundsWithJobs,
 } from "@/lib/queries";
+import {
+  listCustomColumnsForPrincipal,
+  listRoundsWithJobsForPrincipal,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { allowedTransitions, canEditBidSchedule } from "@/lib/permissions";
 import {
   BID_SCHEDULE_GROUP_OPTIONS,
@@ -36,13 +38,13 @@ export default async function BidSchedulePage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const workspace = await getWorkspace();
-  const [user, rows, lists, templates, customCols] = await Promise.all([
-    getCurrentUser(),
-    getRoundsWithJobs(workspace),
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const user = principal.user;
+  const [rows, lists, templates, customCols] = await Promise.all([
+    listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
     db.select().from(reportTemplates),
-    getAllCustomColumns(),
+    listCustomColumnsForPrincipal(principal),
   ]);
 
   const section = SECTIONS.find((s) => s.key === (params.section ?? "all")) ?? SECTIONS[0];

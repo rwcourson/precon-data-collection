@@ -16,12 +16,13 @@ import {
   DEFAULT_FORECAST_ASSUMPTIONS,
   resolveForecastTimingDate,
 } from "@/lib/forecast";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getWorkspace } from "@/lib/workspace-server";
 
 export default async function ForecastDashboardPage() {
-  const workspace = await getWorkspace();
-  const rounds = await getRoundsWithJobs(workspace);
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const rounds = await listRoundsWithJobsForPrincipal(principal);
 
   const series = buildForecastSeries(
     rounds.map((r) => ({

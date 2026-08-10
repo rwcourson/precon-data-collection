@@ -6,7 +6,7 @@ import {
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:dashboards" }, async () => {
     let body: { action?: string; prompt?: string; plan?: unknown };
     try {
       body = await req.json();

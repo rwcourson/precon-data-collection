@@ -170,8 +170,11 @@ type Filters = Partial<Record<ColKey, { text?: string; values?: string[] }>>;
 
 const WIDTH_STORAGE = "precon-bid-schedule-col-widths";
 
-const defaultColWidths = () =>
-  Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<string, number>;
+const DEFAULT_COL_WIDTHS = Object.freeze(
+  Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<string, number>,
+);
+
+const defaultColWidths = () => DEFAULT_COL_WIDTHS;
 
 const widthListeners = new Set<() => void>();
 let widthCache: Record<string, number> | null = null;

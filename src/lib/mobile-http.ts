@@ -5,6 +5,9 @@ import {
   type MobilePrincipal,
 } from "@/lib/mobile-auth";
 import { runWithMobileContext } from "@/lib/mobile-context";
+import { createPrincipal } from "@/lib/authorization/principal";
+import { requireScopes } from "@/lib/api-auth";
+import type { ApiTokenScope } from "@/domain/contracts";
 
 export const WORKSPACE_HEADER = "x-workspace-region";
 
@@ -58,19 +61,32 @@ export function mapError(err: unknown): NextResponse {
  */
 export async function withMobileAuth(
   req: Request,
+  requirements: { scopes: ApiTokenScope | readonly ApiTokenScope[] },
   handler: (principal: MobilePrincipal, req: Request) => Promise<NextResponse>,
 ): Promise<NextResponse> {
   const resolved = await resolveMobilePrincipal(req.headers.get("authorization"));
   if (!resolved.ok) {
     return jsonError(resolved.error, resolved.status);
   }
+  const scope = requireScopes(resolved.principal.token, requirements.scopes);
+  if (!scope.ok) return jsonError(scope.error, scope.status);
   const workspaceCookie =
     req.headers.get(WORKSPACE_HEADER)?.trim() || undefined;
+  const authorization = createPrincipal({
+    user: resolved.principal.user,
+    authSource: resolved.principal.source,
+    workspaceRegion:
+      workspaceCookie === "corporate"
+        ? null
+        : (workspaceCookie ?? resolved.principal.user.region),
+    token: resolved.principal.token,
+  });
+  const principal = { ...resolved.principal, authorization };
 
   try {
     return await runWithMobileContext(
-      { user: resolved.principal.user, workspaceCookie },
-      () => handler(resolved.principal, req),
+      { user: resolved.principal.user, workspaceCookie, authorization },
+      () => handler(principal, req),
     );
   } catch (err) {
     return mapError(err);

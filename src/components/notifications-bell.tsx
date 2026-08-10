@@ -10,7 +10,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { markAllNotificationsRead } from "@/actions/user";
-import { fmtDateTime } from "@/lib/format";
 
 type Item = {
   id: number;
@@ -18,7 +17,7 @@ type Item = {
   body: string | null;
   roundId: number | null;
   readAt: Date | null;
-  createdAt: Date;
+  createdAtLabel: string;
 };
 
 export function NotificationsBell({ items }: { items: Item[] }) {
@@ -81,7 +80,7 @@ export function NotificationsBell({ items }: { items: Item[] }) {
                 <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
               )}
               <p className="mt-1 text-2xs text-muted-foreground">
-                {fmtDateTime(n.createdAt)}
+                {n.createdAtLabel}
               </p>
             </Link>
           ))}

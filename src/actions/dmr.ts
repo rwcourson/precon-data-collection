@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { dmrImports, dmrLines } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
+import {
+  listRoundsWithJobsForPrincipal,
+  loadAdminSectionForPrincipal,
+  principalRegionPredicate,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { reconcileDmr } from "@/lib/dmr-reconcile";
 
 export async function importDmrUpload(input: {
@@ -44,10 +48,20 @@ export async function importDmrUpload(input: {
 }
 
 export async function getDmrReconciliation(importId: number) {
-  await getCurrentUser();
-  const workspace = await getWorkspace();
-  const lines = await db.select().from(dmrLines).where(eq(dmrLines.importId, importId));
-  const rounds = await getRoundsWithJobs(workspace);
+  const principal = await getWebPrincipal();
+  if (!(await loadAdminSectionForPrincipal(principal, "integrations"))) {
+    throw new Error("Not found");
+  }
+  const lines = await db
+    .select()
+    .from(dmrLines)
+    .where(
+      and(
+        eq(dmrLines.importId, importId),
+        principalRegionPredicate(dmrLines.region, principal, true),
+      ),
+    );
+  const rounds = await listRoundsWithJobsForPrincipal(principal);
   return reconcileDmr(
     lines.map((l) => ({
       jobNumber: l.jobNumber,

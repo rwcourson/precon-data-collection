@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { authMode } from "@/lib/auth";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { DEMO_USER_COOKIE, getCurrentUser } from "@/lib/current-user";
 import {
   canViewCorporate,
@@ -15,7 +16,7 @@ import {
 import { and, eq, isNull } from "drizzle-orm";
 
 export async function switchUser(userId: number) {
-  if (authMode() === "sso") {
+  if (getRuntimeConfig().appEnv !== "demo" || authMode() !== "demo") {
     throw new Error("Personas are a demo feature — identity comes from SSO here.");
   }
   const store = await cookies();

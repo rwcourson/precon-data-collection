@@ -30,11 +30,23 @@ import { apiTokenScopeSchema, type ApiTokenScope } from "@/domain/contracts";
 const ALL_SCOPES = apiTokenScopeSchema.options;
 
 const SCOPE_LABELS: Record<ApiTokenScope, string> = {
+  "profile:read": "Read profile",
   "read:pursuits": "Read pursuits",
   "read:reports": "Read reports",
   "read:dashboards": "Read dashboards",
+  "read:sheets": "Read sheets",
+  "read:notifications": "Read notifications",
+  "read:admin": "Read admin",
+  "read:trash": "Read trash",
   "write:pursuits": "Write pursuits",
+  "write:reports": "Write reports",
+  "write:dashboards": "Write dashboards",
+  "write:sheets": "Write sheets",
+  "write:notifications": "Write notifications",
+  "write:admin": "Write admin",
+  "write:trash": "Write trash",
   "write:destructive": "Destructive writes",
+  "integrate:connect": "Use Connect integration",
   "admin:tokens": "Manage tokens",
 };
 
@@ -51,6 +63,9 @@ export type ApiTokenRow = {
 export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<ApiTokenScope[]>(["read:pursuits"]);
+  const [expiresOn, setExpiresOn] = useState(() =>
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+  );
   const [plaintext, setPlaintext] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -70,7 +85,11 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
     }
     startTransition(async () => {
       try {
-        const res = await createApiToken({ name: name.trim(), scopes });
+        const res = await createApiToken({
+          name: name.trim(),
+          scopes,
+          expiresAt: new Date(`${expiresOn}T23:59:59.000Z`).toISOString(),
+        });
         setPlaintext(res.token);
         setName("");
         toast.success("Token created — copy it now; it won't be shown again");
@@ -145,6 +164,15 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
                 </label>
               ))}
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Expires on</Label>
+            <Input
+              type="date"
+              value={expiresOn}
+              onChange={(event) => setExpiresOn(event.target.value)}
+              required
+            />
           </div>
           <Button
             onClick={create}

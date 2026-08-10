@@ -47,6 +47,7 @@ describe("Zod contracts", () => {
       createApiTokenSchema.parse({
         name: "Magnus read",
         scopes: ["read:pursuits"],
+        expiresAt: "2026-09-01T00:00:00.000Z",
       }).scopes,
     ).toEqual(["read:pursuits"]);
   });

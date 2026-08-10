@@ -22,6 +22,9 @@ import { getDmrReconciliation } from "@/actions/dmr";
 import { db } from "@/db";
 import { dmrImports } from "@/db/schema";
 import { fmtDateTime, fmtDollars } from "@/lib/format";
+import { notFound } from "next/navigation";
+import { loadAdminSectionForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export default async function ReconciliationPage({
   searchParams,
@@ -29,6 +32,8 @@ export default async function ReconciliationPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
+  const principal = await getWebPrincipal();
+  if (!(await loadAdminSectionForPrincipal(principal, "integrations"))) notFound();
   const importId = params.importId ? Number(params.importId) : null;
 
   const imports = await db.select().from(dmrImports).orderBy(desc(dmrImports.createdAt));

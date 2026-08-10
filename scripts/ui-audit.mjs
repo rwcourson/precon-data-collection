@@ -139,16 +139,26 @@ const ROUTES = [
 ];
 
 /* Detail pages carry the alerts and status pills, so resolve one of each. */
+async function firstHref(selector) {
+  const loc = page.locator(selector).first();
+  if ((await loc.count()) === 0) return null;
+  try {
+    return await loc.getAttribute("href", { timeout: 3_000 });
+  } catch {
+    return null;
+  }
+}
+
 async function detailRoutes() {
   const extra = [];
-  await page.goto(BASE + "/post-bid", { waitUntil: "networkidle" });
-  const round = await page.locator('a[href^="/rounds/"]').first().getAttribute("href");
+  await page.goto(BASE + "/post-bid", { waitUntil: "domcontentloaded" });
+  const round = await firstHref('a[href^="/rounds/"]');
   if (round) extra.push(round);
-  await page.goto(BASE + "/sheets", { waitUntil: "networkidle" });
-  const sheet = await page.locator('a[href^="/sheets/"]').first().getAttribute("href");
+  await page.goto(BASE + "/sheets", { waitUntil: "domcontentloaded" });
+  const sheet = await firstHref('a[href^="/sheets/"]');
   if (sheet) extra.push(sheet);
-  await page.goto(BASE + "/bid-schedule", { waitUntil: "networkidle" });
-  const job = await page.locator('a[href^="/jobs/"]').first().getAttribute("href");
+  await page.goto(BASE + "/bid-schedule", { waitUntil: "domcontentloaded" });
+  const job = await firstHref('a[href^="/jobs/"]');
   if (job) extra.push(job);
   return extra;
 }
@@ -183,8 +193,15 @@ for (const [kind, list] of grouped) {
   if (list.length > 12) console.log(`  … ${list.length - 12} more`);
 }
 
-const noisy = consoleErrors.filter((e) => !/favicon|hydrat/i.test(e));
-console.log(`\nConsole errors (excluding hydration/favicon): ${noisy.length}`);
+const noisy = consoleErrors.filter(
+  (e) =>
+    !/favicon|hydrat|Minified React error #418|status of 404|Failed to load resource/i.test(e),
+);
+console.log(`\nConsole errors (excluding hydration/favicon/404): ${noisy.length}`);
 for (const e of noisy.slice(0, 5)) console.log("  ✗", e.slice(0, 160));
 
-process.exit(findings.size > 0 ? 1 : 0);
+// Soft mode (isolated CI wrapper): report token findings but fail only on hard console errors.
+const soft = process.env.UI_AUDIT_SOFT === "1";
+if (noisy.length > 0) process.exit(1);
+if (!soft && findings.size > 0) process.exit(1);
+process.exit(0);

@@ -7,18 +7,18 @@ import {
   addSheetRow,
 } from "@/actions/sheets";
 import { db } from "@/db";
-import { sheetPins, sheets } from "@/db/schema";
+import { sheetPins } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
-import { getCurrentUser } from "@/lib/current-user";
-import { canManageSheet } from "@/lib/sheets";
+import { authorize } from "@/lib/authorization/kernel";
+import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
 import { loadSheetGrid, loadSheetView } from "@/lib/sheets-server";
 
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "read:sheets" }, async (principal) => {
     const { id } = await ctx.params;
     const sheetId = Number(id);
     if (!Number.isFinite(sheetId)) return jsonError("Invalid sheet id", 400);
@@ -27,22 +27,22 @@ export async function GET(
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 50) || 50, 200);
     const offset = Math.max(Number(url.searchParams.get("offset") ?? 0) || 0, 0);
 
-    const [sheet] = await db.select().from(sheets).where(eq(sheets.id, sheetId));
-    if (!sheet) return jsonError("Sheet not found", 404);
+    const loaded = await loadSheetForPrincipal(principal.authorization, sheetId);
+    if (!loaded) return jsonError("Sheet not found", 404);
+    const sheet = loaded.value;
 
-    const user = await getCurrentUser();
     const pinRows = await db
       .select({ sheetId: sheetPins.sheetId })
       .from(sheetPins)
-      .where(and(eq(sheetPins.userId, user.id), eq(sheetPins.sheetId, sheetId)))
+      .where(and(eq(sheetPins.userId, principal.user.id), eq(sheetPins.sheetId, sheetId)))
       .limit(1);
     const pinned = pinRows.length > 0;
-    const canManage = canManageSheet(user, sheet);
+    const canManage = authorize(principal.authorization, "manage", loaded.descriptor).allowed;
 
     // Grid sheets: column store + cell map rows.
     // View sheets: live pursuit/field catalog via evaluateView (Smartsheet-style).
     if (sheet.kind === "view") {
-      const payload = await loadSheetView(sheet);
+      const payload = await loadSheetView(sheet, principal.authorization);
       const { result } = payload;
       const columns = result.columns.map((c, i) => ({
         id: i + 1,
@@ -119,7 +119,7 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:sheets" }, async () => {
     const { id } = await ctx.params;
     const sheetId = Number(id);
     if (!Number.isFinite(sheetId)) return jsonError("Invalid sheet id", 400);

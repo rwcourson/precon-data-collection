@@ -20,10 +20,8 @@ import { GET as meGet } from "@/app/api/v1/mobile/me/route";
 import { GET as overviewGet } from "@/app/api/v1/mobile/overview/route";
 import { POST as pursuitsPost } from "@/app/api/v1/mobile/pursuits/route";
 import { POST as approveLockPost } from "@/app/api/v1/mobile/rounds/[id]/approve-lock/route";
-import {
-  POST as adminPost,
-  isMobileAdminRole,
-} from "@/app/api/v1/mobile/admin/route";
+import { POST as adminPost } from "@/app/api/v1/mobile/admin/route";
+import { isMobileAdminRole } from "@/lib/mobile-admin";
 import { POST as sheetsPost } from "@/app/api/v1/mobile/sheets/route";
 import {
   PATCH as sheetPatch,

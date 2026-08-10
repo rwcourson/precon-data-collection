@@ -1,11 +1,12 @@
-import { setOutcome } from "@/actions/post-bid";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import type { OutcomeValue } from "@/lib/outcome";
+import { pursuitService } from "@/services/pursuit-service";
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:pursuits" }, async (principal) => {
     const { id } = await ctx.params;
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
@@ -17,7 +18,11 @@ export async function POST(
     }
     if (!body.outcome) return jsonError("outcome is required", 400);
     try {
-      await setOutcome(roundId, body.outcome as Parameters<typeof setOutcome>[1]);
+      await pursuitService.setOutcome(
+        principal.authorization,
+        roundId,
+        body.outcome as OutcomeValue,
+      );
       return jsonOk({ ok: true, outcome: body.outcome });
     } catch (err) {
       return mapError(err);

@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { dashboardWidgets, dashboards } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
+import { loadDashboardForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   assertWidgetQueryBounds,
   canPublishDashboard,
@@ -47,12 +49,11 @@ export async function createDashboard(raw: unknown) {
 }
 
 export async function cloneDashboard(id: number) {
-  const user = await getCurrentUser();
-  const [src] = await db
-    .select()
-    .from(dashboards)
-    .where(and(eq(dashboards.id, id), isNull(dashboards.deletedAt)));
-  if (!src) throw new Error("Dashboard not found");
+  const principal = await getWebPrincipal();
+  const user = principal.user;
+  const loaded = await loadDashboardForPrincipal(principal, id);
+  if (!loaded) throw new Error("Dashboard not found");
+  const src = loaded.value;
   const widgets = await db
     .select()
     .from(dashboardWidgets)

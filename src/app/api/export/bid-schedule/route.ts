@@ -11,6 +11,7 @@ import { STATUS_LABELS } from "@/lib/permissions";
 import { pdfResponse } from "@/lib/pdf";
 import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,11 @@ export async function GET(req: NextRequest) {
     return new Response("No columns selected", { status: 400 });
   }
 
-  const workspace = await getWorkspace();
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
   const scoped = resolveRegionParam(workspace, params.get("region"));
   if ("error" in scoped) return new Response(scoped.error, { status: 403 });
 
-  const { rows, catalog } = await getFlatDataset();
+  const { rows, catalog } = await getFlatDataset(principal);
 
   // Apply the same filters as the Bid Schedule view
   const section = params.get("section") ?? "all";

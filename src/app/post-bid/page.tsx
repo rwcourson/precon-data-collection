@@ -11,7 +11,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { PageHeader } from "@/components/page-header";
-import { getMultiValuesForRounds, getRoundsWithJobs } from "@/lib/queries";
+import { getMultiValuesForRounds } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getWorkspace } from "@/lib/workspace-server";
 import { requiredCompletion } from "@/lib/validation";
 import { fmtDate, fmtDollars, fmtDateTime } from "@/lib/format";
@@ -22,8 +24,8 @@ export default async function PostBidPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const workspace = await getWorkspace();
-  const rows = await getRoundsWithJobs(workspace);
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const rows = await listRoundsWithJobsForPrincipal(principal);
 
   const region = workspace.region ?? params.region ?? "all";
   const inScope = rows.filter((r) => region === "all" || r.round.region === region);

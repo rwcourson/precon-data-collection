@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import type { User } from "@/db/schema";
+import type { Principal } from "@/lib/authorization/types";
 
 /**
  * Request-scoped identity for mobile REST handlers. Lets existing server
@@ -10,6 +11,7 @@ export type MobileRequestContext = {
   user: User;
   /** Cookie-equivalent workspace region; "corporate" or a region name. */
   workspaceCookie?: string;
+  authorization?: Principal;
 };
 
 export const mobileContext = new AsyncLocalStorage<MobileRequestContext>();

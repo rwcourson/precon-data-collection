@@ -1,8 +1,12 @@
 import { getDmrReconciliation, importDmrUpload } from "@/actions/dmr";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import { loadAdminSectionForPrincipal } from "@/lib/authorization/loaders";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: ["read:dashboards", "read:admin"] }, async (principal) => {
+    if (!(await loadAdminSectionForPrincipal(principal.authorization, "integrations"))) {
+      return jsonError("Not found", 404);
+    }
     const id = Number(new URL(req.url).searchParams.get("importId") ?? 0);
     if (!id) {
       return jsonOk({
@@ -21,7 +25,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:dashboards" }, async () => {
     let body: {
       name?: string;
       periodKey?: string;

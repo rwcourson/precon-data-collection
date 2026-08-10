@@ -1,9 +1,9 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { apiTokens, type ApiToken } from "@/db/schema";
 import type { ApiTokenScope } from "@/domain/contracts";
-import { hashToken, tokenHasScope, tokenIsExpired } from "@/lib/api-tokens";
+import { hashToken, tokenHasScope } from "@/lib/api-tokens";
 
 export type AuthedToken = ApiToken;
 
@@ -17,23 +17,25 @@ export async function authenticateBearer(
   if (!plaintext) return { ok: false, status: 401, error: "Missing bearer token" };
 
   const hash = hashToken(plaintext);
-  const [token] = await db.select().from(apiTokens).where(eq(apiTokens.tokenHash, hash));
-  if (!token || token.revokedAt) {
-    return { ok: false, status: 401, error: "Invalid or revoked token" };
-  }
-  if (tokenIsExpired(token.expiresAt)) {
-    return { ok: false, status: 401, error: "Token expired" };
-  }
-  await db
+  const now = new Date();
+  const [token] = await db
     .update(apiTokens)
-    .set({ lastUsedAt: new Date() })
-    .where(eq(apiTokens.id, token.id));
+    .set({ lastUsedAt: now })
+    .where(
+      and(
+        eq(apiTokens.tokenHash, hash),
+        isNull(apiTokens.revokedAt),
+        or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, now)),
+      ),
+    )
+    .returning();
+  if (!token) return { ok: false, status: 401, error: "Invalid, expired, or revoked token" };
   return { ok: true, token };
 }
 
 export function requireScopes(
   token: AuthedToken,
-  scopes: ApiTokenScope | ApiTokenScope[],
+  scopes: ApiTokenScope | readonly ApiTokenScope[],
 ): { ok: true } | { ok: false; status: 403; error: string } {
   if (!tokenHasScope(token.scopes, scopes)) {
     return { ok: false, status: 403, error: "Insufficient token scope" };

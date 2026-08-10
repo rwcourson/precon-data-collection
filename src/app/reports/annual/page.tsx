@@ -21,7 +21,9 @@ import { UrlSelect } from "@/components/url-select";
 import { toOptions } from "@/lib/select-options";
 import { buildAnnualReport } from "@/lib/annual-report";
 import { fmtDollars, fmtPercent } from "@/lib/format";
-import { getReferenceValues, getRoundsWithJobs } from "@/lib/queries";
+import { getReferenceValues } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getWorkspace } from "@/lib/workspace-server";
 
 export default async function AnnualReportPage({
@@ -30,9 +32,9 @@ export default async function AnnualReportPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const workspace = await getWorkspace();
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
   const [rows, lists] = await Promise.all([
-    getRoundsWithJobs(workspace),
+    listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
   ]);
 

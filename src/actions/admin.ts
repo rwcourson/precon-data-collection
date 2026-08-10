@@ -8,25 +8,48 @@ import {
   customColumns,
   referenceListValues,
 } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import {
-  canManageCompanyColumns,
-  canManageReferenceLists,
-  canManageRegionColumns,
-} from "@/lib/permissions";
+import { DomainError } from "@/domain/errors";
+import { authorize } from "@/lib/authorization/kernel";
+import { principalAllowsRegion } from "@/lib/authorization/principal";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import type { Principal } from "@/lib/authorization/types";
+
+function requireAdminManage(principal: Principal, section: string, region: string | null = null) {
+  const decision = authorize(principal, "manage", {
+    type: "admin",
+    id: section,
+    region,
+    ownerId: null,
+    published: true,
+    deleted: false,
+    adminSection: section,
+  });
+  if (!decision.allowed) {
+    // Corporate lists/columns require corporate manage; region columns use role+region checks below.
+    if (section === "columns" && region != null) {
+      if (!["rpd", "corporate_admin"].includes(principal.user.role)) {
+        throw DomainError.forbidden("Not permitted to manage Region columns.");
+      }
+      if (!principalAllowsRegion(principal, region)) {
+        throw DomainError.forbidden("Not permitted to manage columns in that Region.");
+      }
+      return;
+    }
+    throw DomainError.forbidden("Not permitted to manage admin settings.");
+  }
+}
 
 export async function addReferenceValue(listKey: string, value: string) {
-  const user = await getCurrentUser();
-  if (!canManageReferenceLists(user))
-    throw new Error("Only the Corporate Precon Admin manages company-wide reference lists");
-  if (!value.trim()) throw new Error("Value is required");
+  const principal = await getWebPrincipal();
+  requireAdminManage(principal, "lists");
+  if (!value.trim()) throw DomainError.badRequest("Value is required");
 
   const existing = await db
     .select()
     .from(referenceListValues)
     .where(eq(referenceListValues.listKey, listKey));
   if (existing.some((v) => v.value.toLowerCase() === value.trim().toLowerCase()))
-    throw new Error("That value already exists in the list");
+    throw DomainError.badRequest("That value already exists in the list");
 
   await db.insert(referenceListValues).values({
     listKey,
@@ -38,35 +61,32 @@ export async function addReferenceValue(listKey: string, value: string) {
     action: "value_added",
     field: listKey,
     newValue: value.trim(),
-    userId: user.id,
+    userId: principal.user.id,
   });
   revalidatePath("/admin");
 }
 
 export async function setReferenceValueRetired(id: number, retired: boolean) {
-  const user = await getCurrentUser();
-  if (!canManageReferenceLists(user))
-    throw new Error("Only the Corporate Precon Admin manages company-wide reference lists");
+  const principal = await getWebPrincipal();
+  requireAdminManage(principal, "lists");
 
   const [row] = await db
     .select()
     .from(referenceListValues)
     .where(eq(referenceListValues.id, id));
-  if (!row) throw new Error("Value not found");
+  if (!row) throw DomainError.notFound("Value not found");
 
   await db
     .update(referenceListValues)
     .set({ retired })
     .where(eq(referenceListValues.id, id));
-  // Historical records retain the original value (BRD Section 10) — retiring
-  // only removes it from new-entry dropdowns.
   await db.insert(auditLog).values({
     entity: "reference_list",
     action: retired ? "value_retired" : "value_restored",
     field: row.listKey,
     oldValue: row.value,
     newValue: retired ? "retired" : "active",
-    userId: user.id,
+    userId: principal.user.id,
   });
   revalidatePath("/admin");
 }
@@ -81,21 +101,18 @@ export type AddColumnInput = {
 };
 
 export async function addCustomColumn(input: AddColumnInput) {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
+  const user = principal.user;
 
   if (input.scope === "company") {
-    if (!canManageCompanyColumns(user))
-      throw new Error("Only the Corporate Precon Admin can add company-wide columns");
+    requireAdminManage(principal, "lists");
   } else {
-    if (!canManageRegionColumns(user))
-      throw new Error("Only RPDs (own Region) and the Corporate Admin can add Region columns");
-    if (user.role === "rpd" && input.region !== user.region)
-      throw new Error("RPDs can only add columns scoped to their own Region");
-    if (!input.region) throw new Error("Region is required for Region-scoped columns");
+    if (!input.region) throw DomainError.badRequest("Region is required for Region-scoped columns");
+    requireAdminManage(principal, "columns", input.region);
   }
-  if (!input.label.trim()) throw new Error("Column label is required");
+  if (!input.label.trim()) throw DomainError.badRequest("Column label is required");
   if (input.type === "dropdown" && (!input.options || input.options.length === 0))
-    throw new Error("Dropdown columns need at least one option");
+    throw DomainError.badRequest("Dropdown columns need at least one option");
 
   const key = input.label
     .trim()
@@ -130,17 +147,14 @@ export async function addCustomColumn(input: AddColumnInput) {
 }
 
 export async function deleteCustomColumn(id: number) {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
   const [col] = await db.select().from(customColumns).where(eq(customColumns.id, id));
   if (!col) return;
 
   if (col.scope === "company") {
-    if (!canManageCompanyColumns(user))
-      throw new Error("Only the Corporate Precon Admin can delete company-wide columns");
+    requireAdminManage(principal, "lists");
   } else {
-    if (user.role === "rpd" && col.region !== user.region)
-      throw new Error("RPDs can only delete their own Region's columns");
-    if (!canManageRegionColumns(user)) throw new Error("Not permitted");
+    requireAdminManage(principal, "columns", col.region);
   }
 
   await db.delete(customColumns).where(eq(customColumns.id, id));
@@ -150,7 +164,7 @@ export async function deleteCustomColumn(id: number) {
     action: "column_deleted",
     field: col.label,
     oldValue: col.scope === "company" ? "company-wide" : `region:${col.region}`,
-    userId: user.id,
+    userId: principal.user.id,
   });
   revalidatePath("/admin");
   revalidatePath("/reports");

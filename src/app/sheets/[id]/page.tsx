@@ -7,12 +7,13 @@ import { GridSheet } from "@/components/sheets/grid-sheet";
 import { SheetPinButton } from "@/components/sheets/sheet-pin-button";
 import { ViewSheet } from "@/components/sheets/view-sheet";
 import { loadSheetRows } from "@/actions/sheets";
-import { getCurrentUser } from "@/lib/current-user";
 import { getAllCustomColumns } from "@/lib/queries";
 import { buildFieldCatalog } from "@/lib/report-engine";
-import { BLANK_VIEW_CONFIG, canEditRows, canManageSheet } from "@/lib/sheets";
-import { getSheet, loadSheetGrid, visibleInWorkspace } from "@/lib/sheets-server";
-import { getWorkspace } from "@/lib/workspace-server";
+import { BLANK_VIEW_CONFIG } from "@/lib/sheets";
+import { loadSheetGrid } from "@/lib/sheets-server";
+import { authorize } from "@/lib/authorization/kernel";
+import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +26,12 @@ export default async function SheetPage({
   const sheetId = Number(id);
   if (!Number.isInteger(sheetId)) notFound();
 
-  const [sheet, user, workspace] = await Promise.all([
-    getSheet(sheetId),
-    getCurrentUser(),
-    getWorkspace(),
-  ]);
-  if (!sheet || sheet.archivedAt || !visibleInWorkspace(sheet, workspace)) notFound();
+  const principal = await getWebPrincipal();
+  const loaded = await loadSheetForPrincipal(principal, sheetId);
+  if (!loaded || loaded.value.archivedAt) notFound();
+  const sheet = loaded.value;
 
-  const canManage = canManageSheet(user, sheet);
+  const canManage = authorize(principal, "manage", loaded.descriptor).allowed;
   const Icon = sheet.kind === "view" ? Table2 : Grid3x3;
 
   const header = (
@@ -82,7 +81,7 @@ export default async function SheetPage({
           columns={columns}
           rows={rows}
           canManage={canManage}
-          canEdit={canEditRows(user)}
+          canEdit={authorize(principal, "edit", loaded.descriptor).allowed}
         />
       </div>
     );

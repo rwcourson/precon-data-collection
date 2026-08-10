@@ -16,9 +16,24 @@ export function tokenIsExpired(expiresAt: Date | null | undefined, now = new Dat
   return Boolean(expiresAt && expiresAt.getTime() <= now.getTime());
 }
 
+export function validateTokenExpiry(
+  expiresAt: Date,
+  maxTtlDays: number,
+  now = new Date(),
+): { ok: true } | { ok: false; reason: string } {
+  if (!Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= now.getTime()) {
+    return { ok: false, reason: "Token expiry must be in the future." };
+  }
+  const maximum = now.getTime() + maxTtlDays * 24 * 60 * 60 * 1000;
+  if (expiresAt.getTime() > maximum) {
+    return { ok: false, reason: `Token expiry cannot exceed ${maxTtlDays} days.` };
+  }
+  return { ok: true };
+}
+
 export function tokenHasScope(
   scopes: string[] | null | undefined,
-  needed: ApiTokenScope | ApiTokenScope[],
+  needed: ApiTokenScope | readonly ApiTokenScope[],
 ): boolean {
   const have = new Set(scopes ?? []);
   const need = Array.isArray(needed) ? needed : [needed];

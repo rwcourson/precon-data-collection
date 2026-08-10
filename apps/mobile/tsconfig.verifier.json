@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "typecheck-fixtures/intentional-error.ts"
+  ],
+  "exclude": []
+}

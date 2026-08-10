@@ -1,19 +1,33 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, ensureDbReady } from "@/db";
 import { apiTokens, users, type User } from "@/db/schema";
-import { authMode } from "@/lib/auth";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import {
   generateApiTokenSecret,
   tokenIsExpired,
 } from "@/lib/api-tokens";
 import { authenticateBearer, type AuthedToken } from "@/lib/api-auth";
+import { createPrincipal } from "@/lib/authorization/principal";
+import type { Principal } from "@/lib/authorization/types";
 
 const MOBILE_ALL_SCOPES = [
+  "profile:read",
   "read:pursuits",
   "read:reports",
   "read:dashboards",
+  "read:sheets",
+  "read:notifications",
+  "read:admin",
+  "read:trash",
   "write:pursuits",
+  "write:reports",
+  "write:dashboards",
+  "write:sheets",
+  "write:notifications",
+  "write:admin",
+  "write:trash",
   "write:destructive",
+  "integrate:connect",
   "admin:tokens",
 ] as const;
 
@@ -21,10 +35,12 @@ export type MobilePrincipal = {
   user: User;
   token: AuthedToken;
   source: "demo_session" | "api_token";
+  authorization: Principal;
 };
 
 export function isDemoAuthAllowed(): boolean {
-  return authMode() === "demo";
+  const config = getRuntimeConfig();
+  return config.appEnv === "demo" && config.authMode === "demo";
 }
 
 export function publicUser(user: User) {
@@ -85,7 +101,7 @@ export async function issueDemoSession(
     scopes: [...MOBILE_ALL_SCOPES],
     regionAllowlist: [],
     createdById: userId,
-    expiresAt: null,
+    expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
   });
 
   return { token: secret.plaintext, user };
@@ -119,10 +135,23 @@ export async function resolveMobilePrincipal(
   const source = auth.token.name.startsWith("mobile-demo-session:")
     ? ("demo_session" as const)
     : ("api_token" as const);
+  if (source === "demo_session" && !isDemoAuthAllowed()) {
+    return { ok: false, status: 401, error: "Demo session is disabled" };
+  }
 
   return {
     ok: true,
-    principal: { user, token: auth.token, source },
+    principal: {
+      user,
+      token: auth.token,
+      source,
+      authorization: createPrincipal({
+        user,
+        authSource: source,
+        workspaceRegion: user.region,
+        token: auth.token,
+      }),
+    },
   };
 }
 

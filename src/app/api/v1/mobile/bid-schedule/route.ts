@@ -4,16 +4,14 @@ import {
   type LifecycleSectionKey,
 } from "@/lib/bid-schedule";
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "read:pursuits" }, async (principal) => {
     const url = new URL(req.url);
     const section = (url.searchParams.get("section") ?? "all").toLowerCase();
     const groupBy = parseBidScheduleGroupBy(url.searchParams.get("groupBy") ?? "none");
-    const workspace = await getWorkspace();
-    const rows = await getRoundsWithJobs(workspace);
+    const rows = await listRoundsWithJobsForPrincipal(principal.authorization);
 
     const lifecycle = new Set<string>(LIFECYCLE_SECTION_ORDER);
     let filtered = rows;

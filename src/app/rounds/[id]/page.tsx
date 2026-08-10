@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { AlertTriangle, ArrowLeft, History, Lock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -18,14 +18,11 @@ import { EntryForm } from "@/components/rounds/entry-form";
 import { ApproveLockButton } from "@/components/rounds/approve-lock-button";
 import { OutcomeSelect } from "@/components/rounds/outcome-select";
 import { db } from "@/db";
-import { auditLog, statusTransitions, users } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import { auditLog, statusTransitions } from "@/db/schema";
 import {
-  getAllCustomColumns,
   getCustomValuesForRounds,
   getMultiValues,
   getReferenceValues,
-  getRoundWithJob,
 } from "@/lib/queries";
 import {
   allowedTransitions,
@@ -47,6 +44,12 @@ const FIELD_LABELS: Record<string, string> = Object.fromEntries(
 import { METRIC_DEFS, METRIC_GROUPS, formatMetricValue } from "@/lib/metrics";
 import { missingRequiredFields } from "@/lib/validation";
 import { fmtDateTime } from "@/lib/format";
+import { loadRoundForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import {
+  listCustomColumnsForPrincipal,
+  listDirectoryUsersForPrincipal,
+} from "@/lib/authorization/loaders";
 
 export default async function RoundPage({
   params,
@@ -54,17 +57,18 @@ export default async function RoundPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const row = await getRoundWithJob(Number(id));
-  if (!row) notFound();
-  const { round, job, estimateLeadName } = row;
+  const principal = await getWebPrincipal();
+  const loaded = await loadRoundForPrincipal(principal, Number(id));
+  if (!loaded) notFound();
+  const { round, job, estimateLeadName } = loaded.value;
 
   const [user, multi, lists, allUsers, customColsAll, transitions, audits] =
     await Promise.all([
-      getCurrentUser(),
+      Promise.resolve(principal.user),
       getMultiValues(round.id),
       getReferenceValues(),
-      db.select().from(users).orderBy(asc(users.id)),
-      getAllCustomColumns(),
+      listDirectoryUsersForPrincipal(principal),
+      listCustomColumnsForPrincipal(principal),
       db
         .select()
         .from(statusTransitions)
@@ -366,4 +370,3 @@ export default async function RoundPage({
     </div>
   );
 }
-

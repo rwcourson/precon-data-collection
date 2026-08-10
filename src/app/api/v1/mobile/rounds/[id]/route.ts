@@ -14,18 +14,21 @@ import {
   getRoundWithJob,
 } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
+import { authorizationService } from "@/services/authorization-service";
+import { loadRoundForPrincipal } from "@/lib/authorization/loaders";
 
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "read:pursuits" }, async (principal) => {
     const { id } = await ctx.params;
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
 
-    const row = await getRoundWithJob(roundId);
-    if (!row) return jsonError("Round not found", 404);
+    const result = await authorizationService.readRound(principal.authorization, roundId);
+    if (!result.ok) return jsonError(result.error.what, 404, { code: result.error.code });
+    const row = result.value;
 
     const [multi, customMap, lists] = await Promise.all([
       getMultiValues(roundId),
@@ -59,7 +62,7 @@ export async function PUT(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:pursuits" }, async (principal) => {
     const { id } = await ctx.params;
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
@@ -77,6 +80,10 @@ export async function PUT(
     }
 
     try {
+      const editable = await loadRoundForPrincipal(principal.authorization, roundId, {
+        capability: "edit",
+      });
+      if (!editable) throw DomainError.notFound("Round not found");
       if (body.cell) {
         await updateRoundCell(roundId, body.cell.key, body.cell.value);
         return jsonOk({ ok: true, mode: "cell" });
@@ -103,7 +110,7 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:pursuits" }, async () => {
     const { id } = await ctx.params;
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
@@ -112,7 +119,14 @@ export async function POST(
     const action = url.searchParams.get("action");
     if (action === "approve-lock") {
       try {
-        await approveAndLock(roundId);
+        const approval = await approveAndLock(roundId);
+        if (!approval.ok) {
+          return jsonError(approval.error, 400, {
+            code: "BAD_REQUEST",
+            missingFields: approval.missingFields,
+            details: approval.missingFields,
+          });
+        }
         return jsonOk({ ok: true, locked: true });
       } catch (err) {
         if (err instanceof DomainError) {
@@ -134,7 +148,6 @@ export async function POST(
             details: missing,
           });
         }
-        // approveAndLock may throw plain Error with missing fields
         const msg = err instanceof Error ? err.message : "Lock failed";
         const row = await getRoundWithJob(roundId);
         let missing: string[] = [];

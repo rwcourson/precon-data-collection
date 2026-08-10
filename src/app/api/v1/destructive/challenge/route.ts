@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { apiDestructiveChallenges } from "@/db/schema";
 import { authenticateBearer, requireScopes } from "@/lib/api-auth";
-import { generateDestructiveChallenge } from "@/lib/api-tokens";
+import { createDestructiveChallenge } from "@/lib/api-safety";
 
 export async function POST(req: Request) {
   const auth = await authenticateBearer(req.headers.get("authorization"));
@@ -10,18 +8,20 @@ export async function POST(req: Request) {
   const scope = requireScopes(auth.token, "write:destructive");
   if (!scope.ok) return NextResponse.json({ error: scope.error }, { status: scope.status });
 
-  const body = (await req.json().catch(() => ({}))) as { operation?: string };
-  if (!body.operation) {
-    return NextResponse.json({ error: "operation required" }, { status: 400 });
+  const body = (await req.json().catch(() => ({}))) as {
+    operation?: string;
+    target?: string;
+    payload?: unknown;
+  };
+  if (!body.operation || !body.target) {
+    return NextResponse.json({ error: "operation and target are required" }, { status: 400 });
   }
 
-  const challenge = generateDestructiveChallenge();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  await db.insert(apiDestructiveChallenges).values({
-    tokenId: auth.token.id,
-    challenge,
+  const { challenge, expiresAt } = await createDestructiveChallenge({
+    token: auth.token,
     operation: body.operation,
-    expiresAt,
+    target: body.target,
+    payload: body.payload ?? null,
   });
 
   return NextResponse.json({

@@ -17,12 +17,17 @@ import { StatusBadge, OutcomeBadge } from "@/components/status-badge";
 import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
 import { LinkSalesforceCard } from "@/components/jobs/link-salesforce-card";
 import { db } from "@/db";
-import { estimateRounds, jobs } from "@/db/schema";
+import { estimateRounds } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
 import { getReferenceValues } from "@/lib/queries";
 import { getSalesforceCandidates } from "@/actions/pursuits";
 import { canCreatePursuit } from "@/lib/permissions";
 import { fmtDate, fmtDollars } from "@/lib/format";
+import {
+  loadAdminSectionForPrincipal,
+  loadJobForPrincipal,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export default async function JobPage({
   params,
@@ -30,8 +35,13 @@ export default async function JobPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job] = await db.select().from(jobs).where(eq(jobs.id, Number(id)));
-  if (!job) notFound();
+  const principal = await getWebPrincipal();
+  const loaded = await loadJobForPrincipal(principal, Number(id));
+  if (!loaded) notFound();
+  const job = loaded.value;
+  const canReadSalesforce = Boolean(
+    await loadAdminSectionForPrincipal(principal, "salesforce"),
+  );
 
   const [rounds, user, lists, candidates] = await Promise.all([
     db
@@ -41,7 +51,7 @@ export default async function JobPage({
       .orderBy(asc(estimateRounds.roundNumber)),
     getCurrentUser(),
     getReferenceValues(),
-    job.isLinked ? Promise.resolve([]) : getSalesforceCandidates(job.id),
+    job.isLinked || !canReadSalesforce ? Promise.resolve([]) : getSalesforceCandidates(job.id),
   ]);
 
   const totalVolume = rounds.reduce((s, r) => s + (r.estimateValue ?? 0), 0);
@@ -87,7 +97,9 @@ export default async function JobPage({
         )}
       </div>
 
-      {!job.isLinked && <LinkSalesforceCard jobId={job.id} candidates={candidates} />}
+      {canReadSalesforce && !job.isLinked && (
+        <LinkSalesforceCard jobId={job.id} candidates={candidates} />
+      )}
 
       <Card>
         <CardHeader className="pb-2">

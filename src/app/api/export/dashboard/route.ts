@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { rollup } from "@/lib/rollup";
 import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
 import { getWorkspace } from "@/lib/workspace-server";
@@ -15,11 +16,11 @@ export async function GET(req: NextRequest) {
   const dept = params.get("dept");
   const year = params.get("year");
 
-  const workspace = await getWorkspace();
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
   const scoped = resolveRegionParam(workspace, level === "corporate" ? null : region);
   if ("error" in scoped) return new Response(scoped.error, { status: 403 });
 
-  const data = await getRoundsWithJobs(workspace);
+  const data = await listRoundsWithJobsForPrincipal(principal);
   let rounds = data.map((r) => r.round);
   if (scoped.region) rounds = rounds.filter((r) => r.region === scoped.region);
   if (level === "division" && dept && dept !== "all")

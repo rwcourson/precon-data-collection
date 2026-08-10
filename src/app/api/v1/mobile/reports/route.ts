@@ -4,21 +4,14 @@ import {
   saveReport,
   shareReport,
 } from "@/actions/reports";
-import { db } from "@/db";
-import { savedReports, type SavedReportConfig } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import { type SavedReportConfig } from "@/db/schema";
+import { listReportsForPrincipal } from "@/lib/authorization/loaders";
 import { CONSOLIDATED_REGIONAL_PRESET } from "@/lib/report-presets";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
-import { desc, eq } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
-    const user = await getCurrentUser();
-    const mine = await db
-      .select()
-      .from(savedReports)
-      .where(eq(savedReports.ownerId, user.id))
-      .orderBy(desc(savedReports.updatedAt));
+  return withMobileAuth(req, { scopes: "read:reports" }, async (principal) => {
+    const mine = await listReportsForPrincipal(principal.authorization);
     return jsonOk({
       data: mine,
       presets: [CONSOLIDATED_REGIONAL_PRESET],
@@ -27,7 +20,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:reports" }, async () => {
     let body: {
       action?: string;
       name?: string;

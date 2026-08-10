@@ -8,6 +8,7 @@ import {
 } from "@/lib/export-helpers";
 import { formatReportValue, runReportEngine } from "@/lib/report-engine";
 import { pdfResponse } from "@/lib/pdf";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,8 @@ export async function GET(req: NextRequest) {
     return new Response("No fields selected", { status: 400 });
   }
 
-  const { rows, catalog } = await getFlatDataset();
+  const principal = await getWebPrincipal();
+  const { rows, catalog } = await getFlatDataset(principal);
   const result = runReportEngine(rows, config, catalog);
 
   const columns: ExportColumn[] = result.columns.map((c) => {

@@ -2,6 +2,7 @@ import "server-only";
 import { eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { salesforceJobs } from "@/db/schema";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 /**
  * B&G Connect / Salesforce lookup (BRD Section 5). The Databricks probe found no
@@ -23,10 +24,10 @@ export type ConnectJob = {
   createdDate?: string | null;
 };
 
-export type ConnectMode = "mock" | "rest";
+export type ConnectMode = "disabled" | "mock" | "rest";
 
 export function connectMode(): ConnectMode {
-  return process.env.CONNECT_MODE === "rest" && process.env.CONNECT_API_URL ? "rest" : "mock";
+  return getRuntimeConfig().integrations.connect;
 }
 
 export type ConnectProvider = {
@@ -60,15 +61,13 @@ const mockProvider: ConnectProvider = {
  * Talks to whatever REST facade B&G exposes over Connect. Field names are
  * normalised here so a schema difference on their side stays contained.
  */
-function restProvider(baseUrl: string): ConnectProvider {
+function restProvider(baseUrl: string, token: string): ConnectProvider {
   const call = async (path: string, params: Record<string, string> = {}) => {
     const url = new URL(path.replace(/^\//, ""), baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
     const res = await fetch(url, {
-      headers: process.env.CONNECT_API_TOKEN
-        ? { Authorization: `Bearer ${process.env.CONNECT_API_TOKEN}` }
-        : {},
+      headers: { Authorization: `Bearer ${token}` },
       // Pursuit lookups are interactive; a stale answer is worse than a slow one.
       cache: "no-store",
     });
@@ -122,7 +121,10 @@ const str = (v: unknown): string | null => {
 };
 
 export function connectProvider(): ConnectProvider {
-  return connectMode() === "rest"
-    ? restProvider(process.env.CONNECT_API_URL!)
-    : mockProvider;
+  const mode = connectMode();
+  if (mode === "mock") return mockProvider;
+  if (mode === "rest") {
+    return restProvider(process.env.CONNECT_API_URL!, process.env.CONNECT_API_TOKEN!);
+  }
+  throw new Error("B&G Connect is disabled for this deployment.");
 }

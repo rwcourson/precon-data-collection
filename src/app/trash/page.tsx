@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import { TrashActions } from "@/components/trash/trash-actions";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDateTime } from "@/lib/format";
 import { listTrash } from "@/lib/recovery";
-import { getWorkspace } from "@/lib/workspace-server";
 
 const TYPE_LABELS: Record<string, string> = {
   job: "Job",
@@ -28,16 +28,17 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default async function TrashPage() {
-  const workspace = await getWorkspace();
-  const items = await listTrash(workspace.region);
+  const principal = await getWebPrincipal();
+  const items = await listTrash(principal);
+  const workspaceRegion = principal.workspace.region;
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Trash"
         description={
-          workspace.region
-            ? `Soft-deleted items in ${workspace.region} Region. Items are purged automatically after 30 days.`
+          workspaceRegion
+            ? `Soft-deleted items in ${workspaceRegion} Region. Items are purged automatically after 30 days.`
             : "Soft-deleted items across all regions. Items are purged automatically after 30 days."
         }
       />

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run db:migrate:check
+      - run: npm run contract:check
+      - run: npm run security:check
+      - run: npm run perf:check
+      - run: npm run release:check
+      - run: npm run verify:web
+        env:
+          APP_ENV: demo
+          AUTH_MODE: demo
+          DATABASE_MODE: pglite
+          EMAIL_MODE: stub
+          PRIVATE_STORAGE_MODE: local
+
+  expo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npm --prefix apps/mobile ci
+      - run: npm run contract:check
+      - run: npm run verify:expo
+
+  ios:
+    runs-on: macos-14
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run verify:ios

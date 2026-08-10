@@ -1,10 +1,13 @@
 import ExcelJS from "exceljs";
 import {
-  getAllCustomColumns,
   getCustomValuesForRounds,
   getMultiValuesForRounds,
-  getRoundsWithJobs,
 } from "./queries";
+import {
+  listCustomColumnsForPrincipal,
+  listRoundsWithJobsForPrincipal,
+} from "./authorization/loaders";
+import type { Principal } from "./authorization/types";
 import {
   buildFieldCatalog,
   flattenRound,
@@ -12,19 +15,17 @@ import {
   type ReportFieldDef,
 } from "./report-engine";
 import { METRIC_DEFS } from "./metrics";
-import { getWorkspace } from "./workspace-server";
 
 export type ExportColumn = { key: string; label: string; type: string };
 
 /** Flattened cross-dataset rows + the introspected field catalog (incl. custom columns). */
-export async function getFlatDataset(): Promise<{
+export async function getFlatDataset(principal: Principal): Promise<{
   rows: FlatRow[];
   catalog: ReportFieldDef[];
 }> {
-  const workspace = await getWorkspace();
   const [rowData, customCols] = await Promise.all([
-    getRoundsWithJobs(workspace),
-    getAllCustomColumns(),
+    listRoundsWithJobsForPrincipal(principal),
+    listCustomColumnsForPrincipal(principal),
   ]);
   const ids = rowData.map((r) => r.round.id);
   const [multiMap, customMap] = await Promise.all([

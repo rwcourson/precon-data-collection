@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import PptxGenJS from "pptxgenjs";
-import { getCurrentUser } from "@/lib/current-user";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getWorkspace } from "@/lib/workspace-server";
 import {
   buildForecastSeries,
@@ -10,9 +10,8 @@ import {
 
 /** 16:9 dashboard / forecast slide export. */
 export async function GET() {
-  await getCurrentUser();
-  const workspace = await getWorkspace();
-  const rounds = await getRoundsWithJobs(workspace);
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const rounds = await listRoundsWithJobsForPrincipal(principal);
 
   const series = buildForecastSeries(
     rounds.map((r) => ({

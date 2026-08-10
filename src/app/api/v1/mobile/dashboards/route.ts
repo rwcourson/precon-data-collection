@@ -3,9 +3,10 @@ import {
   createDashboard,
   deleteDashboard,
 } from "@/actions/dashboards";
-import { db } from "@/db";
-import { dashboards } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import {
+  listDashboardsForPrincipal,
+  listRoundsWithJobsForPrincipal,
+} from "@/lib/authorization/loaders";
 import { METRIC_DEFS } from "@/lib/metrics";
 import {
   groupVolumeChartSubtitle,
@@ -16,22 +17,18 @@ import {
   statusSeriesFromRounds,
 } from "@/lib/mobile-dashboard-scope";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
-import { asc, eq, isNull, or } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "read:dashboards" }, async (principal) => {
     const url = new URL(req.url);
     const level = parseDashboardLevel(url.searchParams.get("level"));
-    const workspace = await getWorkspace();
-    const user = await getCurrentUser();
-    const allRows = await getRoundsWithJobs(workspace);
+    const user = principal.user;
+    const allRows = await listRoundsWithJobsForPrincipal(principal.authorization);
 
     // Web: corporate = all workspace; region/division filter to focus region
     // (workspace.region if set, else user's region for cross-region viewers)
     const focusRegion =
-      workspace.region ??
+      principal.authorization.workspace.region ??
       (url.searchParams.get("region") || user.region || null);
 
     const rounds = allRows.map((r) => ({
@@ -81,17 +78,9 @@ export async function GET(req: Request) {
         return { key: m.key, label: m.label, value: avg, format: m.format, group: m.group };
       });
 
-    const studio = await db
-      .select()
-      .from(dashboards)
-      .where(
-        or(
-          eq(dashboards.ownerId, user.id),
-          eq(dashboards.published, true),
-          isNull(dashboards.region),
-        ),
-      )
-      .orderBy(asc(dashboards.name));
+    const studio = (await listDashboardsForPrincipal(principal.authorization)).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     return jsonOk({
       level,
@@ -129,7 +118,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:dashboards" }, async () => {
     let body: unknown;
     try {
       body = await req.json();
@@ -146,7 +135,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:dashboards" }, async () => {
     let body: { action?: string; id?: number };
     try {
       body = await req.json();

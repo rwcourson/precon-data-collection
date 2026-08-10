@@ -2,11 +2,16 @@ import { NextRequest } from "next/server";
 import { pdfResponse } from "@/lib/pdf";
 import { buildStatusReport, renderStatusReportHtml } from "@/lib/status-report";
 import { getWorkspace } from "@/lib/workspace-server";
+import { loadAdminSectionForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const workspace = await getWorkspace();
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  if (!(await loadAdminSectionForPrincipal(principal, "status"))) {
+    return new Response("Not found", { status: 404 });
+  }
   const report = await buildStatusReport(workspace);
   const html = renderStatusReportHtml(report);
 

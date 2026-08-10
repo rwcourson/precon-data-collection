@@ -1,42 +1,41 @@
 import "server-only";
 
-import { asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { sheetColumns, sheetPins, sheetRows, sheets, users } from "@/db/schema";
-import type { Sheet, SheetColumn, SheetRow, User } from "@/db/schema";
+import { sheetColumns, sheetPins, sheetRows, users } from "@/db/schema";
+import type { Sheet, SheetColumn, SheetRow } from "@/db/schema";
+import {
+  listSheetsForPrincipal,
+  loadSheetForPrincipal,
+} from "./authorization/loaders";
+import type { Principal } from "./authorization/types";
 import { getFlatDataset } from "./export-helpers";
 import type { FlatRow, ReportFieldDef } from "./report-engine";
 import {
   BLANK_VIEW_CONFIG,
-  canManageSheet,
   evaluateView,
   matchesFilter,
   type SheetSummary,
   type SheetViewResult,
 } from "./sheets";
-import type { Workspace } from "./workspace";
-
-/** A Corporate sheet is shared with every Region; a Region sheet stays home. */
-export function visibleInWorkspace(sheet: Pick<Sheet, "region">, workspace: Workspace): boolean {
-  if (sheet.region == null) return true;
-  return workspace.region == null || workspace.region === sheet.region;
-}
 
 export async function listSheets(
-  workspace: Workspace,
-  user: User,
+  principal: Principal,
 ): Promise<SheetSummary[]> {
+  const scopedSheets = await listSheetsForPrincipal(principal);
+  const ownerIds = [...new Set(scopedSheets.map((sheet) => sheet.ownerId).filter((id): id is number => id != null))];
   const [rows, owners, pins] = await Promise.all([
-    db.select().from(sheets).where(isNull(sheets.archivedAt)).orderBy(asc(sheets.name)),
-    db.select({ id: users.id, name: users.name }).from(users),
-    db.select().from(sheetPins).where(eq(sheetPins.userId, user.id)),
+    Promise.resolve(scopedSheets),
+    ownerIds.length > 0
+      ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ownerIds))
+      : Promise.resolve([]),
+    db.select().from(sheetPins).where(eq(sheetPins.userId, principal.user.id)),
   ]);
 
-  const visible = rows.filter((s) => visibleInWorkspace(s, workspace));
   const ownerName = new Map(owners.map((o) => [o.id, o.name]));
   const pinned = new Set(pins.map((p) => p.sheetId));
 
-  const gridIds = visible.filter((s) => s.kind === "grid").map((s) => s.id);
+  const gridIds = rows.filter((s) => s.kind === "grid").map((s) => s.id);
   const gridCounts = new Map<number, number>();
   if (gridIds.length > 0) {
     const allRows = await db
@@ -49,11 +48,21 @@ export async function listSheets(
   // View counts come from the live dataset, so a sheet's row count is never
   // a stale number copied at save time.
   let flat: FlatRow[] = [];
-  if (visible.some((s) => s.kind === "view")) {
-    flat = (await getFlatDataset()).rows;
+  if (rows.some((s) => s.kind === "view")) {
+    flat = (await getFlatDataset(principal)).rows;
   }
 
-  return visible.map((s) => ({
+  const manageable = new Set(
+    (
+      await Promise.all(
+        rows.map(async (sheet) =>
+          (await loadSheetForPrincipal(principal, sheet.id, "manage")) ? sheet.id : null,
+        ),
+      )
+    ).filter((id): id is number => id != null),
+  );
+
+  return rows.map((s) => ({
     id: s.id,
     kind: s.kind,
     name: s.name,
@@ -68,7 +77,7 @@ export async function listSheets(
       s.kind === "grid"
         ? (gridCounts.get(s.id) ?? 0)
         : countMatching(flat, s),
-    canManage: canManageSheet(user, s),
+    canManage: manageable.has(s.id),
   }));
 }
 
@@ -77,22 +86,18 @@ export async function listSheets(
  * that clears out a sheet mid-year still needs last year's back.
  */
 export async function listArchivedSheets(
-  workspace: Workspace,
-  user: User,
+  principal: Principal,
 ): Promise<
   { id: number; name: string; folder: string; archivedAt: string; canRestore: boolean }[]
 > {
-  const rows = await db.select().from(sheets).where(isNotNull(sheets.archivedAt));
-  return rows
-    .filter((s) => visibleInWorkspace(s, workspace))
-    .sort((a, b) => (b.archivedAt?.getTime() ?? 0) - (a.archivedAt?.getTime() ?? 0))
-    .map((s) => ({
+  const rows = await listSheetsForPrincipal(principal, { archived: true });
+  return Promise.all(rows.map(async (s) => ({
       id: s.id,
       name: s.name,
       folder: s.folder,
       archivedAt: s.archivedAt!.toISOString(),
-      canRestore: canManageSheet(user, s),
-    }));
+      canRestore: Boolean(await loadSheetForPrincipal(principal, s.id, "manage")),
+    })));
 }
 
 function countMatching(flat: FlatRow[], sheet: Sheet): number {
@@ -101,19 +106,14 @@ function countMatching(flat: FlatRow[], sheet: Sheet): number {
   return flat.filter((r) => config.filters.every((f) => matchesFilter(r, f))).length;
 }
 
-export async function getSheet(id: number): Promise<Sheet | null> {
-  const [row] = await db.select().from(sheets).where(eq(sheets.id, id));
-  return row ?? null;
-}
-
 export type SheetViewPayload = {
   sheet: Sheet;
   result: SheetViewResult;
   catalog: ReportFieldDef[];
 };
 
-export async function loadSheetView(sheet: Sheet): Promise<SheetViewPayload> {
-  const { rows, catalog } = await getFlatDataset();
+export async function loadSheetView(sheet: Sheet, principal: Principal): Promise<SheetViewPayload> {
+  const { rows, catalog } = await getFlatDataset(principal);
   const config = sheet.config ?? BLANK_VIEW_CONFIG;
   return { sheet, result: evaluateView(rows, config, catalog), catalog };
 }
@@ -141,30 +141,21 @@ export async function loadSheetGrid(sheet: Sheet): Promise<SheetGridPayload> {
 }
 
 /** Folder names already in use in a workspace, for the create/move pickers. */
-export async function listFolders(workspace: Workspace): Promise<string[]> {
-  const rows = await db
-    .select({ folder: sheets.folder, region: sheets.region })
-    .from(sheets)
-    .where(isNull(sheets.archivedAt));
-  const names = new Set<string>();
-  for (const r of rows) {
-    if (visibleInWorkspace(r, workspace)) names.add(r.folder);
-  }
+export async function listFolders(principal: Principal): Promise<string[]> {
+  const rows = await listSheetsForPrincipal(principal);
+  const names = new Set(rows.map((row) => row.folder));
   return [...names].sort((a, b) => a.localeCompare(b));
 }
 
 export async function listPinnedSheets(
-  workspace: Workspace,
-  userId: number,
+  principal: Principal,
 ): Promise<{ id: number; name: string }[]> {
-  const pins = await db.select().from(sheetPins).where(eq(sheetPins.userId, userId));
+  const pins = await db.select().from(sheetPins).where(eq(sheetPins.userId, principal.user.id));
   if (pins.length === 0) return [];
-  const rows = await db
-    .select()
-    .from(sheets)
-    .where(inArray(sheets.id, pins.map((p) => p.sheetId)));
+  const rows = await listSheetsForPrincipal(principal);
+  const pinned = new Set(pins.map((pin) => pin.sheetId));
   return rows
-    .filter((s) => s.archivedAt == null && visibleInWorkspace(s, workspace))
+    .filter((s) => pinned.has(s.id))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((s) => ({ id: s.id, name: s.name }));
 }

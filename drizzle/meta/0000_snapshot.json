@@ -20,14 +20,32 @@
           "primaryKey": false,
           "notNull": true
         },
-        "challenge": {
-          "name": "challenge",
+        "actor_id": {
+          "name": "actor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "challenge_hash": {
+          "name": "challenge_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "operation": {
           "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target": {
+          "name": "target",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload_hash": {
+          "name": "payload_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -52,7 +70,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "api_destructive_challenge_hash_unique": {
+          "name": "api_destructive_challenge_hash_unique",
+          "columns": [
+            {
+              "expression": "challenge_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "api_destructive_challenges_token_id_api_tokens_id_fk": {
           "name": "api_destructive_challenges_token_id_api_tokens_id_fk",
@@ -60,6 +94,19 @@
           "tableTo": "api_tokens",
           "columnsFrom": [
             "token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "api_destructive_challenges_actor_id_users_id_fk": {
+          "name": "api_destructive_challenges_actor_id_users_id_fk",
+          "tableFrom": "api_destructive_challenges",
+          "tableTo": "users",
+          "columnsFrom": [
+            "actor_id"
           ],
           "columnsTo": [
             "id"
@@ -96,6 +143,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "response_status": {
           "name": "response_status",
           "type": "integer",
@@ -116,7 +175,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "api_idempotency_token_key_unique": {
+          "name": "api_idempotency_token_key_unique",
+          "columns": [
+            {
+              "expression": "token_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "api_idempotency_keys_token_id_api_tokens_id_fk": {
           "name": "api_idempotency_keys_token_id_api_tokens_id_fk",
@@ -212,7 +293,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "api_tokens_token_hash_unique": {
+          "name": "api_tokens_token_hash_unique",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "api_tokens_created_by_id_users_id_fk": {
           "name": "api_tokens_created_by_id_users_id_fk",

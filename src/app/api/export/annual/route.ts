@@ -2,7 +2,8 @@ import { NextRequest } from "next/server";
 import { buildAnnualReport, renderAnnualReportHtml } from "@/lib/annual-report";
 import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
 import { pdfResponse, safeName } from "@/lib/pdf";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { FlatRow } from "@/lib/report-engine";
 import type { RollupStats } from "@/lib/rollup";
 import { resolveRegionParam } from "@/lib/workspace";
@@ -35,7 +36,7 @@ const toGroupRow = (g: RollupStats): FlatRow => ({
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const format = params.get("format") ?? "pdf";
-  const workspace = await getWorkspace();
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
 
   // A Region workspace pins the scope; Corporate may target any single Region.
   const scoped = resolveRegionParam(workspace, params.get("region"));
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
   const toYear = clampYear(params.get("to"), currentYear);
   const fromYear = Math.min(clampYear(params.get("from"), toYear - 2), toYear);
 
-  const rows = await getRoundsWithJobs(workspace);
+  const rows = await listRoundsWithJobsForPrincipal(principal);
   const report = buildAnnualReport({ rows, region, fromYear, toYear });
   const title = `${report.scope} Annual Precon Report ${fromYear}-${toYear}`;
 

@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/status-badge";
 import { PageHeader } from "@/components/page-header";
 import { Separator } from "@/components/ui/separator";
-import { getCurrentUser } from "@/lib/current-user";
-import { getRoundsWithJobs } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDollars } from "@/lib/format";
 import { STATUS_ORDER } from "@/lib/permissions";
 import { getWorkspace } from "@/lib/workspace-server";
@@ -13,10 +13,9 @@ import type { RoundStatus } from "@/db/schema";
 
 export default async function OverviewPage() {
   const workspace = await getWorkspace();
-  const [user, regionRows] = await Promise.all([
-    getCurrentUser(),
-    getRoundsWithJobs(workspace),
-  ]);
+  const principal = await getWebPrincipal();
+  const user = principal.user;
+  const regionRows = await listRoundsWithJobsForPrincipal(principal);
 
   const byStatus = new Map<RoundStatus, number>();
   for (const s of STATUS_ORDER) byStatus.set(s, 0);

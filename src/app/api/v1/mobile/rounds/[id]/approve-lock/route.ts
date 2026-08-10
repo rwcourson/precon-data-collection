@@ -1,19 +1,26 @@
-import { approveAndLock } from "@/actions/post-bid";
 import { DomainError } from "@/domain/errors";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { getMultiValues, getRoundWithJob } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
+import { pursuitService } from "@/services/pursuit-service";
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:pursuits" }, async (principal) => {
     const { id } = await ctx.params;
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
     try {
-      await approveAndLock(roundId);
+      const approval = await pursuitService.approveAndLock(principal.authorization, roundId);
+      if (!approval.ok) {
+        return jsonError(approval.error, 400, {
+          code: "BAD_REQUEST",
+          missingFields: approval.missingFields,
+          details: approval.missingFields,
+        });
+      }
       return jsonOk({ ok: true, locked: true, roundId });
     } catch (err) {
       const row = await getRoundWithJob(roundId);
@@ -27,7 +34,9 @@ export async function POST(
         });
       }
       if (err instanceof DomainError) {
-        return jsonError(err.what, 400, {
+        const status =
+          err.code === "NOT_FOUND" ? 404 : err.code === "FORBIDDEN" ? 403 : 400;
+        return jsonError(err.what, status, {
           code: err.code,
           why: err.why,
           solution: err.solution,

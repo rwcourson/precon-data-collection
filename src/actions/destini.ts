@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, estimateRounds, jobs } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
 import {
   DESTINI_WRITABLE_KEYS,
   filterWritableValues,
@@ -14,19 +13,14 @@ import {
   type DestiniMappedRow,
   type DestiniWritableKey,
 } from "@/lib/destini-import";
+import { DomainError } from "@/domain/errors";
 import { FIELD_MAP } from "@/lib/fields";
-import { appendEntityVersion } from "@/lib/recovery";
-import { assertCanWriteField } from "@/lib/policy";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { pursuitService } from "@/services/pursuit-service";
 
-const ALLOWED_ROLES = ["admin_jsa", "rpd", "estimate_lead", "corporate_admin"] as const;
-
-function assertImporter() {
-  return getCurrentUser().then((user) => {
-    if (!ALLOWED_ROLES.includes(user.role as (typeof ALLOWED_ROLES)[number])) {
-      throw new Error("Permission denied.");
-    }
-    return user;
-  });
+/** Preview is open to signed-in principals; confirm applies the same field policy as interactive edits. */
+async function assertImporter() {
+  return getWebPrincipal();
 }
 
 export type DestiniFieldDiff = {
@@ -222,61 +216,43 @@ export async function previewDestiniFile(formData: FormData): Promise<DestiniPre
   throw new Error("Upload a .xlsx or .csv Destini export.");
 }
 
-/** Write Destini-sourced fields onto one matched round. */
+/** Write Destini-sourced fields onto one matched round via the same field-policy service as interactive edits. */
 export async function confirmDestiniImport(input: {
   roundId: number;
   values: Record<string, number | string | null>;
 }) {
-  const user = await assertImporter();
+  const principal = await assertImporter();
   const values = filterWritableValues(input.values);
   const keys = Object.keys(values) as DestiniWritableKey[];
-  if (keys.length === 0) throw new Error("No Destini fields to import.");
+  if (keys.length === 0) throw DomainError.badRequest("No Destini fields to import.");
 
-  const [round] = await db
-    .select()
-    .from(estimateRounds)
-    .where(and(eq(estimateRounds.id, input.roundId), isNull(estimateRounds.deletedAt)));
-  if (!round) throw new Error("Round not found.");
-
-  for (const key of keys) {
-    assertCanWriteField(user, key, round);
-  }
-
-  const numericPatch: Record<string, number | null> = {};
+  const stringValues: Record<string, string> = {};
   for (const key of keys) {
     const v = values[key];
-    if (v == null || v === "") {
-      numericPatch[key] = null;
-    } else if (typeof v === "number") {
-      numericPatch[key] = v;
-    } else {
-      const n = Number(String(v).replace(/[$,]/g, ""));
-      numericPatch[key] = Number.isFinite(n) ? n : null;
-    }
+    stringValues[key] = v == null ? "" : String(v);
   }
 
-  await appendEntityVersion("round", round.id, { ...round }, user.id);
-  await db
-    .update(estimateRounds)
-    .set({
-      ...numericPatch,
-      updatedAt: new Date(),
-    })
-    .where(eq(estimateRounds.id, round.id));
+  await pursuitService.savePostBidData(principal, {
+    roundId: input.roundId,
+    values: stringValues,
+    multiValues: {},
+    customValues: {},
+  });
+
   await db.insert(auditLog).values({
     entity: "round",
-    entityId: round.id,
-    roundId: round.id,
+    entityId: input.roundId,
+    roundId: input.roundId,
     action: "destini_import",
-    userId: user.id,
+    userId: principal.user.id,
     newValue: JSON.stringify({ keys, values }),
   });
 
   revalidatePath("/post-bid");
-  revalidatePath(`/rounds/${round.id}`);
+  revalidatePath(`/rounds/${input.roundId}`);
   revalidatePath("/admin");
   revalidatePath("/admin/destini");
-  return { ok: true as const, roundId: round.id, fields: keys.length };
+  return { ok: true as const, roundId: input.roundId, fields: keys.length };
 }
 
 /**

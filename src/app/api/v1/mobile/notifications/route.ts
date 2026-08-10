@@ -6,7 +6,7 @@ import { jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { desc, eq } from "drizzle-orm";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "read:notifications" }, async () => {
     const user = await getCurrentUser();
     const rows = await db
       .select()
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async () => {
+  return withMobileAuth(req, { scopes: "write:notifications" }, async () => {
     try {
       await markAllNotificationsRead();
       return jsonOk({ ok: true });

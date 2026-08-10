@@ -4,7 +4,7 @@ import { jsonError, jsonOk, withMobileAuth } from "@/lib/mobile-http";
 import { getMobileContext } from "@/lib/mobile-context";
 
 export async function POST(req: Request) {
-  return withMobileAuth(req, async (principal) => {
+  return withMobileAuth(req, { scopes: "profile:read" }, async (principal) => {
     let body: { region?: string };
     try {
       body = (await req.json()) as { region?: string };

@@ -1,13 +1,14 @@
 import type { EstimateRound, Role, RoundStatus, User } from "@/db/schema";
-import { FIELD_DEFS } from "@/lib/fields";
-import { canEditAfterLock, canEnterPostBid } from "@/lib/permissions";
+import { authorize, resolveKernelSheetCapability, sheetCapabilityRank as kernelSheetCapabilityRank } from "@/lib/authorization/kernel";
+import { createPrincipal } from "@/lib/authorization/principal";
 
 /**
  * Central field + sheet authorization. All editors, imports, and APIs should
  * call these helpers rather than inventing per-action checks.
  */
 
-const READ_ONLY_ROLES: Role[] = ["leadership"];
+const policyPrincipal = (user: User) =>
+  createPrincipal({ user, authSource: "service", workspaceRegion: user.region });
 
 /** Default: who may write a field key given round lifecycle. */
 export function canWriteField(
@@ -15,35 +16,23 @@ export function canWriteField(
   fieldKey: string,
   round: Pick<EstimateRound, "status" | "region">,
 ): boolean {
-  if (READ_ONLY_ROLES.includes(user.role)) return false;
-
-  if (round.status === "locked") {
-    return canEditAfterLock(user, round);
-  }
-
-  const def = FIELD_DEFS.find((f) => f.key === fieldKey);
-  const isCustom = fieldKey.startsWith("custom:");
-  const isCoreBid = Boolean(def?.core);
-  const isPostBidField = Boolean(def && !def.core) || isCustom;
-
-  if (isPostBidField) {
-    return canEnterPostBid(user, round);
-  }
-
-  // Bid-schedule / core fields (and unknown keys treated as bid-schedule)
-  if (["pcm", "estimate_lead", "admin_jsa", "rpd"].includes(user.role)) {
-    if (user.role === "rpd" && user.region && user.region !== round.region) return false;
-    if (isCoreBid || !def) {
-      return ["active", "upcoming", "outstanding", "submitted"].includes(round.status);
-    }
-  }
-  return false;
+  return authorize(policyPrincipal(user), "edit", {
+    type: "round",
+    id: 0,
+    region: round.region,
+    ownerId: null,
+    published: false,
+    deleted: false,
+    round,
+    fieldKey,
+    fieldPolicy: null,
+  }).allowed;
 }
 
 export type SheetCapability = "viewer" | "editor" | "manager";
 
 export function sheetCapabilityRank(c: SheetCapability): number {
-  return c === "manager" ? 3 : c === "editor" ? 2 : 1;
+  return kernelSheetCapabilityRank(c);
 }
 
 /**
@@ -61,33 +50,11 @@ export function resolveSheetCapability(
     regionAllowlist: string[] | null;
   }[],
 ): SheetCapability | null {
-  let best: SheetCapability | null = null;
-
-  for (const row of acls) {
-    const userMatch = row.userId != null && row.userId === user.id;
-    const roleMatch = row.grantRole != null && row.grantRole === user.role;
-    if (!userMatch && !roleMatch) continue;
-    const allow = row.regionAllowlist ?? [];
-    if (allow.length > 0 && user.region && !allow.includes(user.region)) continue;
-    if (!best || sheetCapabilityRank(row.acl) > sheetCapabilityRank(best)) {
-      best = row.acl;
-    }
-  }
-
-  if (best) return best;
-
-  // Defaults
-  if (sheet.region == null) {
-    return user.role === "corporate_admin" ? "manager" : "viewer";
-  }
-  if (user.role === "corporate_admin") return "manager";
-  if (user.role === "rpd" && user.region === sheet.region) return "manager";
-  if (sheet.ownerId === user.id) return "manager";
-  if (["pcm", "estimate_lead", "admin_jsa"].includes(user.role)) {
-    if (!user.region || user.region === sheet.region) return "editor";
-  }
-  if (user.role === "leadership") return "viewer";
-  return null;
+  return resolveKernelSheetCapability(policyPrincipal(user), {
+    region: sheet.region,
+    ownerId: sheet.ownerId,
+    sheetAcls: acls,
+  });
 }
 
 export function assertCanWriteField(

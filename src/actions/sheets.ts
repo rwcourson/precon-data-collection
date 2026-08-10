@@ -12,8 +12,13 @@ import {
   type SheetColumnType,
   type SheetViewConfig,
 } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
 import { getFlatDataset } from "@/lib/export-helpers";
+import {
+  listSheetsForPrincipal,
+  loadSheetForPrincipal,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { DomainError } from "@/domain/errors";
 import { FIELD_MAP, ROUND_COLUMN_KEYS } from "@/lib/fields";
 import { getReferenceValues } from "@/lib/queries";
 import { STATUS_LABELS } from "@/lib/permissions";
@@ -24,15 +29,11 @@ import {
 } from "@/lib/sheet-import";
 import {
   BLANK_VIEW_CONFIG,
-  canCreateSheet,
-  canEditRows,
-  canManageSheet,
   columnKeyFromLabel,
   duplicateName,
   matchesFilter,
 } from "@/lib/sheets";
-import { getWorkspace } from "@/lib/workspace-server";
-import { visibleInWorkspace } from "@/lib/sheets-server";
+import { requireAuthorized, requireTargetRegion } from "@/services/mutation-policy";
 
 /**
  * Sheet management. Every mutation re-checks who owns the sheet's workspace,
@@ -41,30 +42,17 @@ import { visibleInWorkspace } from "@/lib/sheets-server";
  */
 
 async function loadManageable(id: number) {
-  const user = await getCurrentUser();
-  const [sheet] = await db.select().from(sheets).where(eq(sheets.id, id));
-  if (!sheet) throw new Error("Sheet not found");
-  const workspace = await getWorkspace();
-  if (!visibleInWorkspace(sheet, workspace))
-    throw new Error("That sheet belongs to another Region's workspace.");
-  if (!canManageSheet(user, sheet))
-    throw new Error(
-      sheet.region == null
-        ? "Corporate sheets are managed by the Corporate Precon Admin."
-        : "Only the sheet owner, the Region's RPD, or a Corporate Admin can change this sheet.",
-    );
-  return { user, sheet };
+  const principal = await getWebPrincipal();
+  const loaded = await loadSheetForPrincipal(principal, id, "manage");
+  if (!loaded) throw new Error("Sheet not found");
+  return { user: principal.user, sheet: loaded.value };
 }
 
 async function loadEditable(id: number) {
-  const user = await getCurrentUser();
-  const [sheet] = await db.select().from(sheets).where(eq(sheets.id, id));
-  if (!sheet) throw new Error("Sheet not found");
-  const workspace = await getWorkspace();
-  if (!visibleInWorkspace(sheet, workspace))
-    throw new Error("That sheet belongs to another Region's workspace.");
-  if (!canEditRows(user)) throw new Error("Your role has read-only access to sheets.");
-  return { user, sheet };
+  const principal = await getWebPrincipal();
+  const loaded = await loadSheetForPrincipal(principal, id, "edit");
+  if (!loaded) throw new Error("Sheet not found");
+  return { user: principal.user, sheet: loaded.value };
 }
 
 const touch = (id: number) => {
@@ -84,19 +72,37 @@ export type CreateSheetInput = {
 };
 
 export async function createSheet(input: CreateSheetInput): Promise<number> {
-  const user = await getCurrentUser();
-  const workspace = await getWorkspace();
-  const region = input.region !== undefined ? input.region : workspace.region;
+  const principal = await getWebPrincipal();
+  const user = principal.user;
+  const region = input.region !== undefined ? input.region : principal.workspace.region;
 
-  if (!canCreateSheet(user, region))
-    throw new Error("Your role cannot create sheets in this workspace.");
+  requireTargetRegion(principal, region, "Sheet");
+  requireAuthorized(
+    principal,
+    "edit",
+    {
+      type: "sheet",
+      id: "new",
+      region,
+      ownerId: user.id,
+      published: true,
+      deleted: false,
+      sheetAcls: [],
+    },
+    "Sheet",
+  );
+  if (principal.user.role === "leadership") {
+    throw DomainError.forbidden("Your role cannot create sheets in this workspace.");
+  }
   const name = input.name.trim();
   if (!name) throw new Error("Give the sheet a name.");
   const folder = input.folder.trim() || "General";
 
   let config: SheetViewConfig | null = input.kind === "view" ? BLANK_VIEW_CONFIG : null;
   if (input.copyFromId) {
-    const [source] = await db.select().from(sheets).where(eq(sheets.id, input.copyFromId));
+    const loaded = await loadSheetForPrincipal(principal, input.copyFromId);
+    if (!loaded) throw new Error("Sheet not found");
+    const source = loaded.value;
     if (source?.config) config = source.config;
   }
 
@@ -153,11 +159,27 @@ export type ImportSheetResult = {
  * to get it across.
  */
 export async function createSheetFromUpload(form: FormData): Promise<ImportSheetResult> {
-  const user = await getCurrentUser();
-  const workspace = await getWorkspace();
-  const region = workspace.region;
-  if (!canCreateSheet(user, region))
-    throw new Error("Your role cannot create sheets in this workspace.");
+  const principal = await getWebPrincipal();
+  const user = principal.user;
+  const region = principal.workspace.region;
+  requireTargetRegion(principal, region, "Sheet");
+  requireAuthorized(
+    principal,
+    "edit",
+    {
+      type: "sheet",
+      id: "new",
+      region,
+      ownerId: user.id,
+      published: true,
+      deleted: false,
+      sheetAcls: [],
+    },
+    "Sheet",
+  );
+  if (principal.user.role === "leadership") {
+    throw DomainError.forbidden("Your role cannot create sheets in this workspace.");
+  }
 
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0)
@@ -299,18 +321,33 @@ export async function saveSheetView(id: number, config: SheetViewConfig) {
 }
 
 export async function duplicateSheet(id: number): Promise<number> {
-  const user = await getCurrentUser();
-  const workspace = await getWorkspace();
-  const [sheet] = await db.select().from(sheets).where(eq(sheets.id, id));
-  if (!sheet) throw new Error("Sheet not found");
-  if (!visibleInWorkspace(sheet, workspace))
-    throw new Error("That sheet belongs to another Region's workspace.");
+  const principal = await getWebPrincipal();
+  const user = principal.user;
+  const loaded = await loadSheetForPrincipal(principal, id);
+  if (!loaded) throw new Error("Sheet not found");
+  const sheet = loaded.value;
 
   // Duplicating a Corporate sheet drops the copy into your own workspace,
   // which is how a Region starts from the standard and then adapts it.
-  const region = sheet.region ?? workspace.region;
-  if (!canCreateSheet(user, region))
-    throw new Error("Your role cannot create sheets in this workspace.");
+  const region = sheet.region ?? principal.workspace.region;
+  requireTargetRegion(principal, region, "Sheet");
+  requireAuthorized(
+    principal,
+    "edit",
+    {
+      type: "sheet",
+      id: "new",
+      region,
+      ownerId: user.id,
+      published: true,
+      deleted: false,
+      sheetAcls: [],
+    },
+    "Sheet",
+  );
+  if (principal.user.role === "leadership") {
+    throw DomainError.forbidden("Your role cannot create sheets in this workspace.");
+  }
 
   const existing = await db.select({ name: sheets.name }).from(sheets);
   const [copy] = await db
@@ -397,7 +434,10 @@ export async function restoreSheet(id: number) {
 }
 
 export async function toggleSheetPin(id: number): Promise<boolean> {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
+  const loaded = await loadSheetForPrincipal(principal, id, "read");
+  if (!loaded) throw DomainError.notFound("Sheet not found");
+  const user = principal.user;
   const [existing] = await db
     .select()
     .from(sheetPins)
@@ -585,23 +625,20 @@ export async function loadSheetRows(
   columns: string[],
   filters: { field: string; op: string; value: string }[],
 ): Promise<SheetRowsPayload> {
-  const user = await getCurrentUser();
-  const workspace = await getWorkspace();
-  const [sheet] = await db.select().from(sheets).where(eq(sheets.id, sheetId));
-  if (!sheet) throw new Error("Sheet not found");
-  if (!visibleInWorkspace(sheet, workspace))
-    throw new Error("That sheet belongs to another Region's workspace.");
+  const principal = await getWebPrincipal();
+  const loaded = await loadSheetForPrincipal(principal, sheetId);
+  if (!loaded) throw new Error("Sheet not found");
 
-  return projectRows(user, columns, filters);
+  return projectRows(principal, columns, filters);
 }
 
 async function projectRows(
-  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  principal: Awaited<ReturnType<typeof getWebPrincipal>>,
   columnKeys: string[],
   filters: { field: string; op: string; value: string }[],
 ): Promise<SheetRowsPayload> {
   const [{ rows: flat, catalog }, lists] = await Promise.all([
-    getFlatDataset(),
+    getFlatDataset(principal),
     getReferenceValues(),
   ]);
   const byKey = new Map(catalog.map((c) => [c.key, c]));
@@ -625,7 +662,7 @@ async function projectRows(
     });
 
   const matching = flat.filter((r) => filters.every((f) => matchesFilter(r, f)));
-  const canEdit = canEditRows(user);
+  const canEdit = principal.user.role !== "leadership";
 
   return {
     total: flat.length,
@@ -639,7 +676,9 @@ async function projectRows(
         cells,
         jobId: 0,
         status: String(r.status ?? ""),
-        locked: !canEdit || (locked && user.role !== "rpd" && user.role !== "corporate_admin"),
+        locked:
+          !canEdit ||
+          (locked && principal.user.role !== "rpd" && principal.user.role !== "corporate_admin"),
         lockReason: !canEdit
           ? "Your role has read-only access."
           : locked
@@ -659,13 +698,18 @@ function defaultWidth(type: string, label: string): number {
 
 /** Folder rename across a workspace, so the tree can be reorganised in place. */
 export async function renameFolder(from: string, to: string) {
-  const user = await getCurrentUser();
-  const workspace = await getWorkspace();
+  const principal = await getWebPrincipal();
   const target = to.trim();
   if (!target) throw new Error("Give the folder a name.");
 
-  const all = await db.select().from(sheets).where(eq(sheets.folder, from));
-  const mine = all.filter((s) => visibleInWorkspace(s, workspace) && canManageSheet(user, s));
+  const all = (await listSheetsForPrincipal(principal)).filter((sheet) => sheet.folder === from);
+  const mine = (
+    await Promise.all(
+      all.map(async (sheet) =>
+        (await loadSheetForPrincipal(principal, sheet.id, "manage")) ? sheet : null,
+      ),
+    )
+  ).filter((sheet): sheet is NonNullable<typeof sheet> => sheet != null);
   if (mine.length === 0) throw new Error("No sheets in that folder are yours to move.");
 
   for (const s of mine) {

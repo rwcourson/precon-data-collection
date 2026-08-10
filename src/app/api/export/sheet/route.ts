@@ -10,8 +10,9 @@ import { formatReportValue, type FlatRow } from "@/lib/report-engine";
 import { pdfResponse } from "@/lib/pdf";
 import { formatCell } from "@/lib/sheet-format";
 import { BLANK_VIEW_CONFIG, matchesFilter } from "@/lib/sheets";
-import { getSheet, loadSheetGrid, visibleInWorkspace } from "@/lib/sheets-server";
-import { getWorkspace } from "@/lib/workspace-server";
+import { loadSheetGrid } from "@/lib/sheets-server";
+import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,10 @@ export async function GET(req: NextRequest) {
   const id = Number(params.get("id"));
   if (!Number.isInteger(id)) return new Response("Missing sheet id", { status: 400 });
 
-  const [sheet, workspace] = await Promise.all([getSheet(id), getWorkspace()]);
-  if (!sheet || sheet.archivedAt) return new Response("Sheet not found", { status: 404 });
-  if (!visibleInWorkspace(sheet, workspace))
-    return new Response("That sheet belongs to another Region's workspace.", { status: 403 });
+  const principal = await getWebPrincipal();
+  const loaded = await loadSheetForPrincipal(principal, id);
+  if (!loaded || loaded.value.archivedAt) return new Response("Sheet not found", { status: 404 });
+  const sheet = loaded.value;
 
   const format = params.get("format") ?? "xlsx";
   const title = sheet.name;
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const dataset = await getFlatDataset();
+    const dataset = await getFlatDataset(principal);
     const byKey = new Map(dataset.catalog.map((c) => [c.key, c]));
     columns = columnKeys
       .filter((k) => byKey.has(k))

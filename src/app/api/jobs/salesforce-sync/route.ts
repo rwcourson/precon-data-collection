@@ -1,23 +1,25 @@
 import { NextResponse } from "next/server";
-import { runSalesforceSync } from "@/actions/salesforce-inbox";
+import { authorizeCron } from "@/lib/cron-auth";
+import { createServicePrincipal } from "@/services/distribution-service";
+import { salesforceSyncService } from "@/services/salesforce-sync-service";
 
 export async function POST(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const denied = authorizeCron(req);
+  if (denied) return denied;
   try {
-    // Cron path bypasses interactive user — use a service-style call by
-    // temporarily relying on demo auth cookie when present; otherwise report.
-    const result = await runSalesforceSync();
-    return NextResponse.json({ ok: true, ...result });
+    const body = (await req.json().catch(() => ({}))) as { cursor?: string | null };
+    const result = await salesforceSyncService.runIncremental(createServicePrincipal(null), {
+      cursor: body.cursor ?? null,
+    });
+    return NextResponse.json({ ok: true, runId: result.runId, metrics: {
+      opportunitiesSeen: result.opportunitiesSeen,
+      candidatesCreated: result.candidatesCreated,
+      nextCursor: result.nextCursor,
+    } });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "failed" },
-      { status: 200 },
+      { status: 502 },
     );
   }
 }

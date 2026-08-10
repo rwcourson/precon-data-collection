@@ -21,8 +21,9 @@ import {
   VolumeByGroupChart,
   VolumeByYearChart,
 } from "@/components/dashboards/charts";
-import { getCurrentUser } from "@/lib/current-user";
-import { getReferenceValues, getRoundsWithJobs } from "@/lib/queries";
+import { getReferenceValues } from "@/lib/queries";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { computeStats, rollup } from "@/lib/rollup";
 import { fmtDollars, fmtPercent } from "@/lib/format";
 import { Download } from "lucide-react";
@@ -43,10 +44,10 @@ export default async function DashboardsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const workspace = await getWorkspace();
-  const [user, rows, lists] = await Promise.all([
-    getCurrentUser(),
-    getRoundsWithJobs(workspace),
+  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const user = principal.user;
+  const [rows, lists] = await Promise.all([
+    listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
   ]);
 

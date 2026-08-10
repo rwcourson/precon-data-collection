@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
@@ -8,20 +8,23 @@ import { AppMain } from "@/components/app-main";
 import { SidebarProvider } from "@/components/sidebar-context";
 import { themeScript } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { listPinnedSheets } from "@/lib/sheets-server";
-import { getWorkspace } from "@/lib/workspace-server";
 
-const jakarta = Plus_Jakarta_Sans({
+const manrope = localFont({
+  src: [
+    { path: "./fonts/Manrope-Regular.ttf", weight: "400", style: "normal" },
+    { path: "./fonts/Manrope-Medium.ttf", weight: "500", style: "normal" },
+    { path: "./fonts/Manrope-SemiBold.ttf", weight: "600", style: "normal" },
+  ],
   variable: "--font-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
+const spaceMono = localFont({
+  src: "./fonts/SpaceMono-Regular.ttf",
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -34,8 +37,8 @@ export const dynamic = "force-dynamic";
 /** Pinned sheets ride in the sidebar, so the shell needs them before render. */
 async function pinnedSheets() {
   try {
-    const [user, workspace] = await Promise.all([getCurrentUser(), getWorkspace()]);
-    return await listPinnedSheets(workspace, user.id);
+    const principal = await getWebPrincipal();
+    return await listPinnedSheets(principal);
   } catch {
     return [];
   }
@@ -48,7 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${jakarta.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${spaceMono.variable} h-full antialiased`}
       style={
         {
           "--font-heading": "var(--font-sans)",

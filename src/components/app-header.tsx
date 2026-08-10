@@ -9,6 +9,7 @@ import { MobileNav } from "./mobile-nav";
 import { GlobalSearch } from "./global-search";
 import { ThemeToggle } from "./theme-toggle";
 import { authMode } from "@/lib/auth";
+import { fmtDateTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { User } from "@/db/schema";
 
@@ -41,7 +42,12 @@ export async function AppHeader() {
         ) : (
           <SignedInUser user={user} />
         )}
-        <NotificationsBell items={items} />
+        <NotificationsBell
+          items={items.map((item) => ({
+            ...item,
+            createdAtLabel: fmtDateTime(item.createdAt),
+          }))}
+        />
         <ThemeToggle />
       </div>
     </header>

@@ -11,15 +11,40 @@ Destini) are convincingly mocked; everything else actually works.
 
 ## Quick start
 
+### Full data (recommended — Neon)
+
+Your hosted Neon database already holds the Smartsheet import and workspace
+sheets. With `DATABASE_MODE=postgres` and Neon URLs in `.env.local`:
+
 ```bash
 npm install
-npm run db:reset   # create schema + seed ~110 estimate rounds across 42 jobs
-npm run dev        # http://localhost:3000
+npm run db:status   # should show ~600+ jobs / ~1000+ rounds / sheets
+npm run dev         # http://localhost:3000 against Neon
 ```
 
-Reseed anytime with `npm run db:reset` (stop the dev server first — PGlite is
-single-process).
+Do **not** run `npm run db:reset` if you want this dataset — that command only
+rebuilds the **small synthetic demo** on local PGlite and never writes Neon.
 
+### Synthetic demo only (offline PGlite)
+
+```bash
+npm install
+npm run db:reset    # wipe .pglite/data + ~42 jobs / ~108 rounds demo seed
+npm run dev         # requires DATABASE_MODE=pglite (see .env.development)
+```
+
+### Full offline rebuild from Smartsheet export
+
+Source files live in `data/smartsheet/json` (47 sheets). Rebuild a local
+PGlite copy without touching Neon:
+
+```bash
+npm run db:bootstrap:smartsheet   # → .pglite/data-full
+# then point .env.local at PGLITE_DATA_DIR=.pglite/data-full + DATABASE_MODE=pglite
+```
+
+Reseed the **demo** store anytime with `npm run db:reset` (stop the dev server
+first — PGlite is single-process).
 ## The demo story
 
 Use the **role switcher** (top right) to walk the four-stage pipeline as each persona:

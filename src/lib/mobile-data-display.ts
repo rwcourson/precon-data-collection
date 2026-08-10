@@ -298,7 +298,7 @@ export function sheetDisplayName(name: string | null | undefined): string {
     return raw.replace(/^pcn[_\s]+/i, "").trim() || raw;
   }
 
-  let s = raw.replace(/^pcn_/i, "");
+  const s = raw.replace(/^pcn_/i, "");
   if (/[_-]/.test(s) || s === s.toLowerCase()) {
     return s
       .replace(/[_-]+/g, " ")

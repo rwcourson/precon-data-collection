@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { Download } from "lucide-react";
 import { StudioCloneButton } from "@/components/dashboards/studio-clone-button";
 import { StudioWidgetForm } from "@/components/dashboards/studio-widget-form";
@@ -17,10 +17,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { db } from "@/db";
-import { dashboardWidgets, dashboards } from "@/db/schema";
+import { dashboardWidgets } from "@/db/schema";
 import { resolveWidget } from "@/lib/dashboard-query";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
+import {
+  listRoundsWithJobsForPrincipal,
+  loadDashboardForPrincipal,
+} from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export default async function DashboardStudioDetailPage({
   params,
@@ -31,21 +34,19 @@ export default async function DashboardStudioDetailPage({
   const id = Number(idParam);
   if (!Number.isFinite(id)) notFound();
 
-  const [dash] = await db
-    .select()
-    .from(dashboards)
-    .where(and(eq(dashboards.id, id), isNull(dashboards.deletedAt)));
-  if (!dash) notFound();
+  const principal = await getWebPrincipal();
+  const loaded = await loadDashboardForPrincipal(principal, id);
+  if (!loaded) notFound();
+  const dash = loaded.value;
 
-  const [widgets, workspace] = await Promise.all([
+  const [widgets, rows] = await Promise.all([
     db
       .select()
       .from(dashboardWidgets)
       .where(eq(dashboardWidgets.dashboardId, id))
       .orderBy(asc(dashboardWidgets.sortOrder)),
-    getWorkspace(),
+    listRoundsWithJobsForPrincipal(principal),
   ]);
-  const rows = await getRoundsWithJobs(workspace);
   const rounds = rows.map((r) => r.round);
   const resolved = widgets.map((w) => resolveWidget(w.config, rounds));
 

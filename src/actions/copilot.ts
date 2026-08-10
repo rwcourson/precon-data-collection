@@ -2,11 +2,11 @@
 
 import { createDashboard } from "@/actions/dashboards";
 import { getCurrentUser } from "@/lib/current-user";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
 import { resolveWidgets, type WidgetResolved } from "@/lib/dashboard-query";
 import { runMagnusTurn, type MagnusTurn } from "@/lib/magnus-ai";
-import { getRoundsWithJobs } from "@/lib/queries";
-import { getWorkspace } from "@/lib/workspace-server";
 
 export type CopilotPreviewResult = {
   plan: CopilotPlan;
@@ -19,12 +19,11 @@ export type MagnusChatResult = {
 };
 
 export async function askMagnus(prompt: string): Promise<MagnusChatResult> {
-  await getCurrentUser();
+  const principal = await getWebPrincipal();
   const trimmed = prompt.trim();
   if (trimmed.length < 2) throw new Error("Ask a question or describe a dashboard.");
 
-  const workspace = await getWorkspace();
-  const rows = await getRoundsWithJobs(workspace);
+  const rows = await listRoundsWithJobsForPrincipal(principal);
   const rounds = rows.map((r) => r.round);
   const turn = await runMagnusTurn(trimmed, rounds);
 
