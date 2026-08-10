@@ -188,8 +188,8 @@ describe("resource access HTTP matrix", () => {
     store.set(WORKSPACE_COOKIE, pcm.region!);
 
     try {
-      const { default: JobPage } = await import("@/app/jobs/[id]/page");
-      const { default: RoundPage } = await import("@/app/rounds/[id]/page");
+      const { default: JobPage } = await import("@/app/(app)/jobs/[id]/page");
+      const { default: RoundPage } = await import("@/app/(app)/rounds/[id]/page");
       for (const render of [
         () => JobPage({ params: Promise.resolve({ id: String(job.id) }) }),
         () => RoundPage({ params: Promise.resolve({ id: String(round.id) }) }),

@@ -1,28 +1,38 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function SignInClient({
-  searchParams,
+  initialNext,
+  initialError,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  initialNext?: string;
+  initialError?: string;
 }) {
-  const params = use(searchParams);
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(params.error ?? null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
 
   const signIn = async () => {
     setPending(true);
     setError(null);
     try {
-      await authClient.signIn.social({
+      const callbackURL =
+        initialNext && initialNext.startsWith("/") && !initialNext.startsWith("//")
+          ? initialNext
+          : "/";
+      const result = await authClient.signIn.social({
         provider: "microsoft",
-        callbackURL: params.next && params.next.startsWith("/") ? params.next : "/",
+        callbackURL,
       });
+      if (result?.error) {
+        setError(result.error.message || "Sign-in failed");
+        setPending(false);
+      }
+      // On success the browser navigates to Microsoft.
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed");
       setPending(false);
@@ -30,41 +40,60 @@ export function SignInClient({
   };
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-primary text-primary-foreground">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-10">
+      {/* Soft brand wash — no app chrome */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklch,var(--primary)_12%,transparent),transparent_55%),radial-gradient(ellipse_at_bottom_right,color-mix(in_oklch,var(--info)_10%,transparent),transparent_50%)]"
+      />
+
+      <Card className="relative z-10 w-full max-w-[420px] border-border/80 shadow-lg">
+        <CardHeader className="space-y-3 pb-2 text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
             <span
               aria-hidden
-              className="size-7 bg-current"
+              className="size-8 bg-current"
               style={{
                 mask: 'url("/bg-ampersand.png") center / contain no-repeat',
                 WebkitMask: 'url("/bg-ampersand.png") center / contain no-repeat',
               }}
             />
           </div>
-          <CardTitle className="text-xl tracking-tight">B&amp;G Precon</CardTitle>
-          <CardDescription>
-            Sign in with your Brasfield &amp; Gorrie Microsoft account to access
-            pursuits and data.
-          </CardDescription>
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold tracking-tight">
+              B&amp;G Precon
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Sign in with your Brasfield &amp; Gorrie Microsoft account to open
+              pursuits and data.
+            </CardDescription>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4 pt-2">
           {error && (
-            <p className="rounded-md border border-destructive/40 bg-destructive-soft px-3 py-2 text-xs text-destructive-foreground">
+            <p
+              role="alert"
+              className="rounded-md border border-destructive/40 bg-destructive-soft px-3 py-2 text-xs leading-relaxed text-destructive-foreground"
+            >
               {error}
             </p>
           )}
-          <Button className="w-full gap-2" size="lg" disabled={pending} onClick={signIn}>
+          <Button
+            className="h-11 w-full gap-2.5 text-sm font-medium"
+            size="lg"
+            disabled={pending}
+            onClick={signIn}
+          >
             {pending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <MicrosoftGlyph className="size-4" />
+              <MicrosoftGlyph className="size-4 shrink-0" />
             )}
-            Sign in with Microsoft
+            {pending ? "Redirecting to Microsoft…" : "Sign in with Microsoft"}
           </Button>
-          <p className="text-center text-2xs text-muted-foreground">
-            Zero passwords in this app — identity comes from Microsoft Entra ID.
+          <p className="text-center text-2xs leading-relaxed text-muted-foreground">
+            No app passwords — identity is Microsoft Entra ID. Contact Precon
+            admin if your groups are not mapped.
           </p>
         </CardContent>
       </Card>
