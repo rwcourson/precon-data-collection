@@ -1,6 +1,12 @@
+/* Vendor chart-elements ships a full Tailwind dump in @layer chart-elements.
+   Put utilities last so app responsive classes (hidden md:flex, md:hidden, …)
+   beat unprefixed CE utilities and the desktop shell stays intact. */
+@layer theme, base, components, chart-elements, utilities;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@rwcourson/chart-elements/components.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -115,11 +121,36 @@
   --input: oklch(0.88 0.014 255);
   --ring: oklch(0.48 0.08 262);
 
-  --chart-1: oklch(0.254 0.079 262.3);
-  --chart-2: oklch(0.48 0.09 255);
-  --chart-3: oklch(0.68 0.06 250);
-  --chart-4: oklch(0.62 0.12 60);
-  --chart-5: oklch(0.55 0.09 145);
+  /* Cobalt series (chart-elements default for Precon dashboards) */
+  --chart-1: #002070;
+  --chart-2: #3888ff;
+  --chart-3: #0028f0;
+  --chart-4: #7fa8ff;
+  --chart-5: #00143c;
+  --chart-6: #64748b;
+  --chart-7: #2645d8;
+  --chart-8: #a8c6ff;
+  --chart-positive: #1f6b4a;
+  --chart-negative: #9c343c;
+  --chart-neutral: #5b6675;
+  --chart-warning: #8a5010;
+  --chart-on-1: #ffffff;
+  --chart-on-2: #0f172a;
+  --chart-on-3: #ffffff;
+  --chart-on-4: #0f172a;
+  --chart-on-5: #ffffff;
+  --chart-on-6: #ffffff;
+  --chart-on-7: #ffffff;
+  --chart-on-8: #0f172a;
+  --chart-label: var(--chart-on-1);
+  /* Solid tooltip chrome — chart-elements uses these tokens with !important.
+     Missing vars made hover cards fully transparent over marks. */
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-fg: #10141c;
+  --chart-tooltip-border: rgb(15 23 42 / 0.12);
+  --chart-grid: rgb(15 23 42 / 0.08);
+  --chart-axis: #5b6675;
+  --overlay-shadow: 0 12px 32px rgb(15 23 42 / 0.14);
 
   --radius: 0.375rem;
   --sidebar: oklch(1 0 0);
@@ -175,11 +206,34 @@
   --input: oklch(0.96 0.01 250 / 13%);
   --ring: oklch(0.734 0.07 264.4);
 
-  --chart-1: oklch(0.734 0.07 264.4);
-  --chart-2: oklch(0.62 0.08 255);
-  --chart-3: oklch(0.8 0.05 265);
-  --chart-4: oklch(0.8 0.1 70);
-  --chart-5: oklch(0.74 0.09 150);
+  /* Cobalt dark series */
+  --chart-1: #3888ff;
+  --chart-2: #b0ffff;
+  --chart-3: #7fa8ff;
+  --chart-4: #4c63ff;
+  --chart-5: #d6e6ff;
+  --chart-6: #94a3b8;
+  --chart-7: #66d9e8;
+  --chart-8: #a8c6ff;
+  --chart-positive: #7cc79d;
+  --chart-negative: #e99ba1;
+  --chart-neutral: #a2acbd;
+  --chart-warning: #e0a45e;
+  --chart-on-1: #00143c;
+  --chart-on-2: #00143c;
+  --chart-on-3: #00143c;
+  --chart-on-4: #ffffff;
+  --chart-on-5: #00143c;
+  --chart-on-6: #0f172a;
+  --chart-on-7: #00143c;
+  --chart-on-8: #00143c;
+  --chart-label: var(--chart-on-1);
+  --chart-tooltip-bg: #1a2336;
+  --chart-tooltip-fg: #f4f6fa;
+  --chart-tooltip-border: rgb(255 255 255 / 0.14);
+  --chart-grid: rgb(255 255 255 / 0.08);
+  --chart-axis: #a2acbd;
+  --overlay-shadow: 0 16px 40px rgb(0 0 0 / 0.45);
 
   --sidebar: oklch(0.21 0.036 260);
   --sidebar-foreground: oklch(0.96 0.008 250);
@@ -243,4 +297,28 @@
     color: var(--muted-foreground);
     border-color: var(--border);
   }
+}
+
+/*
+ * Chart hover cards — solid surface, no bleed-through of marks.
+ * chart-elements also sets these; we reinforce with explicit fallbacks.
+ */
+.recharts-default-tooltip,
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--chart-tooltip-bg, #ffffff) !important;
+  background-color: var(--chart-tooltip-bg, #ffffff) !important;
+  border: 1px solid var(--chart-tooltip-border, rgb(15 23 42 / 0.12)) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--overlay-shadow, 0 12px 32px rgb(15 23 42 / 0.14)) !important;
+  color: var(--chart-tooltip-fg, #10141c) !important;
+  padding: 10px 12px !important;
+  opacity: 1 !important;
+}
+.recharts-tooltip-wrapper {
+  z-index: 50 !important;
+  outline: none !important;
+}
+.recharts-tooltip-item,
+.recharts-tooltip-label {
+  color: inherit !important;
 }

@@ -119,11 +119,11 @@ function humanWidgetTitle(
     case "stacked_bar":
       return `${m} stacked by ${g ?? "Bid year"}`;
     case "line":
-      return `${m} over time`;
+      return g === "Bid year" ? `${m} trend by Bid year` : `${m} over time`;
     case "area":
       return `${m} trend`;
     case "table":
-      return `${g ?? "Group"} detail table`;
+      return g ? `Top pursuits by ${g.toLowerCase()}` : "Pursuit detail table";
     case "projection":
       return "Volume projection";
     default:
@@ -377,18 +377,26 @@ export async function planDashboardWithOptionalLlm(prompt: string): Promise<Copi
       model: getZdrModel(),
       ...gatewayZdrOptions(),
       schema: llmPlanSchema,
-      system: `You are Magnus AI for B&G Preconstruction.
+      system: `You are a senior Preconstruction analytics designer (Power BI caliber) for B&G.
 Design personal dashboards from allowlisted metrics and viz kinds only.
-Widget titles must be short, human, and specific — never camelCase or raw field keys.
-Good: "Pursuit volume ranking by Region", "Win rate over time", "Size bucket detail table".
-Bad: "estimateValue by region", "feeExpectedPct", "Group".
-Dashboard name: 3–7 words, title case (e.g. "Florida Pursuit Mix").
-Prefer KPIs + charts; include a table only when the user asks for detail/breakdown/table.
-Max 10 widgets. Use layout {w,h,x,y} on a 12-column grid.
-For "bucketized / size buckets" use groupBy=sizeBucket.
+
+Craft rules:
+- Lead with 3–4 KPIs that frame the story (volume, rounds, win rate, fee) when building scorecards.
+- Ranking → horizontal_bar; ordered categories (year/size) → bar; mix → one donut/pie max; trajectory → line/area; export → table.
+- Never put winRate or feeExpectedPct on a currency chart; keep those as percent metrics.
+- Widget titles: short, human, specific — never camelCase or raw field keys.
+  Good: "Pursuit volume ranking by Region", "Win rate by Market sector", "Pipeline mix by Status".
+  Bad: "estimateValue by region", "feeExpectedPct", "Group".
+- Dashboard name: 3–7 words, title case (e.g. "Florida Pursuit Scorecard").
+- Prefer 6–8 widgets; max 10. Balanced 12-column layout with {w,h,x,y}.
+- Include a table only when the user asks for detail/breakdown/table OR an executive scorecard needs a bottom grid.
+- For size bands / bucketized asks use groupBy=sizeBucket.
+- If the user names a region, filter to it.
+- Thin asks ("dashboard", "scorecard", "overview") still get a full executive page, not one chart.
+
 ${MAGNUS_DATA_CONTRACT}
 Model: ${AI_MODEL_LABEL} (${AI_MODEL_ID}).`,
-      prompt: `User request:\n${prompt}\n\nReturn a dashboard plan with polished names and valid filters only.`,
+      prompt: `User request:\n${prompt}\n\nReturn a senior-analytics dashboard plan with polished names, smart chart kinds, and valid filters only.`,
     });
 
     const sanitized = sanitizePlan({

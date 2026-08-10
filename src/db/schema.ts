@@ -804,3 +804,11 @@ export type Dashboard = typeof dashboards.$inferSelect;
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
 export type DmrImport = typeof dmrImports.$inferSelect;
 export type DmrLine = typeof dmrLines.$inferSelect;
+
+/** Better Auth OAuth tables (string IDs) — do not confuse with app `users`. */
+export {
+  user as authUser,
+  session as authSession,
+  account as authAccount,
+  verification as authVerification,
+} from "./auth-schema";

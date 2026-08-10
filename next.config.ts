@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // PGlite loads WASM assets from disk at runtime; keep it out of the bundle.
   serverExternalPackages: ["@electric-sql/pglite"],
+  // Local file: vendor package — ensure Next transpiles ESM chart-elements.
+  transpilePackages: ["@rwcourson/chart-elements"],
   // Keep build tracing and Turbopack discovery inside this repository even
   // when a parent directory contains another package-manager lockfile.
   outputFileTracingRoot: process.cwd(),

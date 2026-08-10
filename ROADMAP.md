@@ -91,7 +91,7 @@ the ask) · **Missing** (not started).
 | E2 | **Self-service dashboards** — "I can make it myself and I don't need an expert." Each region is a big business and needs its own visualizations, with a place to host them | **Built** | `/dashboards/studio` personal/region/corporate. |
 | E3 | Consistent graphics suitable for communicating upward | **Built** | Shared chart components + studio widgets. |
 | E4 | **Slide export** — today he screenshots charts into PowerPoint. Asked if export-to-slides would help: *"that would be excellent"* | **Built** | `/api/export/pptx` 16:9 forecast deck. |
-| E5 | "AI is UI" — generated views/dashboards from the clean schema (the Power BI-replacement idea) | **Built (stub)** | Suggest-view API; human must review/save. |
+| E5 | "AI is UI" — generated views/dashboards from the clean schema (the Power BI-replacement idea) | **Built** | Magnus ToolLoopAgent + chart-elements cobalt canvas; human must review/save. |
 
 ### F. Integrations & data flow
 
@@ -99,7 +99,7 @@ the ask) · **Missing** (not started).
 |---|---|---|---|
 | F1 | **Salesforce inbound**: pull opportunities/jobs so names and numbers are consistent, but keep the ability to flex (manual adds must survive). Today "there is no funnel coming in" | **Partial** | Sync loop + mock provider built; live REST still needs IT. |
 | F2 | **Match inbox**: every ~24h, sweep Salesforce, propose links/discrepancies, and let a human go "yes / no / link" — the Chambliss King pattern discussed and agreed as a good option | **Built** | Admin → Salesforce Inbox (approve/reject/dismiss). |
-| F3 | **Magnus integration** — ask questions of this data from Magnus chat, or push a report into Magnus | **Partial** | Scoped API + contract (`docs/magnus-api.md`); product wiring with Magnus TBD. |
+| F3 | **Magnus integration** — ask questions of this data from Magnus chat, or push a report into Magnus | **Built** | Streaming `/api/v1/ai/magnus` + web copilot; scoped API + contract (`docs/magnus-api.md`). |
 | F4 | **Databricks outbound** so the analytics team can compare precon data to other business data (per Greg) | **Built** (credential-gated) | Feed + cron + admin panel exist; blocked on credentials from Eric/IT. |
 | F5 | Estimating-software imports — post-bid values often arrive as a Destini (or other) Excel export handed to an admin | **Built** | Destini CSV → round field mapping in Admin. |
 

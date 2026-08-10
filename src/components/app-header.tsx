@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -12,15 +13,25 @@ import { authMode } from "@/lib/auth";
 import { fmtDateTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/permissions";
 import type { User } from "@/db/schema";
-
 export async function AppHeader() {
-  const [user, users] = await Promise.all([getCurrentUser(), getAllUsers()]);
-  const items = await db
-    .select()
-    .from(notifications)
-    .where(eq(notifications.userId, user.id))
-    .orderBy(desc(notifications.createdAt))
-    .limit(20);
+  let user: User | null = null;
+  let users: User[] = [];
+  try {
+    [user, users] = await Promise.all([getCurrentUser(), getAllUsers()]);
+  } catch {
+    user = null;
+    users = [];
+  }
+
+  const items =
+    user != null
+      ? await db
+          .select()
+          .from(notifications)
+          .where(eq(notifications.userId, user.id))
+          .orderBy(desc(notifications.createdAt))
+          .limit(20)
+      : [];
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b bg-card/90 px-6 backdrop-blur-md md:px-10 xl:px-14">
@@ -36,18 +47,29 @@ export async function AppHeader() {
         </div>
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2">
-        <GlobalSearch />
-        {authMode() === "demo" ? (
-          <RoleSwitcher users={users} current={user} />
+        {user ? (
+          <>
+            <GlobalSearch />
+            {authMode() === "demo" ? (
+              <RoleSwitcher users={users} current={user} />
+            ) : (
+              <SignedInUser user={user} />
+            )}
+            <NotificationsBell
+              items={items.map((item) => ({
+                ...item,
+                createdAtLabel: fmtDateTime(item.createdAt),
+              }))}
+            />
+          </>
         ) : (
-          <SignedInUser user={user} />
+          <Link
+            href="/sign-in"
+            className="inline-flex h-7 items-center rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:bg-accent"
+          >
+            Sign in
+          </Link>
         )}
-        <NotificationsBell
-          items={items.map((item) => ({
-            ...item,
-            createdAtLabel: fmtDateTime(item.createdAt),
-          }))}
-        />
         <ThemeToggle />
       </div>
     </header>

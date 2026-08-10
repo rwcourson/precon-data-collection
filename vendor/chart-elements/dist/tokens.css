@@ -1,0 +1,140 @@
+/* Optional Chart Elements default light and dark tokens. */
+
+
+:root {
+  --background: #eef0f4;
+  --background-deep: #e6e9ef;
+  --background-soft: #f4f6f9;
+  --foreground: #10141c;
+  --card: #ffffff;
+  --card-foreground: #10141c;
+  --muted: #f4f6f9;
+  --muted-foreground: #5b6675;
+  --secondary-foreground: #39424f;
+  --border: rgb(15 23 42 / 0.12);
+  --border-strong: rgb(15 23 42 / 0.2);
+  --border-soft: rgb(15 23 42 / 0.07);
+  --ring: #2563eb;
+  --accent: #334155;
+  --accent-hover: #1e293b;
+  --accent-soft: rgb(51 65 85 / 0.09);
+  --accent-foreground: #ffffff;
+  --destructive: #9c343c;
+  --destructive-soft: #f9e9ea;
+  --destructive-foreground: #ffffff;
+  --radius: 10px;
+  --radius-sm: 8px;
+  --radius-panel: 16px;
+  /* Resting elevation for panels/cards, distinct from --overlay-shadow. */
+  --card-shadow: 0 1px 0 rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.06);
+
+  --success: #1f6b4a;
+  --success-soft: #e4efe9;
+  --warning: #8a5010;
+  --warning-soft: #f8eddf;
+
+  --chart-1: #1d4ed8;
+  --chart-2: #0f766e;
+  --chart-3: #7c3aed;
+  --chart-4: #b45309;
+  --chart-5: #be123c;
+  --chart-6: #475569;
+  --chart-7: #0369a1;
+  --chart-8: #4d7c0f;
+  --chart-on-1: #ffffff;
+  --chart-on-2: #ffffff;
+  --chart-on-3: #ffffff;
+  --chart-on-4: #ffffff;
+  --chart-on-5: #ffffff;
+  --chart-on-6: #ffffff;
+  --chart-on-7: #ffffff;
+  --chart-on-8: #ffffff;
+  --chart-positive: #047857;
+  --chart-negative: #be123c;
+  --chart-neutral: #475569;
+  --chart-warning: #a16207;
+  --chart-grid: rgb(15 23 42 / 0.08);
+  /* Axis ticks are normal-size text, so this has to clear WCAG 4.5:1 on the
+     card. The previous #7b8593 only reached 3.74:1; this is 4.66:1. */
+  --chart-axis: #6b7585;
+  /* Backward-compatible fallback. New custom marks should pair each fill with
+     --chart-on-N (or foregroundAt()) rather than assuming one ink fits all. */
+  --chart-label: var(--chart-on-1);
+  /* Solid, not glass: a translucent tooltip lets the marks bleed through and
+     the numbers get hard to read (user feedback). */
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-fg: #10141c;
+  --chart-tooltip-border: rgb(15 23 42 / 0.12);
+  --overlay-shadow: 0 12px 32px rgb(15 23 42 / 0.14);
+
+  --sidebar-bg: rgb(249 250 252 / 0.92);
+  --sidebar-active: rgb(51 65 85 / 0.08);
+  --sidebar-hover: rgb(15 23 42 / 0.05);
+  --header-bg: rgb(249 250 252 / 0.86);
+  --page-gutter: 32px;
+  --section-gap: 20px;
+}
+
+.dark {
+  --background: #161e2e;
+  --background-deep: #121826;
+  --background-soft: #1b2334;
+  --foreground: #f4f6fa;
+  --card: #1f2839;
+  --card-foreground: #f4f6fa;
+  --muted: #1b2334;
+  --muted-foreground: #a2acbd;
+  --secondary-foreground: #cdd5e1;
+  --border: rgb(255 255 255 / 0.13);
+  --border-strong: rgb(255 255 255 / 0.22);
+  --border-soft: rgb(255 255 255 / 0.08);
+  --ring: #93c5fd;
+  --accent: #cbd5e1;
+  --accent-hover: #e2e8f0;
+  --accent-soft: rgb(203 213 225 / 0.16);
+  --accent-foreground: #121826;
+  --destructive: #e99ba1;
+  --destructive-soft: rgb(233 155 161 / 0.16);
+  /* Dark-theme destructive fill is a light pink, so its ink must go dark. */
+  --destructive-foreground: #121826;
+  --card-shadow: 0 1px 0 rgb(255 255 255 / 0.04), 0 10px 28px rgb(0 0 0 / 0.28);
+
+  --success: #7cc79d;
+  --success-soft: rgb(124 199 157 / 0.16);
+  --warning: #e0a45e;
+  --warning-soft: rgb(224 164 94 / 0.16);
+
+  --chart-1: #60a5fa;
+  --chart-2: #5eead4;
+  --chart-3: #c4b5fd;
+  --chart-4: #fbbf24;
+  --chart-5: #fb7185;
+  --chart-6: #cbd5e1;
+  --chart-7: #7dd3fc;
+  --chart-8: #bef264;
+  --chart-on-1: #0f172a;
+  --chart-on-2: #0f172a;
+  --chart-on-3: #0f172a;
+  --chart-on-4: #0f172a;
+  --chart-on-5: #0f172a;
+  --chart-on-6: #0f172a;
+  --chart-on-7: #0f172a;
+  --chart-on-8: #0f172a;
+  --chart-positive: #6ee7b7;
+  --chart-negative: #fda4af;
+  --chart-neutral: #cbd5e1;
+  --chart-warning: #fcd34d;
+  --chart-grid: rgb(255 255 255 / 0.08);
+  /* 4.46:1 on the dark card was fractionally under the bar; this is 5.46:1. */
+  --chart-axis: #939eb0;
+  --chart-label: var(--chart-on-1);
+  --chart-tooltip-bg: #1f2839;
+  --chart-tooltip-fg: #f4f6fa;
+  --chart-tooltip-border: rgb(255 255 255 / 0.13);
+  --overlay-shadow: 0 14px 36px rgb(0 0 0 / 0.4);
+
+  --sidebar-bg: rgb(24 32 47 / 0.96);
+  --sidebar-active: rgb(255 255 255 / 0.11);
+  --sidebar-hover: rgb(255 255 255 / 0.06);
+  --header-bg: rgb(24 32 47 / 0.88);
+}

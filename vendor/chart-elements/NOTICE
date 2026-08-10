@@ -1,0 +1,13 @@
+Chart Elements is an independent open-source project.
+
+Microsoft, Power BI, Azure, and Bing are trademarks of the Microsoft group of
+companies. ArcGIS is a trademark of Esri. All other product names and marks are
+the property of their respective owners. Their use is descriptive only and
+does not imply affiliation, sponsorship, or endorsement.
+
+Runtime dependencies retain their own licenses and copyright notices. See the
+root repository lockfile and release documentation for the dependency-license
+review performed before each release.
+
+DOMPurify is dual-licensed under MPL-2.0 or Apache-2.0. Chart Elements uses it
+under the Apache-2.0 option; its copyright and license remain with its authors.

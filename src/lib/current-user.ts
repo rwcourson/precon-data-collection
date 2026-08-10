@@ -3,19 +3,21 @@ import { db, ensureDbReady } from "@/db";
 import { users } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import type { User } from "@/db/schema";
-import { authMode, readSsoIdentity, resolveSsoUser } from "./auth";
+import { authMode, resolveSsoUser } from "./auth";
 import { getMobileContext } from "./mobile-context";
+import { auth } from "@/lib/auth-server";
+import {
+  identityFromBetterAuthUser,
+  microsoftProfileFromAccount,
+} from "@/lib/sso-session";
 
 const COOKIE = "demo-user-id";
 
 /**
- * Identity resolution. In production (`AUTH_MODE=sso`) the signed-in user comes
- * from the identity provider via the authenticating proxy. In demo mode the
- * role switcher sets a cookie and server code reads it here, falling back to
- * the first seeded persona (PCM).
- *
- * Mobile REST handlers inject the principal via AsyncLocalStorage
- * (`runWithMobileContext`) so server actions reuse this path without cookies.
+ * Identity resolution.
+ * - SSO: Better Auth Microsoft session → app `users` via email + Entra profile.
+ * - Demo: persona cookie / first seeded user.
+ * - Mobile REST: AsyncLocalStorage principal.
  */
 export async function getCurrentUser(): Promise<User> {
   await ensureDbReady();
@@ -24,8 +26,34 @@ export async function getCurrentUser(): Promise<User> {
   if (mobile?.user) return mobile.user;
 
   if (authMode() === "sso") {
-    const identity = readSsoIdentity(await headers());
-    if (!identity) throw new Error("Not signed in.");
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      throw new Error("Not signed in.");
+    }
+
+    const profile = await microsoftProfileFromAccount(session.user.id);
+    const email = (
+      session.user.email ||
+      profile.email ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
+    if (!email) {
+      throw new Error("Not signed in — Microsoft session has no email claim.");
+    }
+
+    const name =
+      (profile.displayName && profile.displayName.trim()) ||
+      session.user.name ||
+      email;
+
+    const identity = identityFromBetterAuthUser({
+      email,
+      name,
+      groups: profile.groups,
+      title: profile.jobTitle,
+    });
     return resolveSsoUser(identity);
   }
 

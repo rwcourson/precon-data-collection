@@ -104,7 +104,7 @@ full re-import.
 | Postgres schema (jobs → estimate rounds one-to-many), full field dictionary | Salesforce/Connect data (seeded mirror behind a live-ready adapter) |
 | Explicit status state machine with transition log | Destini / InEight autofill (manual entry, API-ready field mapping) |
 | RBAC enforced in every server action, Region scoping enforced in SQL | Native mobile apps (responsive web instead) |
-| Required-field validation gating RPD lock | An actual IdP (SSO reads forwarded identity; demo personas otherwise) |
+| Required-field validation gating RPD lock | Microsoft Entra SSO via Better Auth (demo personas when `AUTH_MODE=demo`) |
 | Post-lock audit logging, schema-change audit | A live warehouse (feed builds and pushes, credentials pending) |
 | True PDF (headless Chromium) + Excel exports, saved templates | |
 | Custom report engine over flattened cross-dataset rows | |
@@ -119,8 +119,8 @@ falls back to something reviewable rather than something broken.
 
 | Variable | Effect |
 | --- | --- |
-| `AUTH_MODE=sso` | Identity comes from the authenticating proxy instead of the demo persona cookie. `src/proxy.ts` returns 401 for requests that arrive without one. |
-| `SSO_EMAIL_HEADER`, `SSO_NAME_HEADER`, `SSO_GROUPS_HEADER` | Override the forwarded header names. IdP group → role/Region mapping is edited in **Admin · Access**. |
+| `AUTH_MODE=sso` | Microsoft Entra via Better Auth (`/sign-in`). Session cookie required; unauthenticated pages redirect to sign-in. |
+| `MICROSOFT_CLIENT_ID` / `SECRET` / `TENANT_ID`, `BETTER_AUTH_*` | Entra app registration + Better Auth secrets. Group → role/Region mapping is edited in **Admin · Access**. See `docs/security/sso.md`. |
 | `CONNECT_MODE=rest`, `CONNECT_API_URL`, `CONNECT_API_TOKEN` | Pursuit lookup and match-and-merge read the live B&G Connect facade instead of the seeded mirror. |
 | `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABRICKS_WAREHOUSE_ID`, `DATABRICKS_TABLE` | The warehouse feed pushes for real; without them it builds and previews the payload. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Reminder emails send; otherwise they queue to a visible outbox. |
@@ -200,7 +200,16 @@ it meets during a client render.
 ## Stack
 
 Next.js 16 (App Router) · TypeScript · Drizzle ORM + PGlite (embedded Postgres) ·
-Tailwind 4 + shadcn/ui (Base UI) · Recharts · ExcelJS
+Tailwind 4 + shadcn/ui (Base UI) · **@rwcourson/chart-elements** (cobalt palette) ·
+AI SDK 7 (`ToolLoopAgent` + streaming Magnus) · ExcelJS
+
+### Magnus AI + charts
+
+- **UI:** `/dashboards/copilot` — chat + Power BI–style canvas
+- **API:** `POST /api/v1/ai/magnus` (session) · `POST /api/v1/ai/suggest-view` (bearer)
+- **Charts:** vendored from sibling `chart-elements` at `vendor/chart-elements`
+- **Refresh charts package:** build chart-elements, then `npm run charts:sync && npm install`
+- **Gateway:** set `AI_GATEWAY_API_KEY` for Opus 5 ZDR; without it, rules planner still builds views
 
 ## Layout
 
@@ -210,7 +219,7 @@ Tailwind 4 + shadcn/ui (Base UI) · Recharts · ExcelJS
 - `src/lib/metrics.ts` — server-side calculated metrics, grouped by family
 - `src/lib/permissions.ts` — RBAC role matrix + status state machine
 - `src/lib/workspace.ts` — Region workspace resolution and scoping (Miro folder model)
-- `src/lib/auth.ts` — identity seam: forwarded SSO headers → role/Region mapping
+- `src/lib/auth.ts` / `auth-server.ts` — identity seam: Better Auth Microsoft session → role/Region mapping
 - `src/lib/integrations/connect` — B&G Connect lookup adapter (mirror or live REST)
 - `src/lib/integrations/databricks` — field map, SQL client, outbound warehouse feed
 - `src/lib/migration.ts` — import reconciliation and cutover checklist

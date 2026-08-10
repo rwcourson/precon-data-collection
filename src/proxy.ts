@@ -1,21 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { inspectRuntimeConfig, runtimeDiagnostics } from "@/lib/runtime-config";
-import { verifySsoRequest } from "@/lib/sso-trust";
+import { BA_SESSION_COOKIE } from "@/lib/auth-constants";
 
 /**
- * Gate for SSO mode. The authenticating proxy in front of the app is what
- * actually establishes identity; this only refuses to serve a request that
- * arrived without one, so a misconfigured deployment fails closed instead of
- * silently falling back to a demo persona.
+ * Gate for SSO mode. Better Auth Microsoft holds the session cookie;
+ * this edge check only fails closed when the cookie is absent so demos
+ * and misconfigured deployments do not silently serve as a random persona.
  *
- * The scheduler endpoints are exempt because they authenticate with
- * `CRON_SECRET` rather than a user identity.
+ * Full session + role mapping still run in getCurrentUser() on the server.
+ *
+ * Cron endpoints authenticate with CRON_SECRET, not a user cookie.
  */
-const EXEMPT = ["/api/jobs/"];
+const EXEMPT_PREFIXES = ["/api/auth", "/api/jobs/", "/sign-in"];
 const HEALTH_EXEMPT = ["/api/health/live", "/api/health/ready"];
 
+function isExempt(pathname: string): boolean {
+  if (HEALTH_EXEMPT.includes(pathname)) return true;
+  return EXEMPT_PREFIXES.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`) || pathname.startsWith(p));
+}
+
 export function proxy(req: NextRequest) {
-  if (HEALTH_EXEMPT.includes(req.nextUrl.pathname)) return NextResponse.next();
+  const { pathname } = req.nextUrl;
+  if (isExempt(pathname)) return NextResponse.next();
 
   const status = inspectRuntimeConfig();
   if (!status.ok) {
@@ -26,14 +32,20 @@ export function proxy(req: NextRequest) {
   }
 
   if (status.config.authMode !== "sso") return NextResponse.next();
-  if (EXEMPT.some((p) => req.nextUrl.pathname.startsWith(p))) return NextResponse.next();
 
-  const trust = verifySsoRequest(req.headers, status.config);
-  if (!trust.ok) {
-    return NextResponse.json(
-      { error: "Not signed in. This deployment requires the trusted B&G SSO proxy." },
-      { status: 401 },
-    );
+  const token =
+    req.cookies.get(BA_SESSION_COOKIE)?.value ||
+    req.cookies.get(`__Secure-${BA_SESSION_COOKIE}`)?.value;
+  if (!token) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Not signed in. Sign in with Microsoft (AUTH_MODE=sso)." },
+        { status: 401 },
+      );
+    }
+    const signIn = new URL("/sign-in", req.url);
+    signIn.searchParams.set("next", pathname);
+    return NextResponse.redirect(signIn);
   }
   return NextResponse.next();
 }

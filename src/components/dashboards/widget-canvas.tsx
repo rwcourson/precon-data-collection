@@ -2,22 +2,15 @@
 
 import {
   AreaMetricChart,
+  CeDataTable,
   HorizontalBarChart,
+  KpiMetricCard,
   MetricLineChart,
-  PieDonutChart,
+  PieDonutMetricChart,
   StackedBarChart,
   VerticalBarChart,
-} from "@/components/dashboards/charts";
+} from "@/components/dashboards/ce-charts";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { fmtDollars, fmtNumber, fmtPercent } from "@/lib/format";
 import type { WidgetResolved } from "@/lib/dashboard-query";
 import { cn } from "@/lib/utils";
 
@@ -35,77 +28,119 @@ function isPercentMetric(metricKey?: string | null) {
   return metricKey === "winRate" || metricKey === "feeExpectedPct";
 }
 
-function cellValue(col: string, v: string | number | null) {
-  if (v == null) return "—";
-  if (typeof v !== "number") return v;
-  if (col.includes("%") || col.toLowerCase().includes("rate")) return fmtPercent(v);
-  if (col.toLowerCase().includes("round")) return fmtNumber(v);
-  if (
-    col.includes("$") ||
-    col.toLowerCase().includes("volume") ||
-    col.toLowerCase().includes("fee") ||
-    col.toLowerCase().includes("contingency")
-  ) {
-    return fmtDollars(v, true);
-  }
-  return fmtNumber(v);
+function kindLabel(kind: string) {
+  return kind.replaceAll("_", " ");
+}
+
+function metricSubtitle(metricKey?: string | null, groupBy?: string | null) {
+  const metricLabels: Record<string, string> = {
+    estimateValue: "Pursuit volume",
+    feeExpected: "Expected fee",
+    feeExpectedPct: "Fee %",
+    contingencyTotal: "Contingency",
+    roundCount: "Estimate rounds",
+    winRate: "Win rate",
+  };
+  const groupLabels: Record<string, string> = {
+    region: "Region",
+    preconDepartment: "Department",
+    marketSector: "Market sector",
+    estimatePhase: "Phase",
+    bidYear: "Bid year",
+    status: "Status",
+    outcome: "Outcome",
+    sizeBucket: "Size band",
+  };
+  const m = metricKey ? (metricLabels[metricKey] ?? metricKey) : null;
+  const g = groupBy ? (groupLabels[groupBy] ?? groupBy) : null;
+  if (m && g) return `${m} · by ${g}`;
+  if (m) return m;
+  return null;
 }
 
 export function WidgetCanvas({
   widgets,
   className,
+  loading,
 }: {
   widgets: WidgetResolved[];
   className?: string;
+  loading?: boolean;
 }) {
+  if (loading) {
+    return (
+      <div className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-12", className)}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-40 animate-pulse rounded-lg border bg-muted/40",
+              i < 4 ? "lg:col-span-3" : "lg:col-span-6",
+            )}
+          />
+        ))}
+      </div>
+    );
+  }
+
   if (!widgets.length) {
     return (
       <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
-        No widgets yet — describe a view in Copilot or add one in Studio.
+        No widgets yet — describe a view in Magnus or add one in Studio.
       </div>
     );
   }
 
   return (
-    <div className={cn("grid gap-3 sm:grid-cols-2 lg:grid-cols-12", className)}>
+    <div
+      className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-12", className)}
+      data-chart-palette="cobalt"
+    >
       {widgets.map((w, idx) => {
         const kind = w.config.kind;
         const percent = isPercentMetric(w.config.metricKey);
         const wide = kind === "kpi";
+        const subtitle = metricSubtitle(w.config.metricKey, w.config.groupBy);
         return (
           <article
             key={`${w.config.title}-${idx}`}
             className={cn(
-              "overflow-hidden rounded-md border bg-card",
+              "flex min-h-0 flex-col overflow-hidden rounded-lg border border-border/80 bg-card shadow-[var(--card-shadow,0_1px_0_rgb(15_23_42/0.04))]",
               wide ? "sm:col-span-1 lg:col-span-3" : spanClass(w.config.layout?.w),
             )}
           >
-            <header className="flex items-start justify-between gap-2 border-b px-3.5 py-2.5">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-medium tracking-tight">{w.config.title}</h3>
-                <p className="mt-0.5 text-2xs text-muted-foreground">
-                  {w.config.metricKey ?? "metric"}
-                  {w.config.groupBy ? ` · by ${w.config.groupBy}` : ""}
-                </p>
+            <header className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3">
+              <div className="min-w-0 space-y-0.5">
+                <h3 className="truncate text-[13px] font-semibold leading-snug tracking-tight text-foreground">
+                  {w.config.title}
+                </h3>
+                {subtitle && (
+                  <p className="truncate text-2xs text-muted-foreground">{subtitle}</p>
+                )}
               </div>
-              <Badge variant="secondary" size="sm" className="shrink-0 capitalize">
-                {kind.replaceAll("_", " ")}
+              <Badge
+                variant="secondary"
+                size="sm"
+                className="shrink-0 capitalize text-2xs font-medium"
+              >
+                {kindLabel(kind)}
               </Badge>
             </header>
-            <div className="p-3">
+            <div className={cn("min-h-0 flex-1", kind === "kpi" ? "p-3" : "p-3.5 pt-3")}>
               {w.empty ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No data for this filter.</p>
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No data for this filter.
+                </p>
               ) : kind === "kpi" && w.kpi ? (
-                <div className="border-l-2 border-primary px-3 py-2.5">
-                  <p className="text-3xl font-semibold tracking-tight tabular-nums">
-                    {w.kpi.value}
-                  </p>
-                  {w.kpi.sub && (
-                    <p className="mt-1.5 text-xs text-muted-foreground">{w.kpi.sub}</p>
-                  )}
-                </div>
+                <KpiMetricCard
+                  label={w.config.title}
+                  value={w.kpi.value}
+                  sub={w.kpi.sub}
+                  raw={w.kpi.raw}
+                  percent={percent}
+                />
               ) : kind === "pie" || kind === "donut" ? (
-                <PieDonutChart
+                <PieDonutMetricChart
                   data={(w.series ?? []).map((s) => ({ name: s.name, value: s.value }))}
                   donut={kind === "donut"}
                   percent={percent}
@@ -130,32 +165,17 @@ export function WidgetCanvas({
                   percent={percent && (w.trendKeys?.length ?? 1) === 1}
                 />
               ) : kind === "table" || kind === "reconciliation" ? (
-                <div className="max-h-80 overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {(w.table?.columns ?? []).map((c) => (
-                          <TableHead key={c} className="text-2xs">
-                            {c}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(w.table?.rows ?? []).map((row, i) => (
-                        <TableRow key={i}>
-                          {(w.table?.columns ?? []).map((c) => (
-                            <TableCell key={c} className="text-xs tabular-nums">
-                              {cellValue(c, row[c] ?? null)}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="max-h-96 overflow-auto rounded-md border border-border/60">
+                  <CeDataTable
+                    columns={w.table?.columns ?? []}
+                    rows={w.table?.rows ?? []}
+                    caption={w.config.title}
+                  />
                 </div>
               ) : (
-                <HorizontalBarChart data={w.series ?? []} percent={percent} />
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Unsupported widget kind: {kind}
+                </p>
               )}
             </div>
           </article>

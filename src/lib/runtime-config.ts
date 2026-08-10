@@ -21,8 +21,14 @@ export type RuntimeConfig = {
   appOrigin: string;
   allowedOrigins: string[];
   cronSecret?: string;
+  /** Optional legacy proxy hop secret; primary SSO is Better Auth + Microsoft. */
   ssoTrustSecret?: string;
   ssoAllowedDomains: string[];
+  betterAuthSecret?: string;
+  betterAuthUrl?: string;
+  microsoftClientId?: string;
+  microsoftClientSecret?: string;
+  microsoftTenantId?: string;
   apiTokenMaxTtlDays: number;
   email:
     | { mode: "stub" }
@@ -207,19 +213,37 @@ export function inspectRuntimeConfig(
   const cronSecret = production
     ? required(env, "CRON_SECRET", issues, 32)
     : env.CRON_SECRET?.trim() || undefined;
-  const ssoTrustSecret = production
-    ? required(env, "SSO_TRUST_SECRET", issues, 32)
-    : env.SSO_TRUST_SECRET?.trim() || undefined;
+  // Legacy authenticating-proxy secret (optional). Primary SSO is Better Auth Microsoft.
+  const ssoTrustSecret = env.SSO_TRUST_SECRET?.trim() || undefined;
   const rawDomains = env.SSO_ALLOWED_DOMAINS?.trim();
   const ssoAllowedDomains = rawDomains
     ? [...new Set(rawDomains.split(",").map((domain) => domain.trim().toLowerCase()).filter(Boolean))]
     : [];
-  if (production && ssoAllowedDomains.length === 0) {
-    issues.push({ key: "SSO_ALLOWED_DOMAINS", reason: "is required in production" });
+  if ((production || authMode === "sso") && ssoAllowedDomains.length === 0) {
+    issues.push({ key: "SSO_ALLOWED_DOMAINS", reason: "is required when AUTH_MODE=sso" });
   }
   if (ssoAllowedDomains.some((domain) => !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(domain))) {
     issues.push({ key: "SSO_ALLOWED_DOMAINS", reason: "must contain comma-separated DNS domains" });
   }
+
+  let betterAuthSecret: string | undefined;
+  let betterAuthUrl: string | undefined;
+  let microsoftClientId: string | undefined;
+  let microsoftClientSecret: string | undefined;
+  let microsoftTenantId: string | undefined;
+  if (authMode === "sso") {
+    betterAuthSecret = required(env, "BETTER_AUTH_SECRET", issues, 32);
+    betterAuthUrl =
+      parsedUrl(env, "BETTER_AUTH_URL", production ? ["https:"] : ["http:", "https:"], issues, false) ||
+      appOrigin;
+    if (!betterAuthUrl) {
+      issues.push({ key: "BETTER_AUTH_URL", reason: "is required when AUTH_MODE=sso (or set APP_ORIGIN)" });
+    }
+    microsoftClientId = required(env, "MICROSOFT_CLIENT_ID", issues, 8);
+    microsoftClientSecret = required(env, "MICROSOFT_CLIENT_SECRET", issues, 8);
+    microsoftTenantId = required(env, "MICROSOFT_TENANT_ID", issues, 8);
+  }
+
   const apiTokenMaxTtlDays = boundedInteger(env, "API_TOKEN_MAX_TTL_DAYS", 1, 365, issues);
 
   let email: RuntimeConfig["email"] | undefined;
@@ -287,6 +311,11 @@ export function inspectRuntimeConfig(
       cronSecret,
       ssoTrustSecret,
       ssoAllowedDomains,
+      betterAuthSecret,
+      betterAuthUrl,
+      microsoftClientId,
+      microsoftClientSecret,
+      microsoftTenantId,
       apiTokenMaxTtlDays,
       email,
       storage,

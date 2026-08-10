@@ -19,11 +19,13 @@ if (mode === "pglite" && !pgliteDataDir) {
   throw new Error("PGlite tooling requires PGLITE_DATA_DIR.");
 }
 
+const schema = ["./src/db/schema.ts", "./src/db/auth-schema.ts"];
+
 export default defineConfig(
   mode === "postgres"
     ? {
         dialect: "postgresql",
-        schema: "./src/db/schema.ts",
+        schema,
         out: "./drizzle",
         dbCredentials: {
           url: unpooledUrl!,
@@ -32,7 +34,7 @@ export default defineConfig(
     : {
         dialect: "postgresql",
         driver: "pglite",
-        schema: "./src/db/schema.ts",
+        schema,
         out: "./drizzle",
         dbCredentials: {
           url: pgliteDataDir!,

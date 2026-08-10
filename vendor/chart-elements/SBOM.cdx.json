@@ -1,0 +1,2201 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40rwcourson/chart-elements@0.1.0",
+      "group": "@rwcourson",
+      "name": "chart-elements",
+      "version": "0.1.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40rwcourson/chart-elements@0.1.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40reduxjs/toolkit@2.12.0",
+      "group": "@reduxjs",
+      "name": "toolkit",
+      "version": "2.12.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40reduxjs/toolkit@2.12.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40standard-schema/spec@1.1.0",
+      "group": "@standard-schema",
+      "name": "spec",
+      "version": "1.1.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40standard-schema/spec@1.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40standard-schema/utils@0.3.0",
+      "group": "@standard-schema",
+      "name": "utils",
+      "version": "0.3.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40standard-schema/utils@0.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-array@3.2.2",
+      "group": "@types",
+      "name": "d3-array",
+      "version": "3.2.2",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-array@3.2.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-color@3.1.3",
+      "group": "@types",
+      "name": "d3-color",
+      "version": "3.1.3",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-color@3.1.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-ease@3.0.2",
+      "group": "@types",
+      "name": "d3-ease",
+      "version": "3.0.2",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-ease@3.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-interpolate@3.0.4",
+      "group": "@types",
+      "name": "d3-interpolate",
+      "version": "3.0.4",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-interpolate@3.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-path@3.1.1",
+      "group": "@types",
+      "name": "d3-path",
+      "version": "3.1.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-path@3.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-scale@4.0.9",
+      "group": "@types",
+      "name": "d3-scale",
+      "version": "4.0.9",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-scale@4.0.9"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-shape@3.1.8",
+      "group": "@types",
+      "name": "d3-shape",
+      "version": "3.1.8",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-shape@3.1.8"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-time@3.0.4",
+      "group": "@types",
+      "name": "d3-time",
+      "version": "3.0.4",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-time@3.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/d3-timer@3.0.2",
+      "group": "@types",
+      "name": "d3-timer",
+      "version": "3.0.2",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/d3-timer@3.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/estree@1.0.9",
+      "group": "@types",
+      "name": "estree",
+      "version": "1.0.9",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/estree@1.0.9"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/geojson@7946.0.16",
+      "group": "@types",
+      "name": "geojson",
+      "version": "7946.0.16",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/geojson@7946.0.16"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/%40types/trusted-types@2.0.7",
+      "group": "@types",
+      "name": "trusted-types",
+      "version": "2.0.7",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/%40types/trusted-types@2.0.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/class-variance-authority@0.7.1",
+      "name": "class-variance-authority",
+      "version": "0.7.1",
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/class-variance-authority@0.7.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/clsx@2.1.1",
+      "name": "clsx",
+      "version": "2.1.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/clsx@2.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/commander@2.20.3",
+      "name": "commander",
+      "version": "2.20.3",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/commander@2.20.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/commander@7.2.0",
+      "name": "commander",
+      "version": "7.2.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/commander@7.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-array@3.2.4",
+      "name": "d3-array",
+      "version": "3.2.4",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-array@3.2.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-axis@3.0.0",
+      "name": "d3-axis",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-axis@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-brush@3.0.0",
+      "name": "d3-brush",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-brush@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-chord@3.0.1",
+      "name": "d3-chord",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-chord@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-color@3.1.0",
+      "name": "d3-color",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-color@3.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-contour@4.0.2",
+      "name": "d3-contour",
+      "version": "4.0.2",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-contour@4.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-delaunay@6.0.4",
+      "name": "d3-delaunay",
+      "version": "6.0.4",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-delaunay@6.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-dispatch@3.0.1",
+      "name": "d3-dispatch",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-dispatch@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-drag@3.0.0",
+      "name": "d3-drag",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-drag@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-dsv@3.0.1",
+      "name": "d3-dsv",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-dsv@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-ease@3.0.1",
+      "name": "d3-ease",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/d3-ease@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-fetch@3.0.1",
+      "name": "d3-fetch",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-fetch@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-force@3.0.0",
+      "name": "d3-force",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-force@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-format@3.1.2",
+      "name": "d3-format",
+      "version": "3.1.2",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-format@3.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-geo-projection@4.0.0",
+      "name": "d3-geo-projection",
+      "version": "4.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-geo-projection@4.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-geo@3.1.1",
+      "name": "d3-geo",
+      "version": "3.1.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-geo@3.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-hierarchy@3.1.2",
+      "name": "d3-hierarchy",
+      "version": "3.1.2",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-hierarchy@3.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-interpolate@3.0.1",
+      "name": "d3-interpolate",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-interpolate@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-path@3.1.0",
+      "name": "d3-path",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-path@3.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-polygon@3.0.1",
+      "name": "d3-polygon",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-polygon@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-quadtree@3.0.1",
+      "name": "d3-quadtree",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-quadtree@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-random@3.0.1",
+      "name": "d3-random",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-random@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-scale-chromatic@3.1.0",
+      "name": "d3-scale-chromatic",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-scale-chromatic@3.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-scale@4.0.2",
+      "name": "d3-scale",
+      "version": "4.0.2",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-scale@4.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-selection@3.0.0",
+      "name": "d3-selection",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-selection@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-shape@3.2.0",
+      "name": "d3-shape",
+      "version": "3.2.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-shape@3.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-time-format@4.1.0",
+      "name": "d3-time-format",
+      "version": "4.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-time-format@4.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-time@3.1.0",
+      "name": "d3-time",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-time@3.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-timer@3.0.1",
+      "name": "d3-timer",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-timer@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-transition@3.0.1",
+      "name": "d3-transition",
+      "version": "3.0.1",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-transition@3.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3-zoom@3.0.0",
+      "name": "d3-zoom",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3-zoom@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/d3@7.9.0",
+      "name": "d3",
+      "version": "7.9.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/d3@7.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/date-fns@4.4.0",
+      "name": "date-fns",
+      "version": "4.4.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/date-fns@4.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/decimal.js-light@2.5.1",
+      "name": "decimal.js-light",
+      "version": "2.5.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/decimal.js-light@2.5.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/delaunator@5.1.0",
+      "name": "delaunator",
+      "version": "5.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/delaunator@5.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/dompurify@3.4.13",
+      "name": "dompurify",
+      "version": "3.4.13",
+      "licenses": [
+        {
+          "expression": "(MPL-2.0 OR Apache-2.0)"
+        }
+      ],
+      "purl": "pkg:npm/dompurify@3.4.13"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/es-toolkit@1.50.0",
+      "name": "es-toolkit",
+      "version": "1.50.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/es-toolkit@1.50.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/eventemitter3@5.0.4",
+      "name": "eventemitter3",
+      "version": "5.0.4",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/eventemitter3@5.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/fast-json-patch@3.1.1",
+      "name": "fast-json-patch",
+      "version": "3.1.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/fast-json-patch@3.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/iconv-lite@0.6.3",
+      "name": "iconv-lite",
+      "version": "0.6.3",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/iconv-lite@0.6.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/immer@11.1.16",
+      "name": "immer",
+      "version": "11.1.16",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/immer@11.1.16"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/internmap@2.0.3",
+      "name": "internmap",
+      "version": "2.0.3",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/internmap@2.0.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/json-stringify-pretty-compact@4.0.0",
+      "name": "json-stringify-pretty-compact",
+      "version": "4.0.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/json-stringify-pretty-compact@4.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/lucide-react@1.30.0",
+      "name": "lucide-react",
+      "version": "1.30.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/lucide-react@1.30.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/react-redux@9.3.0",
+      "name": "react-redux",
+      "version": "9.3.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/react-redux@9.3.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/recharts@3.10.1",
+      "name": "recharts",
+      "version": "3.10.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/recharts@3.10.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/redux-thunk@3.1.0",
+      "name": "redux-thunk",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/redux-thunk@3.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/redux@5.0.1",
+      "name": "redux",
+      "version": "5.0.1",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/redux@5.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/reselect@5.2.0",
+      "name": "reselect",
+      "version": "5.2.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/reselect@5.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/robust-predicates@3.0.3",
+      "name": "robust-predicates",
+      "version": "3.0.3",
+      "licenses": [
+        {
+          "expression": "Unlicense"
+        }
+      ],
+      "purl": "pkg:npm/robust-predicates@3.0.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/rw@1.3.3",
+      "name": "rw",
+      "version": "1.3.3",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/rw@1.3.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/safer-buffer@2.1.2",
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/safer-buffer@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/semver@7.8.5",
+      "name": "semver",
+      "version": "7.8.5",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/semver@7.8.5"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/tailwind-merge@3.6.0",
+      "name": "tailwind-merge",
+      "version": "3.6.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/tailwind-merge@3.6.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/tiny-invariant@1.3.3",
+      "name": "tiny-invariant",
+      "version": "1.3.3",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/tiny-invariant@1.3.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/topojson-client@3.1.0",
+      "name": "topojson-client",
+      "version": "3.1.0",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/topojson-client@3.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/tslib@2.8.1",
+      "name": "tslib",
+      "version": "2.8.1",
+      "licenses": [
+        {
+          "expression": "0BSD"
+        }
+      ],
+      "purl": "pkg:npm/tslib@2.8.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/use-sync-external-store@1.6.0",
+      "name": "use-sync-external-store",
+      "version": "1.6.0",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/use-sync-external-store@1.6.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-canvas@2.0.0",
+      "name": "vega-canvas",
+      "version": "2.0.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-canvas@2.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-crossfilter@5.1.2",
+      "name": "vega-crossfilter",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-crossfilter@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-dataflow@6.1.2",
+      "name": "vega-dataflow",
+      "version": "6.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-dataflow@6.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-embed@7.1.0",
+      "name": "vega-embed",
+      "version": "7.1.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-embed@7.1.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-encode@5.2.1",
+      "name": "vega-encode",
+      "version": "5.2.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-encode@5.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-event-selector@4.0.0",
+      "name": "vega-event-selector",
+      "version": "4.0.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-event-selector@4.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-expression@6.2.1",
+      "name": "vega-expression",
+      "version": "6.2.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-expression@6.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-force@5.1.2",
+      "name": "vega-force",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-force@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-format@2.1.2",
+      "name": "vega-format",
+      "version": "2.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-format@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-functions@6.1.3",
+      "name": "vega-functions",
+      "version": "6.1.3",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-functions@6.1.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-geo@5.1.2",
+      "name": "vega-geo",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-geo@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-hierarchy@5.1.2",
+      "name": "vega-hierarchy",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-hierarchy@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-interpreter@2.3.1",
+      "name": "vega-interpreter",
+      "version": "2.3.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-interpreter@2.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-label@2.1.2",
+      "name": "vega-label",
+      "version": "2.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-label@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-lite@6.4.3",
+      "name": "vega-lite",
+      "version": "6.4.3",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-lite@6.4.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-loader@5.1.2",
+      "name": "vega-loader",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-loader@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-parser@7.1.2",
+      "name": "vega-parser",
+      "version": "7.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-parser@7.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-projection@2.1.2",
+      "name": "vega-projection",
+      "version": "2.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-projection@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-regression@2.1.2",
+      "name": "vega-regression",
+      "version": "2.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-regression@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-runtime@7.1.2",
+      "name": "vega-runtime",
+      "version": "7.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-runtime@7.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-scale@8.1.2",
+      "name": "vega-scale",
+      "version": "8.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-scale@8.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-scenegraph@5.2.1",
+      "name": "vega-scenegraph",
+      "version": "5.2.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-scenegraph@5.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-schema-url-parser@3.0.2",
+      "name": "vega-schema-url-parser",
+      "version": "3.0.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-schema-url-parser@3.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-selections@6.1.4",
+      "name": "vega-selections",
+      "version": "6.1.4",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-selections@6.1.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-statistics@2.0.0",
+      "name": "vega-statistics",
+      "version": "2.0.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-statistics@2.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-themes@3.0.0",
+      "name": "vega-themes",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-themes@3.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-time@3.2.1",
+      "name": "vega-time",
+      "version": "3.2.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-time@3.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-tooltip@1.0.0",
+      "name": "vega-tooltip",
+      "version": "1.0.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-tooltip@1.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-transforms@5.2.1",
+      "name": "vega-transforms",
+      "version": "5.2.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-transforms@5.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-typings@2.2.0",
+      "name": "vega-typings",
+      "version": "2.2.0",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-typings@2.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-util@2.1.2",
+      "name": "vega-util",
+      "version": "2.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-util@2.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-view-transforms@5.2.1",
+      "name": "vega-view-transforms",
+      "version": "5.2.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-view-transforms@5.2.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-view@6.1.2",
+      "name": "vega-view",
+      "version": "6.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-view@6.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-voronoi@5.1.2",
+      "name": "vega-voronoi",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-voronoi@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega-wordcloud@5.1.2",
+      "name": "vega-wordcloud",
+      "version": "5.1.2",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega-wordcloud@5.1.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/vega@6.3.1",
+      "name": "vega",
+      "version": "6.3.1",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/vega@6.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/victory-vendor@37.3.6",
+      "name": "victory-vendor",
+      "version": "37.3.6",
+      "licenses": [
+        {
+          "expression": "MIT AND ISC"
+        }
+      ],
+      "purl": "pkg:npm/victory-vendor@37.3.6"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40reduxjs/toolkit@2.12.0",
+      "dependsOn": [
+        "pkg:npm/%40standard-schema/spec@1.1.0",
+        "pkg:npm/%40standard-schema/utils@0.3.0",
+        "pkg:npm/immer@11.1.16",
+        "pkg:npm/redux-thunk@3.1.0",
+        "pkg:npm/redux@5.0.1",
+        "pkg:npm/reselect@5.2.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40rwcourson/chart-elements@0.1.0",
+      "dependsOn": [
+        "pkg:npm/class-variance-authority@0.7.1",
+        "pkg:npm/clsx@2.1.1",
+        "pkg:npm/d3@7.9.0",
+        "pkg:npm/date-fns@4.4.0",
+        "pkg:npm/dompurify@3.4.13",
+        "pkg:npm/lucide-react@1.30.0",
+        "pkg:npm/recharts@3.10.1",
+        "pkg:npm/tailwind-merge@3.6.0",
+        "pkg:npm/vega-embed@7.1.0",
+        "pkg:npm/vega-lite@6.4.3",
+        "pkg:npm/vega@6.3.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40standard-schema/spec@1.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40standard-schema/utils@0.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-array@3.2.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-color@3.1.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-ease@3.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-interpolate@3.0.4",
+      "dependsOn": [
+        "pkg:npm/%40types/d3-color@3.1.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-path@3.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-scale@4.0.9",
+      "dependsOn": [
+        "pkg:npm/%40types/d3-time@3.0.4"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-shape@3.1.8",
+      "dependsOn": [
+        "pkg:npm/%40types/d3-path@3.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-time@3.0.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/d3-timer@3.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/estree@1.0.9",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/geojson@7946.0.16",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/trusted-types@2.0.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/class-variance-authority@0.7.1",
+      "dependsOn": [
+        "pkg:npm/clsx@2.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/clsx@2.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/commander@2.20.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/commander@7.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-array@3.2.4",
+      "dependsOn": [
+        "pkg:npm/internmap@2.0.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-axis@3.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-brush@3.0.0",
+      "dependsOn": [
+        "pkg:npm/d3-dispatch@3.0.1",
+        "pkg:npm/d3-drag@3.0.0",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-selection@3.0.0",
+        "pkg:npm/d3-transition@3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-chord@3.0.1",
+      "dependsOn": [
+        "pkg:npm/d3-path@3.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-color@3.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-contour@4.0.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-delaunay@6.0.4",
+      "dependsOn": [
+        "pkg:npm/delaunator@5.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-dispatch@3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-drag@3.0.0",
+      "dependsOn": [
+        "pkg:npm/d3-dispatch@3.0.1",
+        "pkg:npm/d3-selection@3.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-dsv@3.0.1",
+      "dependsOn": [
+        "pkg:npm/commander@7.2.0",
+        "pkg:npm/iconv-lite@0.6.3",
+        "pkg:npm/rw@1.3.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-ease@3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-fetch@3.0.1",
+      "dependsOn": [
+        "pkg:npm/d3-dsv@3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-force@3.0.0",
+      "dependsOn": [
+        "pkg:npm/d3-dispatch@3.0.1",
+        "pkg:npm/d3-quadtree@3.0.1",
+        "pkg:npm/d3-timer@3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-format@3.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-geo-projection@4.0.0",
+      "dependsOn": [
+        "pkg:npm/commander@7.2.0",
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-geo@3.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-geo@3.1.1",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-hierarchy@3.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-interpolate@3.0.1",
+      "dependsOn": [
+        "pkg:npm/d3-color@3.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-path@3.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-polygon@3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-quadtree@3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-random@3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-scale-chromatic@3.1.0",
+      "dependsOn": [
+        "pkg:npm/d3-color@3.1.0",
+        "pkg:npm/d3-interpolate@3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-scale@4.0.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-format@3.1.2",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-time-format@4.1.0",
+        "pkg:npm/d3-time@3.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-selection@3.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-shape@3.2.0",
+      "dependsOn": [
+        "pkg:npm/d3-path@3.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-time-format@4.1.0",
+      "dependsOn": [
+        "pkg:npm/d3-time@3.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-time@3.1.0",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-timer@3.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/d3-transition@3.0.1",
+      "dependsOn": [
+        "pkg:npm/d3-color@3.1.0",
+        "pkg:npm/d3-dispatch@3.0.1",
+        "pkg:npm/d3-ease@3.0.1",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-timer@3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3-zoom@3.0.0",
+      "dependsOn": [
+        "pkg:npm/d3-dispatch@3.0.1",
+        "pkg:npm/d3-drag@3.0.0",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-selection@3.0.0",
+        "pkg:npm/d3-transition@3.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/d3@7.9.0",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-axis@3.0.0",
+        "pkg:npm/d3-brush@3.0.0",
+        "pkg:npm/d3-chord@3.0.1",
+        "pkg:npm/d3-color@3.1.0",
+        "pkg:npm/d3-contour@4.0.2",
+        "pkg:npm/d3-delaunay@6.0.4",
+        "pkg:npm/d3-dispatch@3.0.1",
+        "pkg:npm/d3-drag@3.0.0",
+        "pkg:npm/d3-dsv@3.0.1",
+        "pkg:npm/d3-ease@3.0.1",
+        "pkg:npm/d3-fetch@3.0.1",
+        "pkg:npm/d3-force@3.0.0",
+        "pkg:npm/d3-format@3.1.2",
+        "pkg:npm/d3-geo@3.1.1",
+        "pkg:npm/d3-hierarchy@3.1.2",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-path@3.1.0",
+        "pkg:npm/d3-polygon@3.0.1",
+        "pkg:npm/d3-quadtree@3.0.1",
+        "pkg:npm/d3-random@3.0.1",
+        "pkg:npm/d3-scale-chromatic@3.1.0",
+        "pkg:npm/d3-scale@4.0.2",
+        "pkg:npm/d3-selection@3.0.0",
+        "pkg:npm/d3-shape@3.2.0",
+        "pkg:npm/d3-time-format@4.1.0",
+        "pkg:npm/d3-time@3.1.0",
+        "pkg:npm/d3-timer@3.0.1",
+        "pkg:npm/d3-transition@3.0.1",
+        "pkg:npm/d3-zoom@3.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/date-fns@4.4.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/decimal.js-light@2.5.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/delaunator@5.1.0",
+      "dependsOn": [
+        "pkg:npm/robust-predicates@3.0.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/dompurify@3.4.13",
+      "dependsOn": [
+        "pkg:npm/%40types/trusted-types@2.0.7"
+      ]
+    },
+    {
+      "ref": "pkg:npm/es-toolkit@1.50.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/eventemitter3@5.0.4",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/fast-json-patch@3.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/iconv-lite@0.6.3",
+      "dependsOn": [
+        "pkg:npm/safer-buffer@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/immer@11.1.16",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/internmap@2.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/json-stringify-pretty-compact@4.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/lucide-react@1.30.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/react-redux@9.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/recharts@3.10.1",
+      "dependsOn": [
+        "pkg:npm/%40reduxjs/toolkit@2.12.0",
+        "pkg:npm/clsx@2.1.1",
+        "pkg:npm/decimal.js-light@2.5.1",
+        "pkg:npm/es-toolkit@1.50.0",
+        "pkg:npm/eventemitter3@5.0.4",
+        "pkg:npm/immer@11.1.16",
+        "pkg:npm/react-redux@9.3.0",
+        "pkg:npm/reselect@5.2.0",
+        "pkg:npm/tiny-invariant@1.3.3",
+        "pkg:npm/use-sync-external-store@1.6.0",
+        "pkg:npm/victory-vendor@37.3.6"
+      ]
+    },
+    {
+      "ref": "pkg:npm/redux-thunk@3.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/redux@5.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/reselect@5.2.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/robust-predicates@3.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/rw@1.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/safer-buffer@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/semver@7.8.5",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/tailwind-merge@3.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/tiny-invariant@1.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/topojson-client@3.1.0",
+      "dependsOn": [
+        "pkg:npm/commander@2.20.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/tslib@2.8.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/use-sync-external-store@1.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-canvas@2.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-crossfilter@5.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-dataflow@6.1.2",
+      "dependsOn": [
+        "pkg:npm/vega-format@2.1.2",
+        "pkg:npm/vega-loader@5.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-embed@7.1.0",
+      "dependsOn": [
+        "pkg:npm/fast-json-patch@3.1.1",
+        "pkg:npm/json-stringify-pretty-compact@4.0.0",
+        "pkg:npm/semver@7.8.5",
+        "pkg:npm/tslib@2.8.1",
+        "pkg:npm/vega-interpreter@2.3.1",
+        "pkg:npm/vega-schema-url-parser@3.0.2",
+        "pkg:npm/vega-themes@3.0.0",
+        "pkg:npm/vega-tooltip@1.0.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-encode@5.2.1",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-scale@8.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-event-selector@4.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-expression@6.2.1",
+      "dependsOn": [
+        "pkg:npm/%40types/estree@1.0.9",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-force@5.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-force@3.0.0",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-format@2.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-format@3.1.2",
+        "pkg:npm/d3-time-format@4.1.0",
+        "pkg:npm/vega-time@3.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-functions@6.1.3",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-color@3.1.0",
+        "pkg:npm/d3-geo@3.1.1",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-expression@6.2.1",
+        "pkg:npm/vega-scale@8.1.2",
+        "pkg:npm/vega-scenegraph@5.2.1",
+        "pkg:npm/vega-selections@6.1.4",
+        "pkg:npm/vega-statistics@2.0.0",
+        "pkg:npm/vega-time@3.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-geo@5.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-color@3.1.0",
+        "pkg:npm/d3-geo@3.1.1",
+        "pkg:npm/vega-canvas@2.0.0",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-projection@2.1.2",
+        "pkg:npm/vega-statistics@2.0.0",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-hierarchy@5.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-hierarchy@3.1.2",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-interpreter@2.3.1",
+      "dependsOn": [
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-label@2.1.2",
+      "dependsOn": [
+        "pkg:npm/vega-canvas@2.0.0",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-scenegraph@5.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-lite@6.4.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-loader@5.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-dsv@3.0.1",
+        "pkg:npm/topojson-client@3.1.0",
+        "pkg:npm/vega-format@2.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-parser@7.1.2",
+      "dependsOn": [
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-event-selector@4.0.0",
+        "pkg:npm/vega-functions@6.1.3",
+        "pkg:npm/vega-scale@8.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-projection@2.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-geo-projection@4.0.0",
+        "pkg:npm/d3-geo@3.1.1",
+        "pkg:npm/vega-scale@8.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-regression@2.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-statistics@2.0.0",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-runtime@7.1.2",
+      "dependsOn": [
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-scale@8.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-scale-chromatic@3.1.0",
+        "pkg:npm/d3-scale@4.0.2",
+        "pkg:npm/vega-time@3.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-scenegraph@5.2.1",
+      "dependsOn": [
+        "pkg:npm/d3-path@3.1.0",
+        "pkg:npm/d3-shape@3.2.0",
+        "pkg:npm/vega-canvas@2.0.0",
+        "pkg:npm/vega-loader@5.1.2",
+        "pkg:npm/vega-scale@8.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-schema-url-parser@3.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-selections@6.1.4",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/vega-expression@6.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-statistics@2.0.0",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-themes@3.0.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-time@3.2.1",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-time@3.1.0",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-tooltip@1.0.0",
+      "dependsOn": [
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-transforms@5.2.1",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-statistics@2.0.0",
+        "pkg:npm/vega-time@3.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-typings@2.2.0",
+      "dependsOn": [
+        "pkg:npm/%40types/geojson@7946.0.16",
+        "pkg:npm/vega-event-selector@4.0.0",
+        "pkg:npm/vega-expression@6.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-util@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vega-view-transforms@5.2.1",
+      "dependsOn": [
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-scenegraph@5.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-view@6.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-timer@3.0.1",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-format@2.1.2",
+        "pkg:npm/vega-functions@6.1.3",
+        "pkg:npm/vega-runtime@7.1.2",
+        "pkg:npm/vega-scenegraph@5.2.1",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-voronoi@5.1.2",
+      "dependsOn": [
+        "pkg:npm/d3-delaunay@6.0.4",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega-wordcloud@5.1.2",
+      "dependsOn": [
+        "pkg:npm/vega-canvas@2.0.0",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-scale@8.1.2",
+        "pkg:npm/vega-statistics@2.0.0",
+        "pkg:npm/vega-util@2.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vega@6.3.1",
+      "dependsOn": [
+        "pkg:npm/vega-crossfilter@5.1.2",
+        "pkg:npm/vega-dataflow@6.1.2",
+        "pkg:npm/vega-encode@5.2.1",
+        "pkg:npm/vega-event-selector@4.0.0",
+        "pkg:npm/vega-expression@6.2.1",
+        "pkg:npm/vega-force@5.1.2",
+        "pkg:npm/vega-format@2.1.2",
+        "pkg:npm/vega-functions@6.1.3",
+        "pkg:npm/vega-geo@5.1.2",
+        "pkg:npm/vega-hierarchy@5.1.2",
+        "pkg:npm/vega-label@2.1.2",
+        "pkg:npm/vega-loader@5.1.2",
+        "pkg:npm/vega-parser@7.1.2",
+        "pkg:npm/vega-projection@2.1.2",
+        "pkg:npm/vega-regression@2.1.2",
+        "pkg:npm/vega-runtime@7.1.2",
+        "pkg:npm/vega-scale@8.1.2",
+        "pkg:npm/vega-scenegraph@5.2.1",
+        "pkg:npm/vega-statistics@2.0.0",
+        "pkg:npm/vega-time@3.2.1",
+        "pkg:npm/vega-transforms@5.2.1",
+        "pkg:npm/vega-typings@2.2.0",
+        "pkg:npm/vega-util@2.1.2",
+        "pkg:npm/vega-view-transforms@5.2.1",
+        "pkg:npm/vega-view@6.1.2",
+        "pkg:npm/vega-voronoi@5.1.2",
+        "pkg:npm/vega-wordcloud@5.1.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/victory-vendor@37.3.6",
+      "dependsOn": [
+        "pkg:npm/%40types/d3-array@3.2.2",
+        "pkg:npm/%40types/d3-ease@3.0.2",
+        "pkg:npm/%40types/d3-interpolate@3.0.4",
+        "pkg:npm/%40types/d3-scale@4.0.9",
+        "pkg:npm/%40types/d3-shape@3.1.8",
+        "pkg:npm/%40types/d3-time@3.0.4",
+        "pkg:npm/%40types/d3-timer@3.0.2",
+        "pkg:npm/d3-array@3.2.4",
+        "pkg:npm/d3-ease@3.0.1",
+        "pkg:npm/d3-interpolate@3.0.1",
+        "pkg:npm/d3-scale@4.0.2",
+        "pkg:npm/d3-shape@3.2.0",
+        "pkg:npm/d3-time@3.1.0",
+        "pkg:npm/d3-timer@3.0.1"
+      ]
+    }
+  ]
+}

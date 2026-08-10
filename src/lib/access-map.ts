@@ -34,6 +34,8 @@ export type SsoIdentity = {
   email: string;
   name: string;
   groups: string[];
+  /** Optional Entra / IdP job title — used when linking the roster row. */
+  title?: string;
 };
 
 /** First matching group wins, ordered by privilege so the highest grant sticks. */

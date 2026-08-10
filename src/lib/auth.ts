@@ -1,7 +1,7 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appSettings, users, type User } from "@/db/schema";
+import { appSettings, users, type Role, type User } from "@/db/schema";
 import {
   DEFAULT_ACCESS,
   mapIdentity,
@@ -12,18 +12,14 @@ import {
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { DomainError } from "@/domain/errors";
 import { readForwardedSsoIdentity, ssoHeaderNames } from "@/lib/sso-trust";
+import { ROLE_LABELS } from "@/lib/permissions";
 
 /**
- * Identity seam between the demo persona switcher and B&G's identity provider
- * (BRD Section 3). Nothing here talks to an IdP directly: the app is expected to sit
- * behind the same authenticating reverse proxy B&G already runs, which
- * terminates SSO and forwards the signed-in identity as request headers. That
- * keeps the app free of a second credential store while making the cutover a
- * configuration change rather than a rewrite.
+ * Identity seam: demo personas vs SSO (Better Auth Microsoft, or legacy proxy headers).
  *
- * The proxy MUST strip these headers from inbound client requests — otherwise
- * anyone could name themselves Corporate Precon Admin. `src/proxy.ts` refuses
- * to serve SSO mode over a non-forwarded request as a second line of defence.
+ * SSO primary path: Better Auth session → email/groups → resolveSsoUser().
+ * Roster match key is email (case-insensitive). Name/title prefer Entra, then
+ * existing seed/roster values, then role label — never stuck on a placeholder.
  */
 
 export type AuthMode = "demo" | "sso";
@@ -54,30 +50,82 @@ export async function getAccessSettings(): Promise<AccessSettings> {
   return { ...DEFAULT_ACCESS, ...(row.value as Partial<AccessSettings>) };
 }
 
+const PLACEHOLDER_TITLES = new Set([
+  "signed in via sso",
+  "microsoft user",
+  "user",
+]);
+
+function isPlaceholderTitle(title: string | null | undefined): boolean {
+  if (!title?.trim()) return true;
+  return PLACEHOLDER_TITLES.has(title.trim().toLowerCase());
+}
+
+/** Prefer IdP display name; keep roster name when IdP only has an email local-part. */
+export function resolveDisplayName(identity: SsoIdentity, existing?: User | null): string {
+  const fromIdp = identity.name?.trim() ?? "";
+  const looksLikeLocalPart =
+    !fromIdp ||
+    fromIdp.includes("@") ||
+    fromIdp.toLowerCase() === "microsoft user" ||
+    (identity.email && fromIdp.toLowerCase() === identity.email.split("@")[0]?.toLowerCase());
+
+  if (fromIdp && !looksLikeLocalPart) return fromIdp.slice(0, 160);
+  if (existing?.name?.trim()) return existing.name.trim().slice(0, 160);
+  if (fromIdp) return fromIdp.slice(0, 160);
+  return (identity.email.split("@")[0] || "User").slice(0, 160);
+}
+
+/** Prefer Entra job title → existing roster title → role label. */
+export function resolveJobTitle(
+  identity: SsoIdentity,
+  role: Role,
+  existing?: User | null,
+): string {
+  if (identity.title?.trim() && !isPlaceholderTitle(identity.title)) {
+    return identity.title.trim().slice(0, 160);
+  }
+  if (existing?.title && !isPlaceholderTitle(existing.title)) {
+    return existing.title.slice(0, 160);
+  }
+  return ROLE_LABELS[role] ?? "Preconstruction";
+}
+
 /**
- * Resolves the forwarded identity to a row in `users`, creating it on first
- * sign-in. Role and Region are re-applied on every request so a change in the
- * IdP takes effect immediately rather than at the next manual edit.
+ * Resolves an SSO identity to a row in `users`, creating it on first sign-in.
+ * Match key: email (case-insensitive). Name/title/role/region refreshed each request.
  */
 export async function resolveSsoUser(identity: SsoIdentity): Promise<User> {
   const access = await getAccessSettings();
-  const mapping = mapIdentityStrict(identity, access);
+  const config = getRuntimeConfig();
+  let mapping = mapIdentityStrict(identity, access);
+  if (!mapping.ok && config.appEnv === "local") {
+    const loose = mapIdentity(identity, access);
+    mapping = { ok: true, role: loose.role, region: loose.region };
+  }
   if (!mapping.ok) {
     throw DomainError.unauthorized(
       mapping.reason === "unmapped-role"
-        ? "SSO identity has no mapped application role."
+        ? "SSO identity has no mapped application role. Ask a Precon admin to map your Entra groups."
         : "SSO identity is missing a required Region mapping.",
     );
   }
   const { role, region } = mapping;
+  const name = resolveDisplayName(identity, null);
+  const title = resolveJobTitle(identity, role, null);
 
-  const [existing] = await db.select().from(users).where(eq(users.email, identity.email));
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(sql`lower(${users.email}) = ${identity.email}`)
+    .limit(1);
+
   if (!existing) {
     const [created] = await db
       .insert(users)
       .values({
-        name: identity.name,
-        title: "Signed in via SSO",
+        name,
+        title,
         role,
         region,
         email: identity.email,
@@ -86,12 +134,29 @@ export async function resolveSsoUser(identity: SsoIdentity): Promise<User> {
     return created;
   }
 
-  if (existing.role === role && existing.region === region && existing.name === identity.name) {
+  const nextName = resolveDisplayName(identity, existing);
+  const nextTitle = resolveJobTitle(identity, role, existing);
+
+  if (
+    existing.role === role &&
+    existing.region === region &&
+    existing.name === nextName &&
+    existing.title === nextTitle &&
+    existing.email.toLowerCase() === identity.email
+  ) {
     return existing;
   }
+
   const [updated] = await db
     .update(users)
-    .set({ role, region, name: identity.name })
+    .set({
+      role,
+      region,
+      name: nextName,
+      title: nextTitle,
+      // Normalize stored email to the canonical lowercase IdP address.
+      email: identity.email,
+    })
     .where(eq(users.id, existing.id))
     .returning();
   return updated;

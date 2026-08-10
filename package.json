@@ -45,7 +45,8 @@
     "e2e": "npm run smoke:isolated",
     "verify:expo": "npm run mobile:typecheck:verify && npm run mobile:test && npm run mobile:bundle",
     "verify:ios": "node scripts/verify-ios.mjs",
-    "verify:all": "npm run verify:web && npm run verify:expo && npm run verify:ios"
+    "verify:all": "npm run verify:web && npm run verify:expo && npm run verify:ios",
+    "charts:sync": "node scripts/sync-chart-elements.mjs"
   },
   "engines": {
     "node": ">=22 <23"
@@ -53,9 +54,12 @@
   "packageManager": "npm@10.9.2",
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.45",
+    "@ai-sdk/react": "^4.0.61",
     "@base-ui/react": "^1.7.0",
     "@electric-sql/pglite": "^0.5.4",
-    "ai": "^7.0.57",
+    "@rwcourson/chart-elements": "file:vendor/chart-elements",
+    "ai": "^7.0.58",
+    "better-auth": "^1.6.26",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

@@ -51,6 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
+      data-chart-palette="cobalt"
       className={`${manrope.variable} ${spaceMono.variable} h-full antialiased`}
       style={
         {

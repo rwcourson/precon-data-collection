@@ -84,10 +84,10 @@ export function AccessSettingsPanel({
             <div className="space-y-1">
               <CardTitle className="text-sm">Sign-in</CardTitle>
               <CardDescription>
-                The app trusts the identity forwarded by B&amp;G&apos;s authenticating
-                proxy rather than holding its own passwords. Set{" "}
+                Production sign-in is Microsoft Entra via Better Auth (no app
+                passwords). Set{" "}
                 <code className="rounded bg-muted px-1 py-0.5 text-2xs">AUTH_MODE=sso</code>{" "}
-                to switch off the demo persona picker.
+                to require SSO and hide the demo persona picker.
               </CardDescription>
             </div>
             <Badge variant={mode === "sso" ? "success" : "outline"}>
@@ -97,17 +97,27 @@ export function AccessSettingsPanel({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid gap-2 text-xs sm:grid-cols-3">
-            {(["email", "name", "groups"] as const).map((k) => (
-              <div key={k} className="rounded-md border p-2.5">
-                <p className="font-medium capitalize">{k} header</p>
-                <code className="text-2xs text-muted-foreground">{headers[k]}</code>
-              </div>
-            ))}
+          <div className="grid gap-2 text-xs sm:grid-cols-2">
+            <div className="rounded-md border p-2.5">
+              <p className="font-medium">Provider</p>
+              <code className="text-2xs text-muted-foreground">Microsoft Entra ID</code>
+            </div>
+            <div className="rounded-md border p-2.5">
+              <p className="font-medium">Callback</p>
+              <code className="text-2xs text-muted-foreground">
+                /api/auth/callback/microsoft
+              </code>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            The proxy must strip these headers from inbound requests. Requests that
-            reach the app without an identity header are refused in SSO mode.
+            Role and region come from Entra group claims mapped below. Configure the
+            app registration to emit a{" "}
+            <code className="rounded bg-muted px-1 text-2xs">groups</code> claim
+            (or security group IDs/names matching these keys). Legacy proxy header
+            names remain documented for reference:{" "}
+            <code className="rounded bg-muted px-1 text-2xs">{headers.email}</code>,{" "}
+            <code className="rounded bg-muted px-1 text-2xs">{headers.name}</code>,{" "}
+            <code className="rounded bg-muted px-1 text-2xs">{headers.groups}</code>.
           </p>
         </CardContent>
       </Card>

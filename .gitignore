@@ -58,3 +58,6 @@ apps/**/dist/
 apps/**/.expo/
 **/xcuserdata/
 *.xcuserstate
+
+# vendored packages — install deps via root npm install
+vendor/**/node_modules/

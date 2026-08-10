@@ -37,6 +37,39 @@ Suggested views/dashboards must:
 2. Require a human to review and save before publish
 3. Never execute writes autonomously
 
+## Streaming Magnus chat (AI SDK 7)
+
+Web UI at `/dashboards/copilot` streams via:
+
+```
+POST /api/v1/ai/magnus
+Content-Type: application/json
+
+{
+  "messages": [ /* UIMessage[] from useChat */ ],
+  "previousPlan": null | { name, description, scope, widgets, … }
+}
+```
+
+- Auth: same session principal as the web app (not bearer token).
+- Model: Claude Opus 5 via AI Gateway with **zero data retention** (`src/lib/ai/gateway.ts`).
+- Agent: AI SDK 7 `ToolLoopAgent` with tools:
+  - `get_portfolio_brief` — scoped portfolio snapshot
+  - `answer_metric` — single allowlisted metric
+  - `plan_dashboard` — Power BI–style multi-widget plan + resolved series
+  - `refine_dashboard` — iterate on the last canvas plan
+  - `plan_dashboard_rules` — local rules planner (also used when gateway key is missing)
+- Charts: `@rwcourson/chart-elements` with **cobalt** palette on the canvas.
+- Writes: still require the human **Save view** action (`saveCopilotDashboard`).
+
+Bearer suggest-view remains for external Magnus integrations:
+
+```
+POST /api/v1/ai/suggest-view
+Authorization: Bearer pcn_…
+{ "prompt": "region scorecard" }
+```
+
 ## Destructive guardrails
 
 No destructive API call succeeds without:
