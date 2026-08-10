@@ -165,9 +165,9 @@ export function inspectRuntimeConfig(
   const appOrigin = parsedUrl(env, "APP_ORIGIN", production ? ["https:"] : ["http:", "https:"], issues);
   const allowedOrigins = originList(env, appOrigin, production, issues);
 
-  if (env.VERCEL_ENV === "production" && appEnv !== "production") {
-    issues.push({ key: "APP_ENV", reason: "must be production for a Vercel production deployment" });
-  }
+  // Full production (APP_ENV=production) requires SSO, Resend, Blob, etc.
+  // Hosted Magnus may still run APP_ENV=local with Postgres + demo auth until SSO is ready.
+  // Only forbid that combination when APP_ENV is explicitly production.
   if (production && authMode !== "sso") {
     issues.push({ key: "AUTH_MODE", reason: "must be sso in production" });
   }
@@ -178,8 +178,9 @@ export function inspectRuntimeConfig(
   let database: RuntimeConfig["database"] | undefined;
   if (databaseMode === "pglite") {
     const dataDir = required(env, "PGLITE_DATA_DIR", issues);
+    // PGlite is never valid on Vercel (ephemeral filesystem) regardless of APP_ENV.
     if (production || env.VERCEL_ENV === "production" || env.VERCEL === "1") {
-      issues.push({ key: "DATABASE_MODE", reason: "PGlite is forbidden in hosted production" });
+      issues.push({ key: "DATABASE_MODE", reason: "PGlite is forbidden on Vercel; use postgres" });
     }
     if (dataDir) database = { mode: "pglite", dataDir };
   } else if (databaseMode === "postgres") {
