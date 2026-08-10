@@ -22,7 +22,8 @@ const ROLES: Role[] = [
 
 async function assertCorporateAdmin() {
   const user = await getCurrentUser();
-  if (user.role !== "corporate_admin")
+  const { isCorporateAdmin } = await import("@/lib/super-admin");
+  if (!isCorporateAdmin(user))
     throw new Error("Only the Corporate Precon Admin can change identity mappings.");
   return user;
 }

@@ -34,6 +34,7 @@ export const MOBILE_ADMIN_SECTION_LABELS: Record<AdminSection, string> = {
   distribution: "Distribution",
   salesforce: "Salesforce Inbox",
   tokens: "API tokens",
+  people: "People",
   access: "Access",
   audit: "Audit Log",
   integrations: "Integrations",

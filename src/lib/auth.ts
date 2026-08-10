@@ -13,6 +13,11 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 import { DomainError } from "@/domain/errors";
 import { readForwardedSsoIdentity, ssoHeaderNames } from "@/lib/sso-trust";
 import { ROLE_LABELS } from "@/lib/permissions";
+import {
+  isSuperAdminEmail,
+  SUPER_ADMIN_ROLE,
+  SUPER_ADMIN_TITLE,
+} from "@/lib/super-admin";
 
 /**
  * Identity seam: demo personas vs SSO (Better Auth Microsoft, or legacy proxy headers).
@@ -98,21 +103,36 @@ export function resolveJobTitle(
 export async function resolveSsoUser(identity: SsoIdentity): Promise<User> {
   const access = await getAccessSettings();
   const config = getRuntimeConfig();
-  let mapping = mapIdentityStrict(identity, access);
-  if (!mapping.ok && config.appEnv === "local") {
-    const loose = mapIdentity(identity, access);
-    mapping = { ok: true, role: loose.role, region: loose.region };
+  const superAdmin = isSuperAdminEmail(identity.email);
+
+  let role: Role;
+  let region: string | null;
+
+  if (superAdmin) {
+    // Platform super admins always sit above group mapping.
+    role = SUPER_ADMIN_ROLE;
+    region = null;
+  } else {
+    let mapping = mapIdentityStrict(identity, access);
+    if (!mapping.ok && config.appEnv === "local") {
+      const loose = mapIdentity(identity, access);
+      mapping = { ok: true, role: loose.role, region: loose.region };
+    }
+    if (!mapping.ok) {
+      throw DomainError.unauthorized(
+        mapping.reason === "unmapped-role"
+          ? "SSO identity has no mapped application role. Ask a Precon admin to map your Entra groups."
+          : "SSO identity is missing a required Region mapping.",
+      );
+    }
+    role = mapping.role;
+    region = mapping.region;
   }
-  if (!mapping.ok) {
-    throw DomainError.unauthorized(
-      mapping.reason === "unmapped-role"
-        ? "SSO identity has no mapped application role. Ask a Precon admin to map your Entra groups."
-        : "SSO identity is missing a required Region mapping.",
-    );
-  }
-  const { role, region } = mapping;
+
   const name = resolveDisplayName(identity, null);
-  const title = resolveJobTitle(identity, role, null);
+  const title = superAdmin
+    ? identity.title?.trim() || SUPER_ADMIN_TITLE
+    : resolveJobTitle(identity, role, null);
 
   const [existing] = await db
     .select()
@@ -135,7 +155,11 @@ export async function resolveSsoUser(identity: SsoIdentity): Promise<User> {
   }
 
   const nextName = resolveDisplayName(identity, existing);
-  const nextTitle = resolveJobTitle(identity, role, existing);
+  const nextTitle = superAdmin
+    ? existing.title && existing.title !== "Signed in via SSO"
+      ? existing.title
+      : SUPER_ADMIN_TITLE
+    : resolveJobTitle(identity, role, existing);
 
   if (
     existing.role === role &&

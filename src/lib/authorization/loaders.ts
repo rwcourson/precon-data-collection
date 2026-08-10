@@ -48,6 +48,7 @@ export const ADMIN_SECTIONS = [
   "salesforce",
   "tokens",
   "access",
+  "people",
   "audit",
   "integrations",
   "migration",

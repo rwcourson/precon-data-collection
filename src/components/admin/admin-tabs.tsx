@@ -14,6 +14,7 @@ const TABS = [
   { value: "distribution", label: "Distribution" },
   { value: "salesforce", label: "Salesforce Inbox" },
   { value: "tokens", label: "API Tokens" },
+  { value: "people", label: "People" },
   { value: "access", label: "Access" },
   { value: "integrations", label: "Integrations" },
   { value: "migration", label: "Migration" },

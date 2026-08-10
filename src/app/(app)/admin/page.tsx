@@ -60,11 +60,15 @@ import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
 import { getWorkspace } from "@/lib/workspace-server";
 import {
   canManageCompanyColumns,
+  canManagePeople,
   canManageReferenceLists,
   canManageRegionColumns,
   canViewAudit,
   ROLE_LABELS,
 } from "@/lib/permissions";
+import { isSuperAdmin } from "@/lib/super-admin";
+import { listPeople } from "@/actions/people";
+import { PeoplePanel } from "@/components/admin/people-panel";
 import { fmtDateTime } from "@/lib/format";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -84,6 +88,7 @@ const VALID_TABS = new Set([
   "distribution",
   "salesforce",
   "tokens",
+  "people",
   "access",
   "audit",
   "integrations",
@@ -168,6 +173,11 @@ export default async function AdminPage({
     ]);
 
   const showAudit = canViewAudit(user);
+  const managePeople = canManagePeople(user);
+  const people =
+    managePeople && allowedSections.has("people")
+      ? await listPeople()
+      : [];
   let tab = VALID_TABS.has(params.tab ?? "") ? (params.tab as string) : "columns";
   if (!allowedSections.has(tab as AdminSection) || (tab === "audit" && !showAudit)) {
     tab = allowedSections.has("columns") ? "columns" : [...allowedSections][0]!;
@@ -435,6 +445,22 @@ export default async function AdminPage({
             }))}
             canEdit={["corporate_admin", "rpd"].includes(user.role)}
           />
+        </TabsContent>
+
+        <TabsContent value="people" className="pt-3">
+          {managePeople ? (
+            <PeoplePanel
+              people={people}
+              roleLabels={ROLE_LABELS}
+              regions={regionValues}
+              canEdit={managePeople}
+              canGrantCorporateAdmin={isSuperAdmin(user)}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Permission denied: managing people requires Corporate Precon Admin.
+            </p>
+          )}
         </TabsContent>
 
         <TabsContent value="access" className="pt-3">

@@ -33,13 +33,30 @@ ALLOWED_ORIGINS=https://your-origin
 
 ## Entra app registration
 
-| Setting | Value |
-|---------|--------|
-| Redirect URI (local) | `http://localhost:3000/api/auth/callback/microsoft` and/or `:3001` |
-| Redirect URI (prod) | `https://precon.brasfieldgorrie.app/api/auth/callback/microsoft` |
-| API permission | Microsoft Graph `User.Read` (delegated) |
-| Optional claims | `email`, `preferred_username` on ID token |
-| Groups | Emit `groups` claim matching Admin Access keys (e.g. `BG-Precon-PCM`, `BG-Region-Central`) |
+App (client) ID: `2c520da3-96dd-44d4-a9a4-dc63e4898a54`  
+Tenant ID: `52ccbd12-0e54-4e46-ab66-c49c6472d277`
+
+### Redirect URIs (platform type: **Web** — not SPA)
+
+Add **exactly** these under **Authentication → Platform configurations → Web → Redirect URIs**:
+
+| Environment | Redirect URI |
+|-------------|--------------|
+| Production | `https://precon-data.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
+| Production (alias, if used) | `https://precon.brasfieldgorrie.app/api/auth/callback/microsoft` |
+| Local | `http://localhost:3001/api/auth/callback/microsoft` |
+| Local (alt port) | `http://localhost:3000/api/auth/callback/microsoft` |
+
+**AADSTS50011** means the URI in the authorize request is missing from that list (character-for-character match required).
+
+Also set:
+- **Supported account types:** single tenant (this directory only), unless multi-tenant is intentional  
+- **API permission:** Microsoft Graph `User.Read` (delegated), admin consent if required  
+- **Optional claims (ID token):** `email`, `preferred_username`  
+- **Groups:** emit `groups` claim matching Admin Access keys (e.g. `BG-Precon-PCM`, `BG-Region-Central`)
+
+Portal deep link (Authentication blade):  
+https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Authentication/appId/2c520da3-96dd-44d4-a9a4-dc63e4898a54
 
 ## Local vs production mapping
 

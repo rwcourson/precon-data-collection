@@ -16,6 +16,7 @@ const CORPORATE_ADMIN_SECTIONS = new Set([
   "lists",
   "tokens",
   "access",
+  "people",
   "migration",
   "status",
 ]);
@@ -99,7 +100,9 @@ function fieldWriteAllowed(principal: Principal, resource: ResourceDescriptor): 
       (!override.regionScoped || principalAllowsRegion(principal, round.region))
     );
   }
-  if (principal.user.role === "leadership" || principal.user.role === "corporate_admin") return false;
+  // Corporate / platform super admins may correct any field (full visibility + control).
+  if (principal.user.role === "corporate_admin") return true;
+  if (principal.user.role === "leadership") return false;
   if (!principalAllowsRegion(principal, round.region)) return false;
   if (round.status === "locked") return principal.user.role === "rpd";
   const def = FIELD_DEFS.find((field) => field.key === fieldKey);
