@@ -28,6 +28,8 @@ export const bidScheduleGroupBySchema = z.enum([
   "marketSector",
   "estimatePhase",
   "bidDueDate",
+  "drawingsDueDate",
+  "bidReviewDate",
 ]);
 
 export type BidScheduleGroupBy = z.infer<typeof bidScheduleGroupBySchema>;

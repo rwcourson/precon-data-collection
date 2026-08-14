@@ -220,5 +220,11 @@ export function cutoverChecklist(
           : "Reminders write to the outbox only — confirm the channel with IT.",
       done: ctx.emailProvider !== "stub",
     },
+    {
+      label: "SME room: Brian + Jay + form-filler",
+      detail:
+        "Confirm the live Bid Schedule grid replaces the sheet (Drawings Due and Bid Review are optional operational dates, not lock-gate). Do not add resource Gantt, a company-required Owner/client field, or Georgia ATL division codes until that room says so.",
+      done: false,
+    },
   ];
 }

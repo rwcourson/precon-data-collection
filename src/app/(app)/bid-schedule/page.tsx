@@ -5,9 +5,7 @@ import { ExportDialog } from "@/components/bid-schedule/export-dialog";
 import { BidScheduleSheet } from "@/components/bid-schedule/sheet-table";
 import { PageHeader } from "@/components/page-header";
 import { UrlSelect } from "@/components/url-select";
-import {
-  getReferenceValues,
-} from "@/lib/queries";
+import { getReferenceValues } from "@/lib/queries";
 import {
   listCustomColumnsForPrincipal,
   listRoundsWithJobsForPrincipal,
@@ -20,10 +18,12 @@ import {
   parseBidScheduleGroupBy,
   parseBidScheduleSort,
 } from "@/lib/bid-schedule";
+import { calendarDate } from "@/lib/overview-queues";
 import { getWorkspace } from "@/lib/workspace-server";
 import { db } from "@/db";
 import { reportTemplates } from "@/db/schema";
 import type { RoundStatus } from "@/db/schema";
+import { listBidScheduleViews } from "@/actions/bid-schedule-views";
 
 const SECTIONS: { key: string; label: string; statuses: RoundStatus[] }[] = [
   { key: "all", label: "All", statuses: ["active", "upcoming", "outstanding"] },
@@ -31,6 +31,11 @@ const SECTIONS: { key: string; label: string; statuses: RoundStatus[] }[] = [
   { key: "upcoming", label: "Upcoming", statuses: ["upcoming"] },
   { key: "outstanding", label: "Outstanding", statuses: ["outstanding"] },
 ];
+
+const QUEUE_LABELS: Record<string, string> = {
+  "past-due": "Active rounds past bid due",
+  unlinked: "Unlinked TBD jobs",
+};
 
 export default async function BidSchedulePage({
   searchParams,
@@ -40,19 +45,27 @@ export default async function BidSchedulePage({
   const params = await searchParams;
   const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
   const user = principal.user;
-  const [rows, lists, templates, customCols] = await Promise.all([
+  const [rows, lists, templates, customCols, views] = await Promise.all([
     listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
     db.select().from(reportTemplates),
     listCustomColumnsForPrincipal(principal),
+    listBidScheduleViews(),
   ]);
 
+  const activeViewId = params.view ? Number(params.view) : undefined;
+  const activeView =
+    activeViewId && Number.isInteger(activeViewId)
+      ? views.find((v) => v.id === activeViewId)
+      : undefined;
+
   const section = SECTIONS.find((s) => s.key === (params.section ?? "all")) ?? SECTIONS[0];
-  // Inside a Region workspace the data set is already scoped; the picker only
-  // appears in Corporate, where it drills into one Region without switching.
   const region = workspace.region ?? params.region ?? "all";
   const groupBy = parseBidScheduleGroupBy(params.group);
   const sort = parseBidScheduleSort(params.sort, params.dir);
+  const density = params.density === "detail" ? "detail" : "summary";
+  const queue = params.queue;
+  const todayKey = calendarDate(new Date());
 
   const preBid = rows.filter((r) =>
     ["active", "upcoming", "outstanding"].includes(r.round.status),
@@ -68,34 +81,72 @@ export default async function BidSchedulePage({
     ]),
   );
 
-  const scoped = preBid
+  let scoped = preBid
     .filter((r) => section.statuses.includes(r.round.status))
     .filter((r) => region === "all" || r.round.region === region);
 
+  if (queue === "past-due") {
+    scoped = scoped.filter(
+      (r) => r.round.status === "active" && r.round.bidDueDate != null && r.round.bidDueDate < todayKey,
+    );
+  } else if (queue === "unlinked") {
+    scoped = scoped.filter((r) => !r.job.isLinked);
+  }
+
   const canEdit = canEditBidSchedule(user);
-  /** Non-default params only — shared by toolbar selects and export links. */
   const queryParams: Record<string, string | undefined> = {
     region: region !== "all" ? region : undefined,
     section: section.key !== "all" ? section.key : undefined,
     group: groupBy !== "none" ? groupBy : undefined,
     sort: sort.field !== "bidDueDate" ? sort.field : undefined,
     dir: sort.dir !== "asc" ? sort.dir : undefined,
+    density: density !== "summary" ? density : undefined,
+    queue,
+    view: activeView ? String(activeView.id) : undefined,
   };
   const queryString = new URLSearchParams(
     Object.entries(queryParams).filter(([, v]) => Boolean(v)) as [string, string][],
   ).toString();
+
+  const siblingsByJobId: Record<
+    number,
+    {
+      id: number;
+      estimatePhase: string;
+      bidDueDate: string | null;
+      status: RoundStatus;
+      roundNumber: number;
+    }[]
+  > = {};
+  for (const { round, job } of rows) {
+    (siblingsByJobId[job.id] ??= []).push({
+      id: round.id,
+      estimatePhase: round.estimatePhase,
+      bidDueDate: round.bidDueDate,
+      status: round.status,
+      roundNumber: round.roundNumber,
+    });
+  }
 
   const sheetRows = scoped.map(({ round, job, estimateLeadName }) => ({
     id: round.id,
     jobId: job.id,
     jobNumber: job.jobNumber,
     jobName: job.jobName,
+    region: round.region,
     preconDepartment: round.preconDepartment,
     marketSector: round.marketSector,
+    contractType: round.contractType,
+    procurement: round.procurement,
+    mlt: round.mlt,
+    statusAtPricing: round.statusAtPricing,
     roundNumber: round.roundNumber,
     estimatePhase: round.estimatePhase,
     bidYear: round.bidYear,
+    drawingsDueDate: round.drawingsDueDate,
+    bidReviewDate: round.bidReviewDate,
     bidDueDate: round.bidDueDate,
+    projectStartDate: round.projectStartDate,
     city: round.city,
     state: round.state,
     estimateLeadName,
@@ -112,8 +163,14 @@ export default async function BidSchedulePage({
     if (groupBy !== "none") p.set("group", groupBy);
     if (sort.field !== "bidDueDate") p.set("sort", sort.field);
     if (sort.dir !== "asc") p.set("dir", sort.dir);
+    if (density !== "summary") p.set("density", density);
     return `/bid-schedule?${p.toString()}`;
   };
+
+  const shareLabel =
+    principal.workspace.kind === "region"
+      ? `Share with ${principal.workspace.region}`
+      : "Share company-wide";
 
   return (
     <div className="space-y-3">
@@ -136,6 +193,15 @@ export default async function BidSchedulePage({
           </>
         }
       />
+
+      {queue && QUEUE_LABELS[queue] && (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-[13px] text-info-foreground">
+          <span>Queue · {QUEUE_LABELS[queue]}</span>
+          <Link href={sectionHref(section.key)} className="text-2xs font-medium hover:underline">
+            Clear
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded bg-muted p-0.5">
@@ -173,6 +239,18 @@ export default async function BidSchedulePage({
           )}
           <UrlSelect
             pathname="/bid-schedule"
+            param="density"
+            value={density}
+            currentParams={queryParams}
+            omitValues={["summary"]}
+            className="min-w-[8.5rem]"
+            options={[
+              { value: "summary", label: "Summary" },
+              { value: "detail", label: "Detail" },
+            ]}
+          />
+          <UrlSelect
+            pathname="/bid-schedule"
             param="group"
             value={groupBy}
             currentParams={queryParams}
@@ -208,11 +286,28 @@ export default async function BidSchedulePage({
       </div>
 
       <BidScheduleSheet
+        key={`${density}-${activeView?.id ?? "none"}`}
         rows={sheetRows}
         canEdit={canEdit}
         lists={lists}
         groupBy={groupBy}
         sort={sort}
+        density={density}
+        initialColumns={activeView?.config.columns}
+        siblingsByJobId={siblingsByJobId}
+        views={views}
+        currentUserId={user.id}
+        activeViewId={activeView?.id}
+        viewConfig={{
+          section: section.key,
+          group: groupBy,
+          sort: sort.field,
+          dir: sort.dir,
+          region: region !== "all" ? region : undefined,
+          queue,
+          density,
+        }}
+        shareLabel={shareLabel}
       />
     </div>
   );

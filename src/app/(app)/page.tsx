@@ -9,6 +9,9 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDollars } from "@/lib/format";
 import { STATUS_ORDER } from "@/lib/permissions";
 import { getWorkspace } from "@/lib/workspace-server";
+import { getMultiValuesForRounds } from "@/lib/queries";
+import { missingRequiredFields } from "@/lib/validation";
+import { buildOverviewQueues } from "@/lib/overview-queues";
 import type { RoundStatus } from "@/db/schema";
 
 export default async function OverviewPage() {
@@ -32,6 +35,29 @@ export default async function OverviewPage() {
   const decided = locked2026.filter((r) => r.round.outcome !== "pending").length;
 
   const scopeLabel = workspace.region ?? "All Regions";
+
+  const postBidIds = regionRows
+    .filter((r) => ["submitted", "post_bid"].includes(r.round.status))
+    .map((r) => r.round.id);
+  const multiMap = await getMultiValuesForRounds(postBidIds);
+  const queues = buildOverviewQueues(
+    regionRows.map(({ round, job, estimateLeadName }) => ({
+      roundId: round.id,
+      jobId: job.id,
+      jobNumber: job.jobNumber,
+      jobName: job.jobName,
+      status: round.status,
+      bidDueDate: round.bidDueDate,
+      isLinked: job.isLinked,
+      missingRequiredCount: ["submitted", "post_bid"].includes(round.status)
+        ? missingRequiredFields(round, multiMap.get(round.id) ?? {}, {
+            jobNumber: job.jobNumber,
+            jobName: job.jobName,
+            estimateLeadName,
+          }).length
+        : 0,
+    })),
+  );
 
   const kpis = [
     {
@@ -87,20 +113,65 @@ export default async function OverviewPage() {
     <div className="space-y-5">
       <PageHeader
         title={`Welcome back, ${user.name.split(" ")[0]}`}
-        description={`${scopeLabel} pursuit pipeline at a glance.`}
+        description={`${scopeLabel} — this week’s queues, then the pipeline.`}
       />
+
+      <div>
+        <div className="mb-2 flex items-center gap-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Action queues</h2>
+          <Separator className="flex-1" />
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {queues.map((q) => (
+            <Link key={q.id} href={q.href} className="group">
+              <Card className="h-full transition-colors group-hover:bg-info-soft/60">
+                <CardHeader className="gap-1.5 pb-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CardDescription className="text-[13px] font-medium text-foreground">
+                        {q.title}
+                      </CardDescription>
+                      <CardTitle className="font-mono text-xl font-medium tabular-nums">
+                        {q.count}
+                      </CardTitle>
+                    </div>
+                    <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+                  </div>
+                  <CardDescription>{q.description}</CardDescription>
+                </CardHeader>
+                {q.preview.length > 0 && (
+                  <CardContent className="pt-0">
+                    <ul className="space-y-1">
+                      {q.preview.map((item) => (
+                        <li
+                          key={item.roundId}
+                          className="truncate text-[13px] text-muted-foreground"
+                        >
+                          <span className="font-mono">{item.jobNumber}</span>
+                          {" · "}
+                          {item.jobName}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                )}
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (
           <Card key={k.label}>
             <CardHeader className="pb-0.5">
-              <CardDescription className="text-2xs">{k.label}</CardDescription>
+              <CardDescription className="text-[13px]">{k.label}</CardDescription>
               <CardTitle className="font-mono text-xl font-medium tabular-nums">
                 {k.value}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xs text-muted-foreground">{k.sub}</p>
+              <p className="text-[13px] text-muted-foreground">{k.sub}</p>
             </CardContent>
           </Card>
         ))}
@@ -135,7 +206,7 @@ export default async function OverviewPage() {
 
       <div>
         <div className="mb-2 flex items-center gap-3">
-          <h2 className="text-[13px] font-medium text-muted-foreground">Jump in</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">Jump in</h2>
           <Separator className="flex-1" />
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2">

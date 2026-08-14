@@ -31,6 +31,8 @@ export async function GET(req: Request) {
       marketSector: r.round.marketSector,
       estimatePhase: r.round.estimatePhase,
       bidDueDate: r.round.bidDueDate,
+      drawingsDueDate: r.round.drawingsDueDate,
+      bidReviewDate: r.round.bidReviewDate,
       estimateValue: r.round.estimateValue,
       roundNumber: r.round.roundNumber,
       estimateLeadName: r.estimateLeadName,
@@ -43,7 +45,11 @@ export async function GET(req: Request) {
               ? r.round.marketSector
               : groupBy === "estimatePhase"
                 ? r.round.estimatePhase
-                : r.round.bidDueDate,
+                : groupBy === "drawingsDueDate"
+                  ? r.round.drawingsDueDate
+                  : groupBy === "bidReviewDate"
+                    ? r.round.bidReviewDate
+                    : r.round.bidDueDate,
     }));
 
     const sections = LIFECYCLE_SECTION_ORDER.map((key: LifecycleSectionKey) => ({

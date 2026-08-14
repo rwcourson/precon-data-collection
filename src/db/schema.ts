@@ -94,12 +94,14 @@ export const estimateRounds = pgTable("estimate_rounds", {
   status: roundStatusEnum("status").notNull().default("upcoming"),
   outcome: outcomeEnum("outcome").notNull().default("pending"),
 
-  // ---- Core Bid Schedule fields (the "16 core data points") ----
+  // ---- Core Bid Schedule fields (16 Destini core + operational date trio) ----
   region: text("region").notNull(),
   preconDepartment: text("precon_department").notNull(),
   estimatePhase: text("estimate_phase").notNull(),
   bidYear: integer("bid_year").notNull(),
   bidDueDate: date("bid_due_date"),
+  drawingsDueDate: date("drawings_due_date"),
+  bidReviewDate: date("bid_review_date"),
   projectStartDate: date("project_start_date"),
   city: text("city"),
   state: text("state"),
@@ -347,6 +349,31 @@ export const reportTemplates = pgTable("report_templates", {
     .notNull()
     .references(() => users.id),
   config: jsonb("config").$type<ExportTemplateConfig>().notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+/** Named Bid Schedule views — company equivalent of working groups (not ATL OR-filters). */
+export type BidScheduleViewConfig = {
+  section?: string;
+  group?: string;
+  sort?: string;
+  dir?: "asc" | "desc";
+  region?: string;
+  queue?: string;
+  columns?: string[];
+  density?: "summary" | "detail";
+};
+
+export const bidScheduleViews = pgTable("bid_schedule_views", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  ownerId: integer("owner_id")
+    .notNull()
+    .references(() => users.id),
+  region: text("region"),
+  shared: boolean("shared").notNull().default(false),
+  config: jsonb("config").$type<BidScheduleViewConfig>().notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -806,6 +833,7 @@ export type Dashboard = typeof dashboards.$inferSelect;
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
 export type DmrImport = typeof dmrImports.$inferSelect;
 export type DmrLine = typeof dmrLines.$inferSelect;
+export type BidScheduleView = typeof bidScheduleViews.$inferSelect;
 
 /** Better Auth OAuth tables (string IDs) — do not confuse with app `users`. */
 export {

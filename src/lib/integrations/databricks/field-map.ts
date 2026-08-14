@@ -260,6 +260,18 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     column: "standardized.buildingconnected.projects.BidsDueAt",
     notes: "BC project grain; link to B&G job via Number / opportunity_project_pairs",
   },
+  {
+    appField: "drawingsDueDate",
+    label: "Drawings Due",
+    source: "manual_only",
+    notes: "Operational Bid Schedule date from the live sheet — not a lock-gate field",
+  },
+  {
+    appField: "bidReviewDate",
+    label: "Bid Review",
+    source: "manual_only",
+    notes: "Operational Bid Schedule date from the live sheet — not a lock-gate field",
+  },
 
   // Potential awards (win/loss adjacent)
   {

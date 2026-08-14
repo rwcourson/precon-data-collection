@@ -11,6 +11,8 @@ export const BID_SCHEDULE_GROUP_OPTIONS: {
   { value: "marketSector", label: "Market sector" },
   { value: "estimatePhase", label: "Estimate phase" },
   { value: "bidDueDate", label: "Bid due date" },
+  { value: "drawingsDueDate", label: "Drawings due" },
+  { value: "bidReviewDate", label: "Bid review" },
 ];
 
 export const BID_SCHEDULE_SORT_OPTIONS = BID_SCHEDULE_GROUP_OPTIONS.filter(
@@ -54,6 +56,51 @@ export function parseBidScheduleSort(
   return { field, dir };
 }
 
+export type BidDueUrgency = "overdue" | "week" | "fortnight" | null;
+
+/** Assignment-level urgency on bid due — overdue / ≤7d / ≤14d. Not resource planning. */
+export function bidDueUrgency(date: string | null | undefined, today = new Date()): BidDueUrgency {
+  if (!date) return null;
+  const due = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(due.getTime())) return null;
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((due.getTime() - start.getTime()) / 86_400_000);
+  if (days < 0) return "overdue";
+  if (days <= 7) return "week";
+  if (days <= 14) return "fortnight";
+  return null;
+}
+
+export const BID_DUE_URGENCY_LABEL: Record<Exclude<BidDueUrgency, null>, string> = {
+  overdue: "Overdue",
+  week: "Due ≤7d",
+  fortnight: "Due ≤14d",
+};
+
+export type BidScheduleViewQuery = {
+  section?: string;
+  group?: string;
+  sort?: string;
+  dir?: "asc" | "desc";
+  region?: string;
+  queue?: string;
+  columns?: string[];
+  density?: "summary" | "detail";
+};
+
+export function bidScheduleViewHref(config: BidScheduleViewQuery, viewId: number): string {
+  const p = new URLSearchParams();
+  if (config.section && config.section !== "all") p.set("section", config.section);
+  if (config.group && config.group !== "none") p.set("group", config.group);
+  if (config.sort && config.sort !== "bidDueDate") p.set("sort", config.sort);
+  if (config.dir && config.dir !== "asc") p.set("dir", config.dir);
+  if (config.region && config.region !== "all") p.set("region", config.region);
+  if (config.density && config.density !== "summary") p.set("density", config.density);
+  if (config.queue) p.set("queue", config.queue);
+  p.set("view", String(viewId));
+  return `/bid-schedule?${p.toString()}`;
+}
+
 export type BidScheduleGroupable = {
   id: number;
   status: string;
@@ -61,6 +108,8 @@ export type BidScheduleGroupable = {
   marketSector: string | null;
   estimatePhase: string;
   bidDueDate: string | null;
+  drawingsDueDate?: string | null;
+  bidReviewDate?: string | null;
   jobName: string;
   jobNumber: string;
   roundNumber: number;
@@ -79,6 +128,10 @@ function groupValue(
       return row.estimatePhase;
     case "bidDueDate":
       return row.bidDueDate;
+    case "drawingsDueDate":
+      return row.drawingsDueDate ?? null;
+    case "bidReviewDate":
+      return row.bidReviewDate ?? null;
   }
 }
 

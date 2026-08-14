@@ -19,7 +19,7 @@ export type FieldDef = {
   /** External system that will eventually source this field (renders a badge + read-only styling hint). */
   source?: "connect" | "destini" | "buildingconnected";
   note?: string;
-  /** Part of the 16 core Bid Schedule fields captured at pursuit creation. */
+  /** Part of the Bid Schedule core set captured at pursuit creation. */
   core?: boolean;
   /** Only applies when Awardability indicates a Rate Only pricing round. */
   conditional?: "rateOnly";
@@ -33,6 +33,8 @@ export const FIELD_DEFS: FieldDef[] = [
   { key: "preconDepartment", label: "Precon Department", type: "dropdown", tier: "required", group: "Project Identity", listKey: "preconDepartment", core: true, note: "Lead Preconstruction Department if IJV" },
   { key: "estimatePhase", label: "Estimate Phase", type: "dropdown", tier: "required", group: "Project Identity", listKey: "estimatePhase", core: true, note: "Identifies this Estimate Round" },
   { key: "bidYear", label: "Bid Year", type: "dropdown", tier: "required", group: "Project Identity", listKey: "bidYear", core: true },
+  { key: "drawingsDueDate", label: "Drawings Due", type: "date", tier: "optional", group: "Dates & Geography", core: true, note: "Operational Bid Schedule date — does not block RPD lock" },
+  { key: "bidReviewDate", label: "Bid Review", type: "date", tier: "optional", group: "Dates & Geography", core: true, note: "Operational Bid Schedule date — does not block RPD lock" },
   { key: "bidDueDate", label: "Bid Due Date", type: "date", tier: "required", group: "Dates & Geography", core: true },
   { key: "projectStartDate", label: "Project Start Date", type: "date", tier: "required", group: "Dates & Geography", core: true, note: "When construction starts" },
   { key: "city", label: "City", type: "text", tier: "required", group: "Dates & Geography", source: "connect", core: true },

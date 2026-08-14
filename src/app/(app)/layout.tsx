@@ -2,6 +2,10 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { AppMain } from "@/components/app-main";
 import { SidebarProvider } from "@/components/sidebar-context";
+import {
+  countPreBidStatusesForPrincipal,
+  type PipelineBucketCounts,
+} from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { listPinnedSheets } from "@/lib/sheets-server";
 import { authMode } from "@/lib/auth";
@@ -11,12 +15,18 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-async function pinnedSheets() {
+const EMPTY_COUNTS: PipelineBucketCounts = { active: 0, upcoming: 0, outstanding: 0 };
+
+async function chromeData() {
   try {
     const principal = await getWebPrincipal();
-    return await listPinnedSheets(principal);
+    const [pinned, counts] = await Promise.all([
+      listPinnedSheets(principal),
+      countPreBidStatusesForPrincipal(principal),
+    ]);
+    return { pinned, counts };
   } catch {
-    return [];
+    return { pinned: [], counts: EMPTY_COUNTS };
   }
 }
 
@@ -32,11 +42,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const pinned = await pinnedSheets();
+  const { pinned, counts } = await chromeData();
 
   return (
     <SidebarProvider>
-      <AppSidebar pinnedSheets={pinned} />
+      <AppSidebar pinnedSheets={pinned} counts={counts} />
       <AppMain>
         <AppHeader />
         <main className="flex-1 px-6 py-6 md:px-10 md:py-9 xl:px-14 xl:py-10">

@@ -28,9 +28,10 @@ export default async function PostBidPage({
   const rows = await listRoundsWithJobsForPrincipal(principal);
 
   const region = workspace.region ?? params.region ?? "all";
+  const queueFilter = params.queue;
   const inScope = rows.filter((r) => region === "all" || r.round.region === region);
 
-  const queue = inScope
+  let queue = inScope
     .filter((r) => ["submitted", "post_bid"].includes(r.round.status))
     .sort((a, b) => (a.round.submittedAt?.getTime() ?? 0) - (b.round.submittedAt?.getTime() ?? 0));
   const recentlyLocked = inScope
@@ -40,6 +41,26 @@ export default async function PostBidPage({
 
   const multiMap = await getMultiValuesForRounds(queue.map((r) => r.round.id));
 
+  if (queueFilter === "awaiting-lock") {
+    queue = queue.filter((r) => r.round.status === "post_bid");
+  } else if (queueFilter === "incomplete") {
+    queue = queue.filter(({ round, job, estimateLeadName }) => {
+      const { done, total } = requiredCompletion(round, multiMap.get(round.id) ?? {}, {
+        jobNumber: job.jobNumber,
+        jobName: job.jobName,
+        estimateLeadName,
+      });
+      return done < total;
+    });
+  }
+
+  const queueLabel =
+    queueFilter === "incomplete"
+      ? "Incomplete required fields"
+      : queueFilter === "awaiting-lock"
+        ? "Awaiting RPD lock"
+        : null;
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -48,6 +69,15 @@ export default async function PostBidPage({
           region !== "all" ? ` Showing ${region}.` : " Showing all Regions."
         }`}
       />
+
+      {queueLabel && (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-[13px] text-info-foreground">
+          <span>Queue · {queueLabel}</span>
+          <Link href="/post-bid" className="text-2xs font-medium hover:underline">
+            Clear
+          </Link>
+        </div>
+      )}
 
       <Card>
         <CardHeader className="pb-2">

@@ -3,6 +3,8 @@ import {
   buildBidScheduleSections,
   parseBidScheduleGroupBy,
   parseBidScheduleSort,
+  bidDueUrgency,
+  bidScheduleViewHref,
 } from "./bid-schedule";
 import { groupRowsByField } from "./sheets";
 
@@ -100,5 +102,30 @@ describe("bid schedule group/sort", () => {
       (r) => r.marketSector,
     );
     expect(grouped[0]?.label).toBe("(blank)");
+  });
+
+  it("flags bid-due urgency at overdue / 7 / 14 day bands", () => {
+    const today = new Date("2026-08-14T12:00:00");
+    expect(bidDueUrgency("2026-08-10", today)).toBe("overdue");
+    expect(bidDueUrgency("2026-08-14", today)).toBe("week");
+    expect(bidDueUrgency("2026-08-21", today)).toBe("week");
+    expect(bidDueUrgency("2026-08-28", today)).toBe("fortnight");
+    expect(bidDueUrgency("2026-09-15", today)).toBe(null);
+    expect(bidDueUrgency(null, today)).toBe(null);
+  });
+
+  it("builds a saved-view URL from config without default noise", () => {
+    expect(
+      bidScheduleViewHref(
+        {
+          section: "active",
+          group: "none",
+          sort: "bidDueDate",
+          dir: "asc",
+          density: "detail",
+        },
+        12,
+      ),
+    ).toBe("/bid-schedule?section=active&density=detail&view=12");
   });
 });

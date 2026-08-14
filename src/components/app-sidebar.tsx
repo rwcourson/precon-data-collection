@@ -28,9 +28,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+export type PipelineBucketCounts = {
+  active: number;
+  upcoming: number;
+  outstanding: number;
+};
+
 type SubItem = {
   href: string;
   label: string;
+  countKey?: keyof PipelineBucketCounts;
   match?: (pathname: string, search: string) => boolean;
 };
 
@@ -42,175 +49,196 @@ type NavItem = {
   children?: SubItem[];
 };
 
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
+
 export type PinnedSheet = { id: number; name: string };
 
-const NAV: NavItem[] = [
-  { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
+const NAV_SECTIONS: NavSection[] = [
   {
-    href: "/bid-schedule",
-    label: "Bid Schedule",
-    icon: CalendarRange,
-    children: [
+    label: "Pipeline",
+    items: [
+      { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
       {
-        href: "/bid-schedule?section=all",
-        label: "All",
-        match: (_, s) => !s.includes("section=") || s.includes("section=all"),
+        href: "/bid-schedule",
+        label: "Bid Schedule",
+        icon: CalendarRange,
+        children: [
+          {
+            href: "/bid-schedule?section=all",
+            label: "All",
+            match: (_, s) => !s.includes("section=") || s.includes("section=all"),
+          },
+          {
+            href: "/bid-schedule?section=active",
+            label: "Active",
+            countKey: "active",
+            match: (_, s) => s.includes("section=active"),
+          },
+          {
+            href: "/bid-schedule?section=upcoming",
+            label: "Upcoming",
+            countKey: "upcoming",
+            match: (_, s) => s.includes("section=upcoming"),
+          },
+          {
+            href: "/bid-schedule?section=outstanding",
+            label: "Outstanding",
+            countKey: "outstanding",
+            match: (_, s) => s.includes("section=outstanding"),
+          },
+        ],
       },
-      {
-        href: "/bid-schedule?section=active",
-        label: "Active",
-        match: (_, s) => s.includes("section=active"),
-      },
-      {
-        href: "/bid-schedule?section=upcoming",
-        label: "Upcoming",
-        match: (_, s) => s.includes("section=upcoming"),
-      },
-      {
-        href: "/bid-schedule?section=outstanding",
-        label: "Outstanding",
-        match: (_, s) => s.includes("section=outstanding"),
-      },
-    ],
-  },
-  { href: "/post-bid", label: "Post-Bid Entry", icon: ClipboardList },
-  { href: "/sheets", label: "Sheets", icon: Sheet },
-  {
-    href: "/dashboards",
-    label: "Dashboards",
-    icon: FileBarChart2,
-    children: [
-      {
-        href: "/dashboards?level=corporate",
-        label: "Corporate",
-        match: (_, s) => !s.includes("level=") || s.includes("level=corporate"),
-      },
-      {
-        href: "/dashboards?level=region",
-        label: "Region",
-        match: (_, s) => s.includes("level=region"),
-      },
-      {
-        href: "/dashboards?level=division",
-        label: "Division",
-        match: (_, s) => s.includes("level=division"),
-      },
-      {
-        href: "/dashboards/studio",
-        label: "Studio",
-        match: (p) => p.startsWith("/dashboards/studio"),
-      },
-      {
-        href: "/dashboards/forecast",
-        label: "Forecast",
-        match: (p) => p.startsWith("/dashboards/forecast"),
-      },
-      {
-        href: "/dashboards/reconciliation",
-        label: "DMR Reconciliation",
-        match: (p) => p.startsWith("/dashboards/reconciliation"),
-      },
+      { href: "/post-bid", label: "Post-Bid Entry", icon: ClipboardList },
     ],
   },
   {
-    href: "/reports",
-    label: "Reports",
-    icon: Table2,
-    children: [
+    label: "Tools",
+    items: [
+      { href: "/sheets", label: "Sheets", icon: Sheet },
+      {
+        href: "/dashboards",
+        label: "Dashboards",
+        icon: FileBarChart2,
+        children: [
+          {
+            href: "/dashboards?level=corporate",
+            label: "Corporate",
+            match: (p, s) =>
+              p === "/dashboards" &&
+              (!s.includes("level=") || s.includes("level=corporate")),
+          },
+          {
+            href: "/dashboards?level=region",
+            label: "Region",
+            match: (p, s) => p === "/dashboards" && s.includes("level=region"),
+          },
+          {
+            href: "/dashboards?level=division",
+            label: "Division",
+            match: (p, s) => p === "/dashboards" && s.includes("level=division"),
+          },
+          {
+            href: "/dashboards/studio",
+            label: "Studio",
+            match: (p) => p.startsWith("/dashboards/studio"),
+          },
+          {
+            href: "/dashboards/forecast",
+            label: "Forecast",
+            match: (p) => p.startsWith("/dashboards/forecast"),
+          },
+          {
+            href: "/dashboards/reconciliation",
+            label: "DMR Reconciliation",
+            match: (p) => p.startsWith("/dashboards/reconciliation"),
+          },
+          {
+            href: "/dashboards/copilot",
+            label: "Magnus",
+            match: (p) => p.startsWith("/dashboards/copilot"),
+          },
+        ],
+      },
       {
         href: "/reports",
-        label: "Report Builder",
-        match: (p) => p === "/reports",
+        label: "Reports",
+        icon: Table2,
+        children: [
+          {
+            href: "/reports",
+            label: "Report Builder",
+            match: (p) => p === "/reports",
+          },
+          {
+            href: "/reports/annual",
+            label: "Annual Regional Report",
+            match: (p) => p.startsWith("/reports/annual"),
+          },
+        ],
       },
       {
-        href: "/reports/annual",
-        label: "Annual Regional Report",
-        match: (p) => p.startsWith("/reports/annual"),
+        href: "/admin",
+        label: "Admin",
+        icon: Settings2,
+        children: [
+          {
+            href: "/admin?tab=columns",
+            label: "Data Columns",
+            match: (_, s) => !s.includes("tab=") || s.includes("tab=columns"),
+          },
+          {
+            href: "/admin?tab=lists",
+            label: "Reference Lists",
+            match: (_, s) => s.includes("tab=lists"),
+          },
+          {
+            href: "/admin?tab=audit",
+            label: "Audit Log",
+            match: (_, s) => s.includes("tab=audit"),
+          },
+          {
+            href: "/admin?tab=integrations",
+            label: "Integrations",
+            match: (_, s) => s.includes("tab=integrations"),
+          },
+          {
+            href: "/admin?tab=salesforce",
+            label: "Salesforce Inbox",
+            match: (_, s) => s.includes("tab=salesforce"),
+          },
+          {
+            href: "/admin?tab=distribution",
+            label: "Distribution",
+            match: (_, s) => s.includes("tab=distribution"),
+          },
+          {
+            href: "/admin/destini",
+            label: "Destini import",
+            match: (p) => p.startsWith("/admin/destini"),
+          },
+          {
+            href: "/trash",
+            label: "Trash",
+            match: (p) => p.startsWith("/trash"),
+          },
+        ],
       },
     ],
-  },
-  {
-    href: "/admin",
-    label: "Admin",
-    icon: Settings2,
-    children: [
-      {
-        href: "/admin?tab=columns",
-        label: "Data Columns",
-        match: (_, s) => !s.includes("tab=") || s.includes("tab=columns"),
-      },
-      {
-        href: "/admin?tab=lists",
-        label: "Reference Lists",
-        match: (_, s) => s.includes("tab=lists"),
-      },
-      {
-        href: "/admin?tab=audit",
-        label: "Audit Log",
-        match: (_, s) => s.includes("tab=audit"),
-      },
-      {
-        href: "/admin?tab=integrations",
-        label: "Integrations",
-        match: (_, s) => s.includes("tab=integrations"),
-      },
-      {
-        href: "/admin?tab=salesforce",
-        label: "Salesforce Inbox",
-        match: (_, s) => s.includes("tab=salesforce"),
-      },
-      {
-        href: "/admin?tab=distribution",
-        label: "Distribution",
-        match: (_, s) => s.includes("tab=distribution"),
-      },
-      {
-        href: "/admin/destini",
-        label: "Destini import",
-        match: (p) => p.startsWith("/admin/destini"),
-      },
-      {
-        href: "/trash",
-        label: "Trash",
-        match: (p) => p.startsWith("/trash"),
-      },
-    ],
-  },
-  {
-    href: "/dashboards/copilot",
-    label: "Magnus AI",
-    icon: MagnusIcon,
   },
 ];
 
 function isSectionActive(item: NavItem, pathname: string) {
   if (item.exact) return pathname === item.href;
   if (item.href === "/") return pathname === "/";
-  // Copilot is its own top-level section; don't also light up Dashboards.
-  if (item.href === "/dashboards" && pathname.startsWith("/dashboards/copilot")) {
-    return false;
-  }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
+
+const itemClass = (active: boolean, collapsed = false) =>
+  cn(
+    collapsed
+      ? "flex size-10 items-center justify-center rounded-md border-l-2 border-transparent text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      : "flex items-center gap-3 rounded-r-md border-l-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+    active && "border-l-primary bg-info-soft font-medium text-primary",
+  );
 
 function CollapsedFlyout({
   item,
   active,
   search,
   pathname,
+  counts,
 }: {
   item: NavItem;
   active: boolean;
   search: string;
   pathname: string;
+  counts: PipelineBucketCounts;
 }) {
   const { href, label, icon: Icon, children } = item;
   const hasChildren = Boolean(children?.length);
-
-  const triggerClass = cn(
-    "flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-    active && "bg-info-soft text-primary",
-  );
 
   return (
     <DropdownMenu modal={false}>
@@ -219,7 +247,7 @@ function CollapsedFlyout({
         delay={60}
         closeDelay={140}
         nativeButton={false}
-        render={<Link href={href} className={triggerClass} aria-label={label} />}
+        render={<Link href={href} className={itemClass(active, true)} aria-label={label} />}
       >
         <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
       </DropdownMenuTrigger>
@@ -245,16 +273,24 @@ function CollapsedFlyout({
                 (sub.match
                   ? sub.match(pathname, search)
                   : pathname + (search ? `?${search}` : "") === sub.href);
+              const count = sub.countKey ? counts[sub.countKey] : undefined;
               return (
                 <DropdownMenuItem
                   key={sub.href}
                   className={cn(
                     "rounded-md px-2.5 py-2 text-sm",
-                    subActive && "bg-muted font-medium text-foreground",
+                    subActive && "bg-info-soft font-medium text-primary",
                   )}
                   render={<Link href={sub.href} />}
                 >
-                  {sub.label}
+                  <span className="flex w-full items-center justify-between gap-3">
+                    {sub.label}
+                    {count != null && (
+                      <span className="font-mono text-2xs tabular-nums text-muted-foreground">
+                        {count}
+                      </span>
+                    )}
+                  </span>
                 </DropdownMenuItem>
               );
             })}
@@ -265,49 +301,58 @@ function CollapsedFlyout({
   );
 }
 
-function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
+function withPinnedSheets(sections: NavSection[], pinnedSheets: PinnedSheet[]): NavSection[] {
+  if (pinnedSheets.length === 0) return sections;
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) =>
+      item.href === "/sheets"
+        ? {
+            ...item,
+            children: [
+              { href: "/sheets", label: "All sheets", match: (p: string) => p === "/sheets" },
+              ...pinnedSheets.map((s) => ({
+                href: `/sheets/${s.id}`,
+                label: s.name,
+                match: (p: string) => p === `/sheets/${s.id}`,
+              })),
+            ],
+          }
+        : item,
+    ),
+  }));
+}
+
+function SidebarNav({
+  pinnedSheets,
+  counts,
+}: {
+  pinnedSheets: PinnedSheet[];
+  counts: PipelineBucketCounts;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const { collapsed, toggle, ready } = useSidebar();
-
-  // Pinned sheets hang under Sheets the way starred sheets do in Smartsheet:
-  // the two or three grids you live in are one click away.
-  const nav = pinnedSheets.length
-    ? NAV.map((item) =>
-        item.href === "/sheets"
-          ? {
-              ...item,
-              children: [
-                { href: "/sheets", label: "All sheets", match: (p: string) => p === "/sheets" },
-                ...pinnedSheets.map((s) => ({
-                  href: `/sheets/${s.id}`,
-                  label: s.name,
-                  match: (p: string) => p === `/sheets/${s.id}`,
-                })),
-              ],
-            }
-          : item,
-      )
-    : NAV;
+  const sections = withPinnedSheets(NAV_SECTIONS, pinnedSheets);
 
   return (
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-sidebar md:flex",
         ready && "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        collapsed ? "w-16" : "w-56",
+        collapsed ? "w-16" : "w-52",
       )}
     >
       <div
         className={cn(
           "flex h-12 items-center border-b border-sidebar-border",
-          collapsed ? "justify-center px-2" : "gap-2.5 px-3.5",
+          collapsed ? "justify-center px-2" : "gap-3 px-3",
         )}
       >
         <span
           aria-hidden
-          className="size-8 shrink-0 rounded-sm bg-primary"
+          className="size-8 shrink-0 rounded-sm bg-brand"
           style={{
             mask: 'url("/bg-ampersand.png") center / 72% no-repeat',
             WebkitMask: 'url("/bg-ampersand.png") center / 72% no-repeat',
@@ -322,7 +367,7 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
           <p className="truncate whitespace-nowrap text-sm font-semibold tracking-tight">
             B&amp;G Precon
           </p>
-          <p className="truncate whitespace-nowrap text-2xs text-muted-foreground">
+          <p className="truncate whitespace-nowrap text-xs text-muted-foreground">
             Pursuits &amp; Data
           </p>
         </div>
@@ -331,100 +376,97 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
       <nav
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden py-3",
-          collapsed ? "flex flex-col items-center gap-1.5 px-2" : "space-y-1 px-2.5",
+          collapsed ? "flex flex-col items-center gap-1.5 px-2" : "space-y-4 px-2",
         )}
       >
-        {nav.map((item) => {
-          const { href, label, icon: Icon, children } = item;
-          const active = isSectionActive(item, pathname);
-          const expanded = Boolean(active && children?.length && !collapsed);
+        {sections.map((section, sectionIndex) => (
+          <div key={section.label} className={cn(collapsed && sectionIndex > 0 && "mt-1.5 w-full border-t border-sidebar-border pt-1.5")}>
+            {!collapsed && (
+              <p className="px-3 pb-1.5 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+                {section.label}
+              </p>
+            )}
+            <div className={cn(collapsed ? "flex flex-col items-center gap-1.5" : "space-y-0.5")}>
+              {section.items.map((item) => {
+                const { href, label, icon: Icon, children } = item;
+                const active = isSectionActive(item, pathname);
+                const expanded = Boolean(active && children?.length && !collapsed);
 
-          if (collapsed) {
-            return (
-              <div
-                key={href}
-                className={cn(
-                  href === "/dashboards/copilot" &&
-                    "mt-1.5 border-t border-sidebar-border pt-1.5",
-                )}
-              >
-                <CollapsedFlyout
-                  item={item}
-                  active={active}
-                  search={search}
-                  pathname={pathname}
-                />
-              </div>
-            );
-          }
+                if (collapsed) {
+                  return (
+                    <CollapsedFlyout
+                      key={href}
+                      item={item}
+                      active={active}
+                      search={search}
+                      pathname={pathname}
+                      counts={counts}
+                    />
+                  );
+                }
 
-          const isMagnus = href === "/dashboards/copilot";
-          const className = cn(
-            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            active && "bg-info-soft font-medium text-primary",
-            isMagnus && !active && "text-foreground/80",
-          );
+                return (
+                  <div key={href} className="space-y-0.5">
+                    <Link href={href} className={itemClass(active)}>
+                      <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
+                      <span className="min-w-0 flex-1 truncate leading-none">{label}</span>
+                      {children && children.length > 0 && (
+                        <ChevronDown
+                          className={cn(
+                            "size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                            expanded ? "rotate-0 opacity-100" : "-rotate-90 opacity-40",
+                          )}
+                        />
+                      )}
+                    </Link>
 
-          return (
-            <div
-              key={href}
-              className={cn(
-                "space-y-0.5",
-                isMagnus && "mt-2 border-t border-sidebar-border pt-2",
-              )}
-            >
-              <Link href={href} className={className}>
-                <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
-                <span className="min-w-0 flex-1 truncate leading-none">{label}</span>
-                {children && children.length > 0 && (
-                  <ChevronDown
-                    className={cn(
-                      "size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                      expanded ? "rotate-0 opacity-100" : "-rotate-90 opacity-40",
+                    {children && children.length > 0 && (
+                      <div
+                        className={cn(
+                          "grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="ml-3.5 space-y-0.5 border-l border-border/70 py-1 pl-2">
+                            {children.map((sub) => {
+                              const subActive =
+                                active &&
+                                (sub.match
+                                  ? sub.match(pathname, search)
+                                  : pathname + (search ? `?${search}` : "") === sub.href);
+                              const count = sub.countKey ? counts[sub.countKey] : undefined;
+                              return (
+                                <Link
+                                  key={sub.href}
+                                  href={sub.href}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-r-md border-l-2 border-transparent px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                    subActive && "border-l-primary bg-info-soft font-medium text-primary",
+                                  )}
+                                >
+                                  <span className="min-w-0 flex-1 truncate">{sub.label}</span>
+                                  {count != null && (
+                                    <span className="font-mono text-2xs tabular-nums">
+                                      {count}
+                                    </span>
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  />
-                )}
-              </Link>
-
-              {children && children.length > 0 && (
-                <div
-                  className={cn(
-                    "grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                    expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                  )}
-                >
-                  <div className="overflow-hidden">
-                    <div className="ml-3.5 space-y-0.5 border-l border-border/70 py-1 pl-2.5">
-                      {children.map((sub) => {
-                        const subActive =
-                          active &&
-                          (sub.match
-                            ? sub.match(pathname, search)
-                            : pathname + (search ? `?${search}` : "") ===
-                              sub.href);
-                        return (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className={cn(
-                              "block rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                              subActive && "bg-info-soft font-medium text-primary",
-                            )}
-                          >
-                            {sub.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </nav>
 
-      <div className={cn("border-t p-2.5", collapsed ? "px-2" : "px-2.5")}>
+      <div className={cn("border-t p-2", collapsed ? "px-2" : "px-2")}>
         <Button
           type="button"
           variant="ghost"
@@ -432,7 +474,7 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
           onClick={toggle}
           className={cn(
             "h-9 w-full text-muted-foreground",
-            collapsed ? "justify-center px-0" : "justify-start gap-2.5",
+            collapsed ? "justify-center px-0" : "justify-start gap-3",
           )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -450,10 +492,18 @@ function SidebarNav({ pinnedSheets }: { pinnedSheets: PinnedSheet[] }) {
   );
 }
 
-export function AppSidebar({ pinnedSheets = [] }: { pinnedSheets?: PinnedSheet[] }) {
+const EMPTY_COUNTS: PipelineBucketCounts = { active: 0, upcoming: 0, outstanding: 0 };
+
+export function AppSidebar({
+  pinnedSheets = [],
+  counts = EMPTY_COUNTS,
+}: {
+  pinnedSheets?: PinnedSheet[];
+  counts?: PipelineBucketCounts;
+}) {
   return (
     <Suspense fallback={null}>
-      <SidebarNav pinnedSheets={pinnedSheets} />
+      <SidebarNav pinnedSheets={pinnedSheets} counts={counts} />
     </Suspense>
   );
 }

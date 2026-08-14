@@ -1,0 +1,103 @@
+/**
+ * Overview action queues. Company-wide — flags and filters, never new statuses.
+ */
+
+export type OverviewQueueId =
+  | "incomplete-post-bid"
+  | "past-bid-due"
+  | "unlinked"
+  | "awaiting-lock";
+
+export type OverviewQueueInput = {
+  roundId: number;
+  jobId: number;
+  jobNumber: string;
+  jobName: string;
+  status: string;
+  bidDueDate: string | null;
+  isLinked: boolean;
+  missingRequiredCount: number;
+};
+
+export type OverviewQueuePreview = {
+  roundId: number;
+  jobId: number;
+  jobNumber: string;
+  jobName: string;
+};
+
+export type OverviewQueue = {
+  id: OverviewQueueId;
+  title: string;
+  description: string;
+  href: string;
+  count: number;
+  preview: OverviewQueuePreview[];
+};
+
+export function calendarDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function preview(rows: OverviewQueueInput[], limit = 4): OverviewQueuePreview[] {
+  return rows.slice(0, limit).map((r) => ({
+    roundId: r.roundId,
+    jobId: r.jobId,
+    jobNumber: r.jobNumber,
+    jobName: r.jobName,
+  }));
+}
+
+export function buildOverviewQueues(
+  rows: OverviewQueueInput[],
+  today = new Date(),
+): OverviewQueue[] {
+  const todayKey = calendarDate(today);
+
+  const incomplete = rows.filter(
+    (r) => ["submitted", "post_bid"].includes(r.status) && r.missingRequiredCount > 0,
+  );
+  const pastDue = rows.filter(
+    (r) => r.status === "active" && r.bidDueDate != null && r.bidDueDate < todayKey,
+  );
+  const unlinked = rows.filter((r) => !r.isLinked);
+  const awaitingLock = rows.filter((r) => r.status === "post_bid");
+
+  return [
+    {
+      id: "incomplete-post-bid",
+      title: "Incomplete post-bid",
+      description: "Submitted rounds still missing required lock-gate fields.",
+      href: "/post-bid?queue=incomplete",
+      count: incomplete.length,
+      preview: preview(incomplete),
+    },
+    {
+      id: "past-bid-due",
+      title: "Past bid due",
+      description: "Active pursuits whose bid date has already passed.",
+      href: "/bid-schedule?section=active&queue=past-due",
+      count: pastDue.length,
+      preview: preview(pastDue),
+    },
+    {
+      id: "unlinked",
+      title: "Unlinked TBD jobs",
+      description: "Pursuits that have not been matched to Salesforce / Connect.",
+      href: "/bid-schedule?queue=unlinked",
+      count: unlinked.length,
+      preview: preview(unlinked),
+    },
+    {
+      id: "awaiting-lock",
+      title: "Awaiting RPD lock",
+      description: "Post-bid rounds waiting for Regional Precon Director approval.",
+      href: "/post-bid?queue=awaiting-lock",
+      count: awaitingLock.length,
+      preview: preview(awaitingLock),
+    },
+  ];
+}

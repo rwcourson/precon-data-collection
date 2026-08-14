@@ -126,6 +126,42 @@ export async function listRoundsWithJobsForPrincipal(
     );
 }
 
+export type PipelineBucketCounts = {
+  active: number;
+  upcoming: number;
+  outstanding: number;
+};
+
+/** Pre-bid bucket counts for the rail — region-scoped, no row payload. */
+export async function countPreBidStatusesForPrincipal(
+  principal: Principal,
+): Promise<PipelineBucketCounts> {
+  const rows = await db
+    .select({
+      status: estimateRounds.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(estimateRounds)
+    .innerJoin(jobs, eq(estimateRounds.jobId, jobs.id))
+    .where(
+      and(
+        isNull(estimateRounds.deletedAt),
+        isNull(jobs.deletedAt),
+        inArray(estimateRounds.status, ["active", "upcoming", "outstanding"]),
+        principalRegionPredicate(estimateRounds.region, principal),
+      ),
+    )
+    .groupBy(estimateRounds.status);
+
+  const counts: PipelineBucketCounts = { active: 0, upcoming: 0, outstanding: 0 };
+  for (const row of rows) {
+    if (row.status === "active" || row.status === "upcoming" || row.status === "outstanding") {
+      counts[row.status] = Number(row.count);
+    }
+  }
+  return counts;
+}
+
 export async function listDirectoryUsersForPrincipal(principal: Principal): Promise<User[]> {
   return db
     .select()

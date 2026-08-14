@@ -76,17 +76,18 @@
 
 /*
  * Brasfield & Gorrie
- * Navy #0c2048 · Mid #002157 · Steel #93a9d6
- * Sheet #F4F7FB · Canvas #161e2e · Copper #c9762b · Forest #5f8f5a
+ * Brand (navy) #0c2048 — identity, ampersand, headings
+ * Interaction (bright blue) #0028f0 — clicks, active rail, focus
+ * Steel #93a9d6 · Sheet #F4F7FB · Copper #c9762b · Forest #5f8f5a
  */
 :root {
-  --brand: oklch(0.254 0.079 262.3);
-  --brand-foreground: oklch(0.985 0.004 255);
+  --brand: #0c2048;
+  --brand-foreground: #f8fafc;
 
-  --info: oklch(0.45 0.09 255);
-  --info-foreground: oklch(0.28 0.07 262);
-  --info-soft: oklch(0.945 0.02 255);
-  --info-border: oklch(0.82 0.04 255);
+  --info: #0028f0;
+  --info-foreground: #002070;
+  --info-soft: #eff6ff;
+  --info-border: #bfdbfe;
 
   --success: oklch(0.55 0.09 145);
   --success-foreground: oklch(0.32 0.07 145);
@@ -103,23 +104,23 @@
   --destructive-soft: oklch(0.97 0.02 25);
   --destructive-border: oklch(0.86 0.06 25);
 
-  --background: oklch(0.978 0.005 255);
-  --foreground: oklch(0.254 0.079 262.3);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.254 0.079 262.3);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.254 0.079 262.3);
-  --primary: oklch(0.254 0.079 262.3);
-  --primary-foreground: oklch(0.985 0.004 255);
-  --secondary: oklch(0.95 0.012 255);
-  --secondary-foreground: oklch(0.28 0.06 260);
-  --muted: oklch(0.96 0.008 255);
-  --muted-foreground: oklch(0.5 0.03 260);
-  --accent: oklch(0.945 0.016 255);
-  --accent-foreground: oklch(0.254 0.079 262.3);
-  --border: oklch(0.905 0.012 255);
-  --input: oklch(0.88 0.014 255);
-  --ring: oklch(0.48 0.08 262);
+  --background: #f8fafc;
+  --foreground: #0c2048;
+  --card: #ffffff;
+  --card-foreground: #0c2048;
+  --popover: #ffffff;
+  --popover-foreground: #0c2048;
+  --primary: #0028f0;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0c2048;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #eff6ff;
+  --accent-foreground: #0c2048;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0028f0;
 
   /* Cobalt series (chart-elements default for Precon dashboards) */
   --chart-1: #002070;
@@ -153,25 +154,25 @@
   --overlay-shadow: 0 12px 32px rgb(15 23 42 / 0.14);
 
   --radius: 0.375rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.254 0.079 262.3);
-  --sidebar-primary: oklch(0.254 0.079 262.3);
-  --sidebar-primary-foreground: oklch(0.985 0.004 255);
-  --sidebar-accent: oklch(0.945 0.016 255);
-  --sidebar-accent-foreground: oklch(0.254 0.079 262.3);
-  --sidebar-border: oklch(0.905 0.012 255);
-  --sidebar-ring: oklch(0.48 0.08 262);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0c2048;
+  --sidebar-primary: #0028f0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8fafc;
+  --sidebar-accent-foreground: #0c2048;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #0028f0;
   color-scheme: light;
 }
 
 .dark {
-  --brand: oklch(0.734 0.07 264.4);
-  --brand-foreground: oklch(0.2 0.04 258);
+  --brand: #93a9d6;
+  --brand-foreground: #00143c;
 
-  --info: oklch(0.74 0.07 264);
-  --info-foreground: oklch(0.9 0.03 255);
-  --info-soft: oklch(0.32 0.04 262);
-  --info-border: oklch(0.45 0.05 262);
+  --info: #3888ff;
+  --info-foreground: #d6e6ff;
+  --info-soft: #163a7a;
+  --info-border: #3d5aa8;
 
   --success: oklch(0.74 0.09 150);
   --success-foreground: oklch(0.9 0.04 150);
@@ -188,23 +189,23 @@
   --destructive-soft: oklch(0.34 0.05 20);
   --destructive-border: oklch(0.48 0.08 20);
 
-  --background: oklch(0.235 0.033 263.6);
-  --foreground: oklch(0.96 0.008 250);
-  --card: oklch(0.276 0.034 262.8);
-  --card-foreground: oklch(0.96 0.008 250);
-  --popover: oklch(0.276 0.034 262.8);
-  --popover-foreground: oklch(0.96 0.008 250);
-  --primary: oklch(0.734 0.07 264.4);
-  --primary-foreground: oklch(0.2 0.04 258);
-  --secondary: oklch(0.3 0.032 262);
-  --secondary-foreground: oklch(0.94 0.01 250);
-  --muted: oklch(0.29 0.03 262);
-  --muted-foreground: oklch(0.72 0.025 255);
-  --accent: oklch(0.32 0.036 262);
-  --accent-foreground: oklch(0.96 0.008 250);
-  --border: oklch(0.96 0.01 250 / 11%);
-  --input: oklch(0.96 0.01 250 / 13%);
-  --ring: oklch(0.734 0.07 264.4);
+  --background: #00143c;
+  --foreground: #f1f5f9;
+  --card: #002070;
+  --card-foreground: #f1f5f9;
+  --popover: #002070;
+  --popover-foreground: #f1f5f9;
+  --primary: #3888ff;
+  --primary-foreground: #00143c;
+  --secondary: #001a50;
+  --secondary-foreground: #f1f5f9;
+  --muted: #001a50;
+  --muted-foreground: #c5d0e0;
+  --accent: #163a7a;
+  --accent-foreground: #f1f5f9;
+  --border: #3d5aa8;
+  --input: #3d5aa8;
+  --ring: #7fa8ff;
 
   /* Cobalt dark series */
   --chart-1: #3888ff;
@@ -235,14 +236,14 @@
   --chart-axis: #a2acbd;
   --overlay-shadow: 0 16px 40px rgb(0 0 0 / 0.45);
 
-  --sidebar: oklch(0.21 0.036 260);
-  --sidebar-foreground: oklch(0.96 0.008 250);
-  --sidebar-primary: oklch(0.734 0.07 264.4);
-  --sidebar-primary-foreground: oklch(0.2 0.04 258);
-  --sidebar-accent: oklch(0.3 0.032 262);
-  --sidebar-accent-foreground: oklch(0.96 0.008 250);
-  --sidebar-border: oklch(0.96 0.01 250 / 10%);
-  --sidebar-ring: oklch(0.734 0.07 264.4);
+  --sidebar: #00143c;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #3888ff;
+  --sidebar-primary-foreground: #00143c;
+  --sidebar-accent: #163a7a;
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: #3d5aa8;
+  --sidebar-ring: #7fa8ff;
   color-scheme: dark;
 }
 
@@ -254,7 +255,7 @@
     @apply bg-background text-foreground antialiased;
   }
   html {
-    @apply font-sans text-[13px] sm:text-sm;
+    @apply font-sans text-sm;
   }
   ::selection {
     background: color-mix(in oklch, var(--primary) 22%, transparent);
@@ -267,6 +268,7 @@
     font-family: var(--font-heading), var(--font-sans), ui-sans-serif, system-ui,
       sans-serif;
     letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 }
 

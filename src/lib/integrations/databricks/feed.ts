@@ -88,6 +88,8 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
       estimate_phase: round.estimatePhase,
       bid_year: round.bidYear,
       bid_due_date: round.bidDueDate,
+      drawings_due_date: round.drawingsDueDate,
+      bid_review_date: round.bidReviewDate,
       status: round.status,
       outcome: round.outcome,
       market_sector: round.marketSector,
