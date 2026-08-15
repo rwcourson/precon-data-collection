@@ -28,7 +28,7 @@ import { allowedTransitions, STATUS_LABELS } from "@/lib/permissions";
 import { getMultiValues, getReferenceValues, getRoundWithJob } from "@/lib/queries";
 import { getNotificationSettings } from "@/lib/reminders";
 import { planSalesforceLink } from "@/lib/salesforce-link";
-import { evaluateLockGate, missingRequiredFields, validateFieldValue } from "@/lib/validation";
+import { evaluateLockGate, validateFieldValue } from "@/lib/validation";
 import {
   assertPrincipalCanCreatePursuit,
   requireAuthorized,

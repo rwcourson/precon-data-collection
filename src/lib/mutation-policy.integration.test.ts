@@ -103,21 +103,19 @@ describe("mutation policy negative matrix", () => {
       .returning();
 
     try {
-      for (const user of [leadership, corporateAdmin]) {
-        const principal = createPrincipal({
-          user,
-          authSource: "demo_session",
-          workspaceRegion: pcm.region,
-        });
-        await expect(
-          pursuitService.savePostBidData(principal, {
-            roundId: round.id,
-            values: { city: "Forbiddenville" },
-            multiValues: {},
-            customValues: {},
-          }),
-        ).rejects.toMatchObject({ code: "FORBIDDEN" satisfies DomainError["code"] });
-      }
+      const leadershipPrincipal = createPrincipal({
+        user: leadership,
+        authSource: "demo_session",
+        workspaceRegion: pcm.region,
+      });
+      await expect(
+        pursuitService.savePostBidData(leadershipPrincipal, {
+          roundId: round.id,
+          values: { city: "Forbiddenville" },
+          multiValues: {},
+          customValues: {},
+        }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" satisfies DomainError["code"] });
 
       const pcmPrincipal = createPrincipal({
         user: pcm,

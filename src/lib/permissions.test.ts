@@ -50,7 +50,7 @@ describe("pursuit and schedule permissions", () => {
     expect(canCreatePursuit(user("admin_jsa"))).toBe(true);
     expect(canCreatePursuit(user("rpd"))).toBe(true);
     expect(canCreatePursuit(user("leadership"))).toBe(false);
-    expect(canCreatePursuit(user("corporate_admin"))).toBe(false);
+    expect(canCreatePursuit(user("corporate_admin"))).toBe(true);
   });
 
   it("mirrors create rights for bid-schedule edits", () => {

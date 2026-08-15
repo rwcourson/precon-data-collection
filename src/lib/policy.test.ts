@@ -69,13 +69,13 @@ describe("field write policy", () => {
     ).toBe(true);
   });
 
-  it("denies corporate_admin field writes by default", () => {
+  it("allows corporate_admin field writes (corporate admin is elevated)", () => {
     expect(
       canWriteField(user({ role: "corporate_admin", region: null }), "city", {
         status: "active",
         region: "Central",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

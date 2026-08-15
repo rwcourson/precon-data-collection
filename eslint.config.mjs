@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Expo app has its own toolchain; not linted by Next eslint
     "apps/**",
+    // Vendored chart package is minified; hook-name rules do not apply
+    "vendor/**",
   ]),
 ]);
 
