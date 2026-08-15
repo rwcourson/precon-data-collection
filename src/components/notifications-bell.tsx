@@ -48,7 +48,7 @@ export function NotificationsBell({ items }: { items: Item[] }) {
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-96 p-0">
+      <PopoverContent align="end" className="w-[min(24rem,calc(100vw-1.5rem))] p-0">
         <div className="flex items-center justify-between border-b px-4 py-2.5">
           <span className="text-sm font-semibold">Notifications</span>
           {unread > 0 && (

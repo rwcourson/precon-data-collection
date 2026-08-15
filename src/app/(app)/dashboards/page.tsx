@@ -217,12 +217,12 @@ export default async function DashboardsPage({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex w-fit items-center gap-0.5 rounded bg-muted p-0.5">
+        <div className="flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded bg-muted p-0.5">
           {levels.map((l) => (
             <Link
               key={l.key}
               href={qs({ level: l.key })}
-              className={`rounded px-2.5 py-1 text-[13px] font-medium transition-colors ${
+              className={`flex shrink-0 items-center rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
                 level.key === l.key
                   ? "bg-card text-foreground"
                   : "text-muted-foreground hover:text-foreground"

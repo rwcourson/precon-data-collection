@@ -42,9 +42,9 @@ export function AdminTabs({
       value={value}
       onValueChange={(next) => router.push(`/admin?tab=${next}`)}
     >
-      <TabsList className="h-auto flex-wrap rounded bg-muted p-0.5">
+      <TabsList className="h-auto w-full flex-nowrap justify-start overflow-x-auto rounded bg-muted p-0.5">
         {tabs.map((t) => (
-          <TabsTrigger key={t.value} value={t.value} className="rounded">
+          <TabsTrigger key={t.value} value={t.value} className="shrink-0 rounded">
             {t.label}
             {t.value === "review" && reviewCount > 0 && (
               <Badge variant="secondary" size="sm" className="ml-1.5">

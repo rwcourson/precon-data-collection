@@ -34,43 +34,45 @@ export async function AppHeader() {
       : [];
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b bg-card/90 px-6 backdrop-blur-md md:px-10 xl:px-14">
-      <div className="flex items-center gap-2.5">
-        <Suspense fallback={null}>
-          <MobileNav />
-        </Suspense>
-        <div className="hidden items-center gap-2.5 sm:flex">
-          <span aria-hidden className="h-4 w-px bg-border" />
-          <p className="text-sm text-muted-foreground">
-            Preconstruction Data Collection
-          </p>
+    <header className="sticky top-0 z-20 border-b bg-card/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+      <div className="flex h-14 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 md:px-10 xl:px-14">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
+          <Suspense fallback={null}>
+            <MobileNav />
+          </Suspense>
+          <div className="hidden items-center gap-2.5 md:flex">
+            <span aria-hidden className="h-4 w-px bg-border" />
+            <p className="text-sm text-muted-foreground">
+              Preconstruction Data Collection
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        {user ? (
-          <>
-            <GlobalSearch />
-            {authMode() === "demo" ? (
-              <RoleSwitcher users={users} current={user} />
-            ) : (
-              <SignedInUser user={user} />
-            )}
-            <NotificationsBell
-              items={items.map((item) => ({
-                ...item,
-                createdAtLabel: fmtDateTime(item.createdAt),
-              }))}
-            />
-          </>
-        ) : (
-          <Link
-            href="/sign-in"
-            className="inline-flex h-7 items-center rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:bg-accent"
-          >
-            Sign in
-          </Link>
-        )}
-        <ThemeToggle />
+        <div className="flex min-w-0 items-center justify-end gap-0.5 sm:gap-2">
+          {user ? (
+            <>
+              <GlobalSearch />
+              {authMode() === "demo" ? (
+                <RoleSwitcher users={users} current={user} />
+              ) : (
+                <SignedInUser user={user} />
+              )}
+              <NotificationsBell
+                items={items.map((item) => ({
+                  ...item,
+                  createdAtLabel: fmtDateTime(item.createdAt),
+                }))}
+              />
+            </>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="inline-flex h-7 items-center rounded-md border border-border bg-card px-2.5 text-xs font-medium hover:bg-accent"
+            >
+              Sign in
+            </Link>
+          )}
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
@@ -79,9 +81,9 @@ export async function AppHeader() {
 /** Under SSO the identity is fixed, so it is shown rather than offered. */
 function SignedInUser({ user }: { user: User }) {
   return (
-    <div className="flex h-10 items-center gap-2.5 rounded-md border border-border/80 bg-card px-3">
-      <span className="text-sm font-medium">{user.name}</span>
-      <span className="hidden text-xs text-muted-foreground sm:inline">
+    <div className="flex h-10 max-w-[42vw] items-center gap-2 rounded-md border border-border/80 bg-card px-2.5 sm:max-w-none sm:gap-2.5 sm:px-3">
+      <span className="truncate text-sm font-medium">{user.name}</span>
+      <span className="hidden text-xs text-muted-foreground md:inline">
         {ROLE_LABELS[user.role]}
         {user.region ? ` · ${user.region}` : ""}
       </span>

@@ -5,7 +5,6 @@ import { Download } from "lucide-react";
 import { StudioCloneButton } from "@/components/dashboards/studio-clone-button";
 import { StudioWidgetForm } from "@/components/dashboards/studio-widget-form";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
-import { MagnusIcon } from "@/components/magnus-icon";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,9 @@ export default async function DashboardStudioDetailPage({
               nativeButton={false}
               render={<Link href="/dashboards/copilot" />}
             >
-              <MagnusIcon className="size-4" />
+              <span aria-hidden className="text-sm leading-none">
+                ✨
+              </span>
               AI Copilot
             </Button>
             <StudioCloneButton dashboardId={id} />

@@ -49,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppSidebar pinnedSheets={pinned} counts={counts} />
       <AppMain>
         <AppHeader />
-        <main className="flex-1 px-6 py-6 md:px-10 md:py-9 xl:px-14 xl:py-10">
+        <main className="flex-1 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 md:px-10 md:py-9 md:pb-9 xl:px-14 xl:py-10">
           {children}
         </main>
       </AppMain>

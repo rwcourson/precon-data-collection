@@ -38,13 +38,13 @@ export function SignInClient({
   };
 
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#00143c] px-4 py-10">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#00143c] px-4 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgb(56_136_255_/_0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgb(0_40_240_/_0.16),transparent_50%)]"
       />
 
-      <div className="relative z-10 w-full max-w-[420px] rounded-lg border border-white/12 bg-[#002070] px-8 py-8 text-white shadow-[0_16px_40px_rgb(0_0_0_/_0.45)]">
+      <div className="relative z-10 w-full max-w-[420px] rounded-lg border border-white/12 bg-[#002070] px-6 py-8 text-white shadow-[0_16px_40px_rgb(0_0_0_/_0.45)] sm:px-8">
         <div className="space-y-5 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-lg bg-[#0c2048] ring-1 ring-white/15">
             <span

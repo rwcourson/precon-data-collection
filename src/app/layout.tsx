@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { themeScript } from "@/components/theme-provider";
@@ -26,6 +26,16 @@ export const metadata: Metadata = {
   description: "Preconstruction bid & post-bid data collection",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F4F7FB" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c2433" },
+  ],
+};
+
 export const dynamic = "force-dynamic";
 
 /** Root shell only — auth pages stay chrome-free; app chrome lives in `(app)/layout`. */
@@ -45,7 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-full font-sans">
+      <body className="min-h-full overflow-x-clip font-sans">
         {children}
         <Toaster richColors position="top-right" />
       </body>

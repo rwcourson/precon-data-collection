@@ -143,7 +143,7 @@ export function GlobalSearch() {
         variant="outline"
         size="lg"
         onClick={() => setOpenSafe(true)}
-        className="hidden h-10 min-w-[14rem] gap-2.5 border-border/80 bg-card px-3 text-muted-foreground sm:inline-flex"
+        className="hidden h-10 min-w-[14rem] gap-2.5 border-border/80 bg-card px-3 text-muted-foreground md:inline-flex"
       >
         <Search className="size-5" />
         <span className="text-sm">Search…</span>
@@ -156,7 +156,7 @@ export function GlobalSearch() {
         variant="ghost"
         size="icon"
         onClick={() => setOpenSafe(true)}
-        className="size-10 sm:hidden"
+        className="size-10 md:hidden"
         aria-label="Search"
       >
         <Search className="size-5" />
@@ -165,7 +165,7 @@ export function GlobalSearch() {
       <Dialog open={open} onOpenChange={setOpenSafe}>
         <DialogContent
           showCloseButton={false}
-          className="top-[18%] w-full max-w-[calc(100%-2rem)] translate-y-0 gap-0 overflow-hidden rounded-md p-0 sm:max-w-lg"
+          className="top-[max(1rem,env(safe-area-inset-top))] w-full max-w-[calc(100%-1.5rem)] translate-y-0 gap-0 overflow-hidden rounded-md p-0 sm:top-[18%] sm:max-w-lg"
           aria-labelledby={titleId}
         >
           <DialogHeader className="sr-only">
@@ -312,7 +312,7 @@ export function GlobalSearch() {
               )}
             </CommandList>
 
-            <div className="flex items-center justify-between border-t px-3 py-2 text-2xs text-muted-foreground">
+            <div className="hidden items-center justify-between border-t px-3 py-2 text-2xs text-muted-foreground sm:flex">
               <span>↑↓ navigate · ↵ open · esc close</span>
               <span>⌘K</span>
             </div>
