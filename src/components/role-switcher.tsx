@@ -43,7 +43,7 @@ export function RoleSwitcher({ users, current }: { users: User[]; current: User 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          Demo persona — switch to view the app as any role
+          View as another role (Central RPD is the default)
         </div>
         <DropdownMenuSeparator />
         {users.map((u) => (

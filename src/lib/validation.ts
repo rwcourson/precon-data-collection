@@ -50,6 +50,21 @@ export function missingRequiredFields(
   return missing;
 }
 
+/** Shared lock gate used by RPD Approve & Lock. */
+export function evaluateLockGate(
+  round: EstimateRound,
+  multiValues: Record<string, string[]>,
+  extras: { jobNumber: string; jobName: string; estimateLeadName: string | null },
+): { ok: true } | { ok: false; missingFields: string[]; error: string } {
+  const missing = missingRequiredFields(round, multiValues, extras);
+  if (missing.length === 0) return { ok: true };
+  return {
+    ok: false,
+    missingFields: missing,
+    error: `Cannot lock — ${missing.length} required field${missing.length === 1 ? " is" : "s are"} blank: ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? "…" : ""}`,
+  };
+}
+
 /** Percentage of required fields completed, for queue progress display. */
 export function requiredCompletion(
   round: EstimateRound,

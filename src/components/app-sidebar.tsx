@@ -97,7 +97,6 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Tools",
     items: [
-      { href: "/sheets", label: "Sheets", icon: Sheet },
       {
         href: "/dashboards",
         label: "Dashboards",
@@ -119,26 +118,6 @@ const NAV_SECTIONS: NavSection[] = [
             href: "/dashboards?level=division",
             label: "Division",
             match: (p, s) => p === "/dashboards" && s.includes("level=division"),
-          },
-          {
-            href: "/dashboards/studio",
-            label: "Studio",
-            match: (p) => p.startsWith("/dashboards/studio"),
-          },
-          {
-            href: "/dashboards/forecast",
-            label: "Forecast",
-            match: (p) => p.startsWith("/dashboards/forecast"),
-          },
-          {
-            href: "/dashboards/reconciliation",
-            label: "DMR Reconciliation",
-            match: (p) => p.startsWith("/dashboards/reconciliation"),
-          },
-          {
-            href: "/dashboards/copilot",
-            label: "Magnus",
-            match: (p) => p.startsWith("/dashboards/copilot"),
           },
         ],
       },
@@ -205,6 +184,32 @@ const NAV_SECTIONS: NavSection[] = [
             match: (p) => p.startsWith("/trash"),
           },
         ],
+      },
+    ],
+  },
+  {
+    label: "More",
+    items: [
+      { href: "/sheets", label: "Sheets", icon: Sheet },
+      {
+        href: "/dashboards/studio",
+        label: "Studio",
+        icon: FileBarChart2,
+      },
+      {
+        href: "/dashboards/forecast",
+        label: "Forecast",
+        icon: FileBarChart2,
+      },
+      {
+        href: "/dashboards/reconciliation",
+        label: "DMR Reconciliation",
+        icon: FileBarChart2,
+      },
+      {
+        href: "/dashboards/copilot",
+        label: "Magnus",
+        icon: MagnusIcon,
       },
     ],
   },

@@ -18,6 +18,8 @@ import {
 } from "./schema";
 import { assertDemoSeedAllowed } from "@/lib/runtime-config";
 import { REFERENCE_LISTS } from "../lib/reference-data";
+import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
+import { consolidatedRegionalReportInsert } from "../lib/report-presets";
 import type { RoundStatus } from "./schema";
 
 // Deterministic RNG so the demo dataset is stable across reseeds
@@ -125,10 +127,10 @@ export async function seedDemoData() {
   const userRows = await db
     .insert(users)
     .values([
+      { name: DEFAULT_DEMO_RPD.name, title: DEFAULT_DEMO_RPD.title, role: "rpd", region: "Central", preconDepartment: "Central Building Group", email: DEFAULT_DEMO_RPD.email },
       { name: "Sarah Chen", title: "Preconstruction Manager", role: "pcm", region: "Central", preconDepartment: "Central Heavy Civil", email: "schen@brasfieldgorrie.com" },
       { name: "Marcus Webb", title: "Senior Estimate Lead", role: "estimate_lead", region: "Central", preconDepartment: "Central Heavy Civil", email: "mwebb@brasfieldgorrie.com" },
       { name: "Dana Ortiz", title: "Job Site Administrator", role: "admin_jsa", region: "Central", preconDepartment: "Central Building Group", email: "dortiz@brasfieldgorrie.com" },
-      { name: "Bryan Myers", title: "Regional Preconstruction Director", role: "rpd", region: "Central", preconDepartment: "Central Heavy Civil", email: "bmyers@brasfieldgorrie.com" },
       { name: "Patricia Lawson", title: "Division President", role: "leadership", region: "Central", preconDepartment: null, email: "plawson@brasfieldgorrie.com" },
       { name: "Tom Reeves", title: "Corporate Precon Admin", role: "corporate_admin", region: null, preconDepartment: null, email: "treeves@brasfieldgorrie.com" },
     ])
@@ -245,7 +247,12 @@ export async function seedDemoData() {
                 : "unsuccessful"
             : "pending",
         region, preconDepartment: dept, estimatePhase: phase, bidYear,
-        bidDueDate: bidDue, projectStartDate: startDate, city, state,
+        bidDueDate: bidDue,
+        drawingsDueDate: `${bidYear}-${String(Math.max(1, month - 1)).padStart(2, "0")}-15`,
+        bidReviewDate: `${bidYear}-${String(month).padStart(2, "0")}-01`,
+        projectStartDate: startDate,
+        owner: pick(["HCA Healthcare", "Auburn University", "AdventHealth", "Vanderbilt", "USACE", "Private Owner"]),
+        city, state,
         estimateLeadId: leadName === estimateLead.name ? estimateLead.id : null,
         mlt, marketSector: sector,
         contractType: pick(REFERENCE_LISTS.contractType.values),
@@ -414,32 +421,7 @@ export async function seedDemoData() {
     },
     sharedWithRegions: ["Central"],
   });
-  await db.insert(savedReports).values({
-    name: "Consolidated Regional Bid Schedule",
-    ownerId: rpd.id,
-    presetKey: "consolidated_regional_bid_schedule",
-    config: {
-      fields: [
-        "jobNumber",
-        "jobName",
-        "preconDepartment",
-        "estimatePhase",
-        "bidDueDate",
-        "marketSector",
-        "estimateLead",
-        "status",
-        "estimateValue",
-      ],
-      filters: [],
-      groupBy: ["preconDepartment"],
-      aggregations: [],
-      sortBy: [
-        { field: "preconDepartment", dir: "asc" },
-        { field: "bidDueDate", dir: "asc" },
-      ],
-    },
-    sharedWithRegions: ["Central"],
-  });
+  await db.insert(savedReports).values(consolidatedRegionalReportInsert(rpd.id));
 
   console.log(`Done. Seeded ${totalRounds} estimate rounds across 42 jobs.`);
 }

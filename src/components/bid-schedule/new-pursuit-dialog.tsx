@@ -84,7 +84,7 @@ export function NewPursuitDialog({
       }
     }
     if (mode === "salesforce" && !selected) {
-      toast.error("Select a job from B&G Connect, or switch to manual entry");
+      toast.error("Select a job from Salesforce / Connect, or switch to No job number yet (ROM)");
       return;
     }
     if (mode === "manual" && !manualName.trim()) {
@@ -111,8 +111,8 @@ export function NewPursuitDialog({
         await createPursuit(input);
         toast.success(
           mode === "manual"
-            ? "Pursuit created with placeholder Job Number — link it to Salesforce later"
-            : "Pursuit created from B&G Connect",
+            ? "ROM created as TBD-… and left unlinked — link to Salesforce when the number arrives"
+            : "Pursuit created from Salesforce / Connect",
         );
         setOpen(false);
         setSelected(null);
@@ -133,17 +133,18 @@ export function NewPursuitDialog({
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create Pursuit</DialogTitle>
+          <DialogTitle>New Pursuit</DialogTitle>
           <DialogDescription>
-            Pull the Job Number from B&amp;G Connect, or create manually for pricing
-            efforts that don&apos;t have a Salesforce job yet (Quick ROMs, one-offs).
+            Salesforce first — look up the job number in B&amp;G Connect. Use
+            No job number yet (ROM) only when Precon is pricing before Salesforce
+            has a number. That path stays unlinked as TBD-….
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="salesforce">From B&amp;G Connect</TabsTrigger>
-            <TabsTrigger value="manual">Manual (no Job # yet)</TabsTrigger>
+            <TabsTrigger value="salesforce">From Salesforce / Connect</TabsTrigger>
+            <TabsTrigger value="manual">No job number yet (ROM)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="salesforce" className="space-y-3 pt-2">

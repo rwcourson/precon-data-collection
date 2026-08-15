@@ -77,7 +77,7 @@ try {
   await shot("04-round-saved");
   report("post-bid field mutation saves");
 
-  await pickPersona("Bryan Myers");
+  await pickPersona("Brian Meyers");
   await page.goto(`${baseUrl}/post-bid`);
   await page.waitForLoadState("networkidle");
   await page.locator("table tbody tr td a").first().click();

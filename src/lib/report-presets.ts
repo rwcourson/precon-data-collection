@@ -16,10 +16,13 @@ export const CONSOLIDATED_REGIONAL_PRESET: {
     fields: [
       "jobNumber",
       "jobName",
+      "owner",
       "preconDepartment",
       "estimatePhase",
+      "drawingsDueDate",
+      "bidReviewDate",
       "bidDueDate",
-      "marketSector",
+      "procurement",
       "estimateLead",
       "status",
       "estimateValue",
@@ -33,3 +36,14 @@ export const CONSOLIDATED_REGIONAL_PRESET: {
     ],
   },
 };
+
+/** Insert payload for seed + Smartsheet import — always the live preset config. */
+export function consolidatedRegionalReportInsert(ownerId: number) {
+  return {
+    name: CONSOLIDATED_REGIONAL_PRESET.name,
+    ownerId,
+    presetKey: CONSOLIDATED_REGIONAL_PRESET.presetKey,
+    config: CONSOLIDATED_REGIONAL_PRESET.config,
+    sharedWithRegions: ["Central"],
+  };
+}

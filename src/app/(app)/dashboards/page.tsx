@@ -24,7 +24,13 @@ import {
 import { getReferenceValues } from "@/lib/queries";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { computeStats, rollup } from "@/lib/rollup";
+import {
+  applyLeadershipRoundScope,
+  computeStats,
+  parseLeadershipRoundMode,
+  rollup,
+  scopeRoundsForDashboardExport,
+} from "@/lib/rollup";
 import { fmtDollars, fmtPercent } from "@/lib/format";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -62,15 +68,20 @@ export default async function DashboardsPage({
   const year = params.year ?? "all";
   const phase = params.phase ?? "all";
   const status = params.status ?? "all";
+  const roundMode = parseLeadershipRoundMode(params.rounds);
 
-  let scoped = rows.map((r) => r.round);
-  if (level.key !== "corporate") scoped = scoped.filter((r) => r.region === region);
-  if (level.key === "division" && dept !== "all")
-    scoped = scoped.filter((r) => r.preconDepartment === dept);
-  if (sector !== "all") scoped = scoped.filter((r) => r.marketSector === sector);
-  if (year !== "all") scoped = scoped.filter((r) => String(r.bidYear) === year);
-  if (phase !== "all") scoped = scoped.filter((r) => r.estimatePhase === phase);
-  if (status !== "all") scoped = scoped.filter((r) => r.status === status);
+  const scoped = scopeRoundsForDashboardExport(
+    rows.map((r) => r.round),
+    {
+      region: level.key === "corporate" ? null : region,
+      dept: level.key === "division" ? dept : null,
+      sector,
+      year,
+      phase,
+      status,
+      rounds: params.rounds,
+    },
+  );
 
   const totals = computeStats("all", scoped);
 
@@ -83,7 +94,10 @@ export default async function DashboardsPage({
   const groups = rollup(scoped, groupFn);
 
   // Multi-year trend series (ignores the bid-year filter so trends stay multi-year)
-  let trendBase = rows.map((r) => r.round);
+  let trendBase = applyLeadershipRoundScope(
+    rows.map((r) => r.round),
+    roundMode,
+  );
   if (level.key !== "corporate") trendBase = trendBase.filter((r) => r.region === region);
   if (level.key === "division" && dept !== "all")
     trendBase = trendBase.filter((r) => r.preconDepartment === dept);
@@ -118,7 +132,14 @@ export default async function DashboardsPage({
   });
 
   const kpis = [
-    { label: "Pursuit Volume", value: fmtDollars(totals.volume, true), sub: `${totals.rounds} estimate rounds` },
+    {
+      label: "Pursuit Volume",
+      value: fmtDollars(totals.volume, true),
+      sub:
+        roundMode === "latest"
+          ? `${totals.rounds} jobs (latest / final round)`
+          : `${totals.rounds} estimate rounds`,
+    },
     { label: "Win Rate", value: fmtPercent(totals.winRate), sub: `${totals.wins} of ${totals.decided} decided` },
     { label: "Fee % (Expected)", value: fmtPercent(totals.weightedFeePct), sub: "Dollar-weighted across the portfolio" },
     { label: "Contingency %", value: fmtPercent(totals.weightedContingencyPct), sub: "Dollar-weighted across the portfolio" },
@@ -143,6 +164,7 @@ export default async function DashboardsPage({
       year,
       phase,
       status,
+      rounds: roundMode,
       ...patch,
     }).toString()}`;
 
@@ -154,6 +176,7 @@ export default async function DashboardsPage({
     year,
     phase,
     status,
+    rounds: roundMode,
   };
 
   return (
@@ -162,7 +185,7 @@ export default async function DashboardsPage({
         title="Dashboards"
         description={
           level.key === "corporate"
-            ? "Company-wide rollup across all Regions — not possible in the disconnected SmartSheet model."
+            ? "Company-wide rollup. Default counts one latest/final round per job so pricing rounds are not summed."
             : level.key === "region"
               ? `${region} Region rollup by Division/Precon Department.`
               : `${region} — ${dept === "all" ? "all Divisions" : dept} by Market Sector.`
@@ -175,7 +198,7 @@ export default async function DashboardsPage({
             nativeButton={false}
             render={
               <a
-                href={`/api/export/dashboard?level=${level.key}&region=${encodeURIComponent(region)}&dept=${encodeURIComponent(dept)}&year=${year}`}
+                href={`/api/export/dashboard?level=${level.key}&region=${encodeURIComponent(region)}&dept=${encodeURIComponent(dept)}&year=${year}&rounds=${roundMode}`}
               />
             }
           >
@@ -250,6 +273,16 @@ export default async function DashboardsPage({
               ["all", "active", "upcoming", "outstanding", "submitted", "post_bid", "locked"],
               "All Statuses",
             )}
+          />
+          <UrlSelect
+            pathname="/dashboards"
+            param="rounds"
+            value={roundMode}
+            currentParams={filterParams}
+            options={[
+              { value: "latest", label: "Latest / final round per job" },
+              { value: "all", label: "All pricing rounds" },
+            ]}
           />
         </div>
       </div>

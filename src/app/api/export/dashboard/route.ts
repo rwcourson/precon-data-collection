@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { rollup } from "@/lib/rollup";
+import { rollup, scopeRoundsForDashboardExport } from "@/lib/rollup";
 import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
 import { getWorkspace } from "@/lib/workspace-server";
 import { resolveRegionParam } from "@/lib/workspace";
@@ -21,11 +21,15 @@ export async function GET(req: NextRequest) {
   if ("error" in scoped) return new Response(scoped.error, { status: 403 });
 
   const data = await listRoundsWithJobsForPrincipal(principal);
-  let rounds = data.map((r) => r.round);
-  if (scoped.region) rounds = rounds.filter((r) => r.region === scoped.region);
-  if (level === "division" && dept && dept !== "all")
-    rounds = rounds.filter((r) => r.preconDepartment === dept);
-  if (year && year !== "all") rounds = rounds.filter((r) => String(r.bidYear) === year);
+  const rounds = scopeRoundsForDashboardExport(
+    data.map((r) => r.round),
+    {
+      region: scoped.region,
+      dept: level === "division" ? dept : null,
+      year,
+      rounds: params.get("rounds"),
+    },
+  );
 
   const groupFn =
     level === "corporate"

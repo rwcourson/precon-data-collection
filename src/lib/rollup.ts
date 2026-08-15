@@ -1,8 +1,122 @@
 import type { EstimateRound } from "@/db/schema";
 
+export type LeadershipRoundMode = "latest" | "all";
+
+const PHASE_RANK: Record<string, number> = {
+  "budget - quick rom": 10,
+  "budget – quick rom": 10,
+  "budget - concept": 20,
+  "budget – concept": 20,
+  "budget - sd": 30,
+  "budget – sd": 30,
+  "budget - dd": 40,
+  "budget – dd": 40,
+  "budget - early release": 50,
+  "budget – early release": 50,
+  "early release": 55,
+  "value engineering": 60,
+  "reconciliation": 70,
+  "gmp": 80,
+  "hard bid/firm fixed": 90,
+  "rates only": 25,
+  "qualifications only": 15,
+};
+
+const STATUS_RANK: Record<string, number> = {
+  upcoming: 1,
+  active: 2,
+  outstanding: 3,
+  submitted: 4,
+  post_bid: 5,
+  locked: 6,
+};
+
+export function estimatePhaseRank(phase: string): number {
+  return PHASE_RANK[phase.trim().toLowerCase()] ?? 0;
+}
+
+export type LeadershipRound = Pick<
+  EstimateRound,
+  "jobId" | "roundNumber" | "estimatePhase" | "status"
+>;
+
+/** Higher is more “final” for leadership volume (one row per job). */
+export function compareLeadershipRounds(a: LeadershipRound, b: LeadershipRound): number {
+  const phase = estimatePhaseRank(a.estimatePhase) - estimatePhaseRank(b.estimatePhase);
+  if (phase !== 0) return phase;
+  const status = (STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0);
+  if (status !== 0) return status;
+  return a.roundNumber - b.roundNumber;
+}
+
+/** One latest/final estimate round per job. Does not mutate the input. */
+export function latestRoundsPerJob<T extends LeadershipRound>(rounds: T[]): T[] {
+  const byJob = new Map<number, T>();
+  for (const r of rounds) {
+    const prev = byJob.get(r.jobId);
+    if (!prev || compareLeadershipRounds(r, prev) > 0) byJob.set(r.jobId, r);
+  }
+  return [...byJob.values()];
+}
+
+export function applyLeadershipRoundScope<T extends LeadershipRound>(
+  rounds: T[],
+  mode: LeadershipRoundMode,
+): T[] {
+  return mode === "all" ? rounds : latestRoundsPerJob(rounds);
+}
+
+export function parseLeadershipRoundMode(raw: string | null | undefined): LeadershipRoundMode {
+  return raw === "all" ? "all" : "latest";
+}
+
+export type DashboardScopeRound = LeadershipRound & {
+  region: string;
+  preconDepartment: string;
+  bidYear: number;
+  marketSector?: string | null;
+};
+
 /**
- * Rollup aggregation for dashboards (BRD Section 13). Each Estimate Round
- * counts as its own record in volume metrics at every level.
+ * Shared by /dashboards and GET /api/export/dashboard so Excel cannot
+ * silently sum every pricing round while the page shows latest-per-job.
+ */
+export function scopeRoundsForDashboardExport<T extends DashboardScopeRound>(
+  rounds: T[],
+  params: {
+    region?: string | null;
+    dept?: string | null;
+    year?: string | null;
+    sector?: string | null;
+    phase?: string | null;
+    status?: string | null;
+    rounds?: string | null;
+  },
+): T[] {
+  let scoped = rounds;
+  if (params.region) scoped = scoped.filter((r) => r.region === params.region);
+  if (params.dept && params.dept !== "all") {
+    scoped = scoped.filter((r) => r.preconDepartment === params.dept);
+  }
+  if (params.year && params.year !== "all") {
+    scoped = scoped.filter((r) => String(r.bidYear) === params.year);
+  }
+  if (params.sector && params.sector !== "all") {
+    scoped = scoped.filter((r) => r.marketSector === params.sector);
+  }
+  if (params.phase && params.phase !== "all") {
+    scoped = scoped.filter((r) => r.estimatePhase === params.phase);
+  }
+  if (params.status && params.status !== "all") {
+    scoped = scoped.filter((r) => r.status === params.status);
+  }
+  return applyLeadershipRoundScope(scoped, parseLeadershipRoundMode(params.rounds));
+}
+
+/**
+ * Rollup aggregation for dashboards (BRD Section 13). Leadership views should
+ * pass `applyLeadershipRoundScope(..., "latest")` so one job is not counted
+ * once per pricing round. `mode=all` keeps every round.
  *
  * Portfolio ratios are dollar-weighted (sum of numerators / sum of
  * denominators) rather than an average of per-round percentages, so a $200M

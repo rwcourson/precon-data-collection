@@ -47,7 +47,6 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "Tools",
     items: [
-      { href: "/sheets", label: "Sheets" },
       {
         href: "/dashboards",
         label: "Dashboards",
@@ -55,10 +54,6 @@ const NAV_SECTIONS: NavSection[] = [
           { href: "/dashboards?level=corporate", label: "Corporate", match: (s, p) => p === "/dashboards" && (!s.includes("level=") || s.includes("level=corporate")) },
           { href: "/dashboards?level=region", label: "Region", match: (s, p) => p === "/dashboards" && s.includes("level=region") },
           { href: "/dashboards?level=division", label: "Division", match: (s, p) => p === "/dashboards" && s.includes("level=division") },
-          { href: "/dashboards/studio", label: "Studio", match: (_, p) => p.startsWith("/dashboards/studio") },
-          { href: "/dashboards/forecast", label: "Forecast", match: (_, p) => p.startsWith("/dashboards/forecast") },
-          { href: "/dashboards/reconciliation", label: "Reconciliation", match: (_, p) => p.startsWith("/dashboards/reconciliation") },
-          { href: "/dashboards/copilot", label: "Magnus", match: (_, p) => p.startsWith("/dashboards/copilot") },
         ],
       },
       {
@@ -85,6 +80,16 @@ const NAV_SECTIONS: NavSection[] = [
           { href: "/trash", label: "Trash", match: (_, p) => p.startsWith("/trash") },
         ],
       },
+    ],
+  },
+  {
+    label: "More",
+    items: [
+      { href: "/sheets", label: "Sheets" },
+      { href: "/dashboards/studio", label: "Studio" },
+      { href: "/dashboards/forecast", label: "Forecast" },
+      { href: "/dashboards/reconciliation", label: "DMR Reconciliation" },
+      { href: "/dashboards/copilot", label: "Magnus" },
     ],
   },
 ];

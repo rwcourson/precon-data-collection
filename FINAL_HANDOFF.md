@@ -1,60 +1,56 @@
-# Final handoff — honest status (2026-08-07)
+# V1 handoff — demo-tight status (2026-08-15)
 
-**Verdict: not industry-leading / not debt-free.** Neon is wired for persistence.
-Demo is live; several roadmap trust/distribution paths remain incomplete.
+**Verdict:** The four-core V1 loop is the product. Extra surfaces (Sheets, Studio, Forecast, Magnus, iOS) still exist but are demoted so the leadership demo does not become a cathedral tour.
 
-**Live:** https://precon.brasfieldgorrie.app · https://precon-data.magnus.brasfieldgorrie.app  
-**GitHub:** https://github.com/rwcourson/precon-data-collection  
+**Live:** https://precon.brasfieldgorrie.app · https://precon-data.magnus.brasfieldgorrie.app
+**GitHub:** https://github.com/rwcourson/precon-data-collection
 **DB:** Neon (`DATABASE_URL` on Vercel + local `.env.local`)
 
 ---
 
-## Done for Neon / deploy
+## V1 that should impress Greg / Keller / Brian
 
-- [x] App uses Neon when `DATABASE_URL` is set (`postgres.js`, `prepare: false`)
-- [x] Schema migrated; **Smartsheet import into Neon** (626 jobs / 1,058 rounds; 33 pursuit views)
-- [x] Env vars on Vercel (Neon + Databricks read + Smartsheet read; `DATABRICKS_ALLOW_WRITE=false`)
-- [x] Local `.env.local` (gitignored)
-- [x] Databricks SELECT probes verified (~10.6k Destini estimates, Build master, etc.)
-- [x] Smartsheet token verified (read-only; 42+ precon sheets visible)
+- Bid schedule shows **Owner**, **Drawings Due**, **Bid Review** from the Smartsheet parser (not blank after a representative export parse).
+- Default user is **Brian Meyers** (Central RPD). Role switcher is “view as,” not “demo persona.”
+- Status moves among upcoming / active / outstanding / submitted.
+- Second estimate round on the same job.
+- Yellow blanks block RPD lock and name the missing labels (`Fee – Expected $`, etc.). Owner is **not** a lock gate.
+- Post-lock outcome change is persisted and audited.
+- Dashboards default to **one latest/final round per job**; “All pricing rounds” is explicit.
+- New Pursuit is Salesforce-first; **No job number yet (ROM)** stays unlinked as `TBD-…`.
+- Consolidated regional export includes those operational columns.
+- Nav: Overview, Bid Schedule, Post-Bid, Dashboards, Reports.
+
+Open questions for the room: [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
 
 ---
 
-## What still needs to be done
-
-### You (ops / IT / Bryan)
+## Ops before you send the link
 
 1. **Rotate the Neon password** — it was pasted into chat; treat as exposed.
-2. **Vercel Deployment Protection / SSO** — `precon.brasfieldgorrie.app` may require Vercel login; invite Bryan or relax protection for the demo.
-3. **SMTP / Resend** — `RESEND_API_KEY`, `EMAIL_FROM`, Bryan’s distribution lists.
-4. **Salesforce / Connect** — API access, stages, `CONNECT_MODE=rest` + `CONNECT_API_URL`.
-5. **Databricks / Smartsheet** — tokens are on Vercel (read-only). Rotate both (pasted in chat). Do **not** set `DATABRICKS_ALLOW_WRITE=true` unless IT approves outbound push.
-6. **SSO cutover** — `AUTH_MODE=sso`, IdP headers, SPD→RPD group map (leave demo cookie for now).
-7. **Cron** — set `CRON_SECRET` and schedule reminders / SF sync / distribution / snapshots.
-8. **Object storage** — PDFs/snapshots (today local/stub).
-9. **Bryan decisions** — columns to promote, PDF column set, forecast defaults, metrics sheet, analytics team name.
-10. **Share link** with Bryan; fold his follow-up doc; review Jay’s build.
-11. **Optional:** transfer GitHub repo to `BG-Innovation` when you have create rights.
-
-### Product debt (code — not “done”)
-
-1. Wire soft-delete into normal delete UI (Trash is mostly empty today; grid still hard-deletes).
-2. Enforce field/sheet ACL policy on main write paths (tables exist, mostly unused).
-3. Real PDF bytes on email distribution (currently filename metadata + stub SMTP).
-4. Headless cron without `getCurrentUser()` cookie.
-5. Restorable snapshots (today count-only manifests).
-6. Version history UI / grid-row versions.
-7. Destructive API that consumes the challenge token.
-8. Broader PPTX (full dashboard) and real AI suggest (not keyword stub).
-9. Thin test suite — not a production safety net.
-
-### Deliberately deferred
-
-- Gantt / resource planning  
-- Full Magnus product wiring beyond the scoped read API  
+2. **Vercel Deployment Protection** — invite Brian / Keller / Greg or relax for the demo.
+3. Do **not** set `DATABRICKS_ALLOW_WRITE=true`.
+4. Leave `AUTH_MODE=demo` for the room unless SSO is already mapped.
+5. **Neon schema:** run `npm run db:migrate:deploy` so `estimate_rounds.owner` exists, then `npm run db:import-smartsheet` if you want the hosted dataset to carry Owner / Drawings Due / Bid Review. Parser is shipped; a full Neon rewrite is ops, not required for unit proof.
 
 ---
 
-## Solid enough to demo now
+## Deliberately not V1
 
-Bid schedule + group-by, post-bid lock/SPD, reports/dashboards/forecast, Destini import, mock SF inbox (manual), Neon-backed persistence across deploys.
+- Gantt / resource planning
+- Lowery Precon App
+- Live Salesforce, live email, Databricks write
+- Magnus copilot as a first-class nav item
+- Cleaning all ~1,058 imported rounds
+- Changing the Obsidian vault
+
+---
+
+## Verify
+
+```bash
+npm test
+npm run docs:check
+npm run smoke:isolated
+npm run verify:web
+```

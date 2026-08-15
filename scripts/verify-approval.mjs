@@ -25,7 +25,7 @@ async function pickPersona(name) {
 try {
   await page.goto(`${baseUrl}/post-bid`);
   await page.waitForLoadState("networkidle");
-  await pickPersona("Bryan Myers");
+  await pickPersona("Brian Meyers");
   await page.goto(`${baseUrl}/post-bid`);
   await page.waitForLoadState("networkidle");
 
