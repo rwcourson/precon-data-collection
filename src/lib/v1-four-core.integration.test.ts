@@ -157,4 +157,66 @@ describe("V1 four-core loop", () => {
     const audits = await db.select().from(auditLog).where(eq(auditLog.roundId, round.id));
     expect(audits.some((a) => a.field === "outcome" && a.newValue === "successful")).toBe(true);
   });
+
+  it("lets RPD correct estimate value when an imported market sector is off the list", async () => {
+    const principal = createPrincipal({
+      user: rpd,
+      authSource: "demo_session",
+      workspaceRegion: rpd.region,
+    });
+    const [job] = await db
+      .insert(jobs)
+      .values({
+        jobNumber: `V1S-${Date.now()}`,
+        jobName: "Imported sector subject",
+        region: rpd.region ?? "Central",
+        preconDepartment: "Central Building Group",
+        createdById: rpd.id,
+      })
+      .returning();
+    const [round] = await db
+      .insert(estimateRounds)
+      .values({
+        jobId: job.id,
+        roundNumber: 1,
+        status: "locked",
+        outcome: "pending",
+        region: rpd.region ?? "Central",
+        preconDepartment: "Central Building Group",
+        estimatePhase: "GMP",
+        bidYear: 2026,
+        marketSector: "Imported Free Text Sector",
+        estimateValue: 1_000_000,
+        createdById: rpd.id,
+      })
+      .returning();
+    created.push({ jobId: job.id, roundIds: [round.id] });
+
+    const saved = await pursuitService.savePostBidData(principal, {
+      roundId: round.id,
+      values: {
+        marketSector: "Imported Free Text Sector",
+        estimateValue: "1005000",
+      },
+      multiValues: {},
+      customValues: {},
+    });
+    expect(saved.changed).toBe(1);
+    expect(saved.audited).toBe(1);
+
+    const [row] = await db.select().from(estimateRounds).where(eq(estimateRounds.id, round.id));
+    expect(row.estimateValue).toBe(1_005_000);
+    expect(row.marketSector).toBe("Imported Free Text Sector");
+
+    await expect(
+      pursuitService.savePostBidData(principal, {
+        roundId: round.id,
+        values: { marketSector: "Another Invalid Sector" },
+        multiValues: {},
+        customValues: {},
+      }),
+    ).rejects.toMatchObject({
+      what: expect.stringMatching(/Market Sector must match a managed list value/),
+    });
+  });
 });

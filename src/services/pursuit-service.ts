@@ -326,9 +326,12 @@ export const pursuitService = {
 
     for (const [key, raw] of Object.entries(input.values)) {
       if (!ROUND_COLUMN_KEYS.includes(key)) continue;
+      const oldValue = (round as unknown as Record<string, unknown>)[key];
+      // Full-form submits include every field. Do not fail a correction because an
+      // imported dropdown value is still off the current managed list.
+      if (String(oldValue ?? "") === String(raw ?? "")) continue;
       const result = validateFieldValue(key, raw, lists);
       if (!result.ok) throw DomainError.badRequest(result.error);
-      const oldValue = (round as unknown as Record<string, unknown>)[key];
       const newValue = result.value;
       const changed =
         (oldValue ?? null) !== (newValue ?? null) &&

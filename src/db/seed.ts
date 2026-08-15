@@ -62,22 +62,22 @@ const REGION_CITIES: Record<string, [string, string][]> = {
 };
 
 const SECTOR_NAMES: [string, string[], [number, number]][] = [
-  // [market sector prefix, name templates, estimate value range $M]
+  // Labels must match REFERENCE_LISTS.marketSector so a full-form save can lock and correct.
   ["Healthcare – Hospital", ["{city} Regional Medical Center Tower", "{city} Children's Hospital Expansion", "St. Vincent's {city} Bed Tower"], [80, 420]],
-  ["Healthcare – Medical Office", ["{city} Medical Office Building", "{city} Outpatient Pavilion"], [18, 90]],
-  ["Mission Critical – Data Center", ["Project Falcon Data Center", "Project Granite Hyperscale Campus", "{city} Colocation Facility Phase II"], [120, 900]],
+  ["Healthcare – Outpatient Facilities", ["{city} Medical Office Building", "{city} Outpatient Pavilion"], [18, 90]],
+  ["Mission Critical – Greenfield Data Center", ["Project Falcon Data Center", "Project Granite Hyperscale Campus", "{city} Colocation Facility Phase II"], [120, 900]],
   ["Commercial – Office", ["{city} Gateway Office Tower", "Midtown {city} Mixed-Use Office"], [40, 260]],
-  ["Commercial – Mixed Use", ["{city} Riverfront District", "The Foundry at {city}"], [60, 350]],
-  ["Education – Higher Ed", ["{city} University Science Hall", "{city} State Engineering Complex"], [30, 180]],
+  ["Commercial – Other", ["{city} Riverfront District", "The Foundry at {city}"], [60, 350]],
+  ["Education – Higher Education", ["{city} University Science Hall", "{city} State Engineering Complex"], [30, 180]],
   ["Government – Military", ["Fort {city} Barracks Complex", "{city} AFB Maintenance Hangar"], [45, 240]],
-  ["Industrial – Automotive", ["{city} EV Battery Plant", "{city} Assembly Plant Expansion"], [150, 800]],
-  ["Industrial – Food & Beverage", ["{city} Beverage Production Facility", "{city} Cold Storage Distribution"], [35, 160]],
-  ["Infrastructure – Bridges", ["I-65 {city} Bridge Replacement", "SR-280 {city} Interchange"], [25, 190]],
-  ["Infrastructure – Water/Wastewater", ["{city} Water Treatment Plant Upgrade", "{city} WWTP Expansion"], [40, 220]],
+  ["Industrial – Manufacturing", ["{city} EV Battery Plant", "{city} Assembly Plant Expansion"], [150, 800]],
+  ["Industrial – Food and Beverage", ["{city} Beverage Production Facility", "{city} Cold Storage Distribution"], [35, 160]],
+  ["Infrastructure – Roads & Bridges", ["I-65 {city} Bridge Replacement", "SR-280 {city} Interchange"], [25, 190]],
+  ["Water – Wastewater", ["{city} Water Treatment Plant Upgrade", "{city} WWTP Expansion"], [40, 220]],
   ["Hospitality – Hotel", ["{city} Convention Hotel", "The Grand {city} Hotel & Spa"], [55, 280]],
-  ["Multi-Family – Apartments", ["{city} Commons Apartments", "Parkline {city} Residences"], [30, 140]],
-  ["Sports & Entertainment – Stadium", ["{city} Stadium Renovation", "{city} Arena District"], [90, 500]],
-  ["Science & Tech – Lab/Research", ["{city} Biotech Research Center", "{city} Innovation Labs"], [50, 270]],
+  ["Multi-Family – Apartment", ["{city} Commons Apartments", "Parkline {city} Residences"], [30, 140]],
+  ["Sports & Entertainment – Stadium/Athletic Facility", ["{city} Stadium Renovation", "{city} Arena District"], [90, 500]],
+  ["Science & Tech – Research Institutions", ["{city} Biotech Research Center", "{city} Innovation Labs"], [50, 270]],
 ];
 
 const ESTIMATE_LEAD_NAMES = [
@@ -161,7 +161,7 @@ export async function seedDemoData() {
     const mlt = sector.startsWith("Healthcare") ? "Healthcare"
       : sector.startsWith("Mission Critical") ? "Mission Critical"
       : sector.startsWith("Industrial") || sector.startsWith("Science") ? "Industrial"
-      : sector.startsWith("Infrastructure") ? "Heavy Civil"
+      : sector.startsWith("Infrastructure") || sector.startsWith("Water") ? "Heavy Civil"
       : sector.startsWith("Government") ? "Federal"
       : "Commercial";
 
@@ -197,7 +197,7 @@ export async function seedDemoData() {
     const baseValueM = between(loM, hiM);
     const startYear = 2024 + (j % 3);
     const leadName = region === "Central" && j % 2 === 0 ? estimateLead.name : pick(ESTIMATE_LEAD_NAMES);
-    const isBuilding = !sector.startsWith("Infrastructure");
+    const isBuilding = !sector.startsWith("Infrastructure") && !sector.startsWith("Water");
 
     for (let p = 0; p < phases.length; p++) {
       const phase = phases[p];
