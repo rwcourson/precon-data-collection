@@ -12,7 +12,11 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on("pageerror", (error) => errors.push(`${page.url()} pageerror: ${error.message}`));
 page.on("console", (message) => {
-  if (message.type() === "error") errors.push(`${page.url()} console: ${message.text()}`);
+  const text = message.text();
+  if (message.type() !== "error") return;
+  // Chromium logs HTTP 4xx/5xx as console errors; those are not page crashes.
+  if (/Failed to load resource:/.test(text)) return;
+  errors.push(`${page.url()} console: ${text}`);
 });
 
 const report = (message) => process.stdout.write(`PASS ${message}\n`);
