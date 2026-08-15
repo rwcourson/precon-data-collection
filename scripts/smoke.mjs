@@ -12,7 +12,11 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on("pageerror", (error) => errors.push(`${page.url()} pageerror: ${error.message}`));
 page.on("console", (message) => {
-  if (message.type() === "error") errors.push(`${page.url()} console: ${message.text()}`);
+  const text = message.text();
+  if (message.type() !== "error") return;
+  // Chromium logs HTTP 4xx/5xx as console errors; those are not page crashes.
+  if (/Failed to load resource:/.test(text)) return;
+  errors.push(`${page.url()} console: ${text}`);
 });
 
 const report = (message) => process.stdout.write(`PASS ${message}\n`);
@@ -42,7 +46,7 @@ try {
   report(`bid schedule renders ${rowCount} rows`);
 
   await page.getByRole("button", { name: "New Pursuit" }).click();
-  await page.getByRole("tab", { name: /Manual/ }).click();
+  await page.getByRole("tab", { name: /No job number yet/ }).click();
   await page.getByPlaceholder(/Riverside Medical/).fill("Isolated Smoke Test ROM");
   const selects = page.locator('[role="dialog"] [role="combobox"]');
   for (const [index, option] of [
@@ -77,7 +81,7 @@ try {
   await shot("04-round-saved");
   report("post-bid field mutation saves");
 
-  await pickPersona("Bryan Myers");
+  await pickPersona("Brian Meyers");
   await page.goto(`${baseUrl}/post-bid`);
   await page.waitForLoadState("networkidle");
   await page.locator("table tbody tr td a").first().click();

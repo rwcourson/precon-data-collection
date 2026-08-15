@@ -103,6 +103,8 @@ export const estimateRounds = pgTable("estimate_rounds", {
   drawingsDueDate: date("drawings_due_date"),
   bidReviewDate: date("bid_review_date"),
   projectStartDate: date("project_start_date"),
+  /** Project owner from the bid schedule (not the Salesforce PK). */
+  owner: text("owner"),
   city: text("city"),
   state: text("state"),
   estimateLeadId: integer("estimate_lead_id").references(() => users.id),

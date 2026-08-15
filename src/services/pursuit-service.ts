@@ -28,7 +28,7 @@ import { allowedTransitions, STATUS_LABELS } from "@/lib/permissions";
 import { getMultiValues, getReferenceValues, getRoundWithJob } from "@/lib/queries";
 import { getNotificationSettings } from "@/lib/reminders";
 import { planSalesforceLink } from "@/lib/salesforce-link";
-import { missingRequiredFields, validateFieldValue } from "@/lib/validation";
+import { evaluateLockGate, validateFieldValue } from "@/lib/validation";
 import {
   assertPrincipalCanCreatePursuit,
   requireAuthorized,
@@ -181,6 +181,9 @@ export const pursuitService = {
         mlt: latest?.mlt ?? null,
         contractType: latest?.contractType ?? null,
         procurement: latest?.procurement ?? null,
+        owner: latest?.owner ?? null,
+        drawingsDueDate: latest?.drawingsDueDate ?? null,
+        bidReviewDate: latest?.bidReviewDate ?? null,
         estimateLeadId: latest?.estimateLeadId ?? null,
         createdById: user.id,
       })
@@ -323,9 +326,12 @@ export const pursuitService = {
 
     for (const [key, raw] of Object.entries(input.values)) {
       if (!ROUND_COLUMN_KEYS.includes(key)) continue;
+      const oldValue = (round as unknown as Record<string, unknown>)[key];
+      // Full-form submits include every field. Do not fail a correction because an
+      // imported dropdown value is still off the current managed list.
+      if (String(oldValue ?? "") === String(raw ?? "")) continue;
       const result = validateFieldValue(key, raw, lists);
       if (!result.ok) throw DomainError.badRequest(result.error);
-      const oldValue = (round as unknown as Record<string, unknown>)[key];
       const newValue = result.value;
       const changed =
         (oldValue ?? null) !== (newValue ?? null) &&
@@ -527,16 +533,16 @@ export const pursuitService = {
     const row = await getRoundWithJob(roundId);
     if (!row) throw DomainError.notFound("Round not found");
     const multi = await getMultiValues(round.id);
-    const missing = missingRequiredFields(round, multi, {
+    const gate = evaluateLockGate(round, multi, {
       jobNumber: row.job.jobNumber,
       jobName: row.job.jobName,
       estimateLeadName: row.estimateLeadName,
     });
-    if (missing.length > 0) {
+    if (!gate.ok) {
       return {
         ok: false as const,
-        error: `Cannot lock — ${missing.length} required field${missing.length === 1 ? " is" : "s are"} blank: ${missing.slice(0, 4).join(", ")}${missing.length > 4 ? "…" : ""}`,
-        missingFields: missing,
+        error: gate.error,
+        missingFields: gate.missingFields,
       };
     }
 

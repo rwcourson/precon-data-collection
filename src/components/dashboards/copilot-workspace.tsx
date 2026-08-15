@@ -105,54 +105,48 @@ function toolStatusLabel(part: Record<string, unknown>): string | null {
   return null;
 }
 
+const latestPreviewRef: { current: CopilotPreviewResult | null } = { current: null };
+
+const magnusTransport = new DefaultChatTransport({
+  api: "/api/v1/ai/magnus",
+  prepareSendMessagesRequest: ({ messages, id, body, trigger, messageId }) => ({
+    body: {
+      ...body,
+      id,
+      messages,
+      trigger,
+      messageId,
+      previousPlan: latestPreviewRef.current?.plan ?? null,
+    },
+  }),
+});
+
 export function CopilotWorkspace() {
   const [input, setInput] = useState("");
-  const [preview, setPreview] = useState<CopilotPreviewResult | null>(null);
-  const previewRef = useRef<CopilotPreviewResult | null>(null);
   const [savePending, startSave] = useTransition();
   const [exportPending, setExportPending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    previewRef.current = preview;
-  }, [preview]);
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/v1/ai/magnus",
-        prepareSendMessagesRequest: ({ messages, id, body, trigger, messageId }) => ({
-          body: {
-            ...body,
-            id,
-            messages,
-            trigger,
-            messageId,
-            previousPlan: previewRef.current?.plan ?? null,
-          },
-        }),
-      }),
-    [],
-  );
-
   const { messages, sendMessage, status, error } = useChat({
-    transport,
+    transport: magnusTransport,
   });
 
   const pending = status === "submitted" || status === "streaming";
 
-  useEffect(() => {
+  const preview = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       if (msg.role !== "assistant") continue;
       const found = extractDashboardPreview(msg as never);
-      if (found) {
-        setPreview(found);
-        break;
-      }
+      if (found) return found;
     }
+    return null;
   }, [messages]);
+
+  useEffect(() => {
+    latestPreviewRef.current = preview;
+  }, [preview]);
 
   useEffect(() => {
     if (error) toast.error(error.message || "Magnus could not respond");

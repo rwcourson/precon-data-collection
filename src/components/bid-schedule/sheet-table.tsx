@@ -66,6 +66,7 @@ export type BidSheetRow = {
   jobId: number;
   jobNumber: string;
   jobName: string;
+  owner: string | null;
   region: string;
   preconDepartment: string;
   marketSector: string | null;
@@ -92,6 +93,7 @@ export type BidSheetRow = {
 type ColKey =
   | "jobNumber"
   | "jobName"
+  | "owner"
   | "region"
   | "preconDepartment"
   | "estimatePhase"
@@ -139,6 +141,15 @@ const COLS: ColDef[] = [
     filter: "text",
     getValue: (r) => r.jobName,
     getSortValue: (r) => r.jobName.toLowerCase(),
+  },
+  {
+    key: "owner",
+    label: "Owner",
+    width: 160,
+    minWidth: 100,
+    filter: "text",
+    getValue: (r) => r.owner ?? "",
+    getSortValue: (r) => (r.owner ?? "").toLowerCase(),
   },
   {
     key: "region",
@@ -277,7 +288,7 @@ const COLS: ColDef[] = [
   },
   {
     key: "estimateValue",
-    label: "Est. Value",
+    label: "Bid Amount",
     width: 110,
     minWidth: 80,
     align: "right",
@@ -301,6 +312,7 @@ const COL_BY_KEY = Object.fromEntries(COLS.map((c) => [c.key, c])) as Record<Col
 export const SUMMARY_COL_KEYS: ColKey[] = [
   "jobNumber",
   "jobName",
+  "owner",
   "estimatePhase",
   "drawingsDueDate",
   "bidReviewDate",
@@ -314,6 +326,7 @@ export const SUMMARY_COL_KEYS: ColKey[] = [
 export const DETAIL_COL_KEYS: ColKey[] = [
   "jobNumber",
   "jobName",
+  "owner",
   "region",
   "preconDepartment",
   "estimatePhase",
@@ -334,6 +347,7 @@ export const DETAIL_COL_KEYS: ColKey[] = [
 ];
 
 const EDITABLE: Partial<Record<ColKey, { type: string; listKey?: string }>> = {
+  owner: { type: "text" },
   estimatePhase: { type: "dropdown", listKey: "estimatePhase" },
   drawingsDueDate: { type: "date" },
   bidReviewDate: { type: "date" },

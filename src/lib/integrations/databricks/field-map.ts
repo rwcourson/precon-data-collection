@@ -261,6 +261,12 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     notes: "BC project grain; link to B&G job via Number / opportunity_project_pairs",
   },
   {
+    appField: "owner",
+    label: "Owner",
+    source: "manual_only",
+    notes: "Bid-schedule Owner column — not a lock-gate field",
+  },
+  {
     appField: "drawingsDueDate",
     label: "Drawings Due",
     source: "manual_only",

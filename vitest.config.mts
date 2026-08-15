@@ -31,6 +31,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
+    // These import apps/mobile (Expo tsconfig). Web CI does not install Expo.
+    exclude: ["src/lib/mobile-theme.test.ts", "src/theme/mobile-tokens.test.ts"],
     passWithNoTests: false,
     testTimeout: 60_000,
     hookTimeout: 90_000,

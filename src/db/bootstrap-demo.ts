@@ -23,7 +23,14 @@ function wipePgliteDataDir(): void {
     ? dataDir
     : path.join(process.cwd(), dataDir);
   const projectRoot = process.cwd();
-  if (!absolute.startsWith(projectRoot + path.sep) && absolute !== projectRoot) {
+  const e2eRoot = process.env.E2E_PROJECT_DIR
+    ? path.resolve(process.env.E2E_PROJECT_DIR)
+    : null;
+  const allowed =
+    absolute === projectRoot ||
+    absolute.startsWith(projectRoot + path.sep) ||
+    (e2eRoot != null && (absolute === e2eRoot || absolute.startsWith(e2eRoot + path.sep)));
+  if (!allowed) {
     throw new Error(`Refusing to wipe PGlite dir outside the project: ${absolute}`);
   }
   if (fs.existsSync(absolute)) {

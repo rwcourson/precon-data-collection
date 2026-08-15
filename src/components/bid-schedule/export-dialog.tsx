@@ -39,8 +39,10 @@ import { deleteReportTemplate, saveReportTemplate } from "@/actions/templates";
 const DEFAULT_COLUMNS = [
   "jobNumber",
   "jobName",
+  "owner",
   "estimatePhase",
-  "bidYear",
+  "drawingsDueDate",
+  "bidReviewDate",
   "bidDueDate",
   "estimateLead",
   "marketSector",

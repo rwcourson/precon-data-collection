@@ -133,6 +133,7 @@ export default async function BidSchedulePage({
     jobId: job.id,
     jobNumber: job.jobNumber,
     jobName: job.jobName,
+    owner: round.owner,
     region: round.region,
     preconDepartment: round.preconDepartment,
     marketSector: round.marketSector,
@@ -176,7 +177,7 @@ export default async function BidSchedulePage({
     <div className="space-y-3">
       <PageHeader
         title="Bid Schedule"
-        description={`Pre-bid pursuit pipeline — standalone module, independent of post-bid data entry. ${
+        description={`Pre-bid pursuit pipeline. New Pursuit is Salesforce-first; No job number yet (ROM) stays unlinked as TBD-…. ${
           workspace.region ? `${workspace.region} workspace.` : "Corporate view — all Regions."
         }`}
         actions={

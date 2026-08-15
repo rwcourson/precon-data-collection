@@ -29,6 +29,7 @@ export const FIELD_DEFS: FieldDef[] = [
   // ---- Identity / core bid schedule fields ----
   { key: "jobNumber", label: "Job Number", type: "text", tier: "required", group: "Project Identity", source: "connect", core: true, note: "Parent Job Number; may be unlinked pending Salesforce match" },
   { key: "jobName", label: "Job Name", type: "text", tier: "required", group: "Project Identity", source: "connect", core: true },
+  { key: "owner", label: "Owner", type: "text", tier: "optional", group: "Project Identity", core: true, note: "Bid-schedule Owner column — does not block RPD lock" },
   { key: "region", label: "Region", type: "dropdown", tier: "required", group: "Project Identity", listKey: "region", core: true, note: "Lead operational Division/Region if IJV" },
   { key: "preconDepartment", label: "Precon Department", type: "dropdown", tier: "required", group: "Project Identity", listKey: "preconDepartment", core: true, note: "Lead Preconstruction Department if IJV" },
   { key: "estimatePhase", label: "Estimate Phase", type: "dropdown", tier: "required", group: "Project Identity", listKey: "estimatePhase", core: true, note: "Identifies this Estimate Round" },
@@ -47,7 +48,7 @@ export const FIELD_DEFS: FieldDef[] = [
   { key: "statusAtPricing", label: "Status", type: "dropdown", tier: "required", group: "Classification", listKey: "statusAtPricing", core: true, note: "At time of pricing: Prospective, Committed, or Work Under Contract" },
 
   // ---- Remaining required ("Data Base Bid") fields ----
-  { key: "designContract", label: "Design/Contract", type: "dropdown", tier: "required", group: "Classification", listKey: "designContract" },
+  { key: "designContract", label: "Design Delivery", type: "dropdown", tier: "required", group: "Classification", listKey: "designContract", note: "Smartsheet label: Design Delivery" },
   { key: "internalJointVenture", label: "Internal Joint Venture", type: "dropdown", tier: "required", group: "Classification", listKey: "internalJointVenture", note: "Based on operational arrangement per the DMR; includes IJVs between Divisions in the same Region" },
   { key: "awardability", label: "Awardability", type: "dropdown", tier: "required", group: "Classification", listKey: "awardability", note: "Is this a Work Under Contract pricing round?" },
   { key: "businessStrategyValues", label: "Business Strategy Values", type: "dropdown", tier: "required", group: "Classification", listKey: "businessStrategyValues" },

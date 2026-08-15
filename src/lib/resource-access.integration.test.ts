@@ -372,10 +372,10 @@ describe("scoped-read migration inventory", () => {
 
   it("keeps predictable-ID pages and routes behind a parent loader", () => {
     const expectations = [
-      ["src/app/jobs/[id]/page.tsx", "loadJobForPrincipal"],
-      ["src/app/rounds/[id]/page.tsx", "loadRoundForPrincipal"],
-      ["src/app/sheets/[id]/page.tsx", "loadSheetForPrincipal"],
-      ["src/app/dashboards/studio/[id]/page.tsx", "loadDashboardForPrincipal"],
+      ["src/app/(app)/jobs/[id]/page.tsx", "loadJobForPrincipal"],
+      ["src/app/(app)/rounds/[id]/page.tsx", "loadRoundForPrincipal"],
+      ["src/app/(app)/sheets/[id]/page.tsx", "loadSheetForPrincipal"],
+      ["src/app/(app)/dashboards/studio/[id]/page.tsx", "loadDashboardForPrincipal"],
       ["src/app/api/v1/mobile/jobs/[id]/route.ts", "authorizationService.readJob"],
       ["src/app/api/v1/mobile/rounds/[id]/route.ts", "authorizationService.readRound"],
       ["src/app/api/v1/mobile/sheets/[id]/route.ts", "loadSheetForPrincipal"],
@@ -395,7 +395,7 @@ describe("scoped-read migration inventory", () => {
     expect(appSource).not.toMatch(/getRoundsWithJobs\(workspace\)/);
     expect(appSource).not.toMatch(/getFlatDataset\(\)/);
     expect(source("src/app/api/v1/mobile/admin/route.ts")).not.toContain(".from(");
-    expect(source("src/app/dashboards/studio/page.tsx")).toContain(
+    expect(source("src/app/(app)/dashboards/studio/page.tsx")).toContain(
       "listDashboardsForPrincipal",
     );
     expect(source("src/app/api/export/sheet/route.ts")).not.toContain("getSheet(");

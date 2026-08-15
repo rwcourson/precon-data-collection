@@ -10,6 +10,7 @@ import {
   identityFromBetterAuthUser,
   microsoftProfileFromAccount,
 } from "@/lib/sso-session";
+import { pickDefaultDemoUser } from "@/lib/demo-identity";
 
 const COOKIE = "demo-user-id";
 
@@ -63,7 +64,7 @@ export async function getCurrentUser(): Promise<User> {
   if (all.length === 0) {
     throw new Error("No users seeded — run `npm run db:seed` first.");
   }
-  return all.find((u) => u.id === id) ?? all[0];
+  return all.find((u) => u.id === id) ?? pickDefaultDemoUser(all);
 }
 
 export async function getAllUsers(): Promise<User[]> {

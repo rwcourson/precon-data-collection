@@ -18,6 +18,8 @@ import {
 } from "./schema";
 import { assertDemoSeedAllowed } from "@/lib/runtime-config";
 import { REFERENCE_LISTS } from "../lib/reference-data";
+import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
+import { consolidatedRegionalReportInsert } from "../lib/report-presets";
 import type { RoundStatus } from "./schema";
 
 // Deterministic RNG so the demo dataset is stable across reseeds
@@ -60,22 +62,22 @@ const REGION_CITIES: Record<string, [string, string][]> = {
 };
 
 const SECTOR_NAMES: [string, string[], [number, number]][] = [
-  // [market sector prefix, name templates, estimate value range $M]
+  // Labels must match REFERENCE_LISTS.marketSector so a full-form save can lock and correct.
   ["Healthcare – Hospital", ["{city} Regional Medical Center Tower", "{city} Children's Hospital Expansion", "St. Vincent's {city} Bed Tower"], [80, 420]],
-  ["Healthcare – Medical Office", ["{city} Medical Office Building", "{city} Outpatient Pavilion"], [18, 90]],
-  ["Mission Critical – Data Center", ["Project Falcon Data Center", "Project Granite Hyperscale Campus", "{city} Colocation Facility Phase II"], [120, 900]],
+  ["Healthcare – Outpatient Facilities", ["{city} Medical Office Building", "{city} Outpatient Pavilion"], [18, 90]],
+  ["Mission Critical – Greenfield Data Center", ["Project Falcon Data Center", "Project Granite Hyperscale Campus", "{city} Colocation Facility Phase II"], [120, 900]],
   ["Commercial – Office", ["{city} Gateway Office Tower", "Midtown {city} Mixed-Use Office"], [40, 260]],
-  ["Commercial – Mixed Use", ["{city} Riverfront District", "The Foundry at {city}"], [60, 350]],
-  ["Education – Higher Ed", ["{city} University Science Hall", "{city} State Engineering Complex"], [30, 180]],
+  ["Commercial – Other", ["{city} Riverfront District", "The Foundry at {city}"], [60, 350]],
+  ["Education – Higher Education", ["{city} University Science Hall", "{city} State Engineering Complex"], [30, 180]],
   ["Government – Military", ["Fort {city} Barracks Complex", "{city} AFB Maintenance Hangar"], [45, 240]],
-  ["Industrial – Automotive", ["{city} EV Battery Plant", "{city} Assembly Plant Expansion"], [150, 800]],
-  ["Industrial – Food & Beverage", ["{city} Beverage Production Facility", "{city} Cold Storage Distribution"], [35, 160]],
-  ["Infrastructure – Bridges", ["I-65 {city} Bridge Replacement", "SR-280 {city} Interchange"], [25, 190]],
-  ["Infrastructure – Water/Wastewater", ["{city} Water Treatment Plant Upgrade", "{city} WWTP Expansion"], [40, 220]],
+  ["Industrial – Manufacturing", ["{city} EV Battery Plant", "{city} Assembly Plant Expansion"], [150, 800]],
+  ["Industrial – Food and Beverage", ["{city} Beverage Production Facility", "{city} Cold Storage Distribution"], [35, 160]],
+  ["Infrastructure – Roads & Bridges", ["I-65 {city} Bridge Replacement", "SR-280 {city} Interchange"], [25, 190]],
+  ["Water – Wastewater", ["{city} Water Treatment Plant Upgrade", "{city} WWTP Expansion"], [40, 220]],
   ["Hospitality – Hotel", ["{city} Convention Hotel", "The Grand {city} Hotel & Spa"], [55, 280]],
-  ["Multi-Family – Apartments", ["{city} Commons Apartments", "Parkline {city} Residences"], [30, 140]],
-  ["Sports & Entertainment – Stadium", ["{city} Stadium Renovation", "{city} Arena District"], [90, 500]],
-  ["Science & Tech – Lab/Research", ["{city} Biotech Research Center", "{city} Innovation Labs"], [50, 270]],
+  ["Multi-Family – Apartment", ["{city} Commons Apartments", "Parkline {city} Residences"], [30, 140]],
+  ["Sports & Entertainment – Stadium/Athletic Facility", ["{city} Stadium Renovation", "{city} Arena District"], [90, 500]],
+  ["Science & Tech – Research Institutions", ["{city} Biotech Research Center", "{city} Innovation Labs"], [50, 270]],
 ];
 
 const ESTIMATE_LEAD_NAMES = [
@@ -125,10 +127,10 @@ export async function seedDemoData() {
   const userRows = await db
     .insert(users)
     .values([
+      { name: DEFAULT_DEMO_RPD.name, title: DEFAULT_DEMO_RPD.title, role: "rpd", region: "Central", preconDepartment: "Central Building Group", email: DEFAULT_DEMO_RPD.email },
       { name: "Sarah Chen", title: "Preconstruction Manager", role: "pcm", region: "Central", preconDepartment: "Central Heavy Civil", email: "schen@brasfieldgorrie.com" },
       { name: "Marcus Webb", title: "Senior Estimate Lead", role: "estimate_lead", region: "Central", preconDepartment: "Central Heavy Civil", email: "mwebb@brasfieldgorrie.com" },
       { name: "Dana Ortiz", title: "Job Site Administrator", role: "admin_jsa", region: "Central", preconDepartment: "Central Building Group", email: "dortiz@brasfieldgorrie.com" },
-      { name: "Bryan Myers", title: "Regional Preconstruction Director", role: "rpd", region: "Central", preconDepartment: "Central Heavy Civil", email: "bmyers@brasfieldgorrie.com" },
       { name: "Patricia Lawson", title: "Division President", role: "leadership", region: "Central", preconDepartment: null, email: "plawson@brasfieldgorrie.com" },
       { name: "Tom Reeves", title: "Corporate Precon Admin", role: "corporate_admin", region: null, preconDepartment: null, email: "treeves@brasfieldgorrie.com" },
     ])
@@ -159,7 +161,7 @@ export async function seedDemoData() {
     const mlt = sector.startsWith("Healthcare") ? "Healthcare"
       : sector.startsWith("Mission Critical") ? "Mission Critical"
       : sector.startsWith("Industrial") || sector.startsWith("Science") ? "Industrial"
-      : sector.startsWith("Infrastructure") ? "Heavy Civil"
+      : sector.startsWith("Infrastructure") || sector.startsWith("Water") ? "Heavy Civil"
       : sector.startsWith("Government") ? "Federal"
       : "Commercial";
 
@@ -195,7 +197,7 @@ export async function seedDemoData() {
     const baseValueM = between(loM, hiM);
     const startYear = 2024 + (j % 3);
     const leadName = region === "Central" && j % 2 === 0 ? estimateLead.name : pick(ESTIMATE_LEAD_NAMES);
-    const isBuilding = !sector.startsWith("Infrastructure");
+    const isBuilding = !sector.startsWith("Infrastructure") && !sector.startsWith("Water");
 
     for (let p = 0; p < phases.length; p++) {
       const phase = phases[p];
@@ -245,7 +247,12 @@ export async function seedDemoData() {
                 : "unsuccessful"
             : "pending",
         region, preconDepartment: dept, estimatePhase: phase, bidYear,
-        bidDueDate: bidDue, projectStartDate: startDate, city, state,
+        bidDueDate: bidDue,
+        drawingsDueDate: `${bidYear}-${String(Math.max(1, month - 1)).padStart(2, "0")}-15`,
+        bidReviewDate: `${bidYear}-${String(month).padStart(2, "0")}-01`,
+        projectStartDate: startDate,
+        owner: pick(["HCA Healthcare", "Auburn University", "AdventHealth", "Vanderbilt", "USACE", "Private Owner"]),
+        city, state,
         estimateLeadId: leadName === estimateLead.name ? estimateLead.id : null,
         mlt, marketSector: sector,
         contractType: pick(REFERENCE_LISTS.contractType.values),
@@ -414,32 +421,7 @@ export async function seedDemoData() {
     },
     sharedWithRegions: ["Central"],
   });
-  await db.insert(savedReports).values({
-    name: "Consolidated Regional Bid Schedule",
-    ownerId: rpd.id,
-    presetKey: "consolidated_regional_bid_schedule",
-    config: {
-      fields: [
-        "jobNumber",
-        "jobName",
-        "preconDepartment",
-        "estimatePhase",
-        "bidDueDate",
-        "marketSector",
-        "estimateLead",
-        "status",
-        "estimateValue",
-      ],
-      filters: [],
-      groupBy: ["preconDepartment"],
-      aggregations: [],
-      sortBy: [
-        { field: "preconDepartment", dir: "asc" },
-        { field: "bidDueDate", dir: "asc" },
-      ],
-    },
-    sharedWithRegions: ["Central"],
-  });
+  await db.insert(savedReports).values(consolidatedRegionalReportInsert(rpd.id));
 
   console.log(`Done. Seeded ${totalRounds} estimate rounds across 42 jobs.`);
 }

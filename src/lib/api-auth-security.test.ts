@@ -84,6 +84,11 @@ describe("bearer token security", () => {
     if ("error" in issued) throw new Error(issued.error);
     vi.stubEnv("APP_ENV", "local");
     vi.stubEnv("AUTH_MODE", "sso");
+    vi.stubEnv("SSO_ALLOWED_DOMAINS", "brasfieldgorrie.com");
+    vi.stubEnv("BETTER_AUTH_SECRET", "test-better-auth-secret-32chars!!");
+    vi.stubEnv("MICROSOFT_CLIENT_ID", "test-client-id");
+    vi.stubEnv("MICROSOFT_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv("MICROSOFT_TENANT_ID", "test-tenant-id");
     try {
       const result = await resolveMobilePrincipal(`Bearer ${issued.token}`);
       expect(result).toMatchObject({ ok: false, status: 401, error: "Demo session is disabled" });
@@ -95,6 +100,11 @@ describe("bearer token security", () => {
   it("rejects persona switching whenever demo mode is disabled", async () => {
     vi.stubEnv("APP_ENV", "local");
     vi.stubEnv("AUTH_MODE", "sso");
+    vi.stubEnv("SSO_ALLOWED_DOMAINS", "brasfieldgorrie.com");
+    vi.stubEnv("BETTER_AUTH_SECRET", "test-better-auth-secret-32chars!!");
+    vi.stubEnv("MICROSOFT_CLIENT_ID", "test-client-id");
+    vi.stubEnv("MICROSOFT_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv("MICROSOFT_TENANT_ID", "test-tenant-id");
     await expect(switchUser(1)).rejects.toThrow(/demo feature/i);
   });
 
