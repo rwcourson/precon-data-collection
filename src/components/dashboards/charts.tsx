@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Dashboard charts — re-export chart-elements (cobalt) adapters.
+ * Dashboard charts — re-export chart-elements adapters.
  * Prefer importing from `@/components/dashboards/ce-charts` in new code.
  */
 

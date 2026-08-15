@@ -244,7 +244,7 @@ export function CopilotWorkspace() {
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight">Magnus AI</p>
             <p className="text-2xs text-muted-foreground">
-              Claude Opus 5 · ZDR · cobalt charts
+              Claude Opus 5 · ZDR · charts
             </p>
           </div>
         </div>
@@ -352,7 +352,7 @@ export function CopilotWorkspace() {
             <p className="mt-0.5 text-xs text-muted-foreground">
               {preview
                 ? preview.plan.description
-                : "Ask about win rate, volume, or fees — answers stream in chat and a Power BI–style cobalt canvas appears here."}
+                : "Ask about win rate, volume, or fees — answers stream in chat and a Power BI–style canvas appears here."}
             </p>
             {preview?.plan.rationale?.length ? (
               <p className="mt-1.5 text-2xs text-muted-foreground">

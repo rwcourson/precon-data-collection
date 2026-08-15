@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Precon adapters over @rwcourson/chart-elements (cobalt palette).
+ * Precon adapters over @rwcourson/chart-elements (shared color tokens).
  * Values are pre-scaled so axes stay readable (CE only formats tooltips).
  */
 

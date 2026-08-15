@@ -91,7 +91,7 @@ the ask) · **Missing** (not started).
 | E2 | **Self-service dashboards** — "I can make it myself and I don't need an expert." Each region is a big business and needs its own visualizations, with a place to host them | **Built** | `/dashboards/studio` personal/region/corporate. |
 | E3 | Consistent graphics suitable for communicating upward | **Built** | Shared chart components + studio widgets. |
 | E4 | **Slide export** — today he screenshots charts into PowerPoint. Asked if export-to-slides would help: *"that would be excellent"* | **Built** | `/api/export/pptx` 16:9 forecast deck. |
-| E5 | "AI is UI" — generated views/dashboards from the clean schema (the Power BI-replacement idea) | **Built** | Magnus ToolLoopAgent + chart-elements cobalt canvas; human must review/save. |
+| E5 | "AI is UI" — generated views/dashboards from the clean schema (the Power BI-replacement idea) | **Built** | Magnus ToolLoopAgent + chart-elements canvas (shared color tokens); human must review/save. |
 
 ### F. Integrations & data flow
 

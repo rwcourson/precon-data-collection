@@ -367,7 +367,7 @@ function SidebarNav({
           <p className="truncate whitespace-nowrap text-sm font-semibold tracking-tight">
             B&amp;G Precon
           </p>
-          <p className="truncate whitespace-nowrap text-xs text-muted-foreground">
+          <p className="truncate whitespace-nowrap text-xs text-ink-secondary">
             Pursuits &amp; Data
           </p>
         </div>

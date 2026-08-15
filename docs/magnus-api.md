@@ -59,7 +59,7 @@ Content-Type: application/json
   - `plan_dashboard` — Power BI–style multi-widget plan + resolved series
   - `refine_dashboard` — iterate on the last canvas plan
   - `plan_dashboard_rules` — local rules planner (also used when gateway key is missing)
-- Charts: `@rwcourson/chart-elements` with **cobalt** palette on the canvas.
+- Charts: `@rwcourson/chart-elements` on the canvas; series colors come from the shared tokens in `src/app/globals.css` (see `docs/color-system.md`).
 - Writes: still require the human **Save view** action (`saveCopilotDashboard`).
 
 Bearer suggest-view remains for external Magnus integrations:

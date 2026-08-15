@@ -48,6 +48,16 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-frame: var(--surface-frame);
+  --color-surface-card: var(--surface-card);
+  --color-surface-raised: var(--surface-raised);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-muted: var(--text-muted);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
   /* Semantic tones — soft fill + border + ink for badges, alerts, chips */
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
@@ -75,19 +85,61 @@
 }
 
 /*
- * Brasfield & Gorrie
+ * Brasfield & Gorrie product tokens
  * Brand (navy) #0c2048 — identity, ampersand, headings
  * Interaction (bright blue) #0028f0 — clicks, active rail, focus
  * Steel #93a9d6 · Sheet #F4F7FB · Copper #c9762b · Forest #5f8f5a
+ *
+ * Components consume semantic roles (surface / text / accent / status).
+ * Light and dark are independently tuned mappings of the same roles.
  */
 :root {
+  color-scheme: light;
+
+  /* Interaction ramp — hue locked to B&G blue. Roles pick a step; components do not. */
+  --accent-50: oklch(0.97 0.02 264);
+  --accent-100: oklch(0.94 0.04 264);
+  --accent-200: oklch(0.88 0.07 264);
+  --accent-300: oklch(0.78 0.12 264);
+  --accent-400: oklch(0.70 0.16 264);
+  --accent-500: oklch(0.58 0.21 264);
+  --accent-600: #0028f0;
+  --accent-700: oklch(0.38 0.24 264);
+  --accent-800: oklch(0.30 0.16 264);
+  --accent-900: oklch(0.24 0.10 264);
+  --accent-950: oklch(0.18 0.07 264);
+
+  --accent-primary: var(--accent-600);
+  --accent-hover: var(--accent-700);
+  --accent-active: var(--accent-800);
+  --accent-soft: var(--accent-50);
+  --accent-border: var(--accent-200);
+  --accent-link: var(--accent-500);
+  --accent-hover-well: oklch(0.955 0.012 264);
+
+  /*
+   * Light neutrals: small steps (~0.02 L) so the shell anchors without
+   * a second color. Canvas is a navy-tinted sheet; cards lift to near-white.
+   */
+  --surface-canvas: oklch(0.965 0.012 264);
+  --surface-frame: oklch(0.985 0.008 264);
+  --surface-card: oklch(0.995 0.004 264);
+  --surface-raised: oklch(1 0.002 264);
+
+  --border-subtle: oklch(0.90 0.012 264);
+  --border-strong: oklch(0.82 0.016 264);
+
+  --text-primary: #0c2048;
+  --text-secondary: oklch(0.40 0.028 264);
+  --text-muted: oklch(0.52 0.020 264);
+
   --brand: #0c2048;
   --brand-foreground: #f8fafc;
 
-  --info: #0028f0;
-  --info-foreground: #002070;
-  --info-soft: #eff6ff;
-  --info-border: #bfdbfe;
+  --info: var(--accent-primary);
+  --info-foreground: oklch(0.32 0.12 264);
+  --info-soft: var(--accent-soft);
+  --info-border: var(--accent-border);
 
   --success: oklch(0.55 0.09 145);
   --success-foreground: oklch(0.32 0.07 145);
@@ -104,147 +156,174 @@
   --destructive-soft: oklch(0.97 0.02 25);
   --destructive-border: oklch(0.86 0.06 25);
 
-  --background: #f8fafc;
-  --foreground: #0c2048;
-  --card: #ffffff;
-  --card-foreground: #0c2048;
-  --popover: #ffffff;
-  --popover-foreground: #0c2048;
-  --primary: #0028f0;
+  --background: var(--surface-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0c2048;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
-  --accent: #eff6ff;
-  --accent-foreground: #0c2048;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0028f0;
+  --secondary: oklch(0.955 0.012 264);
+  --secondary-foreground: var(--text-primary);
+  --muted: oklch(0.955 0.012 264);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--accent-hover-well);
+  --accent-foreground: var(--text-primary);
+  --border: var(--border-subtle);
+  --input: oklch(0.88 0.014 264);
+  --ring: var(--accent-primary);
+  --card-shadow: 0 1px 0 oklch(0.24 0.04 264 / 0.04);
 
-  /* Cobalt series (chart-elements default for Precon dashboards) */
-  --chart-1: #002070;
-  --chart-2: #3888ff;
-  --chart-3: #0028f0;
-  --chart-4: #7fa8ff;
-  --chart-5: #00143c;
-  --chart-6: #64748b;
-  --chart-7: #2645d8;
-  --chart-8: #a8c6ff;
-  --chart-positive: #1f6b4a;
-  --chart-negative: #9c343c;
-  --chart-neutral: #5b6675;
-  --chart-warning: #8a5010;
+  /* Same hue rotation as dark, darker L so marks hold on a light canvas. */
+  --chart-1: oklch(0.45 0.16 264);
+  --chart-2: oklch(0.48 0.14 180);
+  --chart-3: oklch(0.48 0.14 300);
+  --chart-4: oklch(0.52 0.14 70);
+  --chart-5: oklch(0.48 0.16 20);
+  --chart-6: oklch(0.50 0.03 264);
+  --chart-7: oklch(0.48 0.14 230);
+  --chart-8: oklch(0.48 0.14 145);
+  --chart-positive: oklch(0.48 0.12 150);
+  --chart-negative: oklch(0.50 0.16 22);
+  --chart-neutral: oklch(0.50 0.03 264);
+  --chart-warning: oklch(0.55 0.13 70);
   --chart-on-1: #ffffff;
-  --chart-on-2: #0f172a;
+  --chart-on-2: #ffffff;
   --chart-on-3: #ffffff;
-  --chart-on-4: #0f172a;
+  --chart-on-4: #0c2048;
   --chart-on-5: #ffffff;
-  --chart-on-6: #ffffff;
+  --chart-on-6: #0c2048;
   --chart-on-7: #ffffff;
-  --chart-on-8: #0f172a;
+  --chart-on-8: #ffffff;
   --chart-label: var(--chart-on-1);
   /* Solid tooltip chrome — chart-elements uses these tokens with !important.
      Missing vars made hover cards fully transparent over marks. */
-  --chart-tooltip-bg: #ffffff;
-  --chart-tooltip-fg: #10141c;
-  --chart-tooltip-border: rgb(15 23 42 / 0.12);
-  --chart-grid: rgb(15 23 42 / 0.08);
-  --chart-axis: #5b6675;
-  --overlay-shadow: 0 12px 32px rgb(15 23 42 / 0.14);
+  --chart-tooltip-bg: var(--surface-raised);
+  --chart-tooltip-fg: var(--text-primary);
+  --chart-tooltip-border: var(--border-subtle);
+  --chart-grid: oklch(0.24 0.04 264 / 0.08);
+  --chart-axis: var(--text-muted);
+  --overlay-shadow: 0 12px 32px oklch(0.24 0.04 264 / 0.12);
 
   --radius: 0.375rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0c2048;
-  --sidebar-primary: #0028f0;
+  --sidebar: var(--surface-frame);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent-primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f8fafc;
-  --sidebar-accent-foreground: #0c2048;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #0028f0;
-  color-scheme: light;
+  --sidebar-accent: oklch(0.96 0.014 264);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--accent-primary);
 }
 
 .dark {
-  --brand: #93a9d6;
-  --brand-foreground: #00143c;
-
-  --info: #3888ff;
-  --info-foreground: #d6e6ff;
-  --info-soft: #163a7a;
-  --info-border: #3d5aa8;
-
-  --success: oklch(0.74 0.09 150);
-  --success-foreground: oklch(0.9 0.04 150);
-  --success-soft: oklch(0.32 0.04 150);
-  --success-border: oklch(0.45 0.06 150);
-
-  --warning: oklch(0.8 0.1 70);
-  --warning-foreground: oklch(0.94 0.04 75);
-  --warning-soft: oklch(0.34 0.04 70);
-  --warning-border: oklch(0.48 0.06 70);
-
-  --destructive: oklch(0.72 0.12 20);
-  --destructive-foreground: oklch(0.94 0.04 20);
-  --destructive-soft: oklch(0.34 0.05 20);
-  --destructive-border: oklch(0.48 0.08 20);
-
-  --background: #00143c;
-  --foreground: #f1f5f9;
-  --card: #002070;
-  --card-foreground: #f1f5f9;
-  --popover: #002070;
-  --popover-foreground: #f1f5f9;
-  --primary: #3888ff;
-  --primary-foreground: #00143c;
-  --secondary: #001a50;
-  --secondary-foreground: #f1f5f9;
-  --muted: #001a50;
-  --muted-foreground: #c5d0e0;
-  --accent: #163a7a;
-  --accent-foreground: #f1f5f9;
-  --border: #3d5aa8;
-  --input: #3d5aa8;
-  --ring: #7fa8ff;
-
-  /* Cobalt dark series */
-  --chart-1: #3888ff;
-  --chart-2: #b0ffff;
-  --chart-3: #7fa8ff;
-  --chart-4: #4c63ff;
-  --chart-5: #d6e6ff;
-  --chart-6: #94a3b8;
-  --chart-7: #66d9e8;
-  --chart-8: #a8c6ff;
-  --chart-positive: #7cc79d;
-  --chart-negative: #e99ba1;
-  --chart-neutral: #a2acbd;
-  --chart-warning: #e0a45e;
-  --chart-on-1: #00143c;
-  --chart-on-2: #00143c;
-  --chart-on-3: #00143c;
-  --chart-on-4: #ffffff;
-  --chart-on-5: #00143c;
-  --chart-on-6: #0f172a;
-  --chart-on-7: #00143c;
-  --chart-on-8: #00143c;
-  --chart-label: var(--chart-on-1);
-  --chart-tooltip-bg: #1a2336;
-  --chart-tooltip-fg: #f4f6fa;
-  --chart-tooltip-border: rgb(255 255 255 / 0.14);
-  --chart-grid: rgb(255 255 255 / 0.08);
-  --chart-axis: #a2acbd;
-  --overlay-shadow: 0 16px 40px rgb(0 0 0 / 0.45);
-
-  --sidebar: #00143c;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #3888ff;
-  --sidebar-primary-foreground: #00143c;
-  --sidebar-accent: #163a7a;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #3d5aa8;
-  --sidebar-ring: #7fa8ff;
   color-scheme: dark;
+
+  /*
+   * Navy-tinted neutrals, not painted cobalt.
+   * Elevate by lightening: canvas < frame < card < raised (~0.04 L each).
+   * Accent moves to the 300–400 ramp so buttons/links stay readable.
+   */
+  --surface-canvas: oklch(0.155 0.016 264);
+  --surface-frame: oklch(0.195 0.018 264);
+  --surface-card: oklch(0.235 0.020 264);
+  --surface-raised: oklch(0.285 0.022 264);
+
+  --border-subtle: oklch(0.94 0.012 264 / 0.12);
+  --border-strong: oklch(0.94 0.012 264 / 0.22);
+
+  --text-primary: oklch(0.94 0.008 264);
+  --text-secondary: oklch(0.78 0.016 264);
+  --text-muted: oklch(0.66 0.020 264);
+
+  --accent-primary: var(--accent-400);
+  --accent-hover: var(--accent-300);
+  --accent-active: var(--accent-500);
+  --accent-soft: oklch(0.27 0.055 264);
+  --accent-border: oklch(0.42 0.07 264);
+  --accent-link: var(--accent-300);
+  --accent-hover-well: oklch(0.26 0.020 264);
+
+  --brand: oklch(0.76 0.06 264);
+  --brand-foreground: oklch(0.16 0.03 264);
+
+  --info: var(--accent-primary);
+  --info-foreground: oklch(0.88 0.04 264);
+  --info-soft: var(--accent-soft);
+  --info-border: var(--accent-border);
+
+  --success: oklch(0.76 0.12 150);
+  --success-foreground: oklch(0.90 0.04 150);
+  --success-soft: oklch(0.28 0.05 150);
+  --success-border: oklch(0.42 0.07 150);
+
+  --warning: oklch(0.80 0.12 75);
+  --warning-foreground: oklch(0.92 0.04 75);
+  --warning-soft: oklch(0.30 0.05 75);
+  --warning-border: oklch(0.44 0.07 75);
+
+  --destructive: oklch(0.72 0.16 22);
+  --destructive-foreground: oklch(0.92 0.04 22);
+  --destructive-soft: oklch(0.28 0.06 22);
+  --destructive-border: oklch(0.44 0.08 22);
+
+  --background: var(--surface-canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-card);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
+  --primary-foreground: oklch(0.16 0.03 264);
+  --secondary: oklch(0.205 0.019 264);
+  --secondary-foreground: var(--text-primary);
+  --muted: oklch(0.205 0.019 264);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--accent-hover-well);
+  --accent-foreground: var(--text-primary);
+  --border: var(--border-subtle);
+  --input: oklch(0.42 0.028 264);
+  --ring: var(--accent-400);
+  --card-shadow: 0 1px 0 oklch(0.94 0.01 264 / 0.06), 0 10px 28px oklch(0.10 0.02 264 / 0.38);
+
+  /* Multi-hue series at matched lightness — not a single cobalt ramp. */
+  --chart-1: oklch(0.72 0.14 264);
+  --chart-2: oklch(0.72 0.14 180);
+  --chart-3: oklch(0.72 0.14 300);
+  --chart-4: oklch(0.74 0.14 70);
+  --chart-5: oklch(0.70 0.14 20);
+  --chart-6: oklch(0.72 0.04 264);
+  --chart-7: oklch(0.72 0.14 230);
+  --chart-8: oklch(0.72 0.14 145);
+  --chart-positive: oklch(0.76 0.12 150);
+  --chart-negative: oklch(0.72 0.14 20);
+  --chart-neutral: oklch(0.70 0.03 264);
+  --chart-warning: oklch(0.78 0.12 75);
+  --chart-on-1: oklch(0.16 0.03 264);
+  --chart-on-2: oklch(0.16 0.03 180);
+  --chart-on-3: oklch(0.16 0.03 300);
+  --chart-on-4: oklch(0.20 0.04 70);
+  --chart-on-5: oklch(0.16 0.03 20);
+  --chart-on-6: oklch(0.16 0.02 264);
+  --chart-on-7: oklch(0.16 0.03 230);
+  --chart-on-8: oklch(0.16 0.03 145);
+  --chart-label: var(--chart-on-1);
+  --chart-tooltip-bg: var(--surface-raised);
+  --chart-tooltip-fg: var(--text-primary);
+  --chart-tooltip-border: var(--border-subtle);
+  --chart-grid: oklch(0.94 0.01 264 / 0.08);
+  --chart-axis: var(--text-muted);
+  --overlay-shadow: 0 16px 40px oklch(0.08 0.02 264 / 0.50);
+
+  --sidebar: var(--surface-frame);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent-primary);
+  --sidebar-primary-foreground: oklch(0.16 0.03 264);
+  --sidebar-accent: oklch(0.235 0.022 264);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--accent-400);
 }
 
 @layer base {

@@ -185,12 +185,18 @@ defaults to port 3000 — pass it explicitly if the dev server moved.
 
 ### Theming
 
-Light and dark come from `components/theme-provider.tsx`. There is no React
-state: `useTheme()` reads `localStorage["theme"]` and the OS preference through
-`useSyncExternalStore`, so the `dark` class on `<html>` and what components
-render cannot drift apart. `resolvedTheme` is `undefined` until hydration
-because the server cannot know the OS preference — guard on it rather than
-adding a `mounted` flag.
+Color roles (surfaces, accent ramp, semantic status, chart series) live in
+`src/app/globals.css`. Light and dark independently map the same roles — see
+[`docs/color-system.md`](docs/color-system.md). Components should use those
+tokens (`bg-background`, `bg-card`, `text-ink-secondary`, `bg-accent-hover`)
+instead of new hex values. Sign-in is a navy lockup and stays off the theme.
+
+Light and dark switching comes from `components/theme-provider.tsx`. There is
+no React state: `useTheme()` reads `localStorage["precon-theme"]` and the OS
+preference through `useSyncExternalStore`, so the `dark` class on `<html>` and
+what components render cannot drift apart. `resolvedTheme` is `undefined` until
+hydration because the server cannot know the OS preference — guard on it rather
+than adding a `mounted` flag.
 
 The anti-flash script is inlined into `<head>` from `app/layout.tsx` as a plain
 string. Keep it there: this replaced `next-themes`, which rendered the same
@@ -200,7 +206,7 @@ it meets during a client render.
 ## Stack
 
 Next.js 16 (App Router) · TypeScript · Drizzle ORM + PGlite (embedded Postgres) ·
-Tailwind 4 + shadcn/ui (Base UI) · **@rwcourson/chart-elements** (cobalt palette) ·
+Tailwind 4 + shadcn/ui (Base UI) · **@rwcourson/chart-elements** (token chart series) ·
 AI SDK 7 (`ToolLoopAgent` + streaming Magnus) · ExcelJS
 
 ### Magnus AI + charts
