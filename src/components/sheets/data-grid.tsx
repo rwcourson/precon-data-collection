@@ -3,8 +3,9 @@
 import {
   useCallback,
   useMemo,
-  useRef,
   useState,
+  type DragEvent,
+  type PointerEvent,
   type ReactNode,
 } from "react";
 import {
@@ -27,6 +28,12 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CellEditor, formatCell, isNumericType } from "@/components/sheets/cell-editor";
+import {
+  beginColumnResize,
+  COLUMN_RESIZE_HANDLE_CLASS,
+  dropPlaceForPoint,
+  moveColumnKey,
+} from "@/lib/sheet-grid";
 
 /**
  * The grid behind both kinds of sheet. Column resize, click-to-sort, per-column
@@ -66,6 +73,7 @@ export function DataGrid({
   groupBy,
   widths,
   onWidthChange,
+  onColumnOrderChange,
   onEditCell,
   rowActions,
   emptyMessage = "Nothing here yet.",
@@ -80,6 +88,7 @@ export function DataGrid({
   groupBy?: string | null;
   widths: Record<string, number>;
   onWidthChange: (key: string, width: number) => void;
+  onColumnOrderChange?: (keys: string[]) => void;
   onEditCell?: (rowId: number, key: string, value: string) => Promise<void>;
   rowActions?: (row: GridRow) => ReactNode;
   emptyMessage?: string;
@@ -88,33 +97,56 @@ export function DataGrid({
   const [filterOpen, setFilterOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ rowId: number; key: string } | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const resizing = useRef<{ key: string; startX: number; startW: number } | null>(null);
+  const [dragOver, setDragOver] = useState<{ key: string; place: "before" | "after" } | null>(
+    null,
+  );
 
   const widthOf = useCallback(
     (col: GridColumn) => widths[col.key] ?? col.width,
     [widths],
   );
 
-  const onResizeStart = (col: GridColumn, e: React.MouseEvent) => {
+  const onResizeStart = (col: GridColumn, e: PointerEvent<HTMLElement>) => {
+    beginColumnResize({
+      event: e,
+      startWidth: widthOf(col),
+      minWidth: 64,
+      onWidth: (width) => onWidthChange(col.key, width),
+    });
+  };
+
+  const onHeaderDragStart = (key: string, e: DragEvent<HTMLElement>) => {
+    if (!onColumnOrderChange) return;
+    if ((e.target as HTMLElement).closest('[role="separator"]')) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData("text/plain", key);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onHeaderDragOver = (key: string, e: DragEvent<HTMLElement>) => {
+    if (!onColumnOrderChange) return;
     e.preventDefault();
-    e.stopPropagation();
-    resizing.current = { key: col.key, startX: e.clientX, startW: widthOf(col) };
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return;
-      const next = Math.max(64, resizing.current.startW + (ev.clientX - resizing.current.startX));
-      onWidthChange(resizing.current.key, next);
-    };
-    const onUp = () => {
-      resizing.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    e.dataTransfer.dropEffect = "move";
+    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
+    setDragOver((prev) => (prev?.key === key && prev.place === place ? prev : { key, place }));
+  };
+
+  const onHeaderDrop = (key: string, e: DragEvent<HTMLElement>) => {
+    if (!onColumnOrderChange) return;
+    e.preventDefault();
+    const from = e.dataTransfer.getData("text/plain");
+    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
+    setDragOver(null);
+    if (!from) return;
+    const next = moveColumnKey(
+      columns.map((c) => c.key),
+      from,
+      key,
+      place,
+    );
+    if (next.some((k, i) => k !== columns[i]?.key)) onColumnOrderChange(next);
   };
 
   const display = useMemo(() => {
@@ -256,8 +288,14 @@ export function DataGrid({
       <div className="max-h-[70vh] overflow-auto rounded border border-border/70 bg-card">
         <table
           className="border-collapse text-[13px]"
-          style={{ tableLayout: "fixed", width: totalWidth, minWidth: "100%" }}
+          style={{ tableLayout: "fixed", width: totalWidth }}
         >
+          <colgroup>
+            {columns.map((col) => (
+              <col key={col.key} style={{ width: widthOf(col) }} />
+            ))}
+            {rowActions ? <col style={{ width: actionWidth }} /> : null}
+          </colgroup>
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
             <tr className="border-b">
               {columns.map((col) => {
@@ -268,7 +306,21 @@ export function DataGrid({
                 return (
                   <th
                     key={col.key}
-                    className="relative h-9 select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0"
+                    draggable={Boolean(onColumnOrderChange)}
+                    onDragStart={(e) => onHeaderDragStart(col.key, e)}
+                    onDragOver={(e) => onHeaderDragOver(col.key, e)}
+                    onDrop={(e) => onHeaderDrop(col.key, e)}
+                    onDragEnd={() => setDragOver(null)}
+                    className={cn(
+                      "relative h-9 select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0",
+                      onColumnOrderChange && "cursor-grab active:cursor-grabbing",
+                      dragOver?.key === col.key &&
+                        dragOver.place === "before" &&
+                        "shadow-[-2px_0_0_0_var(--color-primary)]",
+                      dragOver?.key === col.key &&
+                        dragOver.place === "after" &&
+                        "shadow-[2px_0_0_0_var(--color-primary)]",
+                    )}
                     style={{ width: widthOf(col) }}
                   >
                     <div className="flex items-center gap-0.5">
@@ -339,8 +391,11 @@ export function DataGrid({
                     <div
                       role="separator"
                       aria-orientation="vertical"
-                      onMouseDown={(e) => onResizeStart(col, e)}
-                      className="absolute top-0 right-0 z-20 h-full w-1.5 cursor-col-resize hover:bg-primary/40 active:bg-primary/60"
+                      aria-label={`Resize ${col.label}`}
+                      onPointerDown={(e) => onResizeStart(col, e)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      draggable={false}
+                      className={COLUMN_RESIZE_HANDLE_CLASS}
                     />
                   </th>
                 );

@@ -3,9 +3,10 @@
 import {
   Fragment,
   useMemo,
-  useRef,
   useState,
   useSyncExternalStore,
+  type DragEvent,
+  type PointerEvent,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,12 @@ import type { BidScheduleGroupBy } from "@/domain/contracts";
 import { cn } from "@/lib/utils";
 import { fmtDate, fmtDollars } from "@/lib/format";
 import type { RoundStatus } from "@/db/schema";
+import {
+  beginColumnResize,
+  COLUMN_RESIZE_HANDLE_CLASS,
+  dropPlaceForPoint,
+  moveColumnKey,
+} from "@/lib/sheet-grid";
 
 export type SiblingRound = {
   id: number;
@@ -435,47 +442,61 @@ export function BidScheduleSheet({
     const fromView = (initialColumns ?? []).filter((k): k is ColKey => k in COL_BY_KEY);
     return fromView.length > 0 ? fromView : keysForDensity(density);
   });
-  const resizing = useRef<{ key: ColKey; startX: number; startW: number } | null>(null);
+  const [dragOver, setDragOver] = useState<{ key: ColKey; place: "before" | "after" } | null>(
+    null,
+  );
 
   const visibleCols = useMemo(
     () => visibleKeys.map((k) => COL_BY_KEY[k]).filter(Boolean),
     [visibleKeys],
   );
 
-  const onResizeStart = (key: ColKey, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const onResizeStart = (key: ColKey, e: PointerEvent<HTMLElement>) => {
     const col = COL_BY_KEY[key];
-    resizing.current = {
-      key,
-      startX: e.clientX,
-      startW: widths[key] ?? col.width,
-    };
-    const onMove = (ev: MouseEvent) => {
-      if (!resizing.current) return;
-      const delta = ev.clientX - resizing.current.startX;
-      const min = COL_BY_KEY[resizing.current.key].minWidth;
-      const w = Math.max(min, resizing.current.startW + delta);
-      setDraftWidths((prev) => ({
-        ...(prev ?? readColWidths()),
-        [resizing.current!.key]: w,
-      }));
-    };
-    const onUp = () => {
-      setDraftWidths((prev) => {
-        if (prev) writeColWidths(prev);
-        return null;
-      });
-      resizing.current = null;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    beginColumnResize({
+      event: e,
+      startWidth: widths[key] ?? col.width,
+      minWidth: col.minWidth,
+      onWidth: (w) =>
+        setDraftWidths((prev) => ({
+          ...(prev ?? readColWidths()),
+          [key]: w,
+        })),
+      onEnd: () => {
+        setDraftWidths((prev) => {
+          if (prev) writeColWidths(prev);
+          return null;
+        });
+      },
+    });
+  };
+
+  const onHeaderDragStart = (key: ColKey, e: DragEvent<HTMLElement>) => {
+    if ((e.target as HTMLElement).closest('[role="separator"]')) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData("text/plain", key);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onHeaderDragOver = (key: ColKey, e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
+    setDragOver((prev) => (prev?.key === key && prev.place === place ? prev : { key, place }));
+  };
+
+  const onHeaderDrop = (key: ColKey, e: DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    const from = e.dataTransfer.getData("text/plain") as ColKey;
+    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
+    setDragOver(null);
+    if (!from || !(from in COL_BY_KEY)) return;
+    setVisibleKeys((prev) => {
+      const next = moveColumnKey(prev, from, key, place);
+      return next.every((k) => k in COL_BY_KEY) ? (next as ColKey[]) : prev;
+    });
   };
 
   const toggleSort = (key: ColKey) => {
@@ -597,8 +618,14 @@ export function BidScheduleSheet({
       <div className="overflow-auto rounded border border-border/70 bg-card">
         <table
           className="border-collapse text-[13px]"
-          style={{ tableLayout: "fixed", width: totalWidth, minWidth: "100%" }}
+          style={{ tableLayout: "fixed", width: totalWidth }}
         >
+          <colgroup>
+            {visibleCols.map((col) => (
+              <col key={col.key} style={{ width: widths[col.key] ?? col.width }} />
+            ))}
+            {canEdit ? <col style={{ width: actionWidth }} /> : null}
+          </colgroup>
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
             <tr className="border-b">
               {visibleCols.map((col) => {
@@ -609,9 +636,20 @@ export function BidScheduleSheet({
                 return (
                   <th
                     key={col.key}
+                    draggable
+                    onDragStart={(e) => onHeaderDragStart(col.key, e)}
+                    onDragOver={(e) => onHeaderDragOver(col.key, e)}
+                    onDrop={(e) => onHeaderDrop(col.key, e)}
+                    onDragEnd={() => setDragOver(null)}
                     className={cn(
-                      "relative h-9 select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0",
+                      "relative h-9 cursor-grab select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0 active:cursor-grabbing",
                       col.align === "right" && "text-right",
+                      dragOver?.key === col.key &&
+                        dragOver.place === "before" &&
+                        "shadow-[-2px_0_0_0_var(--color-primary)]",
+                      dragOver?.key === col.key &&
+                        dragOver.place === "after" &&
+                        "shadow-[2px_0_0_0_var(--color-primary)]",
                     )}
                     style={{ width: widths[col.key] ?? col.width }}
                   >
@@ -680,8 +718,11 @@ export function BidScheduleSheet({
                     <div
                       role="separator"
                       aria-orientation="vertical"
-                      onMouseDown={(e) => onResizeStart(col.key, e)}
-                      className="absolute top-0 right-0 z-20 h-full w-1.5 cursor-col-resize hover:bg-primary/40 active:bg-primary/60"
+                      aria-label={`Resize ${col.label}`}
+                      onPointerDown={(e) => onResizeStart(col.key, e)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      draggable={false}
+                      className={COLUMN_RESIZE_HANDLE_CLASS}
                     />
                   </th>
                 );

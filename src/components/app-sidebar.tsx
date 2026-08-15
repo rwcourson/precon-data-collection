@@ -219,9 +219,12 @@ function isSectionActive(item: NavItem, pathname: string) {
 const itemClass = (active: boolean, collapsed = false) =>
   cn(
     collapsed
-      ? "flex size-10 items-center justify-center rounded-md border-l-2 border-transparent text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      ? "flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       : "flex items-center gap-3 rounded-r-md border-l-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-    active && "border-l-primary bg-info-soft font-medium text-primary",
+    active &&
+      (collapsed
+        ? "bg-info-soft font-medium text-primary"
+        : "border-l-primary bg-info-soft font-medium text-primary"),
   );
 
 function CollapsedFlyout({
@@ -346,7 +349,7 @@ function SidebarNav({
     >
       <div
         className={cn(
-          "flex h-12 items-center border-b border-sidebar-border",
+          "flex h-14 items-center border-b border-sidebar-border",
           collapsed ? "justify-center px-2" : "gap-3 px-3",
         )}
       >

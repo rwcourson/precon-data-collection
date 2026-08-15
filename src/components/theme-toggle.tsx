@@ -15,7 +15,7 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon"
-      className="size-10 text-muted-foreground hover:text-primary"
+      className="size-10 text-muted-foreground hover:text-foreground"
       aria-label={
         resolvedTheme
           ? isDark

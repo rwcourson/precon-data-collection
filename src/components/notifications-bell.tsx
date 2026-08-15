@@ -31,7 +31,7 @@ export function NotificationsBell({ items }: { items: Item[] }) {
           <Button
             variant="ghost"
             size="icon"
-            className="relative size-10"
+            className="relative size-10 text-muted-foreground hover:text-foreground"
             aria-label={
               unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
             }

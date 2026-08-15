@@ -41,6 +41,7 @@ import {
   addSheetRow,
   deleteSheetColumn,
   deleteSheetRow,
+  reorderSheetColumns,
   updateSheetCell,
   updateSheetColumn,
 } from "@/actions/sheets";
@@ -71,10 +72,23 @@ export function GridSheet({
   const [gridFilters, setGridFilters] = useState<ColumnFilters>({});
   const [groupBy, setGroupBy] = useState("");
   const [widths, setWidths] = useState<Record<string, number>>({});
+  const [orderKeys, setOrderKeys] = useState<string[] | null>(null);
+
+  const displayColumns = useMemo(() => {
+    const keys = orderKeys ?? columns.map((c) => c.key);
+    const byKey = new Map(columns.map((c) => [c.key, c]));
+    const ordered = keys
+      .map((k) => byKey.get(k))
+      .filter((c): c is SheetColumn => c != null);
+    for (const c of columns) {
+      if (!keys.includes(c.key)) ordered.push(c);
+    }
+    return ordered;
+  }, [columns, orderKeys]);
 
   const gridColumns: GridColumn[] = useMemo(
     () =>
-      columns.map((c) => ({
+      displayColumns.map((c) => ({
         key: c.key,
         label: c.label,
         type: c.type,
@@ -82,7 +96,7 @@ export function GridSheet({
         options: c.options ?? undefined,
         editable: canEdit,
       })),
-    [columns, widths, canEdit],
+    [displayColumns, widths, canEdit],
   );
 
   const gridRows: GridRow[] = useMemo(
@@ -90,14 +104,14 @@ export function GridSheet({
       rows.map((r) => ({
         id: r.id,
         cells: Object.fromEntries(
-          columns.map((c) => {
+          displayColumns.map((c) => {
             const raw = r.values[c.key] ?? null;
             const numeric = ["number", "dollars"].includes(c.type);
             return [c.key, numeric && raw != null ? Number(raw) : raw];
           }),
         ),
       })),
-    [rows, columns],
+    [rows, displayColumns],
   );
 
   async function editCell(rowId: number, key: string, value: string) {
@@ -185,6 +199,25 @@ export function GridSheet({
         groupBy={groupBy || null}
         widths={widths}
         onWidthChange={(key, width) => setWidths((prev) => ({ ...prev, [key]: width }))}
+        onColumnOrderChange={
+          canManage
+            ? (keys) => {
+                setOrderKeys(keys);
+                const ids = keys
+                  .map((k) => columns.find((c) => c.key === k)?.id)
+                  .filter((id): id is number => typeof id === "number");
+                startTransition(async () => {
+                  try {
+                    await reorderSheetColumns(sheetId, ids);
+                  } catch (e) {
+                    toast.error(
+                      e instanceof Error ? e.message : "Could not reorder columns",
+                    );
+                  }
+                });
+              }
+            : undefined
+        }
         onEditCell={canEdit ? editCell : undefined}
         emptyMessage="This sheet is empty — add a row to start."
         rowActions={

@@ -94,7 +94,9 @@ export function ViewSheet({
 
   // Column and filter changes need the server: the payload only carries the
   // columns currently on screen, which is what keeps a 1,000-row sheet fast.
-  const nextKey = JSON.stringify({ columnKeys, filters });
+  // Adding/removing columns or changing filters needs the server. Reordering
+  // does not — the payload is the same records in a different column sequence.
+  const nextKey = JSON.stringify({ columns: [...columnKeys].sort(), filters });
   const loadedKey = useRef(nextKey);
 
   useEffect(() => {
@@ -273,6 +275,16 @@ export function ViewSheet({
         widths={widths}
         onWidthChange={(key, width) => {
           setWidths((prev) => ({ ...prev, [key]: width }));
+          markDirty();
+        }}
+        onColumnOrderChange={(keys) => {
+          setColumnKeys(keys);
+          setColumns((prev) => {
+            const byKey = new Map(prev.map((c) => [c.key, c]));
+            return keys
+              .map((k) => byKey.get(k))
+              .filter((c): c is (typeof prev)[number] => c != null);
+          });
           markDirty();
         }}
         onEditCell={editCell}

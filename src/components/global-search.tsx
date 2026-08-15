@@ -145,7 +145,7 @@ export function GlobalSearch() {
         onClick={() => setOpenSafe(true)}
         className="hidden h-10 min-w-[14rem] gap-2.5 border-border/80 bg-card px-3 text-muted-foreground sm:inline-flex"
       >
-        <Search className="size-4" />
+        <Search className="size-5" />
         <span className="text-sm">Search…</span>
         <kbd className="pointer-events-none ml-auto hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground md:inline">
           ⌘K

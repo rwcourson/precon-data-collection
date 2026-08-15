@@ -79,7 +79,7 @@ export async function AppHeader() {
 /** Under SSO the identity is fixed, so it is shown rather than offered. */
 function SignedInUser({ user }: { user: User }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-md border bg-muted/50 px-3 py-1.5">
+    <div className="flex h-10 items-center gap-2.5 rounded-md border border-border/80 bg-card px-3">
       <span className="text-sm font-medium">{user.name}</span>
       <span className="hidden text-xs text-muted-foreground sm:inline">
         {ROLE_LABELS[user.role]}
