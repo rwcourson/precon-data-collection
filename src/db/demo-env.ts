@@ -23,6 +23,7 @@ export function applyDemoBootstrapEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
   for (const [key, value] of Object.entries(DEMO_RUNTIME_DEFAULTS)) {
+    if (key === "PGLITE_DATA_DIR" && env.PGLITE_DATA_DIR) continue;
     env[key] = value;
   }
   // Demo seeding refuses any hosted Postgres URL even when mode is pglite.

@@ -19,6 +19,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - run: npm run db:migrate:check
       - run: npm run contract:check
       - run: npm run security:check

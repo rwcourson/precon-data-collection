@@ -42,7 +42,7 @@ try {
   report(`bid schedule renders ${rowCount} rows`);
 
   await page.getByRole("button", { name: "New Pursuit" }).click();
-  await page.getByRole("tab", { name: /Manual/ }).click();
+  await page.getByRole("tab", { name: /No job number yet/ }).click();
   await page.getByPlaceholder(/Riverside Medical/).fill("Isolated Smoke Test ROM");
   const selects = page.locator('[role="dialog"] [role="combobox"]');
   for (const [index, option] of [
