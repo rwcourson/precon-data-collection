@@ -23,6 +23,9 @@ import { GET as sheetsGet } from "@/app/api/v1/mobile/sheets/route";
 import { GET as adminGet } from "@/app/api/v1/mobile/admin/route";
 import { GET as sheetExportGet } from "@/app/api/export/sheet/route";
 import { GET as statusExportGet } from "@/app/api/export/status/route";
+import { GET as dashboardExportGet } from "@/app/api/export/dashboard/route";
+import { GET as bidScheduleExportGet } from "@/app/api/export/bid-schedule/route";
+import { GET as annualExportGet } from "@/app/api/export/annual/route";
 import { createPrincipal } from "@/lib/authorization/principal";
 import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
 import { issueDemoSession } from "@/lib/mobile-auth";
@@ -213,6 +216,26 @@ describe("resource access HTTP matrix", () => {
       expect(await statusExportGet(new NextRequest("http://localhost/api/export/status"))).toMatchObject({
         status: 404,
       });
+
+      const other = pcm.region === "Florida" ? "Central" : "Florida";
+      const dash = await dashboardExportGet(
+        new NextRequest(
+          `http://localhost/api/export/dashboard?level=region&region=${encodeURIComponent(other)}`,
+        ),
+      );
+      expect(dash.status).toBe(403);
+      const bid = await bidScheduleExportGet(
+        new NextRequest(
+          `http://localhost/api/export/bid-schedule?region=${encodeURIComponent(other)}&config=${encodeURIComponent(JSON.stringify({ columns: ["jobName"] }))}`,
+        ),
+      );
+      expect(bid.status).toBe(403);
+      const annual = await annualExportGet(
+        new NextRequest(
+          `http://localhost/api/export/annual?region=${encodeURIComponent(other)}&format=xlsx`,
+        ),
+      );
+      expect(annual.status).toBe(403);
     } finally {
       await db.delete(sheets).where(eq(sheets.id, sheet.id));
       await db.delete(estimateRounds).where(eq(estimateRounds.id, round.id));
@@ -399,6 +422,14 @@ describe("scoped-read migration inventory", () => {
       "listDashboardsForPrincipal",
     );
     expect(source("src/app/api/export/sheet/route.ts")).not.toContain("getSheet(");
+    expect(source("src/app/api/export/dashboard/route.ts")).toContain("listRoundsWithJobsForPrincipal");
+    expect(source("src/app/api/export/dashboard/route.ts")).toContain("resolveRegionParam");
+    expect(source("src/app/api/export/bid-schedule/route.ts")).toContain("getWebPrincipal");
+    expect(source("src/app/api/export/bid-schedule/route.ts")).toContain("resolveRegionParam");
+    expect(source("src/app/api/export/annual/route.ts")).toContain("resolveRegionParam");
+    expect(source("src/app/api/export/pptx/route.ts")).toContain("getWebPrincipal");
+    expect(source("src/app/api/export/report/route.ts")).toContain("getFlatDataset");
+    expect(source("src/app/api/v1/ai/magnus/route.ts")).toContain("listRoundsWithJobsForPrincipal");
   });
 
   function walk(relative: string): string[] {

@@ -34,7 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      data-chart-palette="cobalt"
+      data-chart-tokens="product"
       className={`${manrope.variable} ${spaceMono.variable} h-full antialiased`}
       style={
         {

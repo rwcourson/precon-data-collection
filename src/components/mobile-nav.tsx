@@ -89,7 +89,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/dashboards/studio", label: "Studio" },
       { href: "/dashboards/forecast", label: "Forecast" },
       { href: "/dashboards/reconciliation", label: "DMR Reconciliation" },
-      { href: "/dashboards/copilot", label: "Magnus" },
+      { href: "/dashboards/copilot", label: "AI Copilot" },
     ],
   },
 ];

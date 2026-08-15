@@ -7,20 +7,13 @@ import {
   type ExportColumn,
 } from "@/lib/export-helpers";
 import { formatReportValue } from "@/lib/report-engine";
-import { STATUS_LABELS } from "@/lib/permissions";
+import { applyBidScheduleExportScope } from "@/lib/bid-schedule";
 import { pdfResponse } from "@/lib/pdf";
 import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
-
-const SECTION_STATUSES: Record<string, string[]> = {
-  all: ["active", "upcoming", "outstanding"],
-  active: ["active"],
-  upcoming: ["upcoming"],
-  outstanding: ["outstanding"],
-};
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
@@ -42,39 +35,14 @@ export async function GET(req: NextRequest) {
 
   const { rows, catalog } = await getFlatDataset(principal);
 
-  // Apply the same filters as the Bid Schedule view
-  const section = params.get("section") ?? "all";
-  const statuses = (SECTION_STATUSES[section] ?? SECTION_STATUSES.all).map(
-    (s) => STATUS_LABELS[s as keyof typeof STATUS_LABELS],
-  );
-  const region = scoped.region;
-  const phase = params.get("phase");
-  const year = params.get("year");
-  const q = (params.get("q") ?? "").toLowerCase();
-
-  let filtered = rows.filter((r) => statuses.includes(String(r.status)));
-  if (region) filtered = filtered.filter((r) => r.region === region);
-  if (phase && phase !== "all") filtered = filtered.filter((r) => r.estimatePhase === phase);
-  if (year && year !== "all") filtered = filtered.filter((r) => String(r.bidYear) === year);
-  if (q)
-    filtered = filtered.filter(
-      (r) =>
-        String(r.jobName ?? "").toLowerCase().includes(q) ||
-        String(r.jobNumber ?? "").toLowerCase().includes(q),
-    );
-
-  // Sorting
-  for (const s of [...(config.sortBy ?? [])].reverse()) {
-    filtered = [...filtered].sort((a, b) => {
-      const av = a[s.field];
-      const bv = b[s.field];
-      const c =
-        typeof av === "number" && typeof bv === "number"
-          ? av - bv
-          : String(av ?? "").localeCompare(String(bv ?? ""));
-      return s.dir === "asc" ? c : -c;
-    });
-  }
+  const filtered = applyBidScheduleExportScope(rows, {
+    section: params.get("section"),
+    region: scoped.region,
+    phase: params.get("phase"),
+    year: params.get("year"),
+    q: params.get("q"),
+    sortBy: config.sortBy,
+  });
 
   const columns: ExportColumn[] = config.columns.map((key) => {
     const def = catalog.find((c) => c.key === key);
