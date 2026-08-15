@@ -65,7 +65,7 @@ export default async function DashboardStudioDetailPage({
               render={<Link href="/dashboards/copilot" />}
             >
               <MagnusIcon className="size-4" />
-              Copilot
+              AI Copilot
             </Button>
             <StudioCloneButton dashboardId={id} />
             <Button

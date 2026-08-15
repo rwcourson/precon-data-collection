@@ -64,7 +64,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: "WIDE", width: 13.333, height: 7.5 });
   pptx.layout = "WIDE";
-  pptx.author = "Magnus AI · B&G Precon";
+  pptx.author = "AI Copilot · B&G Precon";
   pptx.title = input.planName;
   let slideCount = 0;
 
@@ -99,7 +99,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
     [
       input.planDescription?.trim() || "Preconstruction analytics canvas",
       input.scopeLabel ? `Scope: ${input.scopeLabel}` : null,
-      `Generated ${new Date().toLocaleDateString("en-US", { dateStyle: "medium" })} · Magnus AI`,
+      `Generated ${new Date().toLocaleDateString("en-US", { dateStyle: "medium" })} · AI Copilot`,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -363,7 +363,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
   if (slideCount < 2) {
     const empty = pptx.addSlide();
     slideCount += 1;
-    empty.addText("No widget data to chart yet — re-run Magnus with a scorecard request.", {
+    empty.addText("No widget data to chart yet — re-run AI Copilot with a scorecard request.", {
       x: 0.5,
       y: 3,
       w: 12,

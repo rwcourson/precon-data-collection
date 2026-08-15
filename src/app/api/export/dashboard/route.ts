@@ -27,6 +27,9 @@ export async function GET(req: NextRequest) {
       region: scoped.region,
       dept: level === "division" ? dept : null,
       year,
+      sector: params.get("sector"),
+      phase: params.get("phase"),
+      status: params.get("status"),
       rounds: params.get("rounds"),
     },
   );

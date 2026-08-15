@@ -101,4 +101,24 @@ describe("scopeRoundsForDashboardExport (Excel + page)", () => {
     expect(computeStats("all", all as never).rounds).toBe(2);
     expect(computeStats("all", all as never).volume).toBe(22_000_000);
   });
+
+  it("applies sector/phase/status the same way the page and Excel query string do", () => {
+    const rows = [
+      {
+        ...round({ jobId: 1, roundNumber: 1, estimatePhase: "GMP", status: "locked", estimateValue: 10_000_000 }),
+        marketSector: "Healthcare – Hospital",
+      },
+      {
+        ...round({ jobId: 2, roundNumber: 1, estimatePhase: "Budget - SD", status: "active", estimateValue: 4_000_000 }),
+        marketSector: "Commercial – Office",
+      },
+    ];
+    const scoped = scopeRoundsForDashboardExport(rows, {
+      sector: "Healthcare – Hospital",
+      phase: "GMP",
+      status: "locked",
+    });
+    expect(scoped).toHaveLength(1);
+    expect(scoped[0]!.jobId).toBe(1);
+  });
 });

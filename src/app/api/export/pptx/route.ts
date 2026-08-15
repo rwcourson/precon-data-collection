@@ -188,7 +188,7 @@ export async function GET() {
 }
 
 /**
- * POST builds a deck from the Magnus canvas (resolved widgets or configs).
+ * POST builds a deck from the AI Copilot canvas (resolved widgets or configs).
  * Body: { planName, planDescription?, widgets? | widgetConfigs? }
  */
 export async function POST(req: Request) {
@@ -240,7 +240,7 @@ export async function POST(req: Request) {
   }
 
   const { buffer, filename } = await buildCanvasPptx({
-    planName: parsed.data.planName ?? "Magnus canvas",
+    planName: parsed.data.planName ?? "AI Copilot canvas",
     planDescription: parsed.data.planDescription,
     widgets,
     scopeLabel: workspace.region ?? "Corporate",

@@ -208,7 +208,7 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         href: "/dashboards/copilot",
-        label: "Magnus",
+        label: "AI Copilot",
         icon: MagnusIcon,
       },
     ],

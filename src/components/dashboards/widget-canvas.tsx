@@ -88,7 +88,7 @@ export function WidgetCanvas({
   if (!widgets.length) {
     return (
       <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-10 text-center text-sm text-muted-foreground">
-        No widgets yet — describe a view in Magnus or add one in Studio.
+        No widgets yet — describe a view in AI Copilot or add one in Studio.
       </div>
     );
   }
@@ -96,7 +96,7 @@ export function WidgetCanvas({
   return (
     <div
       className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-12", className)}
-      data-chart-palette="cobalt"
+      data-chart-tokens="product"
     >
       {widgets.map((w, idx) => {
         const kind = w.config.kind;

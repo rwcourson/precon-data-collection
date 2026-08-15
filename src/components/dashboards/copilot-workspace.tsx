@@ -149,7 +149,7 @@ export function CopilotWorkspace() {
   }, [preview]);
 
   useEffect(() => {
-    if (error) toast.error(error.message || "Magnus could not respond");
+    if (error) toast.error(error.message || "AI Copilot could not respond");
   }, [error]);
 
   useEffect(() => {
@@ -236,7 +236,7 @@ export function CopilotWorkspace() {
             <MagnusIcon className="size-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight">Magnus AI</p>
+            <p className="text-sm font-semibold tracking-tight">AI Copilot</p>
             <p className="text-2xs text-muted-foreground">
               Claude Opus 5 · ZDR · charts
             </p>
@@ -337,7 +337,7 @@ export function CopilotWorkspace() {
         </div>
       </aside>
 
-      <section className="min-w-0 space-y-4" data-chart-palette="cobalt">
+      <section className="min-w-0 space-y-4" data-chart-tokens="product">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-3">
           <div className="min-w-0">
             <h2 className="truncate text-lg font-semibold tracking-tight">

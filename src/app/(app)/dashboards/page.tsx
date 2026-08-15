@@ -198,7 +198,16 @@ export default async function DashboardsPage({
             nativeButton={false}
             render={
               <a
-                href={`/api/export/dashboard?level=${level.key}&region=${encodeURIComponent(region)}&dept=${encodeURIComponent(dept)}&year=${year}&rounds=${roundMode}`}
+                href={`/api/export/dashboard?${new URLSearchParams({
+                  level: level.key,
+                  region,
+                  dept,
+                  sector,
+                  year,
+                  phase,
+                  status,
+                  rounds: roundMode,
+                }).toString()}`}
               />
             }
           >

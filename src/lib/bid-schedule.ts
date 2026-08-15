@@ -1,6 +1,58 @@
 import type { BidScheduleGroupBy } from "@/domain/contracts";
 import { bidScheduleGroupBySchema } from "@/domain/contracts";
+import { STATUS_LABELS } from "@/lib/permissions";
 import { groupRowsByField, type LabeledGroup } from "@/lib/sheets";
+
+const EXPORT_SECTION_STATUSES: Record<string, Array<keyof typeof STATUS_LABELS>> = {
+  all: ["active", "upcoming", "outstanding"],
+  active: ["active"],
+  upcoming: ["upcoming"],
+  outstanding: ["outstanding"],
+};
+
+/** Same section/region/phase/year/search/sort the Bid Schedule export route applies. */
+export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
+  rows: T[],
+  opts: {
+    section?: string | null;
+    region?: string | null;
+    phase?: string | null;
+    year?: string | null;
+    q?: string | null;
+    sortBy?: { field: string; dir: "asc" | "desc" }[];
+  },
+): T[] {
+  const keys = EXPORT_SECTION_STATUSES[opts.section ?? "all"] ?? EXPORT_SECTION_STATUSES.all;
+  const statuses = keys.map((s) => STATUS_LABELS[s]);
+  let filtered = rows.filter((r) => statuses.includes(String(r.status)));
+  if (opts.region) filtered = filtered.filter((r) => r.region === opts.region);
+  if (opts.phase && opts.phase !== "all") {
+    filtered = filtered.filter((r) => r.estimatePhase === opts.phase);
+  }
+  if (opts.year && opts.year !== "all") {
+    filtered = filtered.filter((r) => String(r.bidYear) === opts.year);
+  }
+  const q = (opts.q ?? "").toLowerCase();
+  if (q) {
+    filtered = filtered.filter(
+      (r) =>
+        String(r.jobName ?? "").toLowerCase().includes(q) ||
+        String(r.jobNumber ?? "").toLowerCase().includes(q),
+    );
+  }
+  for (const s of [...(opts.sortBy ?? [])].reverse()) {
+    filtered = [...filtered].sort((a, b) => {
+      const av = a[s.field];
+      const bv = b[s.field];
+      const c =
+        typeof av === "number" && typeof bv === "number"
+          ? av - bv
+          : String(av ?? "").localeCompare(String(bv ?? ""));
+      return s.dir === "asc" ? c : -c;
+    });
+  }
+  return filtered;
+}
 
 export const BID_SCHEDULE_GROUP_OPTIONS: {
   value: BidScheduleGroupBy;
