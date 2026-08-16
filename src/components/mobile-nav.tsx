@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -177,9 +177,7 @@ export function MobileNav() {
                       )}
                     >
                       {isCopilot && (
-                        <span aria-hidden className="text-sm leading-none">
-                          ✨
-                        </span>
+                        <Sparkles className="size-[18px] shrink-0 stroke-[1.75]" />
                       )}
                       <span className="flex-1 truncate">{item.label}</span>
                       {item.children && (

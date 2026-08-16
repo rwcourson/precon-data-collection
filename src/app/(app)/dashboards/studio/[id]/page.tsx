@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { Download } from "lucide-react";
+import { Download, Sparkles } from "lucide-react";
 import { StudioCloneButton } from "@/components/dashboards/studio-clone-button";
 import { StudioWidgetForm } from "@/components/dashboards/studio-widget-form";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
@@ -63,9 +63,7 @@ export default async function DashboardStudioDetailPage({
               nativeButton={false}
               render={<Link href="/dashboards/copilot" />}
             >
-              <span aria-hidden className="text-sm leading-none">
-                ✨
-              </span>
+              <Sparkles className="size-4" />
               AI Copilot
             </Button>
             <StudioCloneButton dashboardId={id} />

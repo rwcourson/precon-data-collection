@@ -231,9 +231,7 @@ export function CopilotWorkspace() {
     <div className="grid min-h-[min(32rem,72dvh)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:min-h-[70vh]">
       <aside className="flex min-h-[min(28rem,70dvh)] flex-col overflow-hidden rounded-md border bg-card lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:min-h-[420px]">
         <div className="flex items-center gap-2.5 border-b bg-muted/40 px-3.5 py-3">
-          <span className="flex size-8 items-center justify-center text-lg leading-none">
-            ✨
-          </span>
+          <Sparkles className="size-4 shrink-0 stroke-[1.75] text-primary" />
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight">AI Copilot</p>
             <p className="text-2xs text-muted-foreground">

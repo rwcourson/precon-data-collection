@@ -15,10 +15,10 @@ import {
   Settings2,
   Sheet,
   Table2,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { SparkleIcon } from "@/components/sparkle-icon";
 import { BrandMark } from "@/components/brand-mark";
 import { useSidebar } from "@/components/sidebar-context";
 import {
@@ -210,7 +210,7 @@ const NAV_SECTIONS: NavSection[] = [
       {
         href: "/dashboards/copilot",
         label: "AI Copilot",
-        icon: SparkleIcon,
+        icon: Sparkles,
       },
     ],
   },
