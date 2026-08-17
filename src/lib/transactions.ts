@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, type AppDb } from "@/db";
 import { estimateRounds } from "@/db/schema";
 import { DomainError } from "@/domain/errors";

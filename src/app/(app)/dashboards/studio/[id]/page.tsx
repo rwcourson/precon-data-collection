@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { Download } from "lucide-react";
+import { Download, Sparkles } from "lucide-react";
 import { StudioCloneButton } from "@/components/dashboards/studio-clone-button";
 import { StudioWidgetForm } from "@/components/dashboards/studio-widget-form";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
-import { MagnusIcon } from "@/components/magnus-icon";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,7 +63,7 @@ export default async function DashboardStudioDetailPage({
               nativeButton={false}
               render={<Link href="/dashboards/copilot" />}
             >
-              <MagnusIcon className="size-4" />
+              <Sparkles className="size-4" />
               AI Copilot
             </Button>
             <StudioCloneButton dashboardId={id} />

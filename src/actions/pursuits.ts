@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { jobs, type RoundStatus } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";

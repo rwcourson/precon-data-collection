@@ -86,8 +86,8 @@
 
 /*
  * Brasfield & Gorrie product tokens
- * Brand (navy) #0c2048 — identity, ampersand, headings
- * Interaction (bright blue) #0028f0 — clicks, active rail, focus
+ * Brand (navy) #0c2048 — identity, headings
+ * Interaction (bright blue) #0028f0 — clicks, active rail, focus, ampersand
  * Steel #93a9d6 · Sheet #F4F7FB · Copper #c9762b · Forest #5f8f5a
  *
  * Components consume semantic roles (surface / text / accent / status).
@@ -133,7 +133,7 @@
   --text-secondary: oklch(0.40 0.028 264);
   --text-muted: oklch(0.52 0.020 264);
 
-  --brand: #0c2048;
+  --brand: var(--accent-primary);
   --brand-foreground: #f8fafc;
 
   --info: var(--accent-primary);
@@ -245,7 +245,7 @@
   --accent-link: var(--accent-300);
   --accent-hover-well: oklch(0.26 0.020 264);
 
-  --brand: oklch(0.76 0.06 264);
+  --brand: var(--accent-primary);
   --brand-foreground: oklch(0.16 0.03 264);
 
   --info: var(--accent-primary);

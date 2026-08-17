@@ -11,7 +11,6 @@ import {
   type CopilotPreviewResult,
 } from "@/actions/copilot";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
-import { MagnusIcon } from "@/components/magnus-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -229,12 +228,10 @@ export function CopilotWorkspace() {
       .find(Boolean) ?? null;
 
   return (
-    <div className="grid min-h-[70vh] gap-5 lg:grid-cols-[340px_minmax(0,1fr)]">
-      <aside className="flex min-h-[420px] flex-col overflow-hidden rounded-md border bg-card lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)]">
+    <div className="grid min-h-[min(32rem,72dvh)] gap-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:min-h-[70vh]">
+      <aside className="flex min-h-[min(28rem,70dvh)] flex-col overflow-hidden rounded-md border bg-card lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:min-h-[420px]">
         <div className="flex items-center gap-2.5 border-b bg-muted/40 px-3.5 py-3">
-          <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <MagnusIcon className="size-4" />
-          </span>
+          <Sparkles className="size-4 shrink-0 stroke-[1.75] text-primary" />
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight">AI Copilot</p>
             <p className="text-2xs text-muted-foreground">
@@ -300,7 +297,7 @@ export function CopilotWorkspace() {
                 type="button"
                 disabled={pending}
                 onClick={() => run(s)}
-                className="rounded-md border bg-background px-2 py-1 text-2xs text-muted-foreground transition-colors hover:border-info-border hover:bg-info-soft hover:text-foreground"
+                className="min-h-8 rounded-md border bg-background px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-info-border hover:bg-info-soft hover:text-foreground"
               >
                 {s}
               </button>
@@ -401,7 +398,7 @@ export function CopilotWorkspace() {
         ) : pending ? (
           <WidgetCanvas widgets={[]} loading />
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-md border border-dashed bg-muted/30 px-6 py-20 text-center">
+          <div className="flex flex-col items-center justify-center rounded-md border border-dashed bg-muted/30 px-6 py-12 text-center sm:py-20">
             <span className="flex size-11 items-center justify-center rounded-md bg-info-soft text-primary">
               <Sparkles className="size-5" />
             </span>

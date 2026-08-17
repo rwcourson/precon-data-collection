@@ -15,10 +15,11 @@ import {
   Settings2,
   Sheet,
   Table2,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { MagnusIcon } from "@/components/magnus-icon";
+import { BrandMark } from "@/components/brand-mark";
 import { useSidebar } from "@/components/sidebar-context";
 import {
   DropdownMenu,
@@ -209,7 +210,7 @@ const NAV_SECTIONS: NavSection[] = [
       {
         href: "/dashboards/copilot",
         label: "AI Copilot",
-        icon: MagnusIcon,
+        icon: Sparkles,
       },
     ],
   },
@@ -224,11 +225,11 @@ function isSectionActive(item: NavItem, pathname: string) {
 const itemClass = (active: boolean, collapsed = false) =>
   cn(
     collapsed
-      ? "flex size-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      ? "flex h-9 w-full shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
       : "flex items-center gap-3 rounded-r-md border-l-2 border-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
     active &&
       (collapsed
-        ? "bg-info-soft font-medium text-primary"
+        ? "bg-info-soft font-medium text-primary hover:bg-info-soft data-popup-open:bg-info-soft"
         : "border-l-primary bg-info-soft font-medium text-primary"),
   );
 
@@ -358,14 +359,7 @@ function SidebarNav({
           collapsed ? "justify-center px-2" : "gap-3 px-3",
         )}
       >
-        <span
-          aria-hidden
-          className="size-8 shrink-0 rounded-sm bg-brand"
-          style={{
-            mask: 'url("/bg-ampersand.png") center / 72% no-repeat',
-            WebkitMask: 'url("/bg-ampersand.png") center / 72% no-repeat',
-          }}
-        />
+        <BrandMark className="size-8" />
         <div
           className={cn(
             "min-w-0 overflow-hidden leading-tight transition-opacity duration-200",
@@ -384,17 +378,17 @@ function SidebarNav({
       <nav
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden py-3",
-          collapsed ? "flex flex-col items-center gap-1.5 px-2" : "space-y-4 px-2",
+          collapsed ? "flex flex-col gap-1 px-2" : "space-y-4 px-2",
         )}
       >
         {sections.map((section, sectionIndex) => (
-          <div key={section.label} className={cn(collapsed && sectionIndex > 0 && "mt-1.5 w-full border-t border-sidebar-border pt-1.5")}>
+          <div key={section.label} className={cn(collapsed && sectionIndex > 0 && "mt-1 w-full border-t border-sidebar-border pt-1")}>
             {!collapsed && (
               <p className="px-3 pb-1.5 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                 {section.label}
               </p>
             )}
-            <div className={cn(collapsed ? "flex flex-col items-center gap-1.5" : "space-y-0.5")}>
+            <div className={cn(collapsed ? "flex w-full flex-col gap-0.5" : "space-y-0.5")}>
               {section.items.map((item) => {
                 const { href, label, icon: Icon, children } = item;
                 const active = isSectionActive(item, pathname);
@@ -481,7 +475,7 @@ function SidebarNav({
           size="sm"
           onClick={toggle}
           className={cn(
-            "h-9 w-full text-muted-foreground",
+            "h-9 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
             collapsed ? "justify-center px-0" : "justify-start gap-3",
           )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}

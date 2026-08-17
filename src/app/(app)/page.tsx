@@ -186,7 +186,7 @@ export default async function OverviewPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
             {STATUS_ORDER.map((s, i) => (
               <div key={s} className="flex items-center gap-1.5">
                 <div className="flex items-center gap-2 rounded bg-muted/50 px-2.5 py-1.5">
