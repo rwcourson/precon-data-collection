@@ -52,7 +52,7 @@ jobs:
 
   ios:
     runs-on: macos-14
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

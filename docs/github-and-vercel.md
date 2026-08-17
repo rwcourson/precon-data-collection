@@ -18,7 +18,7 @@ How this repo is hosted. Update this file when the project name, domain, or env 
 | --- | --- | --- |
 | `web` | Ubuntu | `db:migrate:check`, `contract:check`, `security:check`, `perf:check`, `release:check`, `docs:check`, `verify:web` (build + typecheck + lint + test + isolated smoke) |
 | `expo` | Ubuntu | Mobile typecheck / tests / bundle |
-| `ios` | macOS, **push only** | Native iOS verify |
+| `ios` | macOS, **push to `master`/`main` only** | Native iOS verify |
 
 `verify:web` needs Playwright Chromium (`npx playwright install --with-deps chromium` in CI) and demo PGlite env (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=pglite`).
 
@@ -38,7 +38,7 @@ Commit app source, `drizzle/*.sql`, `docs/`, `.env.example`, `.env.development` 
 | Production domain | `precon-data.magnus.brasfieldgorrie.app` |
 | Alias | `precon-data-prod.magnus.brasfieldgorrie.app` |
 | Git production | `precon-data-git-master.magnus.brasfieldgorrie.app` |
-| Node on Vercel | **24.x** (local / CI use Node 22 per `package.json` `engines`) |
+| Node on Vercel | Project setting is **24.x**, but `package.json` `engines` (`>=22 <23`) **wins** — deploys run **22.x**. Local / CI also use 22. |
 
 Git integration deploys `master` to Production and every other branch to Preview. Do not run `vercel --prod` unless you intend to skip the PR.
 
@@ -64,7 +64,7 @@ Project SSO protection is **on** for `all_except_custom_domains`. `*.vercel.app`
 
 ### Eve on Vercel
 
-`withEve()` starts a sibling Eve process during **`next dev`**. Vercel serverless does not run that sibling. `/copilot` probes `/eve/v1/health` and falls back to Magnus (`/api/v1/ai/magnus`) when Eve is down. That is expected in production until Eve has a durable host.
+`withEve()` starts a sibling Eve process during **`next dev`**. `next.config.ts` skips that wrapper when `VERCEL` is set so the deploy stays `next build` (Eve 0.38 requires Node >=24; this app’s engines pin 22). `/copilot` probes `/eve/v1/health` and falls back to Magnus (`/api/v1/ai/magnus`) when Eve is down. That is expected in production until Eve has a durable host.
 
 HMAC for `/api/v1/copilot/tools` uses `BETTER_AUTH_SECRET` (then `AI_GATEWAY_API_KEY`). Both exist on Production.
 
