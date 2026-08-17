@@ -13,7 +13,6 @@ export const LEGACY_POLICY_CALLERS = [
   "src/app/(app)/page.tsx",
   "src/app/(app)/rounds/[id]/page.tsx",
   "src/app/(app)/sheets/page.tsx",
-  "src/app/api/export/bid-schedule/route.ts",
   "src/app/api/v1/mobile/admin/route.ts",
   "src/app/api/v1/mobile/overview/route.ts",
   "src/components/app-header.tsx",
@@ -21,6 +20,7 @@ export const LEGACY_POLICY_CALLERS = [
   "src/components/role-switcher.tsx",
   "src/components/status-badge.tsx",
   "src/lib/auth.ts",
+  "src/lib/bid-schedule.ts",
   "src/lib/outcome.ts",
   "src/services/pursuit-service.ts",
 ] as const;
