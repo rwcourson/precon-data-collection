@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronsUpDown, UserRound } from "lucide-react";
 import type { User } from "@/db/schema";
-import { ROLE_LABELS } from "@/lib/permissions";
+import { ROLE_LABELS } from "@/lib/labels";
 import { useRouter } from "next/navigation";
 
 export function RoleSwitcher({ users, current }: { users: User[]; current: User }) {

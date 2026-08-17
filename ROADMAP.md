@@ -23,7 +23,26 @@ Statuses: **Built** (in the V1 demo) · **Partial** · **Later**.
 | E2 | Dual fee (back page vs expected); Power BI stays for DMs | **Built** |
 | F1 | Default identity: Central RPD **Brian Meyers** | **Built** |
 
-Primary nav is Overview, Bid Schedule, Post-Bid, Dashboards, Reports. Sheets / Studio / Forecast / DMR / Magnus are under **More**.
+Primary nav is Overview, Bid Schedule, Post-Bid, Dashboards, Reports. Sheets / Studio / Forecast / DMR / Copilot are under **More**.
+
+Jay McDaniel follow-ups are **Built** (see below) and documented in [docs/jay-mcdaniel-upgrades.md](docs/jay-mcdaniel-upgrades.md). Post-bid finalize stays a seam: [docs/adr/002-post-bid-finalize-seam.md](docs/adr/002-post-bid-finalize-seam.md). Hosting: [docs/github-and-vercel.md](docs/github-and-vercel.md). Docs index: [docs/README.md](docs/README.md).
+
+### Jay McDaniel add-now (2026-08-14) — Built
+
+| # | Requirement | Status |
+|---|---|---|
+| J1 | Kernel-only authorization + new capabilities | **Built** |
+| J2 | Multi-region job visibility + person pins | **Built** |
+| J3 | Regions editor + duplicate warn-and-adopt | **Built** |
+| J4 | Hierarchical region → `preconDepartment` filter | **Built** |
+| J5 | Effort notes + attachments (no project-level, no private) | **Built** |
+| J6 | `@[userId]` mentions + in-app notifications | **Built** |
+| J7 | Explicit team-assigned + Needs staffing queue | **Built** |
+| J8 | Print wrap + latest-note column | **Built** |
+| J9 | Post-bid queue chips + region custom tab + `finalizeRound()` | **Built** |
+| J10 | Server per-user columns; named view wins | **Built** |
+| J11 | Standard dashboards + owner report schedules | **Built** |
+| J12 | Eve copilot at `/copilot` (Magnus fallback) | **Built** |
 
 ---
 
@@ -48,7 +67,7 @@ See [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
 2. Keller: SME group, November vs January flip.
 3. Lucy: Power BI parity metrics, Destini list definitions.
 4. Eric / Jack: Salesforce-in-Databricks, Destini phase dropdown, join key, DMR feed.
-5. IT: SSO, SMTP, rotate tokens that were pasted in chat, Vercel guest access for the demo URL.
+5. IT: SSO Preview-env parity, SMTP/Resend, Blob for attachments, rotate tokens that were pasted in chat, Vercel guest access for the demo URL. See [docs/github-and-vercel.md](docs/github-and-vercel.md).
 
 ---
 
@@ -58,9 +77,10 @@ See [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
 - Live Connect REST + 24h Salesforce sweep
 - Destini CSV mapping polish + required estimate-phase dropdown in Destini
 - Databricks outbound once Eric approves write
-- Email distribution with real PDF bytes + Resend
+- Email distribution with real PDF bytes + Resend (schedules enqueue the outbox today)
 - Self-service dashboard studio / forecast / DMR upload (already built, demoted)
-- Magnus query of this data (scoped API exists; chrome stays out of V1)
+- Durable Eve host on Vercel (production `/copilot` uses Magnus until then)
+- Preview-env SSO parity (Production has Entra; Preview does not — see github-and-vercel.md)
 
 ---
 
@@ -69,6 +89,7 @@ See [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
 ```bash
 npm test
 npm run docs:check
+npm run db:migrate:check
 npm run smoke:isolated
 npm run verify:web
 ```

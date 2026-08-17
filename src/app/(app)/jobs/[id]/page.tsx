@@ -16,18 +16,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge, OutcomeBadge } from "@/components/status-badge";
 import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
 import { LinkSalesforceCard } from "@/components/jobs/link-salesforce-card";
+import { RegionsEditor } from "@/components/jobs/regions-editor";
 import { db } from "@/db";
 import { estimateRounds } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import { getReferenceValues } from "@/lib/queries";
 import { getSalesforceCandidates } from "@/actions/pursuits";
-import { canCreatePursuit } from "@/lib/permissions";
-import { fmtDate, fmtDollars } from "@/lib/format";
+import { getJobVisibility } from "@/actions/visibility";
+import { principalCanCreatePursuit } from "@/lib/authorization/decisions";
 import {
   loadAdminSectionForPrincipal,
   loadJobForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { fmtDate, fmtDollars } from "@/lib/format";
+import { getReferenceValues } from "@/lib/queries";
 
 export default async function JobPage({
   params,
@@ -43,15 +44,15 @@ export default async function JobPage({
     await loadAdminSectionForPrincipal(principal, "salesforce"),
   );
 
-  const [rounds, user, lists, candidates] = await Promise.all([
+  const [rounds, lists, candidates, visibility] = await Promise.all([
     db
       .select()
       .from(estimateRounds)
       .where(eq(estimateRounds.jobId, job.id))
       .orderBy(asc(estimateRounds.roundNumber)),
-    getCurrentUser(),
     getReferenceValues(),
     job.isLinked || !canReadSalesforce ? Promise.resolve([]) : getSalesforceCandidates(job.id),
+    getJobVisibility(job.id),
   ]);
 
   const totalVolume = rounds.reduce((s, r) => s + (r.estimateValue ?? 0), 0);
@@ -87,7 +88,7 @@ export default async function JobPage({
             {job.salesforceId ? ` · ${job.salesforceId}` : ""}
           </p>
         </div>
-        {canCreatePursuit(user) && (
+        {principalCanCreatePursuit(principal, job.region) && (
           <AddRoundDialog
             jobId={job.id}
             jobName={job.jobName}
@@ -100,6 +101,19 @@ export default async function JobPage({
       {canReadSalesforce && !job.isLinked && (
         <LinkSalesforceCard jobId={job.id} candidates={candidates} />
       )}
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Regions</CardTitle>
+          <CardDescription>
+            Home region is {job.region}. Directors can add their own region so this
+            job shows in their view; Corporate Admin can pin individual people.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RegionsEditor jobId={job.id} initial={visibility} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">

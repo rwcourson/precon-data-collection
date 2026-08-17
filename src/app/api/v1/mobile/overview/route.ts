@@ -1,6 +1,6 @@
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
-import { STATUS_ORDER } from "@/lib/permissions";
+import { STATUS_ORDER } from "@/lib/labels";
 import { fmtDollars } from "@/lib/format";
 import type { RoundStatus } from "@/db/schema";
 

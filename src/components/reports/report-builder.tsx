@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/table";
 import { deleteReport, runReport, saveReport, shareReport } from "@/actions/reports";
 import { formatReportValue, type ReportFieldDef, type ReportResult } from "@/lib/report-engine";
+import { LATEST_NOTE_KEY } from "@/lib/latest-note";
 import type { SavedReportConfig } from "@/db/schema";
 
 type SavedReportRow = {
@@ -568,7 +569,14 @@ export function ReportBuilder({
                     {result.rows.map((r, i) => (
                       <TableRow key={i}>
                         {result.columns.map((c) => (
-                          <TableCell key={c.key} className="whitespace-nowrap text-sm tabular-nums first:pl-6">
+                          <TableCell
+                            key={c.key}
+                            className={
+                              c.key === LATEST_NOTE_KEY
+                                ? "max-w-xs whitespace-normal break-words text-sm first:pl-6"
+                                : "whitespace-nowrap text-sm tabular-nums first:pl-6"
+                            }
+                          >
                             {formatReportValue(c.key, r[c.key] ?? null, catalog)}
                           </TableCell>
                         ))}

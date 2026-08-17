@@ -21,7 +21,7 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { DomainError } from "@/domain/errors";
 import { FIELD_MAP, ROUND_COLUMN_KEYS } from "@/lib/fields";
 import { getReferenceValues } from "@/lib/queries";
-import { STATUS_LABELS } from "@/lib/permissions";
+import { STATUS_LABELS } from "@/lib/labels";
 import {
   buildImportedSheet,
   parseDelimited,

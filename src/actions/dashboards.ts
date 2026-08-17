@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { dashboardWidgets, dashboards } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
 import { loadDashboardForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { dashboardService } from "@/services/dashboard-service";
 import {
   assertWidgetQueryBounds,
   canPublishDashboard,
@@ -15,7 +15,8 @@ import {
 } from "@/lib/dashboard-domain";
 
 export async function createDashboard(raw: unknown) {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
+  const user = principal.user;
   const input = dashboardCreateSchema.parse(raw);
   if (input.published && !canPublishDashboard(user.role, input.scope)) {
     throw new Error("Permission denied: cannot publish at this scope.");
@@ -50,47 +51,15 @@ export async function createDashboard(raw: unknown) {
 
 export async function cloneDashboard(id: number) {
   const principal = await getWebPrincipal();
-  const user = principal.user;
-  const loaded = await loadDashboardForPrincipal(principal, id);
-  if (!loaded) throw new Error("Dashboard not found");
-  const src = loaded.value;
-  const widgets = await db
-    .select()
-    .from(dashboardWidgets)
-    .where(eq(dashboardWidgets.dashboardId, id))
-    .orderBy(asc(dashboardWidgets.sortOrder));
-
-  const [copy] = await db
-    .insert(dashboards)
-    .values({
-      name: `${src.name} (copy)`,
-      description: src.description,
-      scope: "personal",
-      region: null,
-      ownerId: user.id,
-      published: false,
-    })
-    .returning();
-
-  if (widgets.length) {
-    await db.insert(dashboardWidgets).values(
-      widgets.map((w, i) => ({
-        dashboardId: copy.id,
-        sortOrder: i,
-        config: w.config,
-      })),
-    );
-  }
+  const copy = await dashboardService.duplicateToPersonal(principal, id);
   revalidatePath("/dashboards/studio");
   return copy.id;
 }
 
 export async function reorderWidgets(dashboardId: number, orderedIds: number[]) {
-  const user = await getCurrentUser();
-  const [dash] = await db.select().from(dashboards).where(eq(dashboards.id, dashboardId));
-  if (!dash || dash.ownerId !== user.id) {
-    if (user.role !== "corporate_admin") throw new Error("Permission denied.");
-  }
+  const principal = await getWebPrincipal();
+  const loaded = await loadDashboardForPrincipal(principal, dashboardId, "edit");
+  if (!loaded) throw new Error("Permission denied.");
   for (let i = 0; i < orderedIds.length; i++) {
     await db
       .update(dashboardWidgets)
@@ -101,14 +70,11 @@ export async function reorderWidgets(dashboardId: number, orderedIds: number[]) 
 }
 
 export async function addWidget(dashboardId: number, rawConfig: unknown) {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
   const config = widgetConfigSchema.parse(rawConfig);
   assertWidgetQueryBounds(config);
-  const [dash] = await db.select().from(dashboards).where(eq(dashboards.id, dashboardId));
-  if (!dash) throw new Error("Not found");
-  if (dash.ownerId !== user.id && user.role !== "corporate_admin") {
-    throw new Error("Permission denied.");
-  }
+  const loaded = await loadDashboardForPrincipal(principal, dashboardId, "edit");
+  if (!loaded) throw new Error("Permission denied.");
   const existing = await db
     .select()
     .from(dashboardWidgets)
@@ -122,12 +88,9 @@ export async function addWidget(dashboardId: number, rawConfig: unknown) {
 }
 
 export async function deleteDashboard(id: number) {
-  const user = await getCurrentUser();
-  const [dash] = await db.select().from(dashboards).where(eq(dashboards.id, id));
-  if (!dash) return;
-  if (dash.ownerId !== user.id && user.role !== "corporate_admin") {
-    throw new Error("Permission denied.");
-  }
+  const principal = await getWebPrincipal();
+  const loaded = await loadDashboardForPrincipal(principal, id, "edit");
+  if (!loaded) return;
   await db.update(dashboards).set({ deletedAt: new Date() }).where(eq(dashboards.id, id));
   revalidatePath("/dashboards/studio");
 }

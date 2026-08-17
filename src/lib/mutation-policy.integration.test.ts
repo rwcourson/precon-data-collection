@@ -23,7 +23,7 @@ import { createPrincipal } from "@/lib/authorization/principal";
 import { issueDemoSession } from "@/lib/mobile-auth";
 import { POST as transitionPost } from "@/app/api/v1/mobile/rounds/[id]/transition/route";
 import { POST as pursuitsPost } from "@/app/api/v1/mobile/pursuits/route";
-import { pursuitService } from "@/services/pursuit-service";
+import { pursuitService, requireCreatedPursuit } from "@/services/pursuit-service";
 import {
   assertPrincipalCanDistribute,
   assertPrincipalCanCreatePursuit,
@@ -154,7 +154,8 @@ describe("mutation policy negative matrix", () => {
     );
     expect(() => assertPrincipalCanCreatePursuit(pcmPrincipal, otherRegion)).toThrow(DomainError);
 
-    const created = await pursuitService.createPursuit(pcmPrincipal, {
+    const created = requireCreatedPursuit(
+      await pursuitService.createPursuit(pcmPrincipal, {
       mode: "manual",
       jobName: `Phase 6 create ${Date.now()}`,
       region: pcm.region!,
@@ -162,7 +163,9 @@ describe("mutation policy negative matrix", () => {
       estimatePhase: "ROM",
       bidYear: 2026,
       initialStatus: "active",
-    });
+      confirmDuplicate: true,
+    }),
+    );
 
     try {
       await expect(

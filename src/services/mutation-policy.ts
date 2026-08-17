@@ -89,3 +89,25 @@ export function assertPrincipalCanIntegrate(principal: Principal, region: string
     "Integration",
   );
 }
+
+export function assertPrincipalAdmin(
+  principal: Principal,
+  section: string,
+  capability: Capability = "edit",
+  label = "Admin",
+): void {
+  requireAuthorized(
+    principal,
+    capability,
+    {
+      type: "admin",
+      id: section,
+      region: principal.workspace.region,
+      ownerId: null,
+      published: true,
+      deleted: false,
+      adminSection: section,
+    },
+    label,
+  );
+}

@@ -25,6 +25,7 @@ jobs:
       - run: npm run security:check
       - run: npm run perf:check
       - run: npm run release:check
+      - run: npm run docs:check
       - run: npm run verify:web
         env:
           APP_ENV: demo

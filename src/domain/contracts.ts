@@ -34,6 +34,59 @@ export const bidScheduleGroupBySchema = z.enum([
 
 export type BidScheduleGroupBy = z.infer<typeof bidScheduleGroupBySchema>;
 
+export const createPursuitSchema = z.object({
+  mode: z.enum(["salesforce", "manual"]),
+  sfId: z.string().trim().min(1).optional(),
+  jobName: z.string().trim().max(240).optional(),
+  region: z.string().trim().min(1).max(80),
+  preconDepartment: z.string().trim().min(1).max(120),
+  estimatePhase: z.string().trim().min(1).max(120),
+  bidYear: z.number().int().min(2000).max(2100),
+  bidDueDate: z.string().trim().optional(),
+  city: z.string().trim().max(80).optional(),
+  state: z.string().trim().max(40).optional(),
+  marketSector: z.string().trim().max(120).optional(),
+  mlt: z.string().trim().max(80).optional(),
+  contractType: z.string().trim().max(80).optional(),
+  procurement: z.string().trim().max(80).optional(),
+  statusAtPricing: z.string().trim().max(80).optional(),
+  initialStatus: z.enum(["active", "upcoming", "outstanding"]),
+  confirmDuplicate: z.boolean().optional(),
+});
+
+export const jobVisibilityRegionSchema = z.object({
+  jobId: z.number().int().positive(),
+  region: z.string().trim().min(1).max(80),
+});
+
+export const jobVisibilityUserSchema = z.object({
+  jobId: z.number().int().positive(),
+  userId: z.number().int().positive(),
+});
+
+export const adoptJobVisibilitySchema = z.object({
+  jobId: z.number().int().positive(),
+});
+
+export const createRoundNoteSchema = z.object({
+  roundId: z.number().int().positive(),
+  body: z.string().trim().min(1).max(10_000),
+});
+
+export const editRoundNoteSchema = z.object({
+  noteId: z.number().int().positive(),
+  body: z.string().trim().min(1).max(10_000),
+});
+
+export const roundNoteIdSchema = z.object({
+  noteId: z.number().int().positive(),
+});
+
+export const markTeamAssignedSchema = z.object({
+  roundId: z.number().int().positive(),
+  assigned: z.boolean(),
+});
+
 export const distributionListSchema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().trim().min(1).max(120),

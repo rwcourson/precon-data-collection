@@ -48,15 +48,18 @@ try {
   await page.getByRole("button", { name: "New Pursuit" }).click();
   await page.getByRole("tab", { name: /No job number yet/ }).click();
   await page.getByPlaceholder(/Riverside Medical/).fill("Isolated Smoke Test ROM");
-  const selects = page.locator('[role="dialog"] [role="combobox"]');
-  for (const [index, option] of [
-    [0, "Central"],
-    [1, "Central Heavy Civil"],
-    [2, "Budget – Quick ROM"],
-  ]) {
-    await selects.nth(index).click();
+  async function pickDialogSelect(label, option) {
+    const field = page.locator('[role="dialog"] div.space-y-1\\.5', {
+      has: page.getByText(label, { exact: false }),
+    });
+    const combo = field.locator('[role="combobox"]');
+    if ((await combo.count()) === 0) return;
+    await combo.click();
     await page.getByRole("option", { name: option, exact: true }).first().click();
   }
+  await pickDialogSelect("Region", "Central");
+  await pickDialogSelect("Precon Department", "Central Heavy Civil");
+  await pickDialogSelect("Estimate Phase", "Budget – Quick ROM");
   await page.getByRole("button", { name: "Create Pursuit" }).click();
   const created = page.getByText("Isolated Smoke Test ROM").first();
   await created.waitFor({ state: "visible" });
@@ -101,7 +104,7 @@ try {
   await pickPersona("Tom Reeves");
   await page.goto(`${baseUrl}/reports`);
   await page.waitForLoadState("networkidle");
-  const savedReport = page.getByText("Fee % by Region (Locked Rounds)");
+  const savedReport = page.getByRole("button", { name: /Fee % by Region \(Locked Rounds\)/ }).first();
   await savedReport.waitFor({ state: "visible" });
   await savedReport.click();
   await page.getByRole("button", { name: "Run Report" }).click();

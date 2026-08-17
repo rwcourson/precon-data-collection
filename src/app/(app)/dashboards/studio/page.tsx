@@ -57,6 +57,7 @@ export default async function DashboardStudioPage() {
                   <TableHead className="pl-6">Name</TableHead>
                   <TableHead>Scope</TableHead>
                   <TableHead>Region</TableHead>
+                  <TableHead>Kind</TableHead>
                   <TableHead>Published</TableHead>
                   <TableHead>Updated</TableHead>
                 </TableRow>
@@ -79,6 +80,15 @@ export default async function DashboardStudioPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {d.region ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      {d.isStandard ? (
+                        <Badge variant="secondary" size="sm">
+                          Standard
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Personal</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {d.published ? "Yes" : "No"}

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   auditLog,
@@ -24,15 +24,19 @@ import { MULTI_FIELD_KEYS, ROUND_COLUMN_KEYS } from "@/lib/fields";
 import { connectProvider } from "@/lib/integrations/connect";
 import { sendEmails } from "@/lib/email";
 import { planOutcomeUpdate, type OutcomeValue } from "@/lib/outcome";
-import { allowedTransitions, STATUS_LABELS } from "@/lib/permissions";
+import { allowedTransitions } from "@/lib/authorization/lifecycle";
+import { STATUS_LABELS } from "@/lib/labels";
 import { getMultiValues, getReferenceValues, getRoundWithJob } from "@/lib/queries";
 import { getNotificationSettings } from "@/lib/reminders";
 import { planSalesforceLink } from "@/lib/salesforce-link";
 import { evaluateLockGate, validateFieldValue } from "@/lib/validation";
+import { findDuplicateJobs, type DuplicateMatch } from "@/lib/duplicate-jobs";
+import { resolveCreatorHomeRegion } from "@/lib/home-region";
 import {
   assertPrincipalCanCreatePursuit,
   requireAuthorized,
 } from "@/services/mutation-policy";
+import { recordHomeRegionVisibility } from "@/services/visibility-service";
 import {
   transactionFault,
   updateRoundIfUnchanged,
@@ -56,7 +60,20 @@ export type CreatePursuitInput = {
   procurement?: string;
   statusAtPricing?: string;
   initialStatus: "active" | "upcoming" | "outstanding";
+  /** Skip the duplicate warning and create anyway. */
+  confirmDuplicate?: boolean;
 };
+
+export type CreatePursuitCreated = { kind: "created"; jobId: number; roundId: number };
+export type CreatePursuitDuplicates = { kind: "duplicates"; matches: DuplicateMatch[] };
+export type CreatePursuitResult = CreatePursuitCreated | CreatePursuitDuplicates;
+
+export function requireCreatedPursuit(result: CreatePursuitResult): CreatePursuitCreated {
+  if (result.kind !== "created") {
+    throw new Error(`Expected a created pursuit, received ${result.matches.length} duplicate match(es).`);
+  }
+  return result;
+}
 
 export type AddRoundInput = {
   jobId: number;
@@ -76,8 +93,9 @@ export type SavePostBidInput = {
 
 /** Transport-neutral pursuit mutations — caller supplies an explicit principal. */
 export const pursuitService = {
-  async createPursuit(principal: Principal, input: CreatePursuitInput) {
-    assertPrincipalCanCreatePursuit(principal, input.region);
+  async createPursuit(principal: Principal, input: CreatePursuitInput): Promise<CreatePursuitResult> {
+    const homeRegion = resolveCreatorHomeRegion(principal, input.region);
+    assertPrincipalCanCreatePursuit(principal, homeRegion);
     const user = principal.user;
 
     let jobNumber: string;
@@ -104,13 +122,48 @@ export const pursuitService = {
       jobNumber = `TBD-${1000 + Math.floor(Math.random() * 9000)}`;
     }
 
+    if (!input.confirmDuplicate) {
+      const existingRows = await db
+        .select({
+          jobId: jobs.id,
+          jobName: jobs.jobName,
+          jobNumber: jobs.jobNumber,
+          homeRegion: jobs.region,
+          creatorName: users.name,
+          city: estimateRounds.city,
+          state: estimateRounds.state,
+          owner: estimateRounds.owner,
+          lastActivityAt: estimateRounds.updatedAt,
+        })
+        .from(jobs)
+        .leftJoin(users, eq(jobs.createdById, users.id))
+        .leftJoin(estimateRounds, and(eq(estimateRounds.jobId, jobs.id), isNull(estimateRounds.deletedAt)))
+        .where(isNull(jobs.deletedAt));
+      const latest = new Map<number, (typeof existingRows)[number]>();
+      for (const row of existingRows) {
+        const prev = latest.get(row.jobId);
+        if (!prev) {
+          latest.set(row.jobId, row);
+          continue;
+        }
+        const prevAt = prev.lastActivityAt ? new Date(prev.lastActivityAt).getTime() : 0;
+        const nextAt = row.lastActivityAt ? new Date(row.lastActivityAt).getTime() : 0;
+        if (nextAt >= prevAt) latest.set(row.jobId, row);
+      }
+      const matches = findDuplicateJobs(
+        { jobName, city, state, owner: null },
+        [...latest.values()],
+      );
+      if (matches.length > 0) return { kind: "duplicates", matches };
+    }
+
     return withTransaction(async (tx) => {
       const [job] = await tx
         .insert(jobs)
         .values({
           jobNumber,
           jobName,
-          region: input.region,
+          region: homeRegion,
           preconDepartment: input.preconDepartment,
           salesforceId,
           isLinked,
@@ -118,13 +171,15 @@ export const pursuitService = {
         })
         .returning();
 
+      await recordHomeRegionVisibility(tx, job);
+
       const [round] = await tx
         .insert(estimateRounds)
         .values({
           jobId: job.id,
           roundNumber: 1,
           status: input.initialStatus,
-          region: input.region,
+          region: homeRegion,
           preconDepartment: input.preconDepartment,
           estimatePhase: input.estimatePhase,
           bidYear: input.bidYear,
@@ -147,7 +202,7 @@ export const pursuitService = {
         userId: user.id,
       });
 
-      return { jobId: job.id, roundId: round.id };
+      return { kind: "created" as const, jobId: job.id, roundId: round.id };
     });
   },
 
@@ -205,7 +260,7 @@ export const pursuitService = {
     const round = loaded.value.round;
     const user = principal.user;
 
-    const allowed = allowedTransitions(user, round);
+    const allowed = allowedTransitions(principal, round);
     if (!allowed.includes(to)) {
       throw DomainError.forbidden(
         `${user.name} cannot move this round from ${STATUS_LABELS[round.status]} to ${STATUS_LABELS[to]}`,

@@ -3,8 +3,8 @@
 import {
   Fragment,
   useMemo,
+  useRef,
   useState,
-  useSyncExternalStore,
   type DragEvent,
   type PointerEvent,
 } from "react";
@@ -32,8 +32,14 @@ import {
 import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
 import { SavedViewsMenu } from "@/components/bid-schedule/saved-views-menu";
 import { StatusMenu } from "@/components/bid-schedule/status-menu";
+import { NotesDrawerTrigger } from "@/components/notes/notes-drawer-trigger";
+import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
 import { CellEditor } from "@/components/sheets/cell-editor";
 import { updateRoundCell } from "@/actions/post-bid";
+import {
+  resetBidScheduleTablePrefs,
+  saveBidScheduleTablePrefs,
+} from "@/actions/table-prefs";
 import type { BidScheduleViewRow } from "@/actions/bid-schedule-views";
 import {
   BID_DUE_URGENCY_LABEL,
@@ -87,6 +93,11 @@ export type BidSheetRow = {
   estimateValue: number | null;
   status: RoundStatus;
   isLinked: boolean;
+  homeRegion?: string;
+  visibilityRegions?: string[];
+  noteCount?: number;
+  latestNotePreview?: string;
+  teamAssignedAt?: string | null;
   allowed: RoundStatus[];
 };
 
@@ -364,49 +375,14 @@ const EDITABLE: Partial<Record<ColKey, { type: string; listKey?: string }>> = {
 type SortState = { key: ColKey; dir: "asc" | "desc" } | null;
 type Filters = Partial<Record<ColKey, { text?: string; values?: string[] }>>;
 
-const WIDTH_STORAGE = "precon-bid-schedule-col-widths";
-
 const DEFAULT_COL_WIDTHS = Object.freeze(
   Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<string, number>,
 );
 
-const defaultColWidths = () => DEFAULT_COL_WIDTHS;
+const PREFS_SAVE_MS = 400;
 
-const widthListeners = new Set<() => void>();
-let widthCache: Record<string, number> | null = null;
-
-function readColWidths(): Record<string, number> {
-  if (widthCache) return widthCache;
-  const defaults = defaultColWidths();
-  try {
-    const raw = localStorage.getItem(WIDTH_STORAGE);
-    if (!raw) {
-      widthCache = defaults;
-      return defaults;
-    }
-    widthCache = { ...defaults, ...(JSON.parse(raw) as Record<string, number>) };
-    return widthCache;
-  } catch {
-    widthCache = defaults;
-    return defaults;
-  }
-}
-
-function writeColWidths(next: Record<string, number>) {
-  widthCache = next;
-  try {
-    localStorage.setItem(WIDTH_STORAGE, JSON.stringify(next));
-  } catch {
-    /* ignore */
-  }
-  for (const listener of widthListeners) listener();
-}
-
-function subscribeColWidths(listener: () => void) {
-  widthListeners.add(listener);
-  return () => {
-    widthListeners.delete(listener);
-  };
+function mergeColWidths(stored?: Record<string, number>): Record<string, number> {
+  return { ...DEFAULT_COL_WIDTHS, ...(stored ?? {}) };
 }
 
 function keysForDensity(density: "summary" | "detail"): ColKey[] {
@@ -421,10 +397,16 @@ export function BidScheduleSheet({
   sort = { field: "bidDueDate", dir: "asc" },
   density = "summary",
   initialColumns,
+  initialWidths,
+  persistColumnPrefs = true,
   siblingsByJobId = {},
   views = [],
   currentUserId,
+  canModerateNotes = false,
+  canMarkStaffing = false,
   activeViewId,
+  defaultViewId = null,
+  prefsHref,
   viewConfig,
   shareLabel = "Share with my region",
 }: {
@@ -435,20 +417,25 @@ export function BidScheduleSheet({
   sort?: BidScheduleSort;
   density?: "summary" | "detail";
   initialColumns?: string[];
+  initialWidths?: Record<string, number>;
+  persistColumnPrefs?: boolean;
   siblingsByJobId?: Record<number, SiblingRound[]>;
   views?: BidScheduleViewRow[];
   currentUserId: number;
+  canModerateNotes?: boolean;
+  canMarkStaffing?: boolean;
   activeViewId?: number;
+  defaultViewId?: number | null;
+  prefsHref?: string;
   viewConfig: BidScheduleViewQuery;
   shareLabel?: string;
 }) {
-  const storedWidths = useSyncExternalStore(
-    subscribeColWidths,
-    readColWidths,
-    defaultColWidths,
-  );
+  const [committedWidths, setCommittedWidths] = useState(() => mergeColWidths(initialWidths));
   const [draftWidths, setDraftWidths] = useState<Record<string, number> | null>(null);
-  const widths = draftWidths ?? storedWidths;
+  const widths = draftWidths ?? committedWidths;
+  const pendingPrefs = useRef<Record<string, unknown>>({});
+  const prefsTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const draftWidthsRef = useRef<Record<string, number> | null>(null);
   const [colSort, setColSort] = useState<SortState>(null);
   const [filters, setFilters] = useState<Filters>({});
   const [filterOpen, setFilterOpen] = useState<ColKey | null>(null);
@@ -459,6 +446,34 @@ export function BidScheduleSheet({
   const [dragOver, setDragOver] = useState<{ key: ColKey; place: "before" | "after" } | null>(
     null,
   );
+  const [dismissedIds, setDismissedIds] = useState<number[]>([]);
+  const hideOnMark = viewConfig.queue === "needs-staffing";
+
+  const schedulePrefsSave = (patch: {
+    columns?: string[];
+    density?: "summary" | "detail";
+    columnWidths?: Record<string, number>;
+  }) => {
+    pendingPrefs.current = { ...pendingPrefs.current, ...patch };
+    clearTimeout(prefsTimer.current);
+    prefsTimer.current = setTimeout(() => {
+      const payload = pendingPrefs.current;
+      pendingPrefs.current = {};
+      void saveBidScheduleTablePrefs(payload);
+    }, PREFS_SAVE_MS);
+  };
+
+  const persistSnapshot = (nextKeys: ColKey[], nextWidths: Record<string, number>) => {
+    schedulePrefsSave({
+      ...(persistColumnPrefs ? { columns: nextKeys, density } : {}),
+      columnWidths: nextWidths,
+    });
+  };
+
+  const commitVisibleKeys = (next: ColKey[]) => {
+    setVisibleKeys(next);
+    if (persistColumnPrefs) persistSnapshot(next, committedWidths);
+  };
 
   const visibleCols = useMemo(
     () => visibleKeys.map((k) => COL_BY_KEY[k]).filter(Boolean),
@@ -472,15 +487,22 @@ export function BidScheduleSheet({
       startWidth: widths[key] ?? col.width,
       minWidth: col.minWidth,
       onWidth: (w) =>
-        setDraftWidths((prev) => ({
-          ...(prev ?? readColWidths()),
-          [key]: w,
-        })),
-      onEnd: () => {
         setDraftWidths((prev) => {
-          if (prev) writeColWidths(prev);
-          return null;
-        });
+          const next = {
+            ...(prev ?? committedWidths),
+            [key]: w,
+          };
+          draftWidthsRef.current = next;
+          return next;
+        }),
+      onEnd: () => {
+        const next = draftWidthsRef.current;
+        draftWidthsRef.current = null;
+        setDraftWidths(null);
+        if (next) {
+          setCommittedWidths(next);
+          persistSnapshot(visibleKeys, next);
+        }
       },
     });
   };
@@ -507,10 +529,8 @@ export function BidScheduleSheet({
     const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
     setDragOver(null);
     if (!from || !(from in COL_BY_KEY)) return;
-    setVisibleKeys((prev) => {
-      const next = moveColumnKey(prev, from, key, place);
-      return next.every((k) => k in COL_BY_KEY) ? (next as ColKey[]) : prev;
-    });
+    const next = moveColumnKey(visibleKeys, from, key, place);
+    if (next.every((k) => k in COL_BY_KEY)) commitVisibleKeys(next as ColKey[]);
   };
 
   const toggleSort = (key: ColKey) => {
@@ -527,6 +547,7 @@ export function BidScheduleSheet({
 
   const filtered = useMemo(() => {
     return rows.filter((row) => {
+      if (dismissedIds.includes(row.id)) return false;
       for (const col of visibleCols) {
         const f = filters[col.key];
         if (!f) continue;
@@ -540,7 +561,7 @@ export function BidScheduleSheet({
       }
       return true;
     });
-  }, [rows, filters, visibleCols]);
+  }, [rows, filters, visibleCols, dismissedIds]);
 
   const sections = useMemo(() => {
     const built = buildBidScheduleSections(filtered, groupBy, sort);
@@ -586,10 +607,10 @@ export function BidScheduleSheet({
 
   const clearFilters = () => setFilters({});
 
-  const actionWidth = canEdit ? 120 : 0;
+  const actionWidth = (canEdit ? 168 : 40) + (canMarkStaffing ? 32 : 0);
   const totalWidth =
     visibleCols.reduce((sum, c) => sum + (widths[c.key] ?? c.width), 0) + actionWidth;
-  const colSpan = visibleCols.length + (canEdit ? 1 : 0);
+  const colSpan = visibleCols.length + 1;
 
   const config: BidScheduleViewQuery = {
     ...viewConfig,
@@ -616,13 +637,28 @@ export function BidScheduleSheet({
           )}
           <ColumnPicker
             selected={visibleKeys}
-            onChange={setVisibleKeys}
-            density={density}
+            onChange={commitVisibleKeys}
+            onResetToDefaults={async () => {
+              clearTimeout(prefsTimer.current);
+              pendingPrefs.current = {};
+              if (persistColumnPrefs) {
+                await resetBidScheduleTablePrefs();
+                const keys = keysForDensity(density);
+                setVisibleKeys(keys);
+                const nextWidths = { ...DEFAULT_COL_WIDTHS };
+                setCommittedWidths(nextWidths);
+                return;
+              }
+              const fromView = (initialColumns ?? []).filter((k): k is ColKey => k in COL_BY_KEY);
+              setVisibleKeys(fromView.length > 0 ? fromView : keysForDensity(density));
+            }}
           />
           <SavedViewsMenu
             views={views}
             currentUserId={currentUserId}
             activeViewId={activeViewId}
+            defaultViewId={defaultViewId}
+            prefsHref={prefsHref}
             config={config}
             shareLabel={shareLabel}
           />
@@ -638,7 +674,7 @@ export function BidScheduleSheet({
             {visibleCols.map((col) => (
               <col key={col.key} style={{ width: widths[col.key] ?? col.width }} />
             ))}
-            {canEdit ? <col style={{ width: actionWidth }} /> : null}
+            <col style={{ width: actionWidth }} />
           </colgroup>
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
             <tr className="border-b">
@@ -741,12 +777,10 @@ export function BidScheduleSheet({
                   </th>
                 );
               })}
-              {canEdit && (
-                <th
-                  className="h-9 border-r border-border/50 px-2 text-left text-2xs font-medium text-muted-foreground last:border-r-0"
-                  style={{ width: actionWidth }}
-                />
-              )}
+              <th
+                className="h-9 border-r border-border/50 px-2 text-left text-2xs font-medium text-muted-foreground last:border-r-0"
+                style={{ width: actionWidth }}
+              />
             </tr>
           </thead>
           <tbody>
@@ -806,6 +840,19 @@ export function BidScheduleSheet({
                           widths={widths}
                           actionWidth={actionWidth}
                           siblings={siblingsByJobId[row.jobId] ?? []}
+                          currentUserId={currentUserId}
+                          canModerateNotes={canModerateNotes}
+                          canMarkStaffing={canMarkStaffing}
+                          onAssignedChange={(next) => {
+                            if (!hideOnMark) return;
+                            setDismissedIds((prev) =>
+                              next
+                                ? prev.includes(row.id)
+                                  ? prev
+                                  : [...prev, row.id]
+                                : prev.filter((id) => id !== row.id),
+                            );
+                          }}
                         />
                       ))}
                     </Fragment>
@@ -828,6 +875,10 @@ function BidScheduleDataRow({
   widths,
   actionWidth,
   siblings,
+  currentUserId,
+  canModerateNotes,
+  canMarkStaffing,
+  onAssignedChange,
 }: {
   row: BidSheetRow;
   cols: ColDef[];
@@ -836,6 +887,10 @@ function BidScheduleDataRow({
   widths: Record<string, number>;
   actionWidth: number;
   siblings: SiblingRound[];
+  currentUserId: number;
+  canModerateNotes: boolean;
+  canMarkStaffing: boolean;
+  onAssignedChange: (assigned: boolean) => void;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<ColKey | null>(null);
@@ -887,27 +942,46 @@ function BidScheduleDataRow({
           </td>
         );
       })}
-      {canEdit && (
-        <td className="px-1 py-1" style={{ width: actionWidth }}>
-          <div className="flex items-center gap-0.5">
-            <AddRoundDialog
-              jobId={row.jobId}
-              jobName={row.jobName}
-              jobNumber={row.jobNumber}
-              lists={lists}
+      <td className="px-1 py-1" style={{ width: actionWidth }}>
+        <div className="flex items-center gap-0.5">
+          <NotesDrawerTrigger
+            roundId={row.id}
+            jobName={row.jobName}
+            estimatePhase={row.estimatePhase}
+            noteCount={row.noteCount ?? 0}
+            latestPreview={row.latestNotePreview}
+            currentUserId={currentUserId}
+            canModerate={canModerateNotes}
+          />
+          {canMarkStaffing ? (
+            <TeamAssignedButton
+              roundId={row.id}
+              assigned={Boolean(row.teamAssignedAt)}
+              compact
+              onAssignedChange={onAssignedChange}
             />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="px-2"
-              nativeButton={false}
-              render={<Link href={`/rounds/${row.id}`} />}
-            >
-              Open
-            </Button>
-          </div>
-        </td>
-      )}
+          ) : null}
+          {canEdit ? (
+            <>
+              <AddRoundDialog
+                jobId={row.jobId}
+                jobName={row.jobName}
+                jobNumber={row.jobNumber}
+                lists={lists}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-2"
+                nativeButton={false}
+                render={<Link href={`/rounds/${row.id}`} />}
+              >
+                Open
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -935,11 +1009,20 @@ function CellDisplay({
             unlinked
           </Badge>
         )}
+        {row.status === "upcoming" && !row.teamAssignedAt && (
+          <span
+            className="inline-block size-1.5 shrink-0 rounded-full bg-warning"
+            title="Needs staffing"
+            aria-label="Needs staffing"
+          />
+        )}
       </span>
     );
   }
 
   if (col.key === "jobName") {
+    const home = row.homeRegion ?? row.region;
+    const extras = (row.visibilityRegions ?? []).filter((region) => region !== home);
     return (
       <>
         <Link
@@ -953,6 +1036,28 @@ function CellDisplay({
           {row.preconDepartment}
           {row.marketSector ? ` · ${row.marketSector}` : ""} · Round {row.roundNumber}
         </p>
+        {extras.length > 0 && (
+          <Popover>
+            <PopoverTrigger
+              render={
+                <button
+                  type="button"
+                  className="mt-0.5 text-2xs text-primary hover:underline"
+                />
+              }
+            >
+              +{extras.length} region{extras.length === 1 ? "" : "s"}
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-3" align="start">
+              <p className="mb-2 text-xs font-medium">
+                Also visible in {extras.join(", ")}
+              </p>
+              <Link href={`/jobs/${row.jobId}`} className="text-xs text-primary hover:underline">
+                Edit regions
+              </Link>
+            </PopoverContent>
+          </Popover>
+        )}
       </>
     );
   }
@@ -1066,11 +1171,11 @@ function JobLookupPopover({
 function ColumnPicker({
   selected,
   onChange,
-  density,
+  onResetToDefaults,
 }: {
   selected: ColKey[];
   onChange: (next: ColKey[]) => void;
-  density: "summary" | "detail";
+  onResetToDefaults: () => void | Promise<void>;
 }) {
   const selectedSet = new Set(selected);
 
@@ -1088,9 +1193,11 @@ function ColumnPicker({
           <Button
             variant="ghost"
             size="xs"
-            onClick={() => onChange(keysForDensity(density))}
+            onClick={() => {
+              void onResetToDefaults();
+            }}
           >
-            Reset
+            Reset to defaults
           </Button>
         </div>
         <div className="max-h-64 space-y-1 overflow-y-auto">

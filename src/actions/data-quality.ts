@@ -4,16 +4,18 @@ import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, dataQualityFlags } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import { canViewAudit } from "@/lib/permissions";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { principalCanViewAudit } from "@/lib/authorization/decisions";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 import { syncDataQualityFlags } from "@/lib/data-quality-sync";
 import { getRoundsWithJobs } from "@/lib/queries";
 import { getWorkspace } from "@/lib/workspace-server";
+import { DomainError } from "@/domain/errors";
 
-function assertReviewer(role: string, region: string | null) {
-  if (!["rpd", "corporate_admin", "admin_jsa"].includes(role))
-    throw new Error("Only RPDs, Admins, and the Corporate Precon Admin can triage imports.");
-  return region;
+async function requireQualityEditor() {
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "quality", "edit", "Import review");
+  return principal.user;
 }
 
 /** Region scoping is enforced on the server, not just hidden in the queue. */
@@ -35,8 +37,7 @@ export async function rescanDataQuality(): Promise<{
   resolved: number;
   cleared: number;
 }> {
-  const user = await getCurrentUser();
-  assertReviewer(user.role, user.region);
+  const user = await requireQualityEditor();
 
   const result = await syncDataQualityFlags();
 
@@ -53,8 +54,7 @@ export async function rescanDataQuality(): Promise<{
 }
 
 export async function resolveFlag(id: number, note: string) {
-  const user = await getCurrentUser();
-  assertReviewer(user.role, user.region);
+  const user = await requireQualityEditor();
 
   const [flag] = await db.select().from(dataQualityFlags).where(eq(dataQualityFlags.id, id));
   if (!flag) throw new Error("Flag not found");
@@ -90,8 +90,7 @@ export async function resolveGroup(
   kind: string,
   note: string,
 ): Promise<{ resolved: number }> {
-  const user = await getCurrentUser();
-  assertReviewer(user.role, user.region);
+  const user = await requireQualityEditor();
 
   const open = await db
     .select({ id: dataQualityFlags.id, roundId: dataQualityFlags.roundId })
@@ -142,8 +141,7 @@ export async function resolveGroup(
  * Region's decision does not sign off on another Region's history.
  */
 export async function confirmLegacyBaseline(): Promise<{ resolved: number }> {
-  const user = await getCurrentUser();
-  assertReviewer(user.role, user.region);
+  const user = await requireQualityEditor();
 
   const workspace = await getWorkspace();
   const inScope = new Set((await getRoundsWithJobs(workspace)).map((r) => r.round.id));
@@ -176,8 +174,7 @@ export async function confirmLegacyBaseline(): Promise<{ resolved: number }> {
 }
 
 export async function reopenFlag(id: number) {
-  const user = await getCurrentUser();
-  assertReviewer(user.role, user.region);
+  await requireQualityEditor();
   const [flag] = await db.select().from(dataQualityFlags).where(eq(dataQualityFlags.id, id));
   if (!flag) throw new Error("Flag not found");
   await assertInScope(flag.roundId);
@@ -189,6 +186,12 @@ export async function reopenFlag(id: number) {
 }
 
 export async function canTriageImports(): Promise<boolean> {
-  const user = await getCurrentUser();
-  return ["rpd", "corporate_admin", "admin_jsa"].includes(user.role) || canViewAudit(user);
+  const principal = await getWebPrincipal();
+  try {
+    assertPrincipalAdmin(principal, "quality", "edit", "Import review");
+    return true;
+  } catch (err) {
+    if (err instanceof DomainError) return principalCanViewAudit(principal);
+    throw err;
+  }
 }

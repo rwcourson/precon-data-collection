@@ -37,9 +37,28 @@ Suggested views/dashboards must:
 2. Require a human to review and save before publish
 3. Never execute writes autonomously
 
+## Eve copilot tools (Principal bridge)
+
+The web UI is `/copilot`. Locally, Eve is a sibling process (`withEve()`). On Vercel it is not; the page falls back to Magnus. Either path uses the same data tools.
+
+```
+POST /api/v1/copilot/tools
+Content-Type: application/json
+x-eve-principal-id: <integer users.id>
+x-eve-hmac: <hex HMAC-SHA256 of "principalId:tool">
+x-eve-workspace: <region or empty for corporate>
+
+{ "tool": "query_needs_staffing", "input": {} }
+```
+
+HMAC secret is `BETTER_AUTH_SECRET` (then `AI_GATEWAY_API_KEY`). Non-integer principal ids and missing HMAC return **401**. Tools: `query_efforts`, `query_needs_staffing`, `search_notes`, `person_history`, `plan_chart`. Implementation: `src/services/copilot-query-service.ts`.
+
+Identity for Eve: `GET /api/v1/copilot/identity` (session cookie). Do not use Eve `localDev()`.
+
 ## Streaming Magnus chat (AI SDK 7)
 
-Web UI at `/dashboards/copilot` streams via:
+The Eve copilot UI lives at `/copilot` (`useEveAgent` → `/eve/v1/*` when healthy).
+Magnus remains the API/mobile fallback and streams via:
 
 ```
 POST /api/v1/ai/magnus

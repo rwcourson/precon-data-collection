@@ -7,11 +7,14 @@ import { Separator } from "@/components/ui/separator";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDollars } from "@/lib/format";
-import { STATUS_ORDER } from "@/lib/permissions";
+import { STATUS_ORDER } from "@/lib/labels";
 import { getWorkspace } from "@/lib/workspace-server";
 import { getMultiValuesForRounds } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
+import { parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
 import { buildOverviewQueues } from "@/lib/overview-queues";
+import { principalCanIntegrate } from "@/lib/authorization/decisions";
+import { UnlinkedSyncCard } from "@/components/overview/unlinked-sync-card";
 import type { RoundStatus } from "@/db/schema";
 
 export default async function OverviewPage() {
@@ -40,6 +43,12 @@ export default async function OverviewPage() {
     .filter((r) => ["submitted", "post_bid"].includes(r.round.status))
     .map((r) => r.round.id);
   const multiMap = await getMultiValuesForRounds(postBidIds);
+  const allowedRegions =
+    principal.allowedRegions === "all" ? ("all" as const) : principal.allowedRegions;
+  const hierarchy = parseHierarchyFromSearchParams(
+    {},
+    { workspaceRegion: workspace.region, allowedRegions },
+  );
   const queues = buildOverviewQueues(
     regionRows.map(({ round, job, estimateLeadName }) => ({
       roundId: round.id,
@@ -56,7 +65,11 @@ export default async function OverviewPage() {
             estimateLeadName,
           }).length
         : 0,
+      preconDepartment: round.preconDepartment,
+      teamAssignedAt: round.teamAssignedAt,
     })),
+    new Date(),
+    hierarchy,
   );
 
   const kpis = [
@@ -122,42 +135,54 @@ export default async function OverviewPage() {
           <Separator className="flex-1" />
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          {queues.map((q) => (
-            <Link key={q.id} href={q.href} className="group">
-              <Card className="h-full transition-colors group-hover:bg-info-soft/60">
-                <CardHeader className="gap-1.5 pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardDescription className="text-[13px] font-medium text-foreground">
-                        {q.title}
-                      </CardDescription>
-                      <CardTitle className="font-mono text-xl font-medium tabular-nums">
-                        {q.count}
-                      </CardTitle>
+          {queues.map((q) =>
+            q.id === "unlinked" ? (
+              <UnlinkedSyncCard
+                key={q.id}
+                title={q.title}
+                description={q.description}
+                href={q.href}
+                count={q.count}
+                preview={q.preview}
+                canSync={principalCanIntegrate(principal)}
+              />
+            ) : (
+              <Link key={q.id} href={q.href} className="group">
+                <Card className="h-full transition-colors group-hover:bg-info-soft/60">
+                  <CardHeader className="gap-1.5 pb-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardDescription className="text-[13px] font-medium text-foreground">
+                          {q.title}
+                        </CardDescription>
+                        <CardTitle className="font-mono text-xl font-medium tabular-nums">
+                          {q.count}
+                        </CardTitle>
+                      </div>
+                      <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                     </div>
-                    <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
-                  </div>
-                  <CardDescription>{q.description}</CardDescription>
-                </CardHeader>
-                {q.preview.length > 0 && (
-                  <CardContent className="pt-0">
-                    <ul className="space-y-1">
-                      {q.preview.map((item) => (
-                        <li
-                          key={item.roundId}
-                          className="truncate text-[13px] text-muted-foreground"
-                        >
-                          <span className="font-mono">{item.jobNumber}</span>
-                          {" · "}
-                          {item.jobName}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                )}
-              </Card>
-            </Link>
-          ))}
+                    <CardDescription>{q.description}</CardDescription>
+                  </CardHeader>
+                  {q.preview.length > 0 && (
+                    <CardContent className="pt-0">
+                      <ul className="space-y-1">
+                        {q.preview.map((item) => (
+                          <li
+                            key={item.roundId}
+                            className="truncate text-[13px] text-muted-foreground"
+                          >
+                            <span className="font-mono">{item.jobNumber}</span>
+                            {" · "}
+                            {item.jobName}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  )}
+                </Card>
+              </Link>
+            ),
+          )}
         </div>
       </div>
 

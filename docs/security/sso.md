@@ -43,9 +43,12 @@ Add **exactly** these under **Authentication → Platform configurations → Web
 | Environment | Redirect URI |
 |-------------|--------------|
 | Production | `https://precon-data.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
-| Production (alias, if used) | `https://precon.brasfieldgorrie.app/api/auth/callback/microsoft` |
+| Production (alias) | `https://precon-data-prod.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
+| Preview (per branch) | `https://precon-data-git-<branch>.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
 | Local | `http://localhost:3001/api/auth/callback/microsoft` |
 | Local (alt port) | `http://localhost:3000/api/auth/callback/microsoft` |
+
+Preview SSO only works after those URIs exist in Entra **and** Preview has `AUTH_MODE`, `APP_ORIGIN`, `BETTER_AUTH_URL`, and the Microsoft secrets (Production has them; Preview did not as of 2026-08-17). See [github-and-vercel.md](../github-and-vercel.md).
 
 **AADSTS50011** means the URI in the authorize request is missing from that list (character-for-character match required).
 

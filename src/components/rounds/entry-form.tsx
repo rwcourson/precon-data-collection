@@ -40,6 +40,8 @@ import {
   type FieldDef,
 } from "@/lib/fields";
 import { savePostBidData } from "@/actions/post-bid";
+import { CustomColumnFields } from "@/components/rounds/custom-column-fields";
+import { companyScopedColumns } from "@/lib/region-custom-columns";
 import type { CustomColumn } from "@/db/schema";
 
 type Props = {
@@ -137,6 +139,7 @@ export function EntryForm({
     });
   }
 
+  const companyCols = companyScopedColumns(customCols);
   const disabled = !canEdit || pending;
 
   return (
@@ -278,53 +281,21 @@ export function EntryForm({
         </Card>
       ))}
 
-      {customCols.length > 0 && (
+      {companyCols.length > 0 && (
         <Card className="border-dashed">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              Region-Specific Columns
-              <Badge variant="secondary" size="sm">
-                {customCols[0].region}
-              </Badge>
-            </CardTitle>
+            <CardTitle className="text-sm font-semibold">Optional company columns</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-            {customCols.map((col) => (
-              <div key={col.id} className="space-y-1">
-                <Label className="text-xs font-medium">{col.label}</Label>
-                {col.type === "dropdown" ? (
-                  <Select
-                    value={custom[col.id] ?? ""}
-                    onValueChange={(v) => {
-                      setCustom((c) => ({ ...c, [col.id]: v ?? "" }));
-                      setDirty(true);
-                    }}
-                    disabled={disabled}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(col.options ?? []).map((o) => (
-                        <SelectItem key={o} value={o}>
-                          {o}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    type={col.type === "date" ? "date" : "text"}
-                    value={custom[col.id] ?? ""}
-                    onChange={(e) => {
-                      setCustom((c) => ({ ...c, [col.id]: e.target.value }));
-                      setDirty(true);
-                    }}
-                    disabled={disabled}
-                  />
-                )}
-              </div>
-            ))}
+          <CardContent>
+            <CustomColumnFields
+              columns={companyCols}
+              values={custom}
+              disabled={disabled}
+              onChange={(columnId, value) => {
+                setCustom((c) => ({ ...c, [columnId]: value }));
+                setDirty(true);
+              }}
+            />
           </CardContent>
         </Card>
       )}

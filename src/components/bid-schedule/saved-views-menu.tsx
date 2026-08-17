@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Loader2, Trash2 } from "lucide-react";
+import { Bookmark, Loader2, Star, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteBidScheduleView,
   saveBidScheduleView,
   type BidScheduleViewRow,
 } from "@/actions/bid-schedule-views";
+import { setBidScheduleDefaultView } from "@/actions/table-prefs";
 import { bidScheduleViewHref, type BidScheduleViewQuery } from "@/lib/bid-schedule";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,12 +36,16 @@ export function SavedViewsMenu({
   views,
   currentUserId,
   activeViewId,
+  defaultViewId,
+  prefsHref,
   config,
   shareLabel,
 }: {
   views: BidScheduleViewRow[];
   currentUserId: number;
   activeViewId?: number;
+  defaultViewId?: number | null;
+  prefsHref?: string;
   config: BidScheduleViewQuery;
   shareLabel: string;
 }) {
@@ -79,6 +84,19 @@ export function SavedViewsMenu({
     });
   };
 
+  const onStar = (id: number) => {
+    const next = defaultViewId === id ? null : id;
+    startTransition(async () => {
+      try {
+        await setBidScheduleDefaultView({ viewId: next });
+        toast.success(next ? "Default view set" : "Default view cleared");
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not update the default view");
+      }
+    });
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -92,32 +110,60 @@ export function SavedViewsMenu({
           {views.length === 0 && (
             <p className="px-2 py-1.5 text-xs text-muted-foreground">No saved views yet.</p>
           )}
-          {views.map((view) => (
-            <DropdownMenuItem
-              key={view.id}
-              className="gap-2"
-              render={<Link href={bidScheduleViewHref(view.config, view.id)} />}
-            >
-              <span className="min-w-0 flex-1 truncate">{view.name}</span>
-              {view.shared && (
-                <span className="text-2xs text-muted-foreground">shared</span>
-              )}
-              {view.ownerId === currentUserId && (
+          {views.map((view) => {
+            const starred = defaultViewId === view.id;
+            return (
+              <DropdownMenuItem
+                key={view.id}
+                className="gap-2"
+                render={<Link href={bidScheduleViewHref(view.config, view.id)} />}
+              >
+                <span className="min-w-0 flex-1 truncate">{view.name}</span>
+                {view.shared && (
+                  <span className="text-2xs text-muted-foreground">shared</span>
+                )}
                 <button
                   type="button"
-                  className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  aria-label={`Delete ${view.name}`}
+                  className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={
+                    starred ? `Clear default view ${view.name}` : `Set ${view.name} as default view`
+                  }
+                  aria-pressed={starred}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    onDelete(view.id);
+                    onStar(view.id);
                   }}
                 >
-                  <Trash2 className="size-3" />
+                  <Star
+                    className={`size-3 ${starred ? "fill-amber-500 text-amber-500" : ""}`}
+                  />
                 </button>
-              )}
-            </DropdownMenuItem>
-          ))}
+                {view.ownerId === currentUserId && (
+                  <button
+                    type="button"
+                    className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label={`Delete ${view.name}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDelete(view.id);
+                    }}
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                )}
+              </DropdownMenuItem>
+            );
+          })}
+          {activeViewId != null && prefsHref && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href={prefsHref} />}>
+                Clear view (restore my columns)
+              </DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setSaveOpen(true)}>Save current view…</DropdownMenuItem>
         </DropdownMenuContent>

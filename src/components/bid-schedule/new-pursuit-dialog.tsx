@@ -24,11 +24,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   createPursuit,
   searchSalesforceJobs,
   type CreatePursuitInput,
 } from "@/actions/pursuits";
+import { showJobInMyRegion } from "@/actions/visibility";
+import type { DuplicateMatch } from "@/lib/duplicate-jobs";
 
 type SfJob = {
   sfId: string;
@@ -40,22 +43,53 @@ type SfJob = {
   state: string | null;
 };
 
+const PREVIEW_DUPLICATE: DuplicateMatch = {
+  jobId: 1,
+  jobName: "Auburn Football Perf. Ctr",
+  jobNumber: "TBD-1042",
+  homeRegion: "Georgia",
+  creatorName: "Marcus Webb",
+  lastActivityAt: new Date().toISOString(),
+  score: 0.86,
+  signals: {
+    nameScore: 0.9,
+    trigramScore: 0.8,
+    cityMatch: true,
+    stateMatch: true,
+    ownerMatch: true,
+  },
+};
+
 export function NewPursuitDialog({
   lists,
+  homeRegion,
+  canChooseRegion = false,
+  previewDuplicates = false,
 }: {
   lists: Record<string, string[]>;
+  homeRegion?: string | null;
+  canChooseRegion?: boolean;
+  previewDuplicates?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"salesforce" | "manual">("salesforce");
+  const [open, setOpen] = useState(previewDuplicates);
+  const [mode, setMode] = useState<"salesforce" | "manual">(
+    previewDuplicates ? "manual" : "salesforce",
+  );
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SfJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SfJob | null>(null);
-  const [manualName, setManualName] = useState("");
+  const [manualName, setManualName] = useState(
+    previewDuplicates ? "Auburn Football Performance Center" : "",
+  );
   const [form, setForm] = useState<Record<string, string>>({
     initialStatus: "upcoming",
     bidYear: "2026",
+    region: homeRegion ?? "",
   });
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>(
+    previewDuplicates ? [PREVIEW_DUPLICATE] : [],
+  );
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -75,10 +109,12 @@ export function NewPursuitDialog({
     }
   }
 
-  function submit() {
-    const required = ["region", "preconDepartment", "estimatePhase", "bidYear"];
+  function submit(confirmDuplicate = false) {
+    const region = canChooseRegion ? form.region : (homeRegion ?? form.region);
+    const required = ["preconDepartment", "estimatePhase", "bidYear"];
+    if (canChooseRegion) required.unshift("region");
     for (const k of required) {
-      if (!form[k]) {
+      if (!(k === "region" ? region : form[k])) {
         toast.error("Region, Precon Department, Estimate Phase, and Bid Year are required");
         return;
       }
@@ -95,20 +131,27 @@ export function NewPursuitDialog({
       mode,
       sfId: selected?.sfId,
       jobName: manualName,
-      region: form.region,
+      region,
       preconDepartment: form.preconDepartment,
       estimatePhase: form.estimatePhase,
       bidYear: Number(form.bidYear),
       bidDueDate: form.bidDueDate,
+      city: selected?.city ?? undefined,
+      state: selected?.state ?? undefined,
       mlt: form.mlt,
       contractType: form.contractType,
       procurement: form.procurement,
       statusAtPricing: form.statusAtPricing,
       initialStatus: form.initialStatus as CreatePursuitInput["initialStatus"],
+      confirmDuplicate,
     };
     startTransition(async () => {
       try {
-        await createPursuit(input);
+        const result = await createPursuit(input);
+        if (result.kind === "duplicates") {
+          setDuplicates(result.matches);
+          return;
+        }
         toast.success(
           mode === "manual"
             ? "ROM created as TBD-… and left unlinked — link to Salesforce when the number arrives"
@@ -119,9 +162,24 @@ export function NewPursuitDialog({
         setManualName("");
         setQuery("");
         setResults([]);
+        setDuplicates([]);
         router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to create pursuit");
+      }
+    });
+  }
+
+  function adopt(jobId: number) {
+    startTransition(async () => {
+      try {
+        await showJobInMyRegion({ jobId });
+        toast.success("This job now shows in your region");
+        setOpen(false);
+        setDuplicates([]);
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not add to your region");
       }
     });
   }
@@ -167,7 +225,7 @@ export function NewPursuitDialog({
                     #{selected.jobNumber} — {selected.jobName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {selected.region} · {selected.marketSector} · {selected.city},{" "}
+                    Salesforce office {selected.region} · {selected.marketSector} · {selected.city},{" "}
                     {selected.state}
                   </p>
                 </div>
@@ -185,7 +243,7 @@ export function NewPursuitDialog({
                       className="w-full rounded-sm px-2 py-1.5 text-left outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
                       onClick={() => {
                         setSelected(r);
-                        setForm((f) => ({ ...f, region: r.region }));
+                        setDuplicates([]);
                       }}
                     >
                       <p className="text-sm font-medium">
@@ -219,7 +277,16 @@ export function NewPursuitDialog({
         </Tabs>
 
         <div className="grid grid-cols-2 gap-3">
-          <SelectField label="Region *" value={form.region} onChange={(v) => set("region", v)} options={lists.region ?? []} />
+          {canChooseRegion ? (
+            <SelectField label="Region *" value={form.region} onChange={(v) => set("region", v)} options={lists.region ?? []} />
+          ) : (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Home region</Label>
+              <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                {homeRegion ?? (form.region || "Your region")}
+              </p>
+            </div>
+          )}
           <SelectField label="Precon Department *" value={form.preconDepartment} onChange={(v) => set("preconDepartment", v)} options={lists.preconDepartment ?? []} />
           <SelectField label="Estimate Phase *" value={form.estimatePhase} onChange={(v) => set("estimatePhase", v)} options={lists.estimatePhase ?? []} />
           <SelectField label="Bid Year *" value={form.bidYear} onChange={(v) => set("bidYear", v)} options={lists.bidYear ?? []} />
@@ -244,16 +311,52 @@ export function NewPursuitDialog({
           />
         </div>
 
+        {duplicates.length > 0 && (
+          <Alert variant="warning" data-testid="duplicate-warning">
+            <AlertTitle>This looks like a job that already exists</AlertTitle>
+            <AlertDescription>
+              <ul className="mt-2 space-y-2">
+                {duplicates.map((match) => (
+                  <li key={match.jobId} className="rounded-md border bg-background/70 p-2">
+                    <p className="text-sm font-medium text-foreground">{match.jobName}</p>
+                    <p className="text-xs">
+                      {match.jobNumber} · {match.homeRegion}
+                      {match.creatorName ? ` · ${match.creatorName}` : ""}
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      disabled={pending}
+                      onClick={() => adopt(match.jobId)}
+                    >
+                      Show in my region instead
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {mode === "manual" && (
           <Badge variant="warning">
             <Unlink /> Will be created unlinked
           </Badge>
         )}
 
-        <Button onClick={submit} disabled={pending} className="w-full">
-          {pending && <Loader2 className="size-4 animate-spin" />}
-          Create Pursuit
-        </Button>
+        {duplicates.length > 0 ? (
+          <Button onClick={() => submit(true)} disabled={pending} variant="outline" className="w-full">
+            {pending && <Loader2 className="size-4 animate-spin" />}
+            Create anyway
+          </Button>
+        ) : (
+          <Button onClick={() => submit(false)} disabled={pending} className="w-full">
+            {pending && <Loader2 className="size-4 animate-spin" />}
+            Create Pursuit
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );

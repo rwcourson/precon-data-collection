@@ -6,6 +6,10 @@ import { distributionService } from "@/services/distribution-service";
  * Weekly distribution scheduler. Secure with CRON_SECRET.
  * Stub mode previews only; failures that need retry return non-2xx.
  */
+export async function GET(req: Request) {
+  return POST(req);
+}
+
 export async function POST(req: Request) {
   const denied = authorizeCron(req);
   if (denied) return denied;

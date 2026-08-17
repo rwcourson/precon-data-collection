@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "apps/**",
     // Vendored chart package is minified; hook-name rules do not apply
     "vendor/**",
+    // Eve local runtime snapshots — not app source
+    ".eve/**",
   ]),
 ]);
 

@@ -4,7 +4,7 @@ import { db, ensureDbReady } from "@/db";
 import { auditLog, estimateRounds, jobs, notifications, statusTransitions, users } from "@/db/schema";
 import { createPrincipal } from "@/lib/authorization/principal";
 import { allowedTransitions } from "@/lib/permissions";
-import { pursuitService } from "@/services/pursuit-service";
+import { pursuitService, requireCreatedPursuit } from "@/services/pursuit-service";
 
 let pcm: typeof users.$inferSelect;
 let rpd: typeof users.$inferSelect;
@@ -46,7 +46,8 @@ describe("V1 four-core loop", () => {
       authSource: "demo_session",
       workspaceRegion: rpd.region,
     });
-    const createdJob = await pursuitService.createPursuit(principal, {
+    const createdJob = requireCreatedPursuit(
+      await pursuitService.createPursuit(principal, {
       mode: "manual",
       jobName: "V1 two-round ROM",
       region: rpd.region ?? "Central",
@@ -54,7 +55,9 @@ describe("V1 four-core loop", () => {
       estimatePhase: "Budget - Quick ROM",
       bidYear: 2026,
       initialStatus: "upcoming",
-    });
+      confirmDuplicate: true,
+    }),
+    );
     created.push({ jobId: createdJob.jobId, roundIds: [createdJob.roundId] });
 
     const [jobRow] = await db.select().from(jobs).where(eq(jobs.id, createdJob.jobId));

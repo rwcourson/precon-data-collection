@@ -99,6 +99,21 @@ describe("authorization principal contract", () => {
     expect(authorize(value, "edit", resource()).allowed).toBe(false);
     expect(authorize(value, "read", resource({ region: "Florida" })).allowed).toBe(false);
   });
+
+  it("a user with no home region does not crash and scopes to the workspace when one is set", () => {
+    const bare = createPrincipal({
+      user: user("pcm", 99, null),
+      authSource: "sso",
+      workspaceRegion: null,
+    });
+    expect(bare.allowedRegions).toBe("all");
+    const scoped = createPrincipal({
+      user: user("pcm", 100, null),
+      authSource: "sso",
+      workspaceRegion: "Central",
+    });
+    expect(scoped.allowedRegions).toEqual(["Central"]);
+  });
 });
 
 describe("deny-by-default role, Region, ownership, publication, field and ACL matrix", () => {
@@ -177,6 +192,13 @@ describe("deny-by-default role, Region, ownership, publication, field and ACL ma
       "integrate",
       "restore",
       "permanent-delete",
+      "notes.write",
+      "notes.attach",
+      "visibility.manage-region",
+      "visibility.assign-user",
+      "staffing.mark",
+      "dashboards.manage-standard",
+      "reports.schedule",
     ];
     const pcm = principal("pcm");
     for (const capability of capabilities) {
@@ -189,6 +211,95 @@ describe("deny-by-default role, Region, ownership, publication, field and ACL ma
     expect(authorize(principal("rpd"), "restore", resource({ type: "trash", deleted: true })).allowed).toBe(true);
     expect(authorize(principal("rpd"), "read", resource({ type: "trash", deleted: true })).allowed).toBe(true);
     expect(authorize(principal("corporate_admin", 9, null), "permanent-delete", resource({ type: "trash", deleted: true })).allowed).toBe(true);
+  });
+});
+
+describe("Jay-roadmap capabilities — allow and deny per role", () => {
+  const editors = new Set(["pcm", "estimate_lead", "admin_jsa", "rpd"]);
+
+  it.each(ROLES)("notes.write / notes.attach allow every in-region role including %s", (role) => {
+    const actor = principal(role, ROLES.indexOf(role) + 1, role === "corporate_admin" ? null : "Central");
+    const round = resource({ type: "round", round: { status: "upcoming", region: "Central" } });
+    expect(authorize(actor, "notes.write", round).allowed).toBe(true);
+    expect(authorize(actor, "notes.attach", round).allowed).toBe(true);
+  });
+
+  it("notes.write is denied cross-region for a pinned director", () => {
+    const rpd = principal("rpd", 2, "Central");
+    expect(
+      authorize(
+        rpd,
+        "notes.write",
+        resource({ type: "round", region: "Florida", round: { status: "upcoming", region: "Florida" } }),
+      ).allowed,
+    ).toBe(false);
+  });
+
+  it.each(ROLES)("visibility.manage-region own-region for %s", (role) => {
+    const actor = principal(role, ROLES.indexOf(role) + 1, role === "corporate_admin" ? null : "Central");
+    expect(authorize(actor, "visibility.manage-region", resource({ type: "job", region: "Central" })).allowed).toBe(
+      editors.has(role) || role === "corporate_admin",
+    );
+    expect(authorize(actor, "visibility.manage-region", resource({ type: "job", region: "Florida" })).allowed).toBe(
+      role === "corporate_admin",
+    );
+  });
+
+  it.each(ROLES)("visibility.assign-user is corporate_admin-only for %s", (role) => {
+    const actor = principal(role, ROLES.indexOf(role) + 1, role === "corporate_admin" ? null : "Central");
+    expect(authorize(actor, "visibility.assign-user", resource({ type: "job" })).allowed).toBe(
+      role === "corporate_admin",
+    );
+  });
+
+  it.each(ROLES)("staffing.mark for %s", (role) => {
+    const actor = principal(role, ROLES.indexOf(role) + 1, role === "corporate_admin" ? null : "Central");
+    expect(
+      authorize(
+        actor,
+        "staffing.mark",
+        resource({ type: "round", round: { status: "upcoming", region: "Central" } }),
+      ).allowed,
+    ).toBe(editors.has(role) || role === "corporate_admin");
+  });
+
+  it.each(ROLES)("dashboards.manage-standard for %s", (role) => {
+    const actor = principal(role, ROLES.indexOf(role) + 1, role === "corporate_admin" ? null : "Central");
+    expect(
+      authorize(
+        actor,
+        "dashboards.manage-standard",
+        resource({ type: "dashboard", ownerId: actor.user.id, published: true }),
+      ).allowed,
+    ).toBe(role === "corporate_admin");
+  });
+
+  it.each(ROLES)("reports.schedule for %s", (role) => {
+    const actor = principal(role, ROLES.indexOf(role) + 1, role === "corporate_admin" ? null : "Central");
+    expect(
+      authorize(actor, "reports.schedule", resource({ type: "report", ownerId: actor.user.id, published: true }))
+        .allowed,
+    ).toBe(true);
+  });
+
+  it("denies reports.schedule on another owner's report", () => {
+    const actor = principal("pcm", 1);
+    expect(
+      authorize(actor, "reports.schedule", resource({ type: "report", ownerId: 99, published: true })).allowed,
+    ).toBe(false);
+  });
+
+  it("denies in-place edit of a standard dashboard", () => {
+    const owner = principal("pcm", 1);
+    const admin = principal("corporate_admin", 2, null);
+    const standard = resource({
+      type: "dashboard",
+      ownerId: owner.user.id,
+      published: true,
+      isStandard: true,
+    });
+    expect(authorize(owner, "edit", standard).allowed).toBe(false);
+    expect(authorize(admin, "edit", { ...standard, ownerId: admin.user.id }).allowed).toBe(false);
   });
 });
 

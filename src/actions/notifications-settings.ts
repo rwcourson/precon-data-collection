@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { appSettings, auditLog } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 import {
   DEFAULT_SETTINGS,
   getNotificationSettings,
@@ -13,14 +14,10 @@ import {
   type SweepResult,
 } from "@/lib/reminders";
 
-function assertAdmin(role: string) {
-  if (!["corporate_admin", "rpd"].includes(role))
-    throw new Error("Only the Corporate Precon Admin or an RPD can change notification settings.");
-}
-
 export async function saveNotificationSettings(next: Partial<NotificationSettings>) {
-  const user = await getCurrentUser();
-  assertAdmin(user.role);
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "notifications", "edit", "Notification settings");
+  const user = principal.user;
 
   const current = await getNotificationSettings();
   const merged: NotificationSettings = {
@@ -53,8 +50,8 @@ export async function saveNotificationSettings(next: Partial<NotificationSetting
 }
 
 export async function runRemindersNow(): Promise<SweepResult> {
-  const user = await getCurrentUser();
-  assertAdmin(user.role);
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "notifications", "edit", "Notification settings");
   const result = await runReminderSweep({ force: true });
   revalidatePath("/admin");
   revalidatePath("/", "layout");

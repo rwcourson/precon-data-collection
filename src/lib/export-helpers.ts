@@ -8,6 +8,8 @@ import {
   listRoundsWithJobsForPrincipal,
 } from "./authorization/loaders";
 import type { Principal } from "./authorization/types";
+import { LATEST_NOTE_KEY } from "./latest-note";
+import { latestNoteCellsForRounds } from "./latest-note-query";
 import {
   buildFieldCatalog,
   flattenRound,
@@ -28,9 +30,10 @@ export async function getFlatDataset(principal: Principal): Promise<{
     listCustomColumnsForPrincipal(principal),
   ]);
   const ids = rowData.map((r) => r.round.id);
-  const [multiMap, customMap] = await Promise.all([
+  const [multiMap, customMap, noteMap] = await Promise.all([
     getMultiValuesForRounds(ids),
     getCustomValuesForRounds(ids),
+    latestNoteCellsForRounds(ids),
   ]);
   const rows = rowData.map((r) =>
     flattenRound(
@@ -39,6 +42,7 @@ export async function getFlatDataset(principal: Principal): Promise<{
       r.estimateLeadName,
       multiMap.get(r.round.id) ?? {},
       customMap.get(r.round.id) ?? {},
+      noteMap.get(r.round.id) ?? null,
     ),
   );
   return { rows, catalog: buildFieldCatalog(customCols) };
@@ -88,7 +92,7 @@ export async function buildWorkbook(opts: {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
     cell.border = { bottom: { style: "thin" } };
-    cell.alignment = { vertical: "middle" };
+    cell.alignment = { vertical: "middle", wrapText: true };
   });
 
   const groupBy = opts.groupBy ?? [];
@@ -101,9 +105,15 @@ export async function buildWorkbook(opts: {
     );
     opts.columns.forEach((c, i) => {
       const fmt = excelFormat(c.type, c.key);
-      if (fmt) row.getCell(i + 1).numFmt = fmt;
-      row.getCell(i + 1).font = { size: 10 };
+      const cell = row.getCell(i + 1);
+      if (fmt) cell.numFmt = fmt;
+      cell.font = { size: 10 };
+      cell.alignment = { wrapText: true, vertical: "top" };
     });
+    const note = r[LATEST_NOTE_KEY];
+    if (typeof note === "string" && note.length > 80) {
+      row.height = Math.min(90, 18 + Math.ceil(note.length / 80) * 14);
+    }
   };
 
   if (groupBy.length > 0) {
@@ -129,9 +139,13 @@ export async function buildWorkbook(opts: {
     opts.rows.forEach(writeDataRow);
   }
 
-  // Column widths from content
+  // Column widths from content. Latest-note stays at the wrap-friendly cap.
   opts.columns.forEach((c, i) => {
     const col = ws.getColumn(i + 1);
+    if (c.key === LATEST_NOTE_KEY) {
+      col.width = 42;
+      return;
+    }
     const maxLen = Math.max(
       c.label.length,
       ...opts.rows.slice(0, 200).map((r) => String(r[c.key] ?? "").length),
@@ -162,7 +176,9 @@ export function buildPrintHtml(opts: {
     `<tr>${opts.columns
       .map((c) => {
         const numeric = ["dollars", "number", "metric"].includes(c.type);
-        return `<td class="${numeric ? "num" : ""}">${esc(opts.formatValue(c.key, r[c.key] ?? null))}</td>`;
+        const note = c.key === LATEST_NOTE_KEY;
+        const cls = [numeric ? "num" : "", note ? "note" : ""].filter(Boolean).join(" ");
+        return `<td${cls ? ` class="${cls}"` : ""}>${esc(opts.formatValue(c.key, r[c.key] ?? null))}</td>`;
       })
       .join("")}</tr>`;
 
@@ -187,18 +203,32 @@ export function buildPrintHtml(opts: {
 <title>${esc(opts.title)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin: 32px; color: #1a202c; }
+  html, body { max-width: 100%; }
+  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin: 32px; color: #1a202c; overflow-x: hidden; }
   h1 { font-size: 18px; margin: 0 0 2px; color: #1e3a5f; }
   .meta { font-size: 11px; color: #64748b; margin-bottom: 16px; }
-  table { border-collapse: collapse; width: 100%; font-size: 10.5px; }
-  th { background: #1e3a5f; color: white; text-align: left; padding: 6px 8px; font-weight: 600; }
-  td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+  table { border-collapse: collapse; width: 100%; font-size: 10.5px; table-layout: fixed; }
+  thead { display: table-header-group; }
+  tbody { display: table-row-group; }
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+    max-width: 12rem;
+  }
+  th { background: #1e3a5f; color: white; font-weight: 600; }
+  td { border-bottom: 1px solid #e2e8f0; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.note, td.note { max-width: 22rem; width: 28%; }
+  tr, tr.group { break-inside: avoid; page-break-inside: avoid; }
   tr.group td { background: #e8eef4; font-weight: 700; }
   .footer { margin-top: 18px; font-size: 10px; color: #94a3b8; }
   .toolbar { position: fixed; top: 12px; right: 12px; }
   .toolbar button { padding: 8px 16px; background: #1e3a5f; color: white; border: 0; border-radius: 6px; cursor: pointer; font-size: 13px; }
-  @media print { .toolbar { display: none; } body { margin: 0; } }
+  @media print { .toolbar { display: none; } body { margin: 0; overflow-x: hidden; } }
 </style>
 </head>
 <body>
@@ -206,7 +236,7 @@ export function buildPrintHtml(opts: {
   <h1>${esc(opts.title)}</h1>
   <p class="meta">Generated ${new Date().toLocaleString("en-US")} · ${opts.rows.length} record${opts.rows.length === 1 ? "" : "s"} · B&amp;G Precon Data Collection</p>
   <table>
-    <thead><tr>${opts.columns.map((c) => `<th>${esc(c.label)}</th>`).join("")}</tr></thead>
+    <thead><tr>${opts.columns.map((c) => `<th${c.key === LATEST_NOTE_KEY ? ' class="note"' : ""}>${esc(c.label)}</th>`).join("")}</tr></thead>
     <tbody>${bodyRows}</tbody>
   </table>
   <p class="footer">${esc(opts.footer ?? "Brasfield & Gorrie Preconstruction — Confidential")}</p>

@@ -1,25 +1,42 @@
 /* Seed script: realistic demo dataset. Run with `npm run db:seed` (server stopped). */
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { db } from "./index";
 import {
   auditLog,
   customColumnValues,
   customColumns,
+  dashboardWidgets,
+  dashboards,
+  distributionLists,
+  distributionRuns,
+  emailOutbox,
   estimateRounds,
   jobs,
+  jobRegionVisibility,
+  jobUserVisibility,
   notifications,
   referenceListValues,
   referenceLists,
   reportTemplates,
   roundMultiValues,
+  roundNoteAttachments,
+  roundNoteMentions,
+  roundNotes,
   salesforceJobs,
   savedReports,
   statusTransitions,
   users,
 } from "./schema";
 import { assertDemoSeedAllowed } from "@/lib/runtime-config";
+import { REGION_DEPARTMENTS } from "@/lib/region-departments";
 import { REFERENCE_LISTS } from "../lib/reference-data";
 import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
-import { consolidatedRegionalReportInsert } from "../lib/report-presets";
+import { consolidatedRegionalReportInsert, upcomingBidScheduleReportInsert } from "../lib/report-presets";
+import { allStandardDashboardDefs } from "@/lib/standard-dashboards";
+import { LATEST_NOTE_KEY } from "@/lib/latest-note";
 import type { RoundStatus } from "./schema";
 
 // Deterministic RNG so the demo dataset is stable across reseeds
@@ -44,14 +61,6 @@ const pickN = <T,>(arr: T[], n: number): T[] => {
 };
 const between = (lo: number, hi: number) => lo + rand() * (hi - lo);
 const round = (v: number, nearest = 1000) => Math.round(v / nearest) * nearest;
-
-const REGION_DEPTS: Record<string, string[]> = {
-  Carolinas: ["Carolinas"],
-  Central: ["Central Building Group", "Central Federal", "Central Heavy Civil", "Central Nashville"],
-  Florida: ["Florida"],
-  Georgia: ["Georgia – Commercial", "Georgia – Healthcare", "Georgia – Mission Critical & Industrial"],
-  Texas: ["Texas"],
-};
 
 const REGION_CITIES: Record<string, [string, string][]> = {
   Carolinas: [["Charlotte", "NC"], ["Raleigh", "NC"], ["Greenville", "SC"], ["Columbia", "SC"]],
@@ -107,7 +116,17 @@ export async function seedDemoData() {
   await db.delete(auditLog);
   await db.delete(notifications);
   await db.delete(reportTemplates);
+  await db.delete(emailOutbox);
+  await db.delete(distributionRuns);
+  await db.delete(distributionLists);
+  await db.delete(dashboardWidgets);
+  await db.delete(dashboards);
   await db.delete(savedReports);
+  await db.delete(jobUserVisibility);
+  await db.delete(jobRegionVisibility);
+  await db.delete(roundNoteAttachments);
+  await db.delete(roundNoteMentions);
+  await db.delete(roundNotes);
   await db.delete(estimateRounds);
   await db.delete(jobs);
   await db.delete(salesforceJobs);
@@ -141,7 +160,7 @@ export async function seedDemoData() {
   const corpAdmin = userRows.find((u) => u.role === "corporate_admin")!;
 
   console.log("Seeding jobs, Salesforce mock data, and estimate rounds…");
-  const regions = Object.keys(REGION_DEPTS);
+  const regions = Object.keys(REGION_DEPARTMENTS);
   let jobNumberCounter = 24101;
   let sfCounter = 7001;
   let tbdCounter = 1042;
@@ -154,7 +173,7 @@ export async function seedDemoData() {
   for (let j = 0; j < 42; j++) {
     // Weight Central so the default demo persona has a rich view
     const region = j % 3 === 0 ? "Central" : regions[j % regions.length];
-    const dept = pick(REGION_DEPTS[region]);
+    const dept = pick([...(REGION_DEPARTMENTS[region] ?? [])]);
     const [city, state] = pick(REGION_CITIES[region]);
     const [sector, templates, [loM, hiM]] = pick(SECTOR_NAMES);
     const jobName = pick(templates).replace("{city}", city);
@@ -368,9 +387,28 @@ export async function seedDemoData() {
   console.log("Seeding custom columns (Section 11 demo)…");
   const [riverMile] = await db.insert(customColumns).values({
     scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
-    key: "riverMileMarker", label: "River Mile Marker", type: "text",
+    key: "riverMileMarker", label: "River Mile Marker (demo)", type: "text",
     createdById: rpd.id,
   }).returning();
+  const centralIndustrial = await db.insert(customColumns).values([
+    {
+      scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
+      key: "spoilDisposalSite", label: "Spoil Disposal Site (demo)", type: "text",
+      createdById: rpd.id,
+    },
+    {
+      scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
+      key: "bargeAccess", label: "Barge Access (demo)", type: "dropdown",
+      options: ["Yes", "No", "Seasonal"],
+      createdById: rpd.id,
+    },
+    {
+      scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
+      key: "cofferdamRequired", label: "Cofferdam Required (demo)", type: "dropdown",
+      options: ["Yes", "No", "TBD"],
+      createdById: rpd.id,
+    },
+  ]).returning();
   const [cleanRoom] = await db.insert(customColumns).values({
     scope: "region", region: "Georgia", preconDepartment: "Georgia – Mission Critical & Industrial",
     key: "cleanRoomClass", label: "Clean Room Class", type: "dropdown",
@@ -378,7 +416,15 @@ export async function seedDemoData() {
     createdById: rpd.id,
   }).returning();
   await db.insert(auditLog).values([
-    { entity: "schema", entityId: riverMile.id, action: "column_added", field: "River Mile Marker", newValue: "region:Central", userId: rpd.id },
+    { entity: "schema", entityId: riverMile.id, action: "column_added", field: "River Mile Marker (demo)", newValue: "region:Central", userId: rpd.id },
+    ...centralIndustrial.map((col) => ({
+      entity: "schema" as const,
+      entityId: col.id,
+      action: "column_added",
+      field: col.label,
+      newValue: "region:Central",
+      userId: rpd.id,
+    })),
     { entity: "schema", entityId: cleanRoom.id, action: "column_added", field: "Clean Room Class", newValue: "region:Georgia", userId: rpd.id },
   ]);
 
@@ -393,12 +439,70 @@ export async function seedDemoData() {
     });
   }
 
+  const [noteRound] = await db.query.estimateRounds.findMany({
+    where: (r, { and, eq, inArray, isNull }) =>
+      and(
+        eq(r.preconDepartment, "Central Heavy Civil"),
+        inArray(r.status, ["active", "upcoming", "outstanding"]),
+        isNull(r.deletedAt),
+      ),
+    limit: 1,
+  });
+  if (noteRound) {
+    const insertedNotes = await db
+      .insert(roundNotes)
+      .values([
+        {
+          roundId: noteRound.id,
+          authorUserId: pcm.id,
+          body: `@[${corpAdmin.id}] Updated drawing due date after talking to this DM on 8/12.`,
+        },
+        {
+          roundId: noteRound.id,
+          authorUserId: estimateLead.id,
+          body: "ROM package dropped in Destini. Fee still TBD pending scope.",
+        },
+      ])
+      .returning();
+    const firstNote = insertedNotes[0];
+    if (firstNote) {
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "base64",
+      );
+      const key = `notes/${firstNote.roundId}/${firstNote.id}/${randomUUID()}-drawing-markups.png`;
+      const root = path.join(process.cwd(), ".data", "artifacts");
+      await mkdir(path.dirname(path.join(root, key)), { recursive: true });
+      await writeFile(path.join(root, key), png);
+      await db.insert(roundNoteAttachments).values({
+        noteId: firstNote.id,
+        storageKey: key,
+        filename: "drawing-markups.png",
+        contentType: "image/png",
+        sizeBytes: png.byteLength,
+        uploadedById: pcm.id,
+      });
+      await db.insert(roundNoteMentions).values({
+        noteId: firstNote.id,
+        mentionedUserId: corpAdmin.id,
+      });
+      const [noteJob] = await db.select({ jobName: jobs.jobName }).from(jobs).where(eq(jobs.id, noteRound.jobId));
+      await db.insert(notifications).values({
+        userId: corpAdmin.id,
+        title: `${pcm.name} mentioned you on ${noteJob?.jobName ?? "an effort"} — R${noteRound.roundNumber}`,
+        body: "Updated drawing due date after talking to this DM on 8/12.",
+        roundId: noteRound.id,
+        noteId: firstNote.id,
+      });
+    }
+  }
+
   console.log("Seeding report templates and saved reports…");
   await db.insert(reportTemplates).values({
     name: "Weekly Region Bid Schedule",
     ownerId: pcm.id,
     config: {
-      columns: ["jobNumber", "jobName", "estimatePhase", "bidYear", "bidDueDate", "estimateLead", "marketSector", "contractType"],
+      columns: ["jobNumber", "jobName", "estimatePhase", "bidYear", "bidDueDate", "estimateLead", "marketSector", "contractType", LATEST_NOTE_KEY],
       groupBy: ["preconDepartment"],
       sortBy: [{ field: "bidDueDate", dir: "asc" }],
       header: "Central Region — Weekly Bid Schedule",
@@ -422,6 +526,30 @@ export async function seedDemoData() {
     sharedWithRegions: ["Central"],
   });
   await db.insert(savedReports).values(consolidatedRegionalReportInsert(rpd.id));
+  await db.insert(savedReports).values(upcomingBidScheduleReportInsert(rpd.id));
+  for (const def of allStandardDashboardDefs()) {
+    const [dash] = await db
+      .insert(dashboards)
+      .values({
+        name: def.name,
+        description: def.description,
+        scope: def.scope,
+        region: def.region,
+        ownerId: corpAdmin.id,
+        published: true,
+        isStandard: true,
+      })
+      .returning();
+    if (def.widgets.length) {
+      await db.insert(dashboardWidgets).values(
+        def.widgets.map((config, i) => ({
+          dashboardId: dash.id,
+          sortOrder: i,
+          config,
+        })),
+      );
+    }
+  }
 
   console.log(`Done. Seeded ${totalRounds} estimate rounds across 42 jobs.`);
 }

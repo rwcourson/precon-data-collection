@@ -16,6 +16,7 @@ type Item = {
   title: string;
   body: string | null;
   roundId: number | null;
+  noteId?: number | null;
   readAt: Date | null;
   createdAtLabel: string;
 };
@@ -70,7 +71,11 @@ export function NotificationsBell({ items }: { items: Item[] }) {
           {items.map((n) => (
             <Link
               key={n.id}
-              href={n.roundId ? `/rounds/${n.roundId}` : "#"}
+              href={
+                n.roundId
+                  ? `/rounds/${n.roundId}?tab=notes${n.noteId ? `&note=${n.noteId}` : ""}`
+                  : "#"
+              }
               className={`block border-b px-4 py-3 last:border-0 hover:bg-accent ${
                 n.readAt ? "opacity-60" : ""
               }`}

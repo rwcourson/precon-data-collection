@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { savedReports, type SavedReportConfig } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import { getFlatDataset } from "@/lib/export-helpers";
+import { loadReportForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { getFlatDataset } from "@/lib/export-helpers";
 import {
   runReportEngine,
   type ReportResult,
@@ -16,7 +16,6 @@ export async function runReport(config: SavedReportConfig): Promise<ReportResult
   const principal = await getWebPrincipal();
   const { rows, catalog } = await getFlatDataset(principal);
   const result = runReportEngine(rows, config, catalog);
-  // Cap on-screen rows for responsiveness
   return { ...result, rows: result.rows.slice(0, 500) };
 }
 
@@ -25,17 +24,13 @@ export async function saveReport(
   config: SavedReportConfig,
   existingId?: number,
 ) {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
+  const user = principal.user;
   if (!name.trim()) throw new Error("Report name is required");
 
   if (existingId) {
-    const [existing] = await db
-      .select()
-      .from(savedReports)
-      .where(eq(savedReports.id, existingId));
-    if (!existing) throw new Error("Report not found");
-    if (existing.ownerId !== user.id)
-      throw new Error("Only the report owner can modify it");
+    const loaded = await loadReportForPrincipal(principal, existingId, "edit");
+    if (!loaded) throw new Error("Report not found");
     await db
       .update(savedReports)
       .set({ name: name.trim(), config, updatedAt: new Date() })
@@ -53,10 +48,9 @@ export async function saveReport(
 }
 
 export async function deleteReport(id: number) {
-  const user = await getCurrentUser();
-  const [existing] = await db.select().from(savedReports).where(eq(savedReports.id, id));
-  if (!existing) return;
-  if (existing.ownerId !== user.id) throw new Error("Only the report owner can delete it");
+  const principal = await getWebPrincipal();
+  const loaded = await loadReportForPrincipal(principal, id, "edit");
+  if (!loaded) return;
   await db.delete(savedReports).where(eq(savedReports.id, id));
   revalidatePath("/reports");
 }
@@ -66,10 +60,9 @@ export async function shareReport(
   sharedWithRegions: string[],
   sharedWithUserIds: number[],
 ) {
-  const user = await getCurrentUser();
-  const [existing] = await db.select().from(savedReports).where(eq(savedReports.id, id));
-  if (!existing) throw new Error("Report not found");
-  if (existing.ownerId !== user.id) throw new Error("Only the report owner can share it");
+  const principal = await getWebPrincipal();
+  const loaded = await loadReportForPrincipal(principal, id, "manage");
+  if (!loaded) throw new Error("Report not found");
   await db
     .update(savedReports)
     .set({ sharedWithRegions, sharedWithUserIds, updatedAt: new Date() })

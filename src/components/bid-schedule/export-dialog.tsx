@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { FIELD_DEFS } from "@/lib/fields";
+import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "@/lib/latest-note";
 import type { ExportTemplateConfig } from "@/db/schema";
 import { deleteReportTemplate, saveReportTemplate } from "@/actions/templates";
 
@@ -47,6 +48,7 @@ const DEFAULT_COLUMNS = [
   "estimateLead",
   "marketSector",
   "contractType",
+  LATEST_NOTE_KEY,
 ];
 
 const GROUPABLE = ["region", "preconDepartment", "estimatePhase", "bidYear", "marketSector", "mlt"];
@@ -79,6 +81,7 @@ export function ExportDialog({
         key: f.key,
         label: f.label,
       })),
+      { key: LATEST_NOTE_KEY, label: LATEST_NOTE_LABEL },
       // Region-specific custom columns surface automatically (Section 11)
       ...customCols,
     ],

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { dmrImports, dmrLines } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
 import {
   listRoundsWithJobsForPrincipal,
   loadAdminSectionForPrincipal,
@@ -18,10 +17,11 @@ export async function importDmrUpload(input: {
   periodKey?: string;
   lines: { jobNumber: string; jobName?: string; region?: string; dmrValue: number }[];
 }) {
-  const user = await getCurrentUser();
-  if (!["corporate_admin", "rpd", "leadership"].includes(user.role)) {
+  const principal = await getWebPrincipal();
+  if (!["corporate_admin", "rpd", "leadership"].includes(principal.user.role)) {
     throw new Error("Permission denied.");
   }
+  const user = principal.user;
   const [imp] = await db
     .insert(dmrImports)
     .values({

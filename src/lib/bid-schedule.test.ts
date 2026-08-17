@@ -4,6 +4,7 @@ import {
   parseBidScheduleGroupBy,
   parseBidScheduleSort,
   bidDueUrgency,
+  bidSchedulePrefsHref,
   bidScheduleViewHref,
 } from "./bid-schedule";
 import { groupRowsByField } from "./sheets";
@@ -127,5 +128,14 @@ describe("bid schedule group/sort", () => {
         12,
       ),
     ).toBe("/bid-schedule?section=active&density=detail&view=12");
+    expect(
+      bidSchedulePrefsHref({
+        section: "active",
+        group: "none",
+        sort: "bidDueDate",
+        dir: "asc",
+        density: "detail",
+      }),
+    ).toBe("/bid-schedule?section=active&density=detail&source=prefs");
   });
 });

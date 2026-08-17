@@ -208,7 +208,7 @@ const NAV_SECTIONS: NavSection[] = [
         icon: FileBarChart2,
       },
       {
-        href: "/dashboards/copilot",
+        href: "/copilot",
         label: "AI Copilot",
         icon: Sparkles,
       },

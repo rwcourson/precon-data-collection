@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
 import { PageHeader } from "@/components/page-header";
 import { getMultiValuesForRounds } from "@/lib/queries";
@@ -16,6 +17,7 @@ import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getWorkspace } from "@/lib/workspace-server";
 import { requiredCompletion } from "@/lib/validation";
+import { postBidQueueRow } from "@/lib/post-bid-queue";
 import { fmtDate, fmtDollars, fmtDateTime } from "@/lib/format";
 
 export default async function PostBidPage({
@@ -97,6 +99,7 @@ export default async function PostBidPage({
                 <TableHead>Estimate Lead</TableHead>
                 <TableHead className="text-right">Est. Value</TableHead>
                 <TableHead className="w-44">Required Fields</TableHead>
+                <TableHead>Queue</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead />
               </TableRow>
@@ -104,18 +107,19 @@ export default async function PostBidPage({
             <TableBody>
               {queue.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-28 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="h-28 text-center text-sm text-muted-foreground">
                     Nothing waiting — all submitted rounds are complete.
                   </TableCell>
                 </TableRow>
               )}
               {queue.map(({ round, job, estimateLeadName }) => {
-                const { done, total } = requiredCompletion(
-                  round,
-                  multiMap.get(round.id) ?? {},
-                  { jobNumber: job.jobNumber, jobName: job.jobName, estimateLeadName },
-                );
-                const pct = Math.round((done / total) * 100);
+                const extras = {
+                  jobNumber: job.jobNumber,
+                  jobName: job.jobName,
+                  estimateLeadName,
+                };
+                const queueRow = postBidQueueRow(round, multiMap.get(round.id) ?? {}, extras);
+                const pct = queueRow.total === 0 ? 100 : Math.round((queueRow.done / queueRow.total) * 100);
                 return (
                   <TableRow key={round.id}>
                     <TableCell className="pl-6">
@@ -144,9 +148,28 @@ export default async function PostBidPage({
                           />
                         </div>
                         <span className="text-xs tabular-nums text-muted-foreground">
-                          {done}/{total}
+                          {queueRow.done}/{queueRow.total}
                         </span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {queueRow.state === "ready-to-lock" ? (
+                        <Badge variant="success" size="sm">
+                          Ready to lock
+                        </Badge>
+                      ) : (
+                        <div className="space-y-1">
+                          <Badge variant="warning" size="sm">
+                            Awaiting required fields
+                          </Badge>
+                          <p className="max-w-48 text-2xs leading-snug text-muted-foreground">
+                            Missing: {queueRow.missing.slice(0, 3).join(", ")}
+                            {queueRow.missing.length > 3
+                              ? ` +${queueRow.missing.length - 3} more`
+                              : ""}
+                          </p>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={round.status} />
@@ -158,7 +181,7 @@ export default async function PostBidPage({
                         className="px-2" nativeButton={false}
                         render={<Link href={`/rounds/${round.id}`} />}
                       >
-                        {round.status === "post_bid" && pct === 100 ? "Review" : "Enter Data"}
+                        {queueRow.state === "ready-to-lock" ? "Review" : "Enter Data"}
                       </Button>
                     </TableCell>
                   </TableRow>

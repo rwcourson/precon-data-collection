@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     return createUIMessageStreamResponse({ stream });
   }
 
-  const agent = createMagnusAgent({ rounds, previousPlan });
+  const agent = createMagnusAgent({ rounds, previousPlan, principal });
 
   return createAgentUIStreamResponse({
     agent,

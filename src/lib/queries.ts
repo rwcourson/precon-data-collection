@@ -3,13 +3,14 @@ import {
   customColumnValues,
   customColumns,
   estimateRounds,
+  jobRegionVisibility,
   jobs,
   roundMultiValues,
   users,
 } from "@/db/schema";
 import type { CustomColumn, EstimateRound, Job } from "@/db/schema";
 import type { Workspace } from "./workspace";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 export type RoundRow = {
   round: EstimateRound;
@@ -19,14 +20,22 @@ export type RoundRow = {
 
 /**
  * All rounds joined with their job + estimate lead name. When a Region
- * workspace is active the filter is applied in SQL, so a scoped page can never
- * accidentally read another Region's records.
+ * workspace is active the filter is applied in SQL against job visibility
+ * rows (not the denormalized round.region grouping column).
  */
 export async function getRoundsWithJobs(workspace?: Workspace): Promise<RoundRow[]> {
   const filters = [
     isNull(estimateRounds.deletedAt),
     isNull(jobs.deletedAt),
-    ...(workspace?.region ? [eq(estimateRounds.region, workspace.region)] : []),
+    ...(workspace?.region
+      ? [
+          sql<boolean>`exists (
+            select 1 from ${jobRegionVisibility}
+            where ${eq(jobRegionVisibility.jobId, jobs.id)}
+              and ${eq(jobRegionVisibility.region, workspace.region)}
+          )`,
+        ]
+      : []),
   ];
   const rows = await db
     .select({

@@ -3,15 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { auditLog } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { runDatabricksFeed, type FeedResult } from "@/lib/integrations/databricks/feed";
 import { probeDatabricksTables } from "@/lib/integrations/databricks/read";
 import { listPreconSheets } from "@/lib/integrations/smartsheet/pull";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 export async function runWarehouseFeed(previewOnly: boolean): Promise<FeedResult> {
-  const user = await getCurrentUser();
-  if (user.role !== "corporate_admin")
-    throw new Error("Only the Corporate Precon Admin can run the warehouse feed.");
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "integrations", "manage", "Warehouse feed");
+  const user = principal.user;
 
   // Push still requires DATABRICKS_ALLOW_WRITE=true inside runDatabricksFeed.
   const result = await runDatabricksFeed({ previewOnly });
@@ -29,9 +30,9 @@ export async function runWarehouseFeed(previewOnly: boolean): Promise<FeedResult
 }
 
 export async function probeWarehouseRead() {
-  const user = await getCurrentUser();
-  if (user.role !== "corporate_admin")
-    throw new Error("Only the Corporate Precon Admin can probe Databricks.");
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "integrations", "manage", "Databricks probe");
+  const user = principal.user;
 
   const result = await probeDatabricksTables();
 
@@ -50,9 +51,9 @@ export async function probeWarehouseRead() {
 }
 
 export async function probeSmartsheetRead() {
-  const user = await getCurrentUser();
-  if (user.role !== "corporate_admin")
-    throw new Error("Only the Corporate Precon Admin can probe Smartsheet.");
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "integrations", "manage", "Smartsheet probe");
+  const user = principal.user;
 
   const result = await listPreconSheets();
 

@@ -3,6 +3,7 @@ import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
 import type { EstimateRound } from "@/db/schema";
+import type { Principal } from "@/lib/authorization/types";
 import {
   planDashboardFromPrompt,
   planDashboardWithOptionalLlm,
@@ -13,6 +14,7 @@ import { resolveWidgets } from "@/lib/dashboard-query";
 import { sanitizePlan } from "@/lib/dashboard-sanitize";
 import { fmtDollars, fmtNumber, fmtPercent } from "@/lib/format";
 import { computeStats, rollup } from "@/lib/rollup";
+import { copilotQueryService } from "@/services/copilot-query-service";
 
 const REGION_LABELS = [
   "Central",
@@ -74,10 +76,68 @@ export type MagnusToolContext = {
   rounds: EstimateRound[];
   /** Last plan on the canvas — used by refine_dashboard when the model omits it. */
   previousPlan?: CopilotPlan | null;
+  /** When set, data tools run as this Principal (same wrappers Eve uses). */
+  principal?: Principal;
 };
+
+function createPrincipalDataTools(principal: Principal) {
+  return {
+    query_efforts: tool({
+      description:
+        "List visibility-scoped efforts with optional status, home region, department, or bid year filters.",
+      inputSchema: z.object({
+        status: z.string().optional(),
+        homeRegion: z.string().optional(),
+        department: z.string().optional(),
+        bidYear: z.number().int().optional(),
+      }),
+      execute: async (input) => copilotQueryService.queryEfforts(principal, input),
+    }),
+    query_needs_staffing: tool({
+      description:
+        "Upcoming efforts with no team assigned — the same phase-7 Needs staffing preset as Overview.",
+      inputSchema: z.object({
+        regions: z.array(z.string()).optional(),
+        departments: z.array(z.string()).optional(),
+      }),
+      execute: async (input) =>
+        copilotQueryService.queryNeedsStaffing(principal, {
+          regions: input.regions ?? [],
+          departments: input.departments ?? [],
+        }),
+    }),
+    search_notes: tool({
+      description:
+        "Search effort notes the caller can read. Returns excerpts plus job/round citations.",
+      inputSchema: z.object({
+        query: z.string(),
+      }),
+      execute: async ({ query }) => copilotQueryService.searchNotes(principal, query),
+    }),
+    person_history: tool({
+      description:
+        "Efforts a directory person worked in a year, from estimateLead plus staffing marks.",
+      inputSchema: z.object({
+        name: z.string().optional(),
+        userId: z.number().int().optional(),
+        year: z.number().int().min(2015).max(2040),
+      }),
+      execute: async (input) => copilotQueryService.personHistory(principal, input),
+    }),
+    plan_chart: tool({
+      description:
+        "Build a dashboard/chart spec from a natural-language request for the canvas.",
+      inputSchema: z.object({
+        intent: z.string().min(2).max(500),
+      }),
+      execute: async ({ intent }) => copilotQueryService.planChart(principal, intent),
+    }),
+  };
+}
 
 export function createMagnusTools(ctx: MagnusToolContext) {
   return {
+    ...(ctx.principal ? createPrincipalDataTools(ctx.principal) : {}),
     get_portfolio_brief: tool({
       description:
         "Get a compact portfolio snapshot (volume, win rate, fee, region/sector mix). Call before answering data questions.",

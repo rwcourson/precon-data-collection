@@ -1,5 +1,6 @@
 import { DomainError } from "@/domain/errors";
-import { canEditAfterLock } from "@/lib/permissions";
+import { authorize } from "@/lib/authorization/kernel";
+import { createPrincipal } from "@/lib/authorization/principal";
 import type { EstimateRound, User } from "@/db/schema";
 
 export type OutcomeValue = "pending" | "successful" | "unsuccessful";
@@ -23,7 +24,22 @@ export function planOutcomeUpdate(
   round: Pick<EstimateRound, "id" | "status" | "region" | "outcome">,
   outcome: OutcomeValue,
 ): { audit: OutcomeAuditEntry | null } {
-  if (round.status === "locked" && !canEditAfterLock(user, round)) {
+  const principal = createPrincipal({
+    user,
+    authSource: "service",
+    workspaceRegion: user.region,
+  });
+  const canCorrect = authorize(principal, "edit", {
+    type: "round",
+    id: round.id,
+    region: round.region,
+    ownerId: null,
+    published: true,
+    deleted: false,
+    round: { status: round.status, region: round.region },
+    fieldKey: "outcome",
+  }).allowed;
+  if (round.status === "locked" && !canCorrect) {
     throw DomainError.forbidden(
       "Record is locked — only the RPD/SPD can update the outcome",
       "Post-lock outcome corrections are limited to the regional RPD/SPD.",

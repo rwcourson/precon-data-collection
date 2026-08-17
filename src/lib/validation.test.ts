@@ -22,6 +22,8 @@ function sparseRound(): EstimateRound {
     city: "Nashville",
     state: "TN",
     estimateLeadId: 2,
+    teamAssignedAt: null,
+    teamAssignedById: null,
     mlt: "Healthcare",
     marketSector: "Healthcare – Acute",
     contractType: "GC - Lump Sum",
@@ -88,6 +90,7 @@ describe("lock gate labels", () => {
     expect(missing).not.toContain("Owner");
     expect(missing).not.toContain("Drawings Due");
     expect(REQUIRED_FIELD_KEYS).not.toContain("owner");
+    expect(REQUIRED_FIELD_KEYS).not.toContain("spoilDisposalSite");
 
     const gate = evaluateLockGate(sparseRound(), {}, extras);
     expect(gate.ok).toBe(false);

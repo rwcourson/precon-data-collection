@@ -1,7 +1,8 @@
 import type { BidScheduleGroupBy } from "@/domain/contracts";
 import { bidScheduleGroupBySchema } from "@/domain/contracts";
-import { STATUS_LABELS } from "@/lib/permissions";
+import { STATUS_LABELS } from "@/lib/labels";
 import { groupRowsByField, type LabeledGroup } from "@/lib/sheets";
+import { filterByHierarchy, parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
 
 const EXPORT_SECTION_STATUSES: Record<string, Array<keyof typeof STATUS_LABELS>> = {
   all: ["active", "upcoming", "outstanding"],
@@ -16,6 +17,8 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
   opts: {
     section?: string | null;
     region?: string | null;
+    regions?: string | null;
+    departments?: string | null;
     phase?: string | null;
     year?: string | null;
     q?: string | null;
@@ -25,7 +28,21 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
   const keys = EXPORT_SECTION_STATUSES[opts.section ?? "all"] ?? EXPORT_SECTION_STATUSES.all;
   const statuses = keys.map((s) => STATUS_LABELS[s]);
   let filtered = rows.filter((r) => statuses.includes(String(r.status)));
-  if (opts.region) filtered = filtered.filter((r) => r.region === opts.region);
+  if (opts.regions || opts.departments) {
+    const hierarchy = parseHierarchyFromSearchParams({
+      regions: opts.regions ?? undefined,
+      departments: opts.departments ?? undefined,
+    });
+    filtered = filterByHierarchy(
+      filtered.map((r) => ({
+        ...r,
+        preconDepartment: String(r.preconDepartment ?? ""),
+      })),
+      hierarchy,
+    );
+  } else if (opts.region) {
+    filtered = filtered.filter((r) => r.region === opts.region);
+  }
   if (opts.phase && opts.phase !== "all") {
     filtered = filtered.filter((r) => r.estimatePhase === opts.phase);
   }
@@ -135,21 +152,37 @@ export type BidScheduleViewQuery = {
   sort?: string;
   dir?: "asc" | "desc";
   region?: string;
+  regions?: string[];
+  departments?: string[];
   queue?: string;
   columns?: string[];
   density?: "summary" | "detail";
 };
 
-export function bidScheduleViewHref(config: BidScheduleViewQuery, viewId: number): string {
+function bidScheduleSearchParams(config: BidScheduleViewQuery): URLSearchParams {
   const p = new URLSearchParams();
   if (config.section && config.section !== "all") p.set("section", config.section);
   if (config.group && config.group !== "none") p.set("group", config.group);
   if (config.sort && config.sort !== "bidDueDate") p.set("sort", config.sort);
   if (config.dir && config.dir !== "asc") p.set("dir", config.dir);
-  if (config.region && config.region !== "all") p.set("region", config.region);
+  if (config.regions?.length) p.set("regions", config.regions.join(","));
+  else if (config.region && config.region !== "all") p.set("region", config.region);
+  if (config.departments?.length) p.set("departments", config.departments.join(","));
   if (config.density && config.density !== "summary") p.set("density", config.density);
   if (config.queue) p.set("queue", config.queue);
+  return p;
+}
+
+export function bidScheduleViewHref(config: BidScheduleViewQuery, viewId: number): string {
+  const p = bidScheduleSearchParams(config);
   p.set("view", String(viewId));
+  return `/bid-schedule?${p.toString()}`;
+}
+
+/** Leave a named view without re-applying the starred default. */
+export function bidSchedulePrefsHref(config: BidScheduleViewQuery): string {
+  const p = bidScheduleSearchParams(config);
+  p.set("source", "prefs");
   return `/bid-schedule?${p.toString()}`;
 }
 

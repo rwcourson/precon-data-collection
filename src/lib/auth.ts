@@ -12,7 +12,7 @@ import {
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { DomainError } from "@/domain/errors";
 import { readForwardedSsoIdentity, ssoHeaderNames } from "@/lib/sso-trust";
-import { ROLE_LABELS } from "@/lib/permissions";
+import { ROLE_LABELS } from "@/lib/labels";
 import {
   isSuperAdminEmail,
   SUPER_ADMIN_ROLE,

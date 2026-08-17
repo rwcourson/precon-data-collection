@@ -42,7 +42,7 @@ import {
   type SmartsheetRoundDraft,
 } from "../lib/integrations/smartsheet/parse";
 import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
-import { consolidatedRegionalReportInsert } from "../lib/report-presets";
+import { consolidatedRegionalReportInsert, upcomingBidScheduleReportInsert } from "../lib/report-presets";
 
 const DATA_DIR = path.join(process.cwd(), "data/smartsheet/json");
 
@@ -292,6 +292,7 @@ async function main() {
   const scan = await syncDataQualityFlags();
 
   await db.insert(savedReports).values(consolidatedRegionalReportInsert(rpd.id));
+  await db.insert(savedReports).values(upcomingBidScheduleReportInsert(rpd.id));
 
   console.log("Rebuilding the workspace sheet tree…");
   const tree = await seedSheetsFromExport(DATA_DIR);

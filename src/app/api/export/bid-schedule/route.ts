@@ -38,6 +38,8 @@ export async function GET(req: NextRequest) {
   const filtered = applyBidScheduleExportScope(rows, {
     section: params.get("section"),
     region: scoped.region,
+    regions: params.get("regions"),
+    departments: params.get("departments"),
     phase: params.get("phase"),
     year: params.get("year"),
     q: params.get("q"),

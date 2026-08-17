@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusMenu } from "@/components/bid-schedule/status-menu";
+import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
+import { NotesThread } from "@/components/notes/notes-thread";
 import { EntryForm } from "@/components/rounds/entry-form";
+import { RegionCustomTab } from "@/components/rounds/region-custom-tab";
 import { ApproveLockButton } from "@/components/rounds/approve-lock-button";
 import { OutcomeSelect } from "@/components/rounds/outcome-select";
 import { db } from "@/db";
@@ -24,13 +27,15 @@ import {
   getMultiValues,
   getReferenceValues,
 } from "@/lib/queries";
+import { allowedTransitions } from "@/lib/authorization/lifecycle";
 import {
-  allowedTransitions,
-  canApproveLock,
-  canEditAfterLock,
-  canEnterPostBid,
-  STATUS_LABELS,
-} from "@/lib/permissions";
+  principalCanApproveLock,
+  principalCanAssignJobUser,
+  principalCanEditAfterLock,
+  principalCanEnterPostBid,
+  principalCanMarkStaffing,
+} from "@/lib/authorization/decisions";
+import { STATUS_LABELS } from "@/lib/labels";
 import {
   FIELD_DEFS,
   MULTI_FIELD_KEYS,
@@ -50,21 +55,25 @@ import {
   listCustomColumnsForPrincipal,
   listDirectoryUsersForPrincipal,
 } from "@/lib/authorization/loaders";
+import { notesService } from "@/services/notes-service";
+import { regionCustomTabForRound } from "@/lib/region-custom-columns";
 
 export default async function RoundPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | undefined>>;
 }) {
   const { id } = await params;
+  const query = (await searchParams) ?? {};
   const principal = await getWebPrincipal();
   const loaded = await loadRoundForPrincipal(principal, Number(id));
   if (!loaded) notFound();
   const { round, job, estimateLeadName } = loaded.value;
 
-  const [user, multi, lists, allUsers, customColsAll, transitions, audits] =
+  const [multi, lists, allUsers, customColsAll, transitions, audits, threadNotes] =
     await Promise.all([
-      Promise.resolve(principal.user),
       getMultiValues(round.id),
       getReferenceValues(),
       listDirectoryUsersForPrincipal(principal),
@@ -79,11 +88,13 @@ export default async function RoundPage({
         .from(auditLog)
         .where(eq(auditLog.roundId, round.id))
         .orderBy(desc(auditLog.createdAt)),
+      notesService.list(principal, round.id),
     ]);
 
   const customCols = customColsAll.filter(
     (c) => c.scope === "company" || c.region === round.region,
   );
+  const regionTab = regionCustomTabForRound(customCols, round);
   const customValues =
     (await getCustomValuesForRounds([round.id])).get(round.id) ?? {};
 
@@ -98,8 +109,8 @@ export default async function RoundPage({
 
   const locked = round.status === "locked";
   const canEdit = locked
-    ? canEditAfterLock(user, round)
-    : canEnterPostBid(user, round) ||
+    ? principalCanEditAfterLock(principal, round)
+    : principalCanEnterPostBid(principal, round) ||
       ["active", "upcoming", "outstanding"].includes(round.status);
 
   const initialValues: Record<string, string> = {};
@@ -151,7 +162,7 @@ export default async function RoundPage({
             <StatusMenu
               roundId={round.id}
               status={round.status}
-              allowed={allowedTransitions(user, round)}
+              allowed={allowedTransitions(principal, round)}
             />
           </div>
           <p className="text-sm text-muted-foreground">
@@ -164,15 +175,30 @@ export default async function RoundPage({
             <OutcomeSelect
               roundId={round.id}
               outcome={round.outcome}
-              disabled={locked && !canEditAfterLock(user, round)}
+              disabled={locked && !principalCanEditAfterLock(principal, round)}
             />
-            {round.status === "post_bid" && canApproveLock(user, round) && (
+            {round.status === "post_bid" && principalCanApproveLock(principal, round) && (
               <ApproveLockButton roundId={round.id} />
             )}
+            {principalCanMarkStaffing(principal, round) && (
+              <TeamAssignedButton
+                roundId={round.id}
+                assigned={round.teamAssignedAt != null}
+              />
+            )}
           </div>
+          {round.teamAssignedAt && (
+            <p className="max-w-xs text-right text-2xs text-muted-foreground">
+              Team assigned {fmtDateTime(round.teamAssignedAt)}
+              {round.teamAssignedById
+                ? ` by ${userMap.get(round.teamAssignedById) ?? "a teammate"}`
+                : ""}
+              . Independent of Estimate Lead.
+            </p>
+          )}
           {locked && (
             <p className="max-w-xs text-right text-2xs text-muted-foreground">
-              {canEditAfterLock(user, round)
+              {principalCanEditAfterLock(principal, round)
                 ? "Post-lock outcome correction (RPD/SPD) — changes are audited."
                 : "Outcome is locked. Ask the regional RPD/SPD to correct it."}
             </p>
@@ -219,13 +245,26 @@ export default async function RoundPage({
         ))}
       </div>
 
-      <Tabs defaultValue="data">
+      <Tabs
+        defaultValue={
+          query.tab === "notes" ? "notes" : query.tab === "region" && regionTab ? "region" : "data"
+        }
+      >
         <TabsList>
           <TabsTrigger value="data">Estimate Data</TabsTrigger>
+          {regionTab && (
+            <TabsTrigger value="region">{regionTab.title}</TabsTrigger>
+          )}
           <TabsTrigger value="metrics">
             Calculated Metrics
             <Badge variant="secondary" size="sm" className="ml-1.5">
               {METRIC_DEFS.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="notes">
+            Notes
+            <Badge variant="secondary" size="sm" className="ml-1.5">
+              {threadNotes.length}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="history">
@@ -248,12 +287,25 @@ export default async function RoundPage({
             estimateLeadId={round.estimateLeadId}
             users={allUsers.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
             lists={lists}
-            customCols={customCols.filter((c) => c.scope === "region")}
+            customCols={customCols}
             canEdit={canEdit}
             locked={locked}
             missingKeys={missingKeys}
           />
         </TabsContent>
+
+        {regionTab && (
+          <TabsContent value="region" className="pt-2">
+            <RegionCustomTab
+              roundId={round.id}
+              title={regionTab.title}
+              columns={regionTab.columns}
+              initialCustom={customValues as Record<number, string>}
+              canEdit={canEdit}
+              locked={locked}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="metrics" className="pt-2">
           <Card>
@@ -282,6 +334,41 @@ export default async function RoundPage({
                   </div>
                 </section>
               ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notes" className="pt-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Effort notes</CardTitle>
+              <CardDescription>
+                Chat-shaped history on this pricing effort — visible to anyone who can
+                see the round. Not private, not project-level.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <NotesThread
+                roundId={round.id}
+                currentUserId={principal.user.id}
+                canModerate={["corporate_admin", "rpd", "admin_jsa"].includes(
+                  principal.user.role,
+                )}
+                initialNotes={threadNotes}
+                directory={allUsers.map((user) => ({
+                  id: user.id,
+                  name: user.name,
+                  title: user.title,
+                  region: user.region,
+                }))}
+                jobId={job.id}
+                canAssignUsers={principalCanAssignJobUser(principal)}
+                highlightNoteId={
+                  query.note && Number.isInteger(Number(query.note))
+                    ? Number(query.note)
+                    : null
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>

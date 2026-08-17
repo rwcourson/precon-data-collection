@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withEve } from "eve/next";
 
 const nextConfig: NextConfig = {
   // PGlite loads WASM assets from disk at runtime; keep it out of the bundle.
@@ -13,4 +14,4 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
 };
 
-export default nextConfig;
+export default withEve(nextConfig);

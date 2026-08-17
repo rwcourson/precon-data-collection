@@ -11,7 +11,7 @@ import {
 import { createPrincipal } from "@/lib/authorization/principal";
 import { DomainError } from "@/domain/errors";
 import { transactionFault } from "@/lib/transactions";
-import { pursuitService } from "@/services/pursuit-service";
+import { pursuitService, requireCreatedPursuit } from "@/services/pursuit-service";
 import {
   analyzeLogicalDuplicates,
   resolveLogicalDuplicates,
@@ -179,7 +179,8 @@ describe("transactions and concurrency", () => {
       authSource: "demo_session",
       workspaceRegion: pcm.region,
     });
-    const created = await pursuitService.createPursuit(principal, {
+    const created = requireCreatedPursuit(
+      await pursuitService.createPursuit(principal, {
       mode: "manual",
       jobName: `Atomic ${Date.now()}`,
       region: pcm.region!,
@@ -187,7 +188,9 @@ describe("transactions and concurrency", () => {
       estimatePhase: "ROM",
       bidYear: 2026,
       initialStatus: "active",
-    });
+      confirmDuplicate: true,
+    }),
+    );
     try {
       const transitions = await db
         .select()

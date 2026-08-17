@@ -1,14 +1,13 @@
 import { PageHeader } from "@/components/page-header";
 import { SheetBrowser } from "@/components/sheets/sheet-browser";
+import { principalCanCreateSheet } from "@/lib/authorization/decisions";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { canCreateSheet } from "@/lib/sheets";
 import { listArchivedSheets, listFolders, listSheets } from "@/lib/sheets-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SheetsPage() {
   const principal = await getWebPrincipal();
-  const user = principal.user;
   const workspace = {
     region: principal.workspace.region,
     label: principal.workspace.region ?? "Corporate",
@@ -31,7 +30,7 @@ export default async function SheetsPage() {
         archived={archived}
         workspaceLabel={workspace.label}
         workspaceRegion={workspace.region}
-        canCreate={canCreateSheet(user, workspace.region)}
+        canCreate={principalCanCreateSheet(principal, workspace.region)}
       />
     </div>
   );

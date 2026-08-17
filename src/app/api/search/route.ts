@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { estimateRounds, jobs, users } from "@/db/schema";
 import {
   listAdminSectionsForPrincipal,
-  principalRegionPredicate,
+  principalJobVisibilityPredicate,
   searchSheetsForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
       .where(
         and(
           isNull(jobs.deletedAt),
-          principalRegionPredicate(jobs.region, principal),
+          principalJobVisibilityPredicate(jobs.id, principal),
           or(
             ilike(jobs.jobNumber, pattern),
             ilike(jobs.jobName, pattern),
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
         and(
           isNull(estimateRounds.deletedAt),
           isNull(jobs.deletedAt),
-          principalRegionPredicate(estimateRounds.region, principal),
+          principalJobVisibilityPredicate(jobs.id, principal),
           or(
             ilike(jobs.jobNumber, pattern),
             ilike(jobs.jobName, pattern),
