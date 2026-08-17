@@ -48,6 +48,20 @@ npx vercel env ls --scope brasfieldgorrie
 npx vercel cron ls
 ```
 
+### Preview deploys and Git author
+
+Vercel Git deploys **BLOCK** when the commit author email does not map to a GitHub user who is on the `brasfieldgorrie` team ([collaboration troubleshooting](https://vercel.com/docs/deployments/troubleshoot-project-collaboration#account-configuration)). Workstation hostname emails such as `rcourson@bgm-….brasfieldgorrie.com` do this. Use a GitHub-linked author, for example:
+
+```bash
+git commit --author="rwcourson <308136783+rwcourson@users.noreply.github.com>"
+```
+
+A team member can also approve the blocked deployment in the Vercel inspector. `npx vercel` (no `--prod`) creates a Preview as the logged-in CLI user and skips that Git-author check.
+
+### Vercel Authentication
+
+Project SSO protection is **on** for `all_except_custom_domains`. `*.vercel.app` inspector URLs require a Brasfield & Gorrie Vercel login. Custom domains on `magnus.brasfieldgorrie.app` do not — they use the app’s Entra SSO (`AUTH_MODE=sso`) on Production.
+
 ### Eve on Vercel
 
 `withEve()` starts a sibling Eve process during **`next dev`**. Vercel serverless does not run that sibling. `/copilot` probes `/eve/v1/health` and falls back to Magnus (`/api/v1/ai/magnus`) when Eve is down. That is expected in production until Eve has a durable host.
