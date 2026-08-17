@@ -50,8 +50,7 @@ jobs:
       - run: npm run verify:expo
 
   ios:
-    runs-on: macos-14
-    if: github.event_name == 'push'
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
