@@ -20,7 +20,7 @@ How this repo is hosted. Update this file when the project name, domain, or env 
 | `expo` | Ubuntu | Mobile typecheck / tests / bundle |
 | `ios` | macOS, **push to `master`/`main` only** | Native iOS verify |
 
-`verify:web` needs Playwright Chromium (`npx playwright install --with-deps chromium` in CI) and demo PGlite env (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=pglite`).
+`verify:web` needs Playwright Chromium (`pnpm exec playwright install --with-deps chromium` in CI) and demo PGlite env (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=pglite`). CI installs with `pnpm install --frozen-lockfile` (lockfile is `pnpm-lock.yaml`; `packageManager` is `pnpm@11.22.0`).
 
 Do not skip hooks on commits. Do not force-push `master`.
 
@@ -119,10 +119,10 @@ Neon marketplace vars (`POSTGRES_*`, `PGHOST`, …) are present on all three env
 
 ### Migrations on deploy
 
-`npm run db:migrate:deploy` applies `drizzle/` against `DATABASE_URL_UNPOOLED` when `APP_ENV=production`. Preview/production deploys that skip this leave new tables (notes, visibility, prefs, schedules) missing. After merging schema work, run migrate against the unpooled URL before the first request that touches those tables.
+`pnpm run db:migrate:deploy` applies `drizzle/` against `DATABASE_URL_UNPOOLED` when `APP_ENV=production`. Preview/production deploys that skip this leave new tables (notes, visibility, prefs, schedules) missing. After merging schema work, run migrate against the unpooled URL before the first request that touches those tables.
 
 ```bash
-APP_ENV=production DATABASE_URL_UNPOOLED=… npm run db:migrate:deploy
+APP_ENV=production DATABASE_URL_UNPOOLED=… pnpm run db:migrate:deploy
 ```
 
 ### Pulling env locally
@@ -131,4 +131,4 @@ APP_ENV=production DATABASE_URL_UNPOOLED=… npm run db:migrate:deploy
 npx vercel env pull .env.local --scope brasfieldgorrie
 ```
 
-`.env.local` wins over `.env.development`. Do not run `npm run db:reset` against a shell that still has Neon URLs if you meant to keep hosted data — demo bootstrap wipes **PGlite only**, but it is easy to confuse which database `next dev` will open. `npm run db:status` first.
+`.env.local` wins over `.env.development`. Do not run `pnpm run db:reset` against a shell that still has Neon URLs if you meant to keep hosted data — demo bootstrap wipes **PGlite only**, but it is easy to confuse which database `next dev` will open. `pnpm run db:status` first.

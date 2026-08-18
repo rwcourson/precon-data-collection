@@ -5,7 +5,7 @@ const repoRoot = path.resolve(import.meta.dirname, "..");
 const mobileRoot = path.join(repoRoot, "apps", "mobile");
 const expectedConfig = path.join(mobileRoot, "tsconfig.json");
 
-const normal = spawnSync("npm", ["run", "typecheck"], {
+const normal = spawnSync("pnpm", ["exec", "tsc", "--noEmit"], {
   cwd: mobileRoot,
   encoding: "utf8",
   stdio: "pipe",
@@ -18,8 +18,8 @@ process.stderr.write(normal.stderr ?? "");
 if (normal.status !== 0) process.exit(normal.status ?? 1);
 
 const sentinel = spawnSync(
-  "npm",
-  ["run", "typecheck", "--", "--project", "tsconfig.verifier.json"],
+  "pnpm",
+  ["exec", "tsc", "--noEmit", "--project", "tsconfig.verifier.json"],
   { cwd: mobileRoot, encoding: "utf8", stdio: "pipe" },
 );
 const sentinelOutput = `${sentinel.stdout ?? ""}${sentinel.stderr ?? ""}`;

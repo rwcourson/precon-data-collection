@@ -1,0 +1,5 @@
+packages:
+  - "apps/mobile"
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

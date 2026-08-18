@@ -14,20 +14,20 @@ jobs:
         working-directory: .
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run db:migrate:check
-      - run: npm run contract:check
-      - run: npm run security:check
-      - run: npm run perf:check
-      - run: npm run release:check
-      - run: npm run docs:check
-      - run: npm run verify:web
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm db:migrate:check
+      - run: pnpm contract:check
+      - run: pnpm security:check
+      - run: pnpm perf:check
+      - run: pnpm release:check
+      - run: pnpm docs:check
+      - run: pnpm verify:web
         env:
           APP_ENV: demo
           AUTH_MODE: demo
@@ -39,25 +39,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            apps/mobile/package-lock.json
-      - run: npm ci
-      - run: npm --prefix apps/mobile ci
-      - run: npm run contract:check
-      - run: npm run verify:expo
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contract:check
+      - run: pnpm verify:expo
 
   ios:
     runs-on: macos-15
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: npm ci
-      - run: npm run verify:ios
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify:ios

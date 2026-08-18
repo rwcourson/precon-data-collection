@@ -29,21 +29,21 @@ Jay-meeting upgrades in full: [docs/jay-mcdaniel-upgrades.md](docs/jay-mcdaniel-
 Hosted Neon holds the Smartsheet import. With `DATABASE_MODE=postgres` and Neon URLs in `.env.local`:
 
 ```bash
-npm install
-npm run db:status   # should show ~600+ jobs / ~1000+ rounds / sheets
-npm run dev         # http://localhost:3000 against Neon
+pnpm install
+pnpm run db:status   # should show ~600+ jobs / ~1000+ rounds / sheets
+pnpm run dev         # http://localhost:3000 against Neon
 ```
 
-Do **not** run `npm run db:reset` if you want this dataset — that rebuilds the small synthetic demo on local PGlite and never writes Neon.
+Do **not** run `pnpm run db:reset` if you want this dataset — that rebuilds the small synthetic demo on local PGlite and never writes Neon.
 
-After pulling a fresh Smartsheet export, `npm run db:import-smartsheet` maps **Owner**, **Drawings Due Date**, and **Bid Review Date** through the shipped parser (`src/lib/integrations/smartsheet/parse.ts`).
+After pulling a fresh Smartsheet export, `pnpm run db:import-smartsheet` maps **Owner**, **Drawings Due Date**, and **Bid Review Date** through the shipped parser (`src/lib/integrations/smartsheet/parse.ts`).
 
 ### Synthetic demo only (offline PGlite)
 
 ```bash
-npm install
-npm run db:reset    # wipe .pglite/data + demo seed (default user: Brian Meyers)
-npm run dev         # requires DATABASE_MODE=pglite (see .env.development)
+pnpm install
+pnpm run db:reset    # wipe .pglite/data + demo seed (default user: Brian Meyers)
+pnpm run dev         # requires DATABASE_MODE=pglite (see .env.development)
 ```
 
 Stop `next dev` before `db:reset` or `next build` — the build deletes `.next/dev`.
@@ -51,7 +51,7 @@ Stop `next dev` before `db:reset` or `next build` — the build deletes `.next/d
 ### Full offline rebuild from Smartsheet export
 
 ```bash
-npm run db:bootstrap:smartsheet   # → .pglite/data-full
+pnpm run db:bootstrap:smartsheet   # → .pglite/data-full
 # then point .env.local at PGLITE_DATA_DIR=.pglite/data-full + DATABASE_MODE=pglite
 ```
 
@@ -99,19 +99,19 @@ Every integration has a live path guarded by an environment variable; unset, it 
 ## Smoke tests
 
 ```bash
-npm test                 # unit + integration (PGlite)
-npm run docs:check
-npm run db:migrate:check
-npm run smoke:isolated   # isolated production server + Playwright
-npm run verify:web       # build + typecheck + lint + test + isolated smoke
-npm run verify:all       # web + Expo + iOS
+pnpm test                 # unit + integration (PGlite)
+pnpm run docs:check
+pnpm run db:migrate:check
+pnpm run smoke:isolated   # isolated production server + Playwright
+pnpm run verify:web       # build + typecheck + lint + test + isolated smoke
+pnpm run verify:all       # web + Expo + iOS
 ```
 
-Run `npm run typecheck` **after** `npm run build` on a clean tree (Next 16 generates `LayoutProps`).
+Run `pnpm run typecheck` **after** `pnpm run build` on a clean tree (Next 16 generates `LayoutProps`).
 
 ## Stack
 
-Next.js 16.3 (App Router) · React 19 · TypeScript · Drizzle ORM + PGlite / Neon · Tailwind 4 + shadcn/ui · Better Auth · AI SDK 7 · Eve (`withEve`) · ExcelJS
+Next.js 16.3 (App Router) · React 19 · TypeScript · Drizzle ORM + PGlite / Neon · Tailwind 4 + shadcn/ui · Better Auth · AI SDK 7 · Eve (`withEve`) · ExcelJS · pnpm workspace (`apps/mobile`)
 
 See [apps/ios/README.md](apps/ios/README.md) for the native client (same `/api/v1/mobile`). It is not part of the V1 leadership demo.
 
