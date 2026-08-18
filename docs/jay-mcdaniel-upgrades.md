@@ -19,7 +19,7 @@ This page is the operator and engineer contract for everything that meeting aske
 | Authorization | One `authorize()` kernel; new capabilities registered | `src/lib/authorization/` |
 | Visibility | Extra regions + person pins; Auburn-style duplicate warning | Job **Regions** editor; New Pursuit |
 | Bid schedule | Region → market tree (`preconDepartment`); server column prefs | Filter popover; `?view=` / `?source=prefs` |
-| Notes | Chat thread + attachments on the round | Round **Notes** tab |
+| Notes | Chat thread + attachments on the round (`POST /api/notes`) | Round **Notes** tab |
 | Mentions | `@[userId]` tokens, bell + deep link | Composer `@`; `/rounds/{id}?tab=notes&note=` |
 | Staffing | Explicit team-assigned mark; Needs staffing queue | Overview card; `?queue=needs-staffing` |
 | Print / reports | Latest note column; wrap CSS | Bid-schedule / upcoming presets |
@@ -27,7 +27,7 @@ This page is the operator and engineer contract for everything that meeting aske
 | Finalize | `finalizeRound()` lock-passthrough | [ADR 002](adr/002-post-bid-finalize-seam.md) |
 | Dashboards | Seeded Standard set; duplicate to personal | Studio; Standard badge |
 | Schedules | Owner Friday/Monday 8am mail; idempotent `periodKey` | Reports → Email schedules |
-| Copilot | Eve agent + Principal tools; Magnus fallback | `/copilot` |
+| Copilot | Eve agent + Principal tools; Magnus fallback; browser chat history | `/copilot` |
 
 ## Visibility
 
@@ -61,7 +61,7 @@ Hierarchical filter is **`preconDepartment`**, not a Georgia special case. Empty
 Chat-shaped history on the pricing effort: author, timestamp, edit marker, soft-delete, attachments.
 
 - Body max **10,000** characters. Markup mentions are `@[userId]`, never a display-name string.
-- Attachments: any file type, **25 MB** inclusive, server-enforced. Download: `GET /api/notes/attachments/:id` (kernel read on the parent round, `Content-Disposition: attachment`).
+- Attachments: any file type, **25 MB** inclusive, server-enforced. The composer posts multipart to `POST /api/notes` (`src/lib/note-create.ts`) so production does not surface React error #441. Download: `GET /api/notes/attachments/:id` (kernel read on the parent round, `Content-Disposition: attachment`).
 - Mentions notify only users who can **read** that round. Re-editing the same mention does not duplicate. Deep link: `/rounds/{id}?tab=notes&note={id}`.
 - Composer is contenteditable chips (`NoteComposer`); storage stays `@[userId]`. The mention picker opens only after the first letter, ranks matches, and portals above the composer so it is not clipped.
 - Notes live on the round **Notes** tab only. There is no bid-schedule row drawer.
@@ -103,7 +103,7 @@ Tools POST `/api/v1/copilot/tools` with HMAC + a **numeric** `x-eve-principal-id
 | `person_history` | Estimate lead + staffing marks for a year |
 | `plan_chart` | Chart spec for the canvas |
 
-UI: `/copilot` — typography-only empty state, then rail + canvas. Assistant replies render markdown (`CopilotMarkdown`). Query tables use product column labels (`columnDisplayLabel`), not raw keys. `prefers-reduced-motion` disables the slide. If `/eve/v1/health` is not ok (typical on Vercel production), the page falls back to Magnus `useChat` over `/api/v1/ai/magnus`. Magnus stays for API and mobile and shares `copilotQueryService`.
+UI: `/copilot` — typography-only empty state, then rail + canvas. The shell is viewport-height so the composer stays on screen; the thread scrolls. Assistant replies render markdown (`CopilotMarkdown`), including GFM tables (and tables that arrived as one pipe-joined line). Query tables on the canvas use product column labels (`columnDisplayLabel`), not raw keys. Chat history is per-user in `localStorage` (`src/lib/copilot-history.ts`): Recent on the empty state, clock icon during a thread, **+** for a new chat. Magnus restore sends the stored messages on follow-up. `prefers-reduced-motion` disables the slide. If `/eve/v1/health` is not ok (typical on Vercel production), the page falls back to Magnus `useChat` over `/api/v1/ai/magnus`. Magnus stays for API and mobile and shares `copilotQueryService`.
 
 Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Next is on). Ignore `.eve/` in git and eslint.
 
@@ -115,6 +115,7 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 - Pass `items={[{ value, label }]}` to `Select` / `UrlSelect` whenever the stored value is an id or key — the trigger must show the name.
 - Dollar and count fields use `NumericInput` so commas appear while typing; stored values stay numeric.
 - Select and dropdown menus size to `--available-height` and wrap labels so they are not clipped.
+- Control height is **`h-7` (28px)** — same as the sheet **Pin** button. Buttons (default/`sm`), inputs, selects, date pickers, and header chips (`Badge` `size="md"`) share it. Dense table pills stay `Badge` `sm`.
 - Job **Access** lists visibility regions and the team for those regions; people outside the selected regions sit under **Added individually**.
 
 ## File map
@@ -124,7 +125,8 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 | Kernel + capabilities | `src/lib/authorization/kernel.ts` |
 | Job visibility SQL | `src/lib/authorization/loaders.ts` |
 | Hierarchy filter | `src/lib/bid-schedule-filter.ts`, `src/lib/region-departments.ts` |
-| Notes / mentions | `src/services/notes-service.ts`, `src/lib/note-body.ts`, `src/components/notes/note-composer.tsx` |
+| Notes / mentions | `src/services/notes-service.ts`, `src/lib/note-body.ts`, `src/lib/note-create.ts`, `src/components/notes/note-composer.tsx` |
+| Note attachments POST | `src/app/api/notes/route.ts` |
 | Date picker | `src/components/ui/date-picker.tsx`, `src/lib/calendar-grid.ts` |
 | Report results layout | `src/lib/report-layout.ts` |
 | Copilot table labels | `src/lib/column-labels.ts` |
@@ -135,6 +137,7 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 | Standard dashboards | `src/lib/standard-dashboards.ts` |
 | Schedule periodKey | `src/lib/distribution-schedule.ts` |
 | Copilot tools | `src/services/copilot-query-service.ts`, `agent/` |
+| Copilot markdown / history | `src/components/copilot/copilot-markdown.tsx`, `src/lib/copilot-history.ts` |
 | HMAC bridge | `src/lib/ai/copilot-bridge.ts` |
 | Generated PPTX / brand | `brand/`, `src/lib/brand/`, `src/lib/pptx-canvas.ts`, `src/lib/pptx-forecast.ts` |
 

@@ -224,7 +224,7 @@ export function ViewSheet({
               markDirty();
             }}
           >
-            <SelectTrigger size="sm" className="h-8 w-44 text-[13px]">
+            <SelectTrigger size="sm" className="w-44 text-[13px]">
               <SelectValue placeholder="No grouping" />
             </SelectTrigger>
             <SelectContent>
@@ -351,7 +351,7 @@ function ColumnPicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Find a column…"
-            className="h-8 pl-8"
+            className="pl-8"
           />
         </div>
         <div className="max-h-80 space-y-3 overflow-y-auto">
@@ -457,7 +457,7 @@ function FilterBuilder({
               value={draft.field}
               onValueChange={(v) => setDraft({ ...draft, field: v ?? "" })}
             >
-              <SelectTrigger size="sm" className="h-8 w-full text-[13px]">
+              <SelectTrigger size="sm" className="w-full text-[13px]">
                 <SelectValue placeholder="Choose a column…" />
               </SelectTrigger>
               <SelectContent>
@@ -475,7 +475,7 @@ function FilterBuilder({
               value={draft.op}
               onValueChange={(v) => setDraft({ ...draft, op: v ?? "eq" })}
             >
-              <SelectTrigger size="sm" className="h-8 text-[13px]">
+              <SelectTrigger size="sm" className="text-[13px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -487,7 +487,6 @@ function FilterBuilder({
               </SelectContent>
             </Select>
             <Input
-              className="h-8"
               value={draft.value}
               disabled={draft.op === "blank" || draft.op === "notblank"}
               placeholder={draft.op === "in" ? "Active, Upcoming" : "Value"}

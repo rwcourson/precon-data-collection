@@ -539,7 +539,6 @@ function FilterPanel({
         value={filter?.text ?? ""}
         onChange={(e) => onChange({ ...filter, text: e.target.value })}
         placeholder="Contains…"
-        className="h-8"
         autoFocus
       />
       {options.length > 0 && (

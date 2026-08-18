@@ -54,7 +54,7 @@ export function UrlSelect({
       <SelectTrigger
         size="sm"
         className={cn(
-          "h-8 min-w-[8.5rem] max-w-[min(22rem,100%)] border-border/80 bg-card text-[13px] *:data-[slot=select-value]:line-clamp-none",
+          "min-w-[8.5rem] max-w-[min(22rem,100%)] border-border/80 bg-card text-[13px] *:data-[slot=select-value]:line-clamp-none",
           className,
         )}
       >

@@ -55,12 +55,12 @@ export default async function SheetPage({
         }
         actions={
           <>
-            <Badge variant="outline" size="sm" className="gap-1">
-              <Icon className="size-3" />
+            <Badge variant="outline" size="md" className="gap-1.5">
+              <Icon />
               {sheet.kind === "view" ? "Pursuit view" : "Standalone"}
             </Badge>
             {sheet.sourceSheet && (
-              <Badge variant="outline" size="sm" className="text-muted-foreground">
+              <Badge variant="outline" size="md" className="text-muted-foreground">
                 Migrated from {sheet.sourceSheet}
               </Badge>
             )}

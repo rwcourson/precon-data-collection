@@ -91,7 +91,7 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
     >
       <div className="grid min-w-[12rem] flex-1 gap-1.5">
         <Label htmlFor="widget-title">Title</Label>
-        <Input id="widget-title" name="title" placeholder="Pursuit volume" required className="h-8" />
+        <Input id="widget-title" name="title" placeholder="Pursuit volume" required />
       </div>
       <div className="grid gap-1.5">
         <Label>Kind</Label>
@@ -100,7 +100,7 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
           value={kind}
           onValueChange={(v) => setKind(v as typeof kind)}
         >
-          <SelectTrigger className="h-8 w-40">
+          <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -115,7 +115,7 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
       <div className="grid gap-1.5">
         <Label>Metric</Label>
         <Select value={metricKey} onValueChange={(v) => v && setMetricKey(v)}>
-          <SelectTrigger className="h-8 w-44">
+          <SelectTrigger className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -131,7 +131,7 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
         <div className="grid gap-1.5">
           <Label>Group by</Label>
           <Select value={groupBy} onValueChange={(v) => v && setGroupBy(v)}>
-            <SelectTrigger className="h-8 w-44">
+            <SelectTrigger className="w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -144,7 +144,7 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
           </Select>
         </div>
       )}
-      <Button type="submit" className="h-8 gap-1.5" disabled={pending}>
+      <Button type="submit" className="gap-1.5" disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
         Add widget
       </Button>

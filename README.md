@@ -16,7 +16,7 @@ Default identity is **Brian Meyers**, Central RPD.
 4. **Visualization** — Region / Division / Corporate dashboards, including a seeded Standard set. **Default = one latest/final round per job** so pricing rounds are not summed. Power BI stays for DMs; numbers must match.
 5. **Effort notes** — Chat on the pricing effort (`@[userId]` mentions, 25 MB attachments). Not project-level, not private.
 6. **Staffing** — Explicit “team assigned” mark. Overview **Needs staffing** = Upcoming + unstaffed in your scope.
-7. **Copilot** — `/copilot` (Eve locally; Magnus fallback on Vercel). Tools are Principal-scoped.
+7. **Copilot** — `/copilot` (Eve locally; Magnus fallback on Vercel). Tools are Principal-scoped. Threads persist per user in the browser.
 
 Primary nav: Overview, Bid Schedule, Post-Bid, Dashboards, Reports. Sheets / Studio / Forecast / DMR / Copilot live under **More**.
 
@@ -66,7 +66,7 @@ Start as Brian Meyers in the **Central** workspace. Do not lead with New Pursuit
 5. Change **Outcome** after lock. Audit line appears.
 6. Print the consolidated Central bid schedule PDF (latest note wraps on the right).
 7. Dashboards — Standard set is read-only. Open a Studio canvas and Export PPTX (B&G deck of the widgets, not the forecast file). Reports → run a report (results are full width) and Email schedules (Friday 8am).
-8. `/copilot` — “Which upcoming efforts in my region have no team assigned?” Tables show Job Number / Status, not raw keys.
+8. `/copilot` — “Which upcoming efforts in my region have no team assigned?” Tables show Job Number / Status, not raw keys. Open **Recent** to resume a prior thread.
 
 Salesforce-first New Pursuit is there if asked. Manual tab is **No job number yet (ROM)**. Duplicate names warn; **Show in my region instead** adopts visibility instead of creating a fourth Auburn.
 

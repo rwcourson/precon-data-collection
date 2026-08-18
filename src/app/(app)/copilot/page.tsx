@@ -1,5 +1,7 @@
 import { CopilotCanvas } from "@/components/copilot/copilot-canvas";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
-export default function CopilotPage() {
-  return <CopilotCanvas />;
+export default async function CopilotPage() {
+  const principal = await getWebPrincipal();
+  return <CopilotCanvas userId={principal.user.id} />;
 }

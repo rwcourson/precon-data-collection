@@ -29,7 +29,7 @@ export function SheetPinButton({ sheetId }: { sheetId: number }) {
         })
       }
     >
-      {pending ? <Loader2 className="size-4 animate-spin" /> : <Pin className="size-4" />}
+      {pending ? <Loader2 className="animate-spin" /> : <Pin />}
       Pin
     </Button>
   );

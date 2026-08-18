@@ -46,7 +46,7 @@ export function StudioCreateForm() {
     >
       <div className="grid gap-1.5">
         <Label htmlFor="dash-name">Name</Label>
-        <Input id="dash-name" name="name" placeholder="My dashboard" required className="h-8" />
+        <Input id="dash-name" name="name" placeholder="My dashboard" required />
       </div>
       <div className="grid gap-1.5">
         <Label htmlFor="dash-scope">Scope</Label>
@@ -59,7 +59,7 @@ export function StudioCreateForm() {
           value={scope}
           onValueChange={(v) => setScope(v as typeof scope)}
         >
-          <SelectTrigger id="dash-scope" className="h-8 w-full">
+          <SelectTrigger id="dash-scope" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -69,7 +69,7 @@ export function StudioCreateForm() {
           </SelectContent>
         </Select>
       </div>
-      <Button type="submit" className="h-8 gap-1.5" disabled={pending}>
+      <Button type="submit" className="gap-1.5" disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
         Create
       </Button>
