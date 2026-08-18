@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DomainError } from "@/domain/errors";
 import { mapError } from "@/lib/mobile-http";
 
@@ -36,8 +36,23 @@ describe("mapError (shipped)", () => {
     expect(body.code).toBe("NOT_FOUND");
   });
 
-  it("maps other Errors to 400", async () => {
-    const res = mapError(new Error("bad input"));
+  it("maps unknown Errors to 500 with a generic body and logs the original", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = mapError(new Error("connect ECONNREFUSED db:5432"));
+      expect(res.status).toBe(500);
+      const body = await bodyOf(res);
+      // The raw message could leak internals; the client sees a generic error.
+      expect(body.error).toBe("Internal error");
+      expect(body.code).toBe("INTERNAL");
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("maps DomainError.badRequest to 400", async () => {
+    const res = mapError(DomainError.badRequest("bad input"));
     expect(res.status).toBe(400);
     const body = await bodyOf(res);
     expect(body.error).toBe("bad input");

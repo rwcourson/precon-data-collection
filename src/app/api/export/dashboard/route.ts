@@ -8,6 +8,8 @@ import { resolveRegionParam } from "@/lib/workspace";
 import type { FlatRow } from "@/lib/report-engine";
 
 export const dynamic = "force-dynamic";
+// Synchronous xlsx workbook build over the full scoped dataset.
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;

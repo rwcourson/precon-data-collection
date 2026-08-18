@@ -1,7 +1,15 @@
 /** ISO-like week key used for weekly distribution cadence dedupe. */
-export function weekPeriodKey(date: Date, _timezone: string): string {
-  void _timezone;
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+export function weekPeriodKey(date: Date, timezone: string): string {
+  // Resolve the calendar day in the list's timezone (a Sunday-evening send in
+  // Chicago must not key to Monday's UTC week), then run ISO week math on it.
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
+  const d = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
   const day = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));

@@ -85,4 +85,36 @@ describe("production SSO trust matrix", () => {
     );
     expect(authed.status).toBe(200);
   });
+
+  it("edge gate passes token-authenticated API requests through to route auth", async () => {
+    for (const [key, value] of Object.entries(ssoEnv)) vi.stubEnv(key, value);
+
+    // Bearer-token mobile API — the route validates the token and fails closed.
+    const bearer = proxy(
+      new NextRequest("https://precon.example.com/api/v1/mobile/rounds/1/transition", {
+        headers: { authorization: "Bearer pct_token" },
+      }),
+    );
+    expect(bearer.status).toBe(200);
+
+    // HMAC-signed webhook — same pass-through.
+    const hmac = proxy(
+      new NextRequest("https://precon.example.com/api/v1/copilot/tools", {
+        headers: { "x-eve-hmac": "deadbeef" },
+      }),
+    );
+    expect(hmac.status).toBe(200);
+
+    // No credential at all still gets the cookie 401.
+    const bare = proxy(new NextRequest("https://precon.example.com/api/v1/mobile/me"));
+    expect(bare.status).toBe(401);
+
+    // HTML page requests never pass through on headers — redirect is unchanged.
+    const page = proxy(
+      new NextRequest("https://precon.example.com/admin", {
+        headers: { authorization: "Bearer pct_token" },
+      }),
+    );
+    expect(page.status).toBe(307);
+  });
 });

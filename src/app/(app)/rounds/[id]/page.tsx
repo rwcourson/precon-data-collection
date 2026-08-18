@@ -295,6 +295,7 @@ export default async function RoundPage({
             canEdit={canEdit}
             locked={locked}
             missingKeys={missingKeys}
+            updatedAt={round.updatedAt.toISOString()}
           />
         </TabsContent>
 

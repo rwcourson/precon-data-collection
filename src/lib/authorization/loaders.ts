@@ -154,8 +154,15 @@ export async function loadJobForPrincipal(
 /** All active pursuit rows are Region-scoped in SQL before auxiliary values load. */
 export async function listRoundsWithJobsForPrincipal(
   principal: Principal,
+  options: {
+    /** When provided, restricts estimate_rounds.status in SQL; omit for the full fetch. */
+    statuses?: readonly EstimateRound["status"][];
+    /** Stable id-ordered page window for API pagination; omit for the full fetch. */
+    limit?: number;
+    offset?: number;
+  } = {},
 ): Promise<AuthorizedRound[]> {
-  return db
+  let query = db
     .select({ round: estimateRounds, job: jobs, estimateLeadName: users.name })
     .from(estimateRounds)
     .innerJoin(jobs, eq(estimateRounds.jobId, jobs.id))
@@ -164,9 +171,17 @@ export async function listRoundsWithJobsForPrincipal(
       and(
         isNull(estimateRounds.deletedAt),
         isNull(jobs.deletedAt),
+        options.statuses?.length
+          ? inArray(estimateRounds.status, [...options.statuses])
+          : undefined,
         principalJobVisibilityPredicate(jobs.id, principal),
       ),
-    );
+    )
+    .orderBy(asc(estimateRounds.id))
+    .$dynamic();
+  if (options.limit != null) query = query.limit(options.limit);
+  if (options.offset) query = query.offset(options.offset);
+  return query;
 }
 
 export type PipelineBucketCounts = {

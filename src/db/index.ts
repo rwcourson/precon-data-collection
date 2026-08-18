@@ -26,7 +26,10 @@ function createDb(): AppDb {
       globalForDb.__preconPg ??
       postgres(config.database.url, {
         prepare: false,
-        max: config.appEnv === "production" ? 1 : 10,
+        // DATABASE_URL points at Neon's pooled (pgbouncer) endpoint, and a
+        // Fluid compute instance serves many concurrent requests: max 1 would
+        // serialize every query and can deadlock nested transactions.
+        max: 10,
         idle_timeout: 20,
         connect_timeout: 15,
       });

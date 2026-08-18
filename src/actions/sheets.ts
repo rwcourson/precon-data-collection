@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   auditLog,
@@ -21,6 +21,7 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { DomainError } from "@/domain/errors";
 import { FIELD_MAP, ROUND_COLUMN_KEYS } from "@/lib/fields";
 import { getReferenceValues } from "@/lib/queries";
+import { isRealCalendarDate } from "@/lib/validation";
 import { STATUS_LABELS } from "@/lib/labels";
 import {
   buildImportedSheet,
@@ -545,10 +546,17 @@ export async function updateSheetCell(rowId: number, key: string, value: string)
   if (!col) throw new Error("Unknown column");
 
   const clean = coerceCell(col.type, value, col.options ?? []);
+  // Merge only this key in SQL instead of read-spread-write of the whole JSONB
+  // map, so two people editing different cells of the same row cannot clobber
+  // each other. Clearing a cell removes the key.
+  const patchedValues =
+    clean === null
+      ? sql`coalesce(${sheetRows.values}, '{}'::jsonb) - ${key}::text`
+      : sql`jsonb_set(coalesce(${sheetRows.values}, '{}'::jsonb), array[${key}::text], to_jsonb(${clean}::text))`;
   await db
     .update(sheetRows)
     .set({
-      values: { ...row.values, [key]: clean },
+      values: patchedValues,
       updatedById: user.id,
       updatedAt: new Date(),
     })
@@ -559,9 +567,13 @@ export async function updateSheetCell(rowId: number, key: string, value: string)
 export async function deleteSheetRow(rowId: number) {
   const [row] = await db.select().from(sheetRows).where(eq(sheetRows.id, rowId));
   if (!row) throw new Error("Row not found");
-  await loadEditable(row.sheetId);
-  await db.delete(sheetRows).where(eq(sheetRows.id, rowId));
+  const principal = await getWebPrincipal();
+  // Soft delete via the shared recovery path so the row lands in trash and can
+  // be restored, instead of an unrecoverable hard delete.
+  const { softDeleteSheetRow } = await import("@/lib/recovery");
+  await softDeleteSheetRow(principal, rowId);
   touch(row.sheetId);
+  revalidatePath("/trash");
 }
 
 /** Same validation the pursuit forms apply, scaled down to one free-form cell. */
@@ -576,7 +588,9 @@ function coerceCell(type: SheetColumnType, raw: string, options: string[]): stri
       return String(n);
     }
     case "date": {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("Dates use YYYY-MM-DD.");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !isRealCalendarDate(value)) {
+        throw new Error("Dates use YYYY-MM-DD.");
+      }
       return value;
     }
     case "checkbox":

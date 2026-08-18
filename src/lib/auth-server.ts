@@ -22,8 +22,11 @@ function trustedOrigins(): string[] {
       /* ignore */
     }
   }
-  // Local dev conveniences
-  fromList.push("http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001");
+  // Local dev conveniences — never trusted on production/hosted runs.
+  const production = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  if (!production) {
+    fromList.push("http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001");
+  }
   return [...new Set(fromList)];
 }
 

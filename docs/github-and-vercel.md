@@ -66,7 +66,11 @@ Project SSO protection is **on** for `all_except_custom_domains`. `*.vercel.app`
 
 `withEve()` starts a sibling Eve process during **`next dev`**. `next.config.ts` skips that wrapper when `VERCEL` is set so the deploy stays `next build` (Eve 0.38 requires Node >=24; this app’s engines pin 22). `/copilot` probes `/eve/v1/health` and falls back to Magnus (`/api/v1/ai/magnus`) when Eve is down. That is expected in production until Eve has a durable host.
 
-HMAC for `/api/v1/copilot/tools` uses `BETTER_AUTH_SECRET` (then `AI_GATEWAY_API_KEY`). Both exist on Production.
+HMAC for `/api/v1/copilot/tools` derives a dedicated signing key from `BETTER_AUTH_SECRET` (then `AI_GATEWAY_API_KEY`) with the `copilot-tools-v1` label, and signs the timestamp + principal + tool + body hash (120 s replay window; see [magnus-api.md](magnus-api.md)). Both secrets exist on Production.
+
+### PDF exports on Vercel
+
+`src/lib/pdf.ts` launches headless Chromium for real `application/pdf` downloads. Locally that is dev-dependency Playwright; on Vercel it is `playwright-core` + `@sparticuz/chromium` (a Linux Chromium build shipped inside the function bundle — no extra env vars). If Chromium fails to launch, exports degrade to print-ready HTML and log the launch error once per instance. Export routes set `maxDuration` (60–120 s) via route segment config.
 
 ### Cron jobs
 

@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const COPILOT_TOOL_NAMES = [
   "query_efforts",
@@ -28,24 +28,51 @@ export function copilotToolSecret(): string {
   return "precon-demo-copilot";
 }
 
-export function signCopilotToolRequest(principalId: string, tool: string): string {
-  return createHmac("sha256", copilotToolSecret()).update(`${principalId}:${tool}`).digest("hex");
+/** Maximum accepted clock skew between signer and verifier. */
+export const COPILOT_TOOL_MAX_SKEW_MS = 120_000;
+
+/**
+ * Dedicated signing key derived from the base secret so a leaked tool-call
+ * signature can never be replayed against Better Auth (and vice versa).
+ * Must stay in lockstep with agent/lib/app-bridge.ts.
+ */
+function copilotToolSigningKey(): Buffer {
+  return createHmac("sha256", copilotToolSecret()).update("copilot-tools-v1").digest();
+}
+
+export function sha256Hex(rawBody: string): string {
+  return createHash("sha256").update(rawBody, "utf8").digest("hex");
+}
+
+export type CopilotToolSignatureInput = {
+  principalId: string;
+  tool: string;
+  /** Epoch milliseconds, transported in the x-eve-ts header. */
+  timestamp: number;
+  /** The exact raw request body string as sent over the wire. */
+  rawBody: string;
+};
+
+export function signCopilotToolRequest(input: CopilotToolSignatureInput): string {
+  const payload = `${input.timestamp}:${input.principalId}:${input.tool}:${sha256Hex(input.rawBody)}`;
+  return createHmac("sha256", copilotToolSigningKey()).update(payload).digest("hex");
 }
 
 export function verifyCopilotToolRequest(
-  principalId: string,
-  tool: string,
-  hmac: string | null,
+  input: CopilotToolSignatureInput & { hmac: string | null; now?: number },
 ): boolean {
-  if (!hmac) return false;
+  if (!input.hmac) return false;
+  if (!Number.isFinite(input.timestamp)) return false;
+  const now = input.now ?? Date.now();
+  if (Math.abs(now - input.timestamp) > COPILOT_TOOL_MAX_SKEW_MS) return false;
   let expected: string;
   try {
-    expected = signCopilotToolRequest(principalId, tool);
+    expected = signCopilotToolRequest(input);
   } catch {
     return false;
   }
   const left = Buffer.from(expected);
-  const right = Buffer.from(hmac);
+  const right = Buffer.from(input.hmac);
   return left.length === right.length && timingSafeEqual(left, right);
 }
 

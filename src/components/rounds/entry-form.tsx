@@ -61,6 +61,11 @@ type Props = {
   canEdit: boolean;
   locked: boolean;
   missingKeys: string[];
+  /**
+   * The round's updatedAt (ISO) as rendered. Sent with the save so the server
+   * can reject writes over data someone else changed since this page loaded.
+   */
+  updatedAt?: string;
 };
 
 export function EntryForm({
@@ -78,6 +83,7 @@ export function EntryForm({
   canEdit,
   locked,
   missingKeys,
+  updatedAt,
 }: Props) {
   const [values, setValues] = useState(initialValues);
   const [multi, setMulti] = useState(initialMulti);
@@ -127,6 +133,7 @@ export function EntryForm({
           multiValues: multi,
           customValues: custom,
           estimateLeadId: leadId,
+          expectedUpdatedAt: updatedAt,
         });
         setDirty(false);
         toast.success(

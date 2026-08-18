@@ -14,6 +14,8 @@ import { getWorkspace } from "@/lib/workspace-server";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
+// Synchronous xlsx/PDF build; PDF uses headless Chromium.
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;

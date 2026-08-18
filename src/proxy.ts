@@ -52,6 +52,12 @@ export function proxy(req: NextRequest) {
 
   if (!hasSessionCookie(req)) {
     if (pathname.startsWith("/api/")) {
+      // Token-authenticated APIs (mobile bearer tokens, eve HMAC webhooks)
+      // never carry a session cookie. Their routes enforce their own auth and
+      // fail closed, so a credentialed request passes through the SSO gate.
+      if (req.headers.get("authorization") || req.headers.get("x-eve-hmac")) {
+        return NextResponse.next();
+      }
       return NextResponse.json(
         { error: "Not signed in. Sign in with Microsoft." },
         { status: 401 },

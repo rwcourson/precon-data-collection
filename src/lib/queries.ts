@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/db";
 import {
   customColumnValues,
@@ -91,9 +92,10 @@ export async function getMultiValuesForRounds(
   return out;
 }
 
-export async function getAllCustomColumns(): Promise<CustomColumn[]> {
+/** Deduplicated per request via React.cache — column definitions are reference data. */
+export const getAllCustomColumns = cache(async (): Promise<CustomColumn[]> => {
   return db.select().from(customColumns).orderBy(asc(customColumns.id));
-}
+});
 
 /** Custom column values for many rounds: roundId -> columnId -> value. */
 export async function getCustomValuesForRounds(
@@ -113,8 +115,12 @@ export async function getCustomValuesForRounds(
   return out;
 }
 
-/** Reference list values (active only), keyed by list. */
-export async function getReferenceValues(): Promise<Record<string, string[]>> {
+/**
+ * Reference list values (active only), keyed by list. Wrapped in React.cache
+ * so the full-table scan runs once per request no matter how many components
+ * ask for it (this is called on nearly every page).
+ */
+export const getReferenceValues = cache(async (): Promise<Record<string, string[]>> => {
   const rows = await db.query.referenceListValues.findMany({
     orderBy: (v, { asc: a }) => [a(v.sortOrder)],
   });
@@ -123,4 +129,4 @@ export async function getReferenceValues(): Promise<Record<string, string[]>> {
     if (!r.retired) (out[r.listKey] ??= []).push(r.value);
   }
   return out;
-}
+});

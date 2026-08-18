@@ -76,6 +76,20 @@ export function requiredCompletion(
   return { done: total - missing.length, total };
 }
 
+/**
+ * True when a YYYY-MM-DD string is a real calendar date. A regex alone accepts
+ * impossible dates like 2026-13-45, which Date would silently roll over.
+ */
+export function isRealCalendarDate(value: string): boolean {
+  const [y, m, d] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(y, m - 1, d));
+  return (
+    parsed.getUTCFullYear() === y &&
+    parsed.getUTCMonth() === m - 1 &&
+    parsed.getUTCDate() === d
+  );
+}
+
 /** Server-side format validation for a single field value. */
 export function validateFieldValue(
   key: string,
@@ -94,7 +108,7 @@ export function validateFieldValue(
       return { ok: true, value: n };
     }
     case "date": {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw))
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw) || !isRealCalendarDate(raw))
         return { ok: false, error: `${def.label} must be a valid date` };
       return { ok: true, value: raw };
     }

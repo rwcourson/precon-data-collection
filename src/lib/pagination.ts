@@ -37,6 +37,28 @@ export function decodeCursor(raw: string | null | undefined): PageCursor | null 
   }
 }
 
+export type OffsetPage = { limit: number; offset: number };
+
+/**
+ * Parse `?limit` / `?offset` query params for offset-paginated endpoints.
+ * `limit` is clamped to MAX_PAGE_SIZE; the default may be raised (up to the
+ * max) for endpoints whose existing consumers expect large pages.
+ */
+export function parsePagination(
+  searchParams: URLSearchParams,
+  defaults: { limit?: number } = {},
+): OffsetPage {
+  const fallback = Math.min(MAX_PAGE_SIZE, defaults.limit ?? DEFAULT_PAGE_SIZE);
+  const rawLimit = Number(searchParams.get("limit"));
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit >= 1
+      ? Math.min(MAX_PAGE_SIZE, Math.floor(rawLimit))
+      : fallback;
+  const rawOffset = Number(searchParams.get("offset"));
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 1 ? Math.floor(rawOffset) : 0;
+  return { limit, offset };
+}
+
 export function pageFromRows<T extends { id: number }>(
   rows: T[],
   pageSize: number,

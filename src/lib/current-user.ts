@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { db, ensureDbReady } from "@/db";
 import { users } from "@/db/schema";
@@ -15,12 +16,13 @@ import { pickDefaultDemoUser } from "@/lib/demo-identity";
 const COOKIE = "demo-user-id";
 
 /**
- * Identity resolution.
+ * Identity resolution, memoized per request with React.cache so layout,
+ * header, and page renders share one session/user lookup.
  * - SSO: Better Auth Microsoft session → app `users` via email + Entra profile.
  * - Demo: persona cookie / first seeded user.
  * - Mobile REST: AsyncLocalStorage principal.
  */
-export async function getCurrentUser(): Promise<User> {
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<User> {
   await ensureDbReady();
 
   const mobile = getMobileContext();
@@ -58,6 +60,16 @@ export async function getCurrentUser(): Promise<User> {
     return resolveSsoUser(identity);
   }
 
+  // Defense in depth: runtime-config already rejects demo auth on hosted
+  // production, but never resolve a cookie-selected identity there either.
+  // Preview deployments run demo personas behind Vercel Authentication.
+  if (
+    process.env.VERCEL_ENV === "production" ||
+    (process.env.VERCEL && !process.env.VERCEL_ENV)
+  ) {
+    throw new Error("Demo authentication is forbidden on hosted production deployments.");
+  }
+
   const store = await cookies();
   const id = Number(store.get(COOKIE)?.value);
   const all = await db.select().from(users).orderBy(asc(users.id));
@@ -65,11 +77,11 @@ export async function getCurrentUser(): Promise<User> {
     throw new Error("No users seeded — run `npm run db:seed` first.");
   }
   return all.find((u) => u.id === id) ?? pickDefaultDemoUser(all);
-}
+});
 
-export async function getAllUsers(): Promise<User[]> {
+export const getAllUsers = cache(async function getAllUsers(): Promise<User[]> {
   await ensureDbReady();
   return db.select().from(users).orderBy(asc(users.id));
-}
+});
 
 export const DEMO_USER_COOKIE = COOKIE;

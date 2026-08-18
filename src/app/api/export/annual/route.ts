@@ -10,6 +10,8 @@ import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
 
 export const dynamic = "force-dynamic";
+// Multi-year full-dataset report rendered to PDF by headless Chromium.
+export const maxDuration = 120;
 
 const GROUP_COLUMNS = (label: string): ExportColumn[] => [
   { key: "group", label, type: "text" },

@@ -120,7 +120,9 @@ export const copilotQueryService = {
     const roundIds = [...byRound.keys()];
     if (roundIds.length === 0) return [];
 
-    const trimmed = query.trim();
+    // Strip LIKE wildcards so user input can't broaden the pattern
+    // (same sanitation as src/app/api/search/route.ts).
+    const trimmed = query.trim().replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
     const rows = await db
       .select({
         noteId: roundNotes.id,

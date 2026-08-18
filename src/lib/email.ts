@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { db, type AppDb } from "@/db";
 import { emailOutbox } from "@/db/schema";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { getArtifactStorage } from "@/lib/artifact-storage";
@@ -29,9 +29,18 @@ export function emailProvider(): "resend" | "stub" {
   return getRuntimeConfig().email.mode;
 }
 
-export async function queueEmails(messages: QueuedEmail[]): Promise<number[]> {
+/**
+ * Insert outbox rows only — no network delivery. Accepts an optional
+ * transaction handle so callers can queue atomically with their own writes
+ * (the prod pool runs max:1, so touching the global `db` inside a transaction
+ * would self-deadlock). Delivery happens after commit via `deliverQueued`.
+ */
+export async function queueEmails(
+  messages: QueuedEmail[],
+  executor: AppDb = db,
+): Promise<number[]> {
   if (messages.length === 0) return [];
-  const rows = await db
+  const rows = await executor
     .insert(emailOutbox)
     .values(
       messages.map((m) => ({

@@ -210,10 +210,18 @@ export function inspectRuntimeConfig(
   const allowedOrigins = originList(env, appOrigin, production, issues);
 
   // Full production (APP_ENV=production) requires SSO, Resend, Blob, etc.
-  // Hosted Magnus may still run APP_ENV=local with Postgres + demo auth until SSO is ready.
-  // Only forbid that combination when APP_ENV is explicitly production.
   if (production && authMode !== "sso") {
     issues.push({ key: "AUTH_MODE", reason: "must be sso in production" });
+  }
+  // Demo auth is cookie-selectable identity with no credential check, so it is
+  // never acceptable on a hosted *production* deployment regardless of APP_ENV.
+  // Preview/development deployments intentionally run demo personas and sit
+  // behind Vercel Authentication (docs/github-and-vercel.md), so they pass.
+  const hostedProduction =
+    env.VERCEL_ENV?.trim() === "production" ||
+    (Boolean(env.VERCEL?.trim()) && !env.VERCEL_ENV?.trim());
+  if (authMode === "demo" && hostedProduction) {
+    issues.push({ key: "AUTH_MODE", reason: "must be sso on hosted production deployments" });
   }
   if (appEnv === "demo" && authMode !== "demo") {
     issues.push({ key: "AUTH_MODE", reason: "must be demo in the demo environment" });

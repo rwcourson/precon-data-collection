@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -47,15 +48,22 @@ export const customFieldTypeEnum = pgEnum("custom_field_type", [
   "dropdown",
 ]);
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  title: text("title").notNull(),
-  role: roleEnum("role").notNull(),
-  region: text("region"),
-  preconDepartment: text("precon_department"),
-  email: text("email").notNull(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    role: roleEnum("role").notNull(),
+    region: text("region"),
+    preconDepartment: text("precon_department"),
+    email: text("email").notNull(),
+  },
+  (table) => [
+    // Mirrors drizzle/0014 — SSO resolves identity via lower(email).
+    index("users_email_lower_idx").on(sql`lower(${table.email})`),
+  ],
+);
 
 /** Mock B&G Connect / Salesforce jobs used for lookup + match-and-merge. */
 export const salesforceJobs = pgTable("salesforce_jobs", {
@@ -70,21 +78,25 @@ export const salesforceJobs = pgTable("salesforce_jobs", {
   createdDate: date("created_date"),
 });
 
-export const jobs = pgTable("jobs", {
-  id: serial("id").primaryKey(),
-  /** Real Job Number when linked; placeholder (e.g. "TBD-1042") when manual/unlinked. */
-  jobNumber: text("job_number").notNull(),
-  jobName: text("job_name").notNull(),
-  region: text("region").notNull(),
-  preconDepartment: text("precon_department").notNull(),
-  salesforceId: text("salesforce_id"),
-  isLinked: boolean("is_linked").notNull().default(false),
-  createdById: integer("created_by_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
-  deletedById: integer("deleted_by_id").references(() => users.id),
-  deletionBatchId: integer("deletion_batch_id"),
-});
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: serial("id").primaryKey(),
+    /** Real Job Number when linked; placeholder (e.g. "TBD-1042") when manual/unlinked. */
+    jobNumber: text("job_number").notNull(),
+    jobName: text("job_name").notNull(),
+    region: text("region").notNull(),
+    preconDepartment: text("precon_department").notNull(),
+    salesforceId: text("salesforce_id"),
+    isLinked: boolean("is_linked").notNull().default(false),
+    createdById: integer("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+    deletedById: integer("deleted_by_id").references(() => users.id),
+    deletionBatchId: integer("deletion_batch_id"),
+  },
+  (table) => [index("jobs_region_active_idx").on(table.region)],
+);
 
 /**
  * Extra regions a job is visible in. `jobs.region` is the HOME region only —
@@ -127,7 +139,9 @@ export const jobUserVisibility = pgTable(
   ],
 );
 
-export const estimateRounds = pgTable("estimate_rounds", {
+export const estimateRounds = pgTable(
+  "estimate_rounds",
+  {
   id: serial("id").primaryKey(),
   jobId: integer("job_id")
     .notNull()
@@ -208,7 +222,17 @@ export const estimateRounds = pgTable("estimate_rounds", {
   deletedAt: timestamp("deleted_at"),
   deletedById: integer("deleted_by_id").references(() => users.id),
   deletionBatchId: integer("deletion_batch_id"),
-});
+  },
+  (table) => [
+    uniqueIndex("estimate_rounds_job_round_number_unique").on(table.jobId, table.roundNumber),
+    index("estimate_rounds_status_region_idx")
+      .on(table.status, table.region)
+      .where(sql`${table.deletedAt} is null`),
+    index("estimate_rounds_job_id_idx")
+      .on(table.jobId)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
 
 /** Chat-shaped notes on a pricing effort. Never project-level; never private. */
 export const roundNotes = pgTable(
@@ -260,14 +284,18 @@ export const roundNoteMentions = pgTable(
 );
 
 /** Repeatable one-to-many fields (Self-Perform Work Type, Utilized Support Services). */
-export const roundMultiValues = pgTable("round_multi_values", {
-  id: serial("id").primaryKey(),
-  roundId: integer("round_id")
-    .notNull()
-    .references(() => estimateRounds.id),
-  field: text("field").notNull(), // "selfPerformWorkType" | "utilizedSupportServices"
-  value: text("value").notNull(),
-});
+export const roundMultiValues = pgTable(
+  "round_multi_values",
+  {
+    id: serial("id").primaryKey(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id),
+    field: text("field").notNull(), // "selfPerformWorkType" | "utilizedSupportServices"
+    value: text("value").notNull(),
+  },
+  (table) => [index("round_multi_values_round_field_idx").on(table.roundId, table.field)],
+);
 
 export const referenceLists = pgTable("reference_lists", {
   key: text("key").primaryKey(),
@@ -310,7 +338,10 @@ export const customColumnValues = pgTable(
       .references(() => estimateRounds.id),
     value: text("value"),
   },
-  (table) => [uniqueIndex("custom_column_values_column_round_unique").on(table.columnId, table.roundId)],
+  (table) => [
+    uniqueIndex("custom_column_values_column_round_unique").on(table.columnId, table.roundId),
+    index("custom_column_values_round_idx").on(table.roundId),
+  ],
 );
 
 export const statusTransitions = pgTable("status_transitions", {
@@ -324,31 +355,42 @@ export const statusTransitions = pgTable("status_transitions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const auditLog = pgTable("audit_log", {
-  id: serial("id").primaryKey(),
-  entity: text("entity").notNull(), // "round" | "schema" | "reference_list" | "job_match"
-  entityId: integer("entity_id"),
-  roundId: integer("round_id"),
-  action: text("action").notNull(),
-  field: text("field"),
-  oldValue: text("old_value"),
-  newValue: text("new_value"),
-  userId: integer("user_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: serial("id").primaryKey(),
+    entity: text("entity").notNull(), // "round" | "schema" | "reference_list" | "job_match"
+    entityId: integer("entity_id"),
+    roundId: integer("round_id"),
+    action: text("action").notNull(),
+    field: text("field"),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    userId: integer("user_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("audit_log_round_created_idx").on(table.roundId, table.createdAt),
+    index("audit_log_entity_created_idx").on(table.entity, table.entityId, table.createdAt),
+  ],
+);
 
-export const notifications = pgTable("notifications", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  title: text("title").notNull(),
-  body: text("body"),
-  roundId: integer("round_id"),
-  noteId: integer("note_id").references(() => roundNotes.id, { onDelete: "set null" }),
-  readAt: timestamp("read_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    title: text("title").notNull(),
+    body: text("body"),
+    roundId: integer("round_id"),
+    noteId: integer("note_id").references(() => roundNotes.id, { onDelete: "set null" }),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("notifications_user_created_idx").on(table.userId, table.createdAt)],
+);
 
 /**
  * Import remediation queue (BRD Section 17). Legacy SmartSheet rows keep their
@@ -385,7 +427,9 @@ export const appSettings = pgTable("app_settings", {
  * Outgoing email. Without provider credentials this is a visible stub outbox
  * so the cadence can be demonstrated and reviewed before SMTP/SSO exist.
  */
-export const emailOutbox = pgTable("email_outbox", {
+export const emailOutbox = pgTable(
+  "email_outbox",
+  {
   id: serial("id").primaryKey(),
   toEmail: text("to_email").notNull(),
   toUserId: integer("to_user_id").references(() => users.id),
@@ -409,7 +453,9 @@ export const emailOutbox = pgTable("email_outbox", {
   nextAttemptAt: timestamp("next_attempt_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   sentAt: timestamp("sent_at"),
-});
+  },
+  (table) => [index("email_outbox_kind_created_idx").on(table.kind, table.createdAt)],
+);
 
 export const deletionBatches = pgTable("deletion_batches", {
   id: serial("id").primaryKey(),
@@ -618,20 +664,28 @@ export const sheetColumns = pgTable("sheet_columns", {
 });
 
 /** Rows of a `grid` sheet, stored as a cell map keyed by column key. */
-export const sheetRows = pgTable("sheet_rows", {
-  id: serial("id").primaryKey(),
-  sheetId: integer("sheet_id")
-    .notNull()
-    .references(() => sheets.id, { onDelete: "cascade" }),
-  values: jsonb("values").$type<Record<string, string | null>>().notNull().default({}),
-  sortOrder: integer("sort_order").notNull().default(0),
-  updatedById: integer("updated_by_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
-  deletedById: integer("deleted_by_id").references(() => users.id),
-  deletionBatchId: integer("deletion_batch_id"),
-});
+export const sheetRows = pgTable(
+  "sheet_rows",
+  {
+    id: serial("id").primaryKey(),
+    sheetId: integer("sheet_id")
+      .notNull()
+      .references(() => sheets.id, { onDelete: "cascade" }),
+    values: jsonb("values").$type<Record<string, string | null>>().notNull().default({}),
+    sortOrder: integer("sort_order").notNull().default(0),
+    updatedById: integer("updated_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+    deletedById: integer("deleted_by_id").references(() => users.id),
+    deletionBatchId: integer("deletion_batch_id"),
+  },
+  (table) => [
+    index("sheet_rows_sheet_sort_idx")
+      .on(table.sheetId, table.sortOrder)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // Roadmap extensions (promotion, ACL, distribution, SF inbox, recovery, API,
@@ -760,34 +814,50 @@ export const salesforceMatchStatusEnum = pgEnum("salesforce_match_status", [
   "linked",
 ]);
 
-export const salesforceMatchCandidates = pgTable("salesforce_match_candidates", {
-  id: serial("id").primaryKey(),
-  syncRunId: integer("sync_run_id").references(() => salesforceSyncRuns.id),
-  jobId: integer("job_id").references(() => jobs.id),
-  sfId: text("sf_id").notNull(),
-  sourceVersion: text("source_version").notNull(),
-  proposedJobNumber: text("proposed_job_number"),
-  proposedJobName: text("proposed_job_name").notNull(),
-  proposedRegion: text("proposed_region"),
-  score: doublePrecision("score").notNull().default(0),
-  signals: jsonb("signals").$type<Record<string, number | boolean | string>>().notNull().default({}),
-  discrepancy: text("discrepancy"),
-  status: salesforceMatchStatusEnum("status").notNull().default("pending"),
-  decidedById: integer("decided_by_id").references(() => users.id),
-  decidedAt: timestamp("decided_at"),
-  decisionNote: text("decision_note"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const salesforceMatchCandidates = pgTable(
+  "salesforce_match_candidates",
+  {
+    id: serial("id").primaryKey(),
+    syncRunId: integer("sync_run_id").references(() => salesforceSyncRuns.id),
+    jobId: integer("job_id").references(() => jobs.id),
+    sfId: text("sf_id").notNull(),
+    sourceVersion: text("source_version").notNull(),
+    proposedJobNumber: text("proposed_job_number"),
+    proposedJobName: text("proposed_job_name").notNull(),
+    proposedRegion: text("proposed_region"),
+    score: doublePrecision("score").notNull().default(0),
+    signals: jsonb("signals").$type<Record<string, number | boolean | string>>().notNull().default({}),
+    discrepancy: text("discrepancy"),
+    status: salesforceMatchStatusEnum("status").notNull().default("pending"),
+    decidedById: integer("decided_by_id").references(() => users.id),
+    decidedAt: timestamp("decided_at"),
+    decisionNote: text("decision_note"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("salesforce_match_candidates_job_sf_version_unique")
+      .on(table.jobId, table.sfId, table.sourceVersion)
+      .where(sql`${table.jobId} is not null`),
+  ],
+);
 
-export const salesforceMatchSuppressions = pgTable("salesforce_match_suppressions", {
-  id: serial("id").primaryKey(),
-  jobId: integer("job_id"),
-  sfId: text("sf_id").notNull(),
-  sourceVersion: text("source_version").notNull(),
-  reason: text("reason"),
-  createdById: integer("created_by_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const salesforceMatchSuppressions = pgTable(
+  "salesforce_match_suppressions",
+  {
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id"),
+    sfId: text("sf_id").notNull(),
+    sourceVersion: text("source_version").notNull(),
+    reason: text("reason"),
+    createdById: integer("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("salesforce_match_suppressions_job_sf_version_unique")
+      .on(table.jobId, table.sfId, table.sourceVersion)
+      .where(sql`${table.jobId} is not null`),
+  ],
+);
 
 export const entityVersions = pgTable(
   "entity_versions",
@@ -896,21 +966,25 @@ export type DashboardWidgetConfig = {
   layout?: { w: number; h: number; x: number; y: number };
 };
 
-export const dashboards = pgTable("dashboards", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  scope: dashboardScopeEnum("scope").notNull().default("personal"),
-  region: text("region"),
-  ownerId: integer("owner_id")
-    .notNull()
-    .references(() => users.id),
-  published: boolean("published").notNull().default(false),
-  isStandard: boolean("is_standard").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
-});
+export const dashboards = pgTable(
+  "dashboards",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    scope: dashboardScopeEnum("scope").notNull().default("personal"),
+    region: text("region"),
+    ownerId: integer("owner_id")
+      .notNull()
+      .references(() => users.id),
+    published: boolean("published").notNull().default(false),
+    isStandard: boolean("is_standard").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => [index("dashboards_owner_published_idx").on(table.ownerId, table.published)],
+);
 
 export const dashboardWidgets = pgTable("dashboard_widgets", {
   id: serial("id").primaryKey(),

@@ -22,4 +22,13 @@ describe("report schedule clock", () => {
     const b = weekPeriodKey(new Date("2026-08-07T12:00:00Z"), "America/Chicago");
     expect(a).toBe(b);
   });
+
+  it("honors the timezone at week boundaries and keeps UTC keys stable", () => {
+    // Monday 2026-08-03 00:30 UTC is still Sunday 2026-08-02 in Chicago.
+    const boundary = new Date("2026-08-03T00:30:00Z");
+    expect(weekPeriodKey(boundary, "UTC")).toBe("2026-W32");
+    expect(weekPeriodKey(boundary, "America/Chicago")).toBe("2026-W31");
+    // Format stays YYYY-Www for UTC.
+    expect(weekPeriodKey(new Date("2026-08-21T13:00:00Z"), "UTC")).toBe("2026-W34");
+  });
 });

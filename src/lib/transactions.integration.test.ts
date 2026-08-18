@@ -173,6 +173,100 @@ describe("transactions and concurrency", () => {
     }
   });
 
+  it("matches the optimistic guard when updated_at carries microseconds", async () => {
+    const { job, round } = await seedPostBidRound();
+    try {
+      // Real Postgres defaults write now() with microseconds; JS Date only has
+      // milliseconds. Simulate that row state explicitly.
+      await db.execute(
+        sql`update estimate_rounds set updated_at = '2026-01-05 12:34:56.123456'::timestamp where id = ${round.id}`,
+      );
+      // The snapshot a caller loads through drizzle is ms-precision.
+      const [loadedRound] = await db
+        .select()
+        .from(estimateRounds)
+        .where(eq(estimateRounds.id, round.id));
+      expect(loadedRound.updatedAt.getMilliseconds()).toBe(123);
+
+      const { updateRoundIfUnchanged, withTransaction } = await import("@/lib/transactions");
+      await expect(
+        withTransaction((tx) =>
+          updateRoundIfUnchanged(tx, {
+            roundId: round.id,
+            expectedStatus: loadedRound.status,
+            expectedUpdatedAt: loadedRound.updatedAt,
+            patch: { city: "Microsecond City" },
+          }),
+        ),
+      ).resolves.toBeUndefined();
+
+      const [after] = await db
+        .select()
+        .from(estimateRounds)
+        .where(eq(estimateRounds.id, round.id));
+      expect(after.city).toBe("Microsecond City");
+    } finally {
+      await cleanup(round.id, job.id);
+    }
+  });
+
+  it("rejects a save whose client snapshot is stale even after a reload", async () => {
+    const { job, round } = await seedPostBidRound();
+    const principal = createPrincipal({
+      user: estimateLead,
+      authSource: "demo_session",
+      workspaceRegion: pcm.region,
+    });
+    try {
+      const staleSnapshot = round.updatedAt;
+      // Another user edits in between (updatedAt moves forward).
+      await db
+        .update(estimateRounds)
+        .set({ feeExpected: 111, updatedAt: new Date(Date.now() + 1000) })
+        .where(eq(estimateRounds.id, round.id));
+
+      await expect(
+        pursuitService.savePostBidData(principal, {
+          roundId: round.id,
+          values: { feeExpected: "222" },
+          multiValues: {},
+          customValues: {},
+          expectedUpdatedAt: staleSnapshot,
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+
+      const [after] = await db
+        .select()
+        .from(estimateRounds)
+        .where(eq(estimateRounds.id, round.id));
+      expect(after.feeExpected).toBe(111);
+    } finally {
+      await cleanup(round.id, job.id);
+    }
+  });
+
+  it("rejects direct transitions to locked, pointing at Approve & Lock", async () => {
+    const { job, round } = await seedPostBidRound();
+    const rpdPrincipal = createPrincipal({
+      user: rpd,
+      authSource: "demo_session",
+      workspaceRegion: rpd.region ?? pcm.region,
+    });
+    try {
+      await expect(
+        pursuitService.transitionStatus(rpdPrincipal, round.id, "locked"),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      const [after] = await db
+        .select()
+        .from(estimateRounds)
+        .where(eq(estimateRounds.id, round.id));
+      expect(after.status).toBe("post_bid");
+      expect(after.lockedAt).toBeNull();
+    } finally {
+      await cleanup(round.id, job.id);
+    }
+  });
+
   it("creates pursuit job+round+transition atomically", async () => {
     const principal = createPrincipal({
       user: pcm,
@@ -241,6 +335,38 @@ describe("migrations uniqueness and indexes", () => {
       await db
         .delete(customColumnValues)
         .where(eq(customColumnValues.roundId, round.id));
+      await cleanup(round.id, job.id);
+    }
+  });
+
+  it("enforces one round number per job via unique index", async () => {
+    const { job, round } = await seedPostBidRound();
+    try {
+      // Drizzle wraps the driver error ("Failed query: …") with the duplicate-key
+      // detail on the cause, so assert rejection then verify no row landed.
+      await expect(
+        db.insert(estimateRounds).values({
+          jobId: job.id,
+          roundNumber: round.roundNumber,
+          status: "active",
+          region: pcm.region!,
+          preconDepartment: "Test",
+          estimatePhase: "GMP",
+          bidYear: 2026,
+          createdById: pcm.id,
+        }),
+      ).rejects.toThrow();
+      const dupes = await db
+        .select({ id: estimateRounds.id })
+        .from(estimateRounds)
+        .where(
+          and(
+            eq(estimateRounds.jobId, job.id),
+            eq(estimateRounds.roundNumber, round.roundNumber),
+          ),
+        );
+      expect(dupes).toHaveLength(1);
+    } finally {
       await cleanup(round.id, job.id);
     }
   });

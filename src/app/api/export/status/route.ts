@@ -6,6 +6,8 @@ import { loadAdminSectionForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
+// Synchronous PDF build via headless Chromium.
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);

@@ -25,6 +25,9 @@ Default recommendation for Magnus: **read scopes only**.
 ## Endpoints
 
 - `GET /api/v1/pursuits` — region-filtered pursuits (`read:pursuits`)
+  - Pagination: `?limit` (default and max **200**) and `?offset`. Response keeps
+    `{ data, count }` and adds `limit`, `offset`, and `nextOffset` (`null` on the
+    last page).
 - `POST /api/v1/destructive/challenge` — mint one-time challenge (`write:destructive`)
   - Body: `{ "operation": "soft_delete_job" }`
   - Pass returned value as `X-Destructive-Challenge` on the mutating call
@@ -45,13 +48,22 @@ The web UI is `/copilot`. Locally, Eve is a sibling process (`withEve()`). On Ve
 POST /api/v1/copilot/tools
 Content-Type: application/json
 x-eve-principal-id: <integer users.id>
-x-eve-hmac: <hex HMAC-SHA256 of "principalId:tool">
+x-eve-ts: <epoch milliseconds>
+x-eve-hmac: <hex HMAC-SHA256 of "ts:principalId:tool:sha256(rawBody)">
 x-eve-workspace: <region or empty for corporate>
 
 { "tool": "query_needs_staffing", "input": {} }
 ```
 
-HMAC secret is `BETTER_AUTH_SECRET` (then `AI_GATEWAY_API_KEY`). Non-integer principal ids and missing HMAC return **401**. Tools: `query_efforts`, `query_needs_staffing`, `search_notes`, `person_history`, `plan_chart`. Implementation: `src/services/copilot-query-service.ts`.
+The signing key is derived from `BETTER_AUTH_SECRET` (then `AI_GATEWAY_API_KEY`)
+with the fixed label `copilot-tools-v1`, so tool signatures are never valid
+against Better Auth sessions. The signature binds the timestamp, principal,
+tool, and the SHA-256 of the exact raw body; requests older than **120 s** are
+rejected (replay window). Non-integer principal ids, stale timestamps, body
+tampering, and missing HMAC all return **401**. Signer: `agent/lib/app-bridge.ts`;
+verifier: `src/lib/ai/copilot-bridge.ts`. Tools: `query_efforts`,
+`query_needs_staffing`, `search_notes`, `person_history`, `plan_chart`.
+Implementation: `src/services/copilot-query-service.ts`.
 
 Identity for Eve: `GET /api/v1/copilot/identity` (session cookie). Do not use Eve `localDev()`.
 

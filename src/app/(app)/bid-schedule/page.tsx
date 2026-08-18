@@ -45,8 +45,10 @@ import { listBidScheduleViews } from "@/actions/bid-schedule-views";
 import { tablePrefsService } from "@/services/table-prefs-service";
 import { TablePrefsDensitySync } from "@/components/bid-schedule/table-prefs-density-sync";
 
+const PRE_BID_STATUSES: RoundStatus[] = ["active", "upcoming", "outstanding"];
+
 const SECTIONS: { key: string; label: string; statuses: RoundStatus[] }[] = [
-  { key: "all", label: "All", statuses: ["active", "upcoming", "outstanding"] },
+  { key: "all", label: "All", statuses: PRE_BID_STATUSES },
   { key: "active", label: "Active", statuses: ["active"] },
   { key: "upcoming", label: "Upcoming", statuses: ["upcoming"] },
   { key: "outstanding", label: "Outstanding", statuses: ["outstanding"] },
@@ -67,7 +69,7 @@ export default async function BidSchedulePage({
   const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
   const user = principal.user;
   const [rows, lists, templates, customCols, views, prefs] = await Promise.all([
-    listRoundsWithJobsForPrincipal(principal),
+    listRoundsWithJobsForPrincipal(principal, { statuses: PRE_BID_STATUSES }),
     getReferenceValues(),
     db.select().from(reportTemplates),
     listCustomColumnsForPrincipal(principal),
@@ -124,9 +126,8 @@ export default async function BidSchedulePage({
   const queue = params.queue;
   const todayKey = calendarDate(new Date());
 
-  const preBid = rows.filter((r) =>
-    ["active", "upcoming", "outstanding"].includes(r.round.status),
-  );
+  // Pre-bid statuses are already filtered in SQL by the loader.
+  const preBid = rows;
   const hierarchicallyVisible = filterByHierarchy(
     preBid.map((r) => ({ ...r, preconDepartment: r.round.preconDepartment })),
     hierarchy,
@@ -190,7 +191,10 @@ export default async function BidSchedulePage({
       roundNumber: number;
     }[]
   > = {};
+  // Only jobs that appear in the scoped rows need sibling entries.
+  const scopedJobIds = new Set(scoped.map((r) => r.job.id));
   for (const { round, job } of rows) {
+    if (!scopedJobIds.has(job.id)) continue;
     (siblingsByJobId[job.id] ??= []).push({
       id: round.id,
       estimatePhase: round.estimatePhase,

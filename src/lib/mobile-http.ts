@@ -50,8 +50,10 @@ export function mapError(err: unknown): NextResponse {
     if (/not found/i.test(msg)) {
       return jsonError(msg, 404, { code: "NOT_FOUND" });
     }
-    return jsonError(msg, 400, { code: "BAD_REQUEST" });
   }
+  // Unknown failures are server errors; the raw message may leak internals
+  // (SQL, file paths), so log it and return a generic body.
+  console.error("Unhandled API error:", err);
   return jsonError("Internal error", 500, { code: "INTERNAL" });
 }
 

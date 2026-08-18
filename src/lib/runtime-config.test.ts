@@ -48,6 +48,15 @@ const productionEnv = {
   DATABRICKS_MODE: "disabled",
 };
 
+const ssoOverrides = {
+  AUTH_MODE: "sso",
+  BETTER_AUTH_SECRET: "b".repeat(32),
+  SSO_ALLOWED_DOMAINS: "example.com",
+  MICROSOFT_CLIENT_ID: "11111111-1111-1111-1111-111111111111",
+  MICROSOFT_CLIENT_SECRET: "ms-client-secret-value",
+  MICROSOFT_TENANT_ID: "22222222-2222-2222-2222-222222222222",
+};
+
 describe("runtime-config environment matrix", () => {
   it("accepts an explicit isolated demo configuration", () => {
     const config = getRuntimeConfig(demoEnv);
@@ -93,15 +102,53 @@ describe("runtime-config environment matrix", () => {
   });
 
   it("treats preview as explicit configuration rather than inferring from NODE_ENV", () => {
-    const status = inspectRuntimeConfig({ ...demoEnv, APP_ENV: "local", VERCEL_ENV: "preview" });
+    const status = inspectRuntimeConfig({
+      ...demoEnv,
+      ...ssoOverrides,
+      APP_ENV: "local",
+      VERCEL_ENV: "preview",
+    });
     expect(status.ok).toBe(true);
     if (status.ok) expect(status.config.appEnv).toBe("local");
   });
 
+  it("forbids demo auth on hosted production deployments regardless of APP_ENV", () => {
+    // VERCEL_ENV=production, and VERCEL set without VERCEL_ENV (fail closed).
+    for (const hostedEnv of [{ VERCEL: "1", VERCEL_ENV: "production" }, { VERCEL: "1" }]) {
+      const status = inspectRuntimeConfig({ ...demoEnv, APP_ENV: "local", ...hostedEnv });
+      expect(status.ok).toBe(false);
+      if (!status.ok) {
+        expect(status.issues).toEqual(
+          expect.arrayContaining([
+            { key: "AUTH_MODE", reason: "must be sso on hosted production deployments" },
+          ]),
+        );
+      }
+    }
+  });
+
+  it("allows demo personas on Preview deployments (behind Vercel Authentication)", () => {
+    const status = inspectRuntimeConfig({
+      ...demoEnv,
+      DATABASE_MODE: "postgres",
+      DATABASE_URL: "postgresql://app:secret@db.example.com/app",
+      DATABASE_URL_UNPOOLED: "postgresql://app:secret@db-direct.example.com/app",
+      PGLITE_DATA_DIR: undefined,
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+    });
+    expect(status.ok).toBe(true);
+  });
+
+  it("still accepts demo auth locally with no Vercel markers", () => {
+    const status = inspectRuntimeConfig({ ...demoEnv, APP_ENV: "local" });
+    expect(status.ok).toBe(true);
+  });
+
   it("derives Preview APP_ORIGIN from VERCEL_BRANCH_URL when unset", () => {
     const status = inspectRuntimeConfig({
-      APP_ENV: "demo",
-      AUTH_MODE: "demo",
+      ...ssoOverrides,
+      APP_ENV: "local",
       DATABASE_MODE: "postgres",
       DATABASE_URL: "postgresql://app:secret@db.example.com/app",
       EMAIL_MODE: "stub",

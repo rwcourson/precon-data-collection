@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   clampPageSize,
   decodeCursor,
+  DEFAULT_PAGE_SIZE,
   encodeCursor,
   MAX_PAGE_SIZE,
   pageFromRows,
+  parsePagination,
 } from "@/lib/pagination";
 
 describe("pagination", () => {
@@ -18,6 +20,36 @@ describe("pagination", () => {
     const encoded = encodeCursor({ id: 42, sortValue: "Central" });
     expect(decodeCursor(encoded)).toEqual({ id: 42, sortValue: "Central" });
     expect(decodeCursor("not-a-cursor")).toBeNull();
+  });
+
+  it("parses limit/offset params with clamped defaults", () => {
+    expect(parsePagination(new URLSearchParams())).toEqual({
+      limit: DEFAULT_PAGE_SIZE,
+      offset: 0,
+    });
+    expect(parsePagination(new URLSearchParams("limit=25&offset=100"))).toEqual({
+      limit: 25,
+      offset: 100,
+    });
+    expect(parsePagination(new URLSearchParams("limit=5000&offset=-3"))).toEqual({
+      limit: MAX_PAGE_SIZE,
+      offset: 0,
+    });
+    expect(parsePagination(new URLSearchParams("limit=abc"))).toEqual({
+      limit: DEFAULT_PAGE_SIZE,
+      offset: 0,
+    });
+  });
+
+  it("allows endpoints to raise the default limit up to the max", () => {
+    expect(parsePagination(new URLSearchParams(), { limit: MAX_PAGE_SIZE })).toEqual({
+      limit: MAX_PAGE_SIZE,
+      offset: 0,
+    });
+    expect(parsePagination(new URLSearchParams(), { limit: 10_000 })).toEqual({
+      limit: MAX_PAGE_SIZE,
+      offset: 0,
+    });
   });
 
   it("pages rows with a next cursor when more remain", () => {

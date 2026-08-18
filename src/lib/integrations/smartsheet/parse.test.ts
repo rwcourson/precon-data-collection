@@ -84,6 +84,51 @@ describe("parseSmartsheetRound", () => {
       ),
     ).toBeNull();
   });
+
+  it("treats an unchecked boolean as blank, never the string \"false\"", () => {
+    const unchecked = parseSmartsheetRound(
+      {
+        "Job #": "24151",
+        "Job Name": "Boolean subject",
+        "Internal Joint Venture?": false,
+      },
+      CEN_ACTIVE,
+    );
+    expect(unchecked!.internalJointVenture).toBeNull();
+
+    const checked = parseSmartsheetRound(
+      {
+        "Job #": "24151",
+        "Job Name": "Boolean subject",
+        "Internal Joint Venture?": true,
+      },
+      CEN_ACTIVE,
+    );
+    expect(checked!.internalJointVenture).toBe("true");
+  });
+
+  it("does not fall back to the lifecycle Status column for statusAtPricing", () => {
+    const draft = parseSmartsheetRound(
+      {
+        "Job #": "24152",
+        "Job Name": "Pricing status subject",
+        Status: "Active",
+      },
+      CEN_ACTIVE,
+    );
+    expect(draft!.statusAtPricing).toBeNull();
+
+    const explicit = parseSmartsheetRound(
+      {
+        "Job #": "24152",
+        "Job Name": "Pricing status subject",
+        Status: "Active",
+        "Contract Status (at time of pricing)": "Contracted",
+      },
+      CEN_ACTIVE,
+    );
+    expect(explicit!.statusAtPricing).toBe("Contracted");
+  });
 });
 
 describe("mergeSmartsheetDrafts", () => {

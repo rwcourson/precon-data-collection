@@ -71,19 +71,30 @@ export function smartsheetRowToCells(sheet: {
   return o;
 }
 
+/**
+ * Booleans map explicitly: an unchecked checkbox (false) is the same as blank —
+ * stringifying it would turn e.g. `internalJointVenture` into the truthy text
+ * "false" and mis-flag the round as an Internal Joint Venture.
+ */
+function normalizeCell(v: string | number | boolean | null | undefined): string | null {
+  if (v == null || v === "" || v === false) return null;
+  if (v === true) return "true";
+  return String(v).trim();
+}
+
 export function cellValue(row: CellMap, ...keys: string[]): string | null {
   for (const k of keys) {
-    const v = row[k];
+    const v = normalizeCell(row[k]);
     if (v == null || v === "") continue;
-    return String(v).trim();
+    return v;
   }
   const lower = Object.fromEntries(
     Object.entries(row).map(([k, v]) => [k.toLowerCase(), v]),
   );
   for (const k of keys) {
-    const v = lower[k.toLowerCase()];
+    const v = normalizeCell(lower[k.toLowerCase()]);
     if (v == null || v === "") continue;
-    return String(v).trim();
+    return v;
   }
   return null;
 }
@@ -213,7 +224,9 @@ export function parseSmartsheetRound(row: CellMap, file: string): SmartsheetRoun
     contractType: cellValue(row, "Contract Type"),
     procurement: cellValue(row, "Procurement Method", "Procurement"),
     designContract: cellValue(row, "Design Delivery", "Design/Contract", "Design Contract"),
-    statusAtPricing: cellValue(row, "Contract Status (at time of pricing)", "Status"),
+    // No "Status" fallback: the lifecycle Status column (Active/Submitted/…) is
+    // a different concept from the contract status at time of pricing.
+    statusAtPricing: cellValue(row, "Contract Status (at time of pricing)"),
     internalJointVenture: cellValue(row, "Internal Joint Venture?"),
     awardability: cellValue(row, "Awardability"),
     estimateValue: parseMoney(cellValue(row, "Estimate Value $", "Bid Amount")),

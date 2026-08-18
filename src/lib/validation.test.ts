@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { EstimateRound } from "@/db/schema";
 import { REQUIRED_FIELD_KEYS } from "./fields";
-import { evaluateLockGate, missingRequiredFields } from "./validation";
+import {
+  evaluateLockGate,
+  isRealCalendarDate,
+  missingRequiredFields,
+  validateFieldValue,
+} from "./validation";
 
 function sparseRound(): EstimateRound {
   return {
@@ -99,5 +104,22 @@ describe("lock gate labels", () => {
       expect(gate.error).toMatch(/Cannot lock/);
       expect(gate.error).toMatch(/Fee – Expected \$/);
     }
+  });
+});
+
+describe("date field validation", () => {
+  it("rejects regex-shaped but impossible dates", () => {
+    expect(isRealCalendarDate("2026-13-45")).toBe(false);
+    expect(isRealCalendarDate("2026-02-30")).toBe(false);
+    expect(isRealCalendarDate("2026-04-31")).toBe(false);
+    expect(isRealCalendarDate("2026-02-28")).toBe(true);
+    expect(isRealCalendarDate("2024-02-29")).toBe(true); // leap year
+
+    expect(validateFieldValue("bidDueDate", "2026-13-45", {}).ok).toBe(false);
+    expect(validateFieldValue("bidDueDate", "2026-02-30", {}).ok).toBe(false);
+    expect(validateFieldValue("bidDueDate", "2026-04-15", {})).toEqual({
+      ok: true,
+      value: "2026-04-15",
+    });
   });
 });

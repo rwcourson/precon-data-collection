@@ -6,6 +6,29 @@ import { notesService } from "@/services/notes-service";
 
 export const dynamic = "force-dynamic";
 
+// The stored content type is attacker-supplied at upload time; only echo it
+// back for well-known safe types and fall back to a generic binary download.
+const SAFE_CONTENT_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+function safeContentType(stored: string): string {
+  const normalized = stored.split(";")[0]?.trim().toLowerCase() ?? "";
+  return SAFE_CONTENT_TYPES.has(normalized) ? normalized : "application/octet-stream";
+}
+
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
@@ -21,7 +44,7 @@ export async function GET(
     return new Response(Buffer.from(file.bytes), {
       status: 200,
       headers: {
-        "Content-Type": file.contentType,
+        "Content-Type": safeContentType(file.contentType),
         "Content-Disposition": attachmentContentDisposition(file.filename),
         "Cache-Control": "private, no-store",
       },

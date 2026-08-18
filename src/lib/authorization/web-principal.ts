@@ -9,7 +9,9 @@ import { createPrincipal } from "./principal";
 export async function getWebPrincipal() {
   const mobile = getMobileContext();
   if (mobile?.authorization) return mobile.authorization;
-  const [user, workspace] = await Promise.all([getCurrentUser(), getWorkspace()]);
+  // Both calls are React.cache-memoized per request, so identity resolves once.
+  const user = await getCurrentUser();
+  const workspace = await getWorkspace();
   return createPrincipal({
     user,
     authSource: authMode() === "sso" ? "sso" : "demo_session",

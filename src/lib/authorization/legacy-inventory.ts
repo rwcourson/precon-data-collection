@@ -23,7 +23,6 @@ export const LEGACY_DIRECT_ID_LOADERS = [
   "src/actions/templates.ts",
   "src/lib/auth.ts",
   "src/lib/email.ts",
-  "src/lib/export-jobs.ts",
   "src/lib/mobile-auth.ts",
   "src/lib/queries.ts",
   "src/lib/recovery.ts",

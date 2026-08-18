@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, type AppDb } from "@/db";
 import { estimateRounds } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
@@ -33,7 +33,10 @@ export async function updateRoundIfUnchanged(
       and(
         eq(estimateRounds.id, input.roundId),
         eq(estimateRounds.status, input.expectedStatus as never),
-        eq(estimateRounds.updatedAt, input.expectedUpdatedAt),
+        // Postgres `now()` keeps microseconds; JS Date only carries milliseconds,
+        // so a strict equality never matches rows whose updated_at came from the
+        // column default. Compare both sides at millisecond precision.
+        sql`date_trunc('milliseconds', ${estimateRounds.updatedAt}) = date_trunc('milliseconds', ${sql.param(input.expectedUpdatedAt, estimateRounds.updatedAt)}::timestamp)`,
       ),
     )
     .returning({ id: estimateRounds.id });

@@ -1,6 +1,6 @@
 import "server-only";
 import { and, desc, eq, gte } from "drizzle-orm";
-import { db } from "@/db";
+import { db, type AppDb } from "@/db";
 import { appSettings, notifications } from "@/db/schema";
 import { fmtDate } from "./format";
 import { sendEmails, type QueuedEmail } from "./email";
@@ -38,8 +38,11 @@ export const DEFAULT_SETTINGS: NotificationSettings = {
   inApp: true,
 };
 
-export async function getNotificationSettings(): Promise<NotificationSettings> {
-  const [row] = await db.select().from(appSettings).where(eq(appSettings.key, SETTINGS_KEY));
+/** Accepts an optional db/tx handle so callers inside a transaction reuse it. */
+export async function getNotificationSettings(
+  executor: AppDb = db,
+): Promise<NotificationSettings> {
+  const [row] = await executor.select().from(appSettings).where(eq(appSettings.key, SETTINGS_KEY));
   if (!row) return DEFAULT_SETTINGS;
   return { ...DEFAULT_SETTINGS, ...(row.value as Partial<NotificationSettings>) };
 }

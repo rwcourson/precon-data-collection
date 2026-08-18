@@ -19,6 +19,9 @@ import { buildForecastPptx } from "@/lib/pptx-forecast";
 import { resolveWidgets, type WidgetResolved } from "@/lib/dashboard-query";
 import { widgetConfigSchema } from "@/lib/dashboard-domain";
 
+// Chart-heavy deck build over the full scoped dataset.
+export const maxDuration = 120;
+
 const canvasBodySchema = z.object({
   source: z.enum(["canvas", "forecast"]).optional(),
   dashboardId: z.number().int().positive().optional(),

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { sheetColumns, sheetPins, sheetRows, users } from "@/db/schema";
 import type { Sheet, SheetColumn, SheetRow } from "@/db/schema";
@@ -41,7 +41,7 @@ export async function listSheets(
     const allRows = await db
       .select({ id: sheetRows.id, sheetId: sheetRows.sheetId })
       .from(sheetRows)
-      .where(inArray(sheetRows.sheetId, gridIds));
+      .where(and(inArray(sheetRows.sheetId, gridIds), isNull(sheetRows.deletedAt)));
     for (const r of allRows) gridCounts.set(r.sheetId, (gridCounts.get(r.sheetId) ?? 0) + 1);
   }
 
@@ -134,7 +134,7 @@ export async function loadSheetGrid(sheet: Sheet): Promise<SheetGridPayload> {
     db
       .select()
       .from(sheetRows)
-      .where(eq(sheetRows.sheetId, sheet.id))
+      .where(and(eq(sheetRows.sheetId, sheet.id), isNull(sheetRows.deletedAt)))
       .orderBy(asc(sheetRows.sortOrder), asc(sheetRows.id)),
   ]);
   return { sheet, columns, rows };

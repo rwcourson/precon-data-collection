@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { createHash } from "crypto";
 import { mkdir, writeFile, readFile } from "fs/promises";
 import path from "path";
@@ -285,9 +285,15 @@ export async function listTrash(principal: Principal): Promise<TrashItem[]> {
       region: s.region,
     });
   }
+  // Batch the parent-sheet lookup: one inArray query instead of one per row.
+  const parentSheetIds = [...new Set(gridRows.filter((r) => r.deletedAt).map((r) => r.sheetId))];
+  const parentSheets = parentSheetIds.length
+    ? await db.select().from(sheets).where(inArray(sheets.id, parentSheetIds))
+    : [];
+  const parentSheetById = new Map(parentSheets.map((s) => [s.id, s]));
   for (const row of gridRows) {
     if (!row.deletedAt) continue;
-    const [parent] = await db.select().from(sheets).where(eq(sheets.id, row.sheetId));
+    const parent = parentSheetById.get(row.sheetId);
     if (!principalAllowsRegion(principal, parent?.region ?? null)) continue;
     items.push({
       entityType: "sheet_row",

@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 
 function secret(): string {
   const configured =
@@ -33,10 +33,20 @@ export async function callAppTool(
   if (!principalId) {
     throw new Error("Copilot tools require an authenticated app user.");
   }
-  const hmac = createHmac("sha256", secret()).update(`${principalId}:${tool}`).digest("hex");
+  // Signature scheme must stay in lockstep with src/lib/ai/copilot-bridge.ts:
+  // a key derived from the base secret signs timestamp, principal, tool, and
+  // a hash of the exact raw body, so requests can't be replayed or re-bodied.
+  const rawBody = JSON.stringify({ tool, input });
+  const bodyHash = createHash("sha256").update(rawBody, "utf8").digest("hex");
+  const timestamp = Date.now();
+  const signingKey = createHmac("sha256", secret()).update("copilot-tools-v1").digest();
+  const hmac = createHmac("sha256", signingKey)
+    .update(`${timestamp}:${principalId}:${tool}:${bodyHash}`)
+    .digest("hex");
   const headers: Record<string, string> = {
     "content-type": "application/json",
     "x-eve-principal-id": principalId,
+    "x-eve-ts": String(timestamp),
     "x-eve-hmac": hmac,
   };
   if (auth.workspaceRegion != null) {
@@ -45,7 +55,7 @@ export async function callAppTool(
   const response = await fetch(`${origin()}/api/v1/copilot/tools`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ tool, input }),
+    body: rawBody,
   });
   if (!response.ok) {
     const text = await response.text();

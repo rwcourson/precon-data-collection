@@ -44,8 +44,9 @@ export async function renderPdf(html: string, opts: PdfOptions = {}): Promise<Ui
         </div>`,
     });
     return new Uint8Array(buffer);
-  } catch {
+  } catch (err) {
     // One failure means the binary is missing or blocked; stop retrying.
+    console.error("PDF rendering unavailable — falling back to print HTML:", err);
     chromiumUnavailable = true;
     return null;
   } finally {
@@ -81,6 +82,20 @@ export async function pdfResponse(
 
 async function launch() {
   // Imported lazily so bundling never pulls Playwright into the client graph.
+  if (process.env.VERCEL) {
+    // Hosted: no system Chromium exists, so use the serverless build shipped
+    // by @sparticuz/chromium and drive it with playwright-core.
+    const [{ chromium }, { default: sparticuz }] = await Promise.all([
+      import("playwright-core"),
+      import("@sparticuz/chromium"),
+    ]);
+    const executablePath = await sparticuz.executablePath();
+    return chromium.launch({
+      executablePath,
+      args: sparticuz.args,
+      headless: true,
+    });
+  }
   const { chromium } = await import("playwright");
   return chromium.launch({ args: ["--no-sandbox"] });
 }

@@ -15,6 +15,8 @@ import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
+// Synchronous xlsx/PDF build; PDF uses headless Chromium.
+export const maxDuration = 60;
 
 /** Excel and PDF for either kind of sheet, using whatever the viewer sees. */
 export async function GET(req: NextRequest) {

@@ -22,7 +22,7 @@ import type { Principal } from "@/lib/authorization/types";
 import { authorize } from "@/lib/authorization/kernel";
 import { MULTI_FIELD_KEYS, ROUND_COLUMN_KEYS } from "@/lib/fields";
 import { connectProvider } from "@/lib/integrations/connect";
-import { sendEmails } from "@/lib/email";
+import { deliverQueued, queueEmails } from "@/lib/email";
 import { planOutcomeUpdate, type OutcomeValue } from "@/lib/outcome";
 import { allowedTransitions } from "@/lib/authorization/lifecycle";
 import { STATUS_LABELS } from "@/lib/labels";
@@ -89,7 +89,47 @@ export type SavePostBidInput = {
   multiValues: Record<string, string[]>;
   customValues: Record<number, string>;
   estimateLeadId?: number | null;
+  /**
+   * Optimistic-concurrency snapshot: the round's updatedAt as rendered by the
+   * client. When present, a save fails with a conflict if anyone else edited
+   * the round in between. Omitted → falls back to a fresh read (legacy).
+   */
+  expectedUpdatedAt?: string | Date | null;
 };
+
+/** Unique-constraint violation (Postgres 23505 / PGlite message), possibly wrapped. */
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current != null; depth++) {
+    if (typeof current === "object") {
+      const e = current as { code?: unknown; message?: unknown; cause?: unknown };
+      if (e.code === "23505") return true;
+      if (typeof e.message === "string" && /duplicate key value|unique constraint/i.test(e.message)) {
+        return true;
+      }
+      current = e.cause;
+    } else {
+      break;
+    }
+  }
+  return false;
+}
+
+/** Placeholder job number for manual pursuits, checked against existing jobs. */
+async function generateTbdJobNumber(): Promise<string> {
+  // Widen the random space each retry so a crowded TBD range cannot collide forever.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const span = 9000 * 10 ** attempt;
+    const candidate = `TBD-${1000 + Math.floor(Math.random() * span)}`;
+    const [existing] = await db
+      .select({ id: jobs.id })
+      .from(jobs)
+      .where(eq(jobs.jobNumber, candidate))
+      .limit(1);
+    if (!existing) return candidate;
+  }
+  return `TBD-${Date.now()}`;
+}
 
 /** Transport-neutral pursuit mutations — caller supplies an explicit principal. */
 export const pursuitService = {
@@ -119,7 +159,7 @@ export const pursuitService = {
     } else {
       if (!input.jobName?.trim()) throw DomainError.badRequest("Job Name is required for manual pursuits");
       jobName = input.jobName.trim();
-      jobNumber = `TBD-${1000 + Math.floor(Math.random() * 9000)}`;
+      jobNumber = await generateTbdJobNumber();
     }
 
     if (!input.confirmDuplicate) {
@@ -212,46 +252,59 @@ export const pursuitService = {
     const job = loaded.value;
     const user = principal.user;
 
-    const existing = await db
-      .select({ n: estimateRounds.roundNumber, r: estimateRounds })
-      .from(estimateRounds)
-      .where(eq(estimateRounds.jobId, job.id));
-    const maxRound = Math.max(0, ...existing.map((e) => e.n));
-    const latest = existing.sort((a, b) => b.n - a.n)[0]?.r;
+    // Concurrent adds can both read the same max(roundNumber); the unique index
+    // on (job_id, round_number) rejects the loser, which retries with a re-read.
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await withTransaction(async (tx) => {
+          const existing = await tx
+            .select({ n: estimateRounds.roundNumber, r: estimateRounds })
+            .from(estimateRounds)
+            .where(eq(estimateRounds.jobId, job.id));
+          const maxRound = Math.max(0, ...existing.map((e) => e.n));
+          const latest = existing.sort((a, b) => b.n - a.n)[0]?.r;
 
-    const [round] = await db
-      .insert(estimateRounds)
-      .values({
-        jobId: job.id,
-        roundNumber: maxRound + 1,
-        status: input.initialStatus,
-        region: job.region,
-        preconDepartment: job.preconDepartment,
-        estimatePhase: input.estimatePhase,
-        bidYear: input.bidYear,
-        bidDueDate: input.bidDueDate || null,
-        city: latest?.city ?? null,
-        state: latest?.state ?? null,
-        marketSector: latest?.marketSector ?? null,
-        mlt: latest?.mlt ?? null,
-        contractType: latest?.contractType ?? null,
-        procurement: latest?.procurement ?? null,
-        owner: latest?.owner ?? null,
-        drawingsDueDate: latest?.drawingsDueDate ?? null,
-        bidReviewDate: latest?.bidReviewDate ?? null,
-        estimateLeadId: latest?.estimateLeadId ?? null,
-        createdById: user.id,
-      })
-      .returning();
+          const [round] = await tx
+            .insert(estimateRounds)
+            .values({
+              jobId: job.id,
+              roundNumber: maxRound + 1,
+              status: input.initialStatus,
+              region: job.region,
+              preconDepartment: job.preconDepartment,
+              estimatePhase: input.estimatePhase,
+              bidYear: input.bidYear,
+              bidDueDate: input.bidDueDate || null,
+              city: latest?.city ?? null,
+              state: latest?.state ?? null,
+              marketSector: latest?.marketSector ?? null,
+              mlt: latest?.mlt ?? null,
+              contractType: latest?.contractType ?? null,
+              procurement: latest?.procurement ?? null,
+              owner: latest?.owner ?? null,
+              drawingsDueDate: latest?.drawingsDueDate ?? null,
+              bidReviewDate: latest?.bidReviewDate ?? null,
+              estimateLeadId: latest?.estimateLeadId ?? null,
+              createdById: user.id,
+            })
+            .returning();
 
-    await db.insert(statusTransitions).values({
-      roundId: round.id,
-      fromStatus: null,
-      toStatus: input.initialStatus,
-      userId: user.id,
-    });
+          await tx.insert(statusTransitions).values({
+            roundId: round.id,
+            fromStatus: null,
+            toStatus: input.initialStatus,
+            userId: user.id,
+          });
 
-    return { roundId: round.id, jobId: job.id };
+          return { roundId: round.id, jobId: job.id };
+        });
+      } catch (error) {
+        if (!isUniqueViolation(error)) throw error;
+        lastError = error;
+      }
+    }
+    throw lastError;
   },
 
   async transitionStatus(principal: Principal, roundId: number, to: RoundStatus) {
@@ -260,6 +313,16 @@ export const pursuitService = {
     const round = loaded.value.round;
     const user = principal.user;
 
+    // Locking must go through Approve & Lock, which enforces the required-field
+    // gate and stamps lockedAt. The generic transition path would bypass both.
+    if (to === "locked") {
+      throw DomainError.badRequest(
+        "Rounds cannot be locked through a direct status change.",
+        "Locking requires the required-field gate.",
+        "Use the Approve & Lock flow instead.",
+      );
+    }
+
     const allowed = allowedTransitions(principal, round);
     if (!allowed.includes(to)) {
       throw DomainError.forbidden(
@@ -267,7 +330,10 @@ export const pursuitService = {
       );
     }
 
-    await withTransaction(async (tx) => {
+    // Inside the transaction we only write DB rows (using the tx handle — the
+    // prod pool is max:1, so global-db calls in here would self-deadlock).
+    // Email delivery (network) happens after commit.
+    const queuedEmailIds = await withTransaction(async (tx) => {
       const patch: Partial<typeof estimateRounds.$inferInsert> = {
         status: to,
       };
@@ -285,6 +351,7 @@ export const pursuitService = {
         userId: user.id,
       });
 
+      let emailIds: number[] = [];
       if (to === "submitted") {
         const [job] = await tx.select().from(jobs).where(eq(jobs.id, round.jobId));
         const targetId =
@@ -293,29 +360,43 @@ export const pursuitService = {
         if (targetId) {
           const title = `Post-bid data needed: ${job?.jobName ?? "Pursuit"}`;
           const body = `${round.estimatePhase} (Bid Year ${round.bidYear}) moved to Submitted. Complete the remaining post-bid fields.`;
-          const settings = await getNotificationSettings();
+          const settings = await getNotificationSettings(tx);
           if (settings.inApp) {
             await tx.insert(notifications).values({ userId: targetId, title, body, roundId });
           }
           if (settings.email) {
             const [target] = await tx.select().from(users).where(eq(users.id, targetId));
             if (target?.email) {
-              // Delivery is outside the DB transaction but outbox insert stays atomic with status.
-              await sendEmails([
-                {
-                  toEmail: target.email,
-                  toUserId: target.id,
-                  subject: title,
-                  body: `${body}\n\nOpen the round to finish entry: /rounds/${roundId}`,
-                  kind: "submitted",
-                  roundId,
-                },
-              ]);
+              emailIds = await queueEmails(
+                [
+                  {
+                    toEmail: target.email,
+                    toUserId: target.id,
+                    subject: title,
+                    body: `${body}\n\nOpen the round to finish entry: /rounds/${roundId}`,
+                    kind: "submitted",
+                    roundId,
+                  },
+                ],
+                tx,
+              );
             }
           }
         }
       }
+      return emailIds;
     });
+
+    // The outbox rows are committed with the status change; delivery is a
+    // network call and stays outside the transaction. Failures are retried by
+    // the outbox sweep, so they must not fail the transition itself.
+    if (queuedEmailIds.length > 0) {
+      try {
+        await deliverQueued(queuedEmailIds);
+      } catch (error) {
+        console.error("Post-transition email delivery failed; outbox will retry.", error);
+      }
+    }
 
     return { roundId, status: to };
   },
@@ -370,6 +451,15 @@ export const pursuitService = {
     if (!loaded) throw DomainError.notFound("Round not found");
     const round = loaded.value.round;
     const locked = round.status === "locked";
+
+    // Prefer the snapshot the client rendered with; the fresh read below would
+    // make the optimistic guard vacuous (it always matches itself).
+    const clientSnapshot =
+      input.expectedUpdatedAt != null ? new Date(input.expectedUpdatedAt) : null;
+    const expectedUpdatedAt =
+      clientSnapshot && !Number.isNaN(clientSnapshot.getTime())
+        ? clientSnapshot
+        : round.updatedAt;
 
     const [lists, existingMulti] = await Promise.all([
       getReferenceValues(),
@@ -502,7 +592,7 @@ export const pursuitService = {
         await updateRoundIfUnchanged(tx, {
           roundId: round.id,
           expectedStatus: round.status,
-          expectedUpdatedAt: round.updatedAt,
+          expectedUpdatedAt,
           patch: Object.keys(patch).length > 0 ? patch : {},
         });
       }

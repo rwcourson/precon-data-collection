@@ -15,6 +15,7 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { connectProvider } from "@/lib/integrations/connect";
 import { proposeMatches } from "@/lib/salesforce-match";
 import { planSalesforceLink } from "@/lib/salesforce-link";
+import { withTransaction } from "@/lib/transactions";
 import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 export async function runSalesforceSync() {
@@ -53,33 +54,30 @@ export async function runSalesforceSync() {
       suppressions,
     );
 
+    // Single bulk insert; the partial unique index on (job_id, sf_id,
+    // source_version) makes re-proposals no-ops without a select-per-candidate.
     let created = 0;
-    for (const c of candidates) {
-      const existing = await db
-        .select()
-        .from(salesforceMatchCandidates)
-        .where(
-          and(
-            eq(salesforceMatchCandidates.jobId, c.jobId),
-            eq(salesforceMatchCandidates.sfId, c.sfId),
-            eq(salesforceMatchCandidates.sourceVersion, c.sourceVersion),
-          ),
-        );
-      if (existing[0]) continue;
-      await db.insert(salesforceMatchCandidates).values({
-        syncRunId: run.id,
-        jobId: c.jobId,
-        sfId: c.sfId,
-        sourceVersion: c.sourceVersion,
-        proposedJobNumber: c.proposedJobNumber,
-        proposedJobName: c.proposedJobName,
-        proposedRegion: c.proposedRegion,
-        score: c.score,
-        signals: c.signals,
-        discrepancy: c.discrepancy,
-        status: "pending",
-      });
-      created++;
+    if (candidates.length > 0) {
+      const inserted = await db
+        .insert(salesforceMatchCandidates)
+        .values(
+          candidates.map((c) => ({
+            syncRunId: run.id,
+            jobId: c.jobId,
+            sfId: c.sfId,
+            sourceVersion: c.sourceVersion,
+            proposedJobNumber: c.proposedJobNumber,
+            proposedJobName: c.proposedJobName,
+            proposedRegion: c.proposedRegion,
+            score: c.score,
+            signals: c.signals,
+            discrepancy: c.discrepancy,
+            status: "pending" as const,
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ id: salesforceMatchCandidates.id });
+      created = inserted.length;
     }
 
     await db
@@ -122,102 +120,121 @@ export async function decideMatchCandidate(
   if (!c || c.status !== "pending") throw new Error("Candidate not found");
 
   if (decision === "reject" || decision === "dismiss") {
-    await db.insert(salesforceMatchSuppressions).values({
-      jobId: c.jobId,
-      sfId: c.sfId,
-      sourceVersion: c.sourceVersion,
-      reason: decision,
-      createdById: user.id,
-    });
-    await db
-      .update(salesforceMatchCandidates)
-      .set({
-        status: decision === "reject" ? "rejected" : "dismissed",
-        decidedById: user.id,
-        decidedAt: new Date(),
-        decisionNote: note ?? null,
-      })
-      .where(eq(salesforceMatchCandidates.id, candidateId));
-    await db.insert(auditLog).values({
-      entity: "salesforce_match",
-      entityId: candidateId,
-      action: decision,
-      field: c.sfId,
-      userId: user.id,
+    await withTransaction(async (tx) => {
+      // Guarded claim: only one concurrent decision can flip a pending row.
+      const [claimed] = await tx
+        .update(salesforceMatchCandidates)
+        .set({
+          status: decision === "reject" ? "rejected" : "dismissed",
+          decidedById: user.id,
+          decidedAt: new Date(),
+          decisionNote: note ?? null,
+        })
+        .where(
+          and(
+            eq(salesforceMatchCandidates.id, candidateId),
+            eq(salesforceMatchCandidates.status, "pending"),
+          ),
+        )
+        .returning({ id: salesforceMatchCandidates.id });
+      if (!claimed) throw new Error("Candidate not found");
+      await tx.insert(salesforceMatchSuppressions).values({
+        jobId: c.jobId,
+        sfId: c.sfId,
+        sourceVersion: c.sourceVersion,
+        reason: decision,
+        createdById: user.id,
+      });
+      await tx.insert(auditLog).values({
+        entity: "salesforce_match",
+        entityId: candidateId,
+        action: decision,
+        field: c.sfId,
+        userId: user.id,
+      });
     });
     revalidatePath("/admin");
     return;
   }
 
   // approve / link — preserve job + round IDs
-  if (!c.jobId) throw new Error("Candidate missing job");
+  const jobId = c.jobId;
+  if (!jobId) throw new Error("Candidate missing job");
   if (c.discrepancy?.includes("job_number_mismatch") && note !== "confirm-job-number") {
     throw new Error(
       "Job number discrepancy requires confirmation (pass note confirm-job-number).",
     );
   }
 
-  const [job] = await db.select().from(jobs).where(eq(jobs.id, c.jobId));
-  if (!job) throw new Error("Job missing");
-
-  if (job.isLinked) {
-    // Discrepancy confirmation path — keep job/round IDs, update identity fields only.
-    await db
-      .update(jobs)
+  await withTransaction(async (tx) => {
+    // Guarded claim first: only one concurrent decision links the candidate.
+    const [claimed] = await tx
+      .update(salesforceMatchCandidates)
       .set({
-        jobNumber: c.proposedJobNumber || job.jobNumber,
-        jobName: c.proposedJobName || job.jobName,
-        salesforceId: c.sfId,
+        status: "linked",
+        decidedById: user.id,
+        decidedAt: new Date(),
+        decisionNote: note ?? null,
       })
-      .where(eq(jobs.id, job.id));
-  } else {
-    const rounds = await db
-      .select({ id: estimateRounds.id })
-      .from(estimateRounds)
-      .where(eq(estimateRounds.jobId, job.id));
-    const plan = planSalesforceLink(
-      {
-        id: job.id,
-        jobNumber: job.jobNumber,
-        jobName: job.jobName,
-        salesforceId: job.salesforceId,
-        isLinked: job.isLinked,
-      },
-      {
-        sfId: c.sfId,
-        jobNumber: c.proposedJobNumber || job.jobNumber,
-        jobName: c.proposedJobName || job.jobName,
-      },
-      rounds.map((r) => r.id),
-    );
-    await db.update(jobs).set(plan.patch).where(eq(jobs.id, job.id));
-  }
+      .where(
+        and(
+          eq(salesforceMatchCandidates.id, candidateId),
+          eq(salesforceMatchCandidates.status, "pending"),
+        ),
+      )
+      .returning({ id: salesforceMatchCandidates.id });
+    if (!claimed) throw new Error("Candidate not found");
 
-  // Rounds stay on the same job id (history preserved)
-  await db
-    .update(estimateRounds)
-    .set({ updatedAt: new Date() })
-    .where(eq(estimateRounds.jobId, job.id));
+    const [job] = await tx.select().from(jobs).where(eq(jobs.id, jobId));
+    if (!job) throw new Error("Job missing");
 
-  await db
-    .update(salesforceMatchCandidates)
-    .set({
-      status: "linked",
-      decidedById: user.id,
-      decidedAt: new Date(),
-      decisionNote: note ?? null,
-    })
-    .where(eq(salesforceMatchCandidates.id, candidateId));
+    if (job.isLinked) {
+      // Discrepancy confirmation path — keep job/round IDs, update identity fields only.
+      await tx
+        .update(jobs)
+        .set({
+          jobNumber: c.proposedJobNumber || job.jobNumber,
+          jobName: c.proposedJobName || job.jobName,
+          salesforceId: c.sfId,
+        })
+        .where(eq(jobs.id, job.id));
+    } else {
+      const rounds = await tx
+        .select({ id: estimateRounds.id })
+        .from(estimateRounds)
+        .where(eq(estimateRounds.jobId, job.id));
+      const plan = planSalesforceLink(
+        {
+          id: job.id,
+          jobNumber: job.jobNumber,
+          jobName: job.jobName,
+          salesforceId: job.salesforceId,
+          isLinked: job.isLinked,
+        },
+        {
+          sfId: c.sfId,
+          jobNumber: c.proposedJobNumber || job.jobNumber,
+          jobName: c.proposedJobName || job.jobName,
+        },
+        rounds.map((r) => r.id),
+      );
+      await tx.update(jobs).set(plan.patch).where(eq(jobs.id, job.id));
+    }
 
-  await db.insert(auditLog).values({
-    entity: "job_match",
-    entityId: job.id,
-    action: "salesforce_linked",
-    field: "salesforceId",
-    oldValue: job.salesforceId,
-    newValue: c.sfId,
-    userId: user.id,
+    // Rounds stay on the same job id (history preserved). No blanket
+    // updated_at touch here — that would invalidate other users' optimistic
+    // save snapshots on every round of the job.
+
+    await tx.insert(auditLog).values({
+      entity: "job_match",
+      entityId: job.id,
+      action: "salesforce_linked",
+      field: "salesforceId",
+      oldValue: job.salesforceId,
+      newValue: c.sfId,
+      userId: user.id,
+    });
   });
   revalidatePath("/admin");
-  revalidatePath(`/jobs/${job.id}`);
+  revalidatePath(`/jobs/${jobId}`);
 }
