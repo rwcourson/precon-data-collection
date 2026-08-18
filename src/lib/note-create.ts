@@ -29,7 +29,8 @@ export function revalidateRoundNotes(roundId: number) {
 export async function createNoteFromUploadedForm(formData: FormData) {
   const roundId = Number(formData.get("roundId"));
   const body = String(formData.get("body") ?? "");
-  const files: { filename: string; contentType: string; bytes: Uint8Array }[] = [];
+  const files: { filename: string; contentType: string; bytes: Uint8Array }[] =
+    [];
   for (const value of formData.getAll("files")) {
     if (!isUploadedFile(value)) continue;
     files.push({
@@ -40,7 +41,12 @@ export async function createNoteFromUploadedForm(formData: FormData) {
   }
   const parsed = createRoundNoteSchema.parse({ roundId, body });
   const principal = await getWebPrincipal();
-  const note = await notesService.create(principal, parsed.roundId, parsed.body, files);
+  const note = await notesService.create(
+    principal,
+    parsed.roundId,
+    parsed.body,
+    files
+  );
   revalidateRoundNotes(parsed.roundId);
   return note;
 }

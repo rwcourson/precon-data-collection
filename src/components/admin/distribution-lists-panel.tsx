@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useTransition, type ReactElement } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2, Mail, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { type ReactElement, useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  deleteDistributionList,
+  sendDistributionNow,
+  upsertDistributionList,
+} from "@/actions/distribution";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,11 +44,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  deleteDistributionList,
-  sendDistributionNow,
-  upsertDistributionList,
-} from "@/actions/distribution";
 import { CONSOLIDATED_REGIONAL_PRESET_KEY } from "@/lib/report-presets";
 
 export type DistributionListRow = {
@@ -83,7 +83,7 @@ export function DistributionListsPanel({
       try {
         const res = await sendDistributionNow(id);
         toast.success(
-          `Queued ${res.outboxIds.length} email(s) for "${name}" via ${res.provider}`,
+          `Queued ${res.outboxIds.length} email(s) for "${name}" via ${res.provider}`
         );
         router.refresh();
       } catch (e) {
@@ -103,8 +103,8 @@ export function DistributionListsPanel({
             </CardTitle>
             <CardDescription>
               Email the consolidated regional bid schedule PDF to stakeholders.
-              Weekly lists send once per ISO week; manual lists send only when you
-              click Send now.
+              Weekly lists send once per ISO week; manual lists send only when
+              you click Send now.
             </CardDescription>
           </div>
           <ListFormDialog />
@@ -141,7 +141,9 @@ export function DistributionListsPanel({
                     {list.reportKey}
                   </p>
                 </TableCell>
-                <TableCell className="text-sm">{list.region ?? "All"}</TableCell>
+                <TableCell className="text-sm">
+                  {list.region ?? "All"}
+                </TableCell>
                 <TableCell className="max-w-48">
                   <p className="truncate text-xs text-muted-foreground">
                     {list.emails.join(", ")}
@@ -214,11 +216,9 @@ function ListFormDialog({
   const [region, setRegion] = useState(list?.region ?? "");
   const [emails, setEmails] = useState(list?.emails.join("\n") ?? "");
   const [cadence, setCadence] = useState<"manual" | "weekly">(
-    list?.cadence ?? "manual",
+    list?.cadence ?? "manual"
   );
-  const [timezone, setTimezone] = useState(
-    list?.timezone ?? "America/Chicago",
-  );
+  const [timezone, setTimezone] = useState(list?.timezone ?? "America/Chicago");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -283,8 +283,8 @@ function ListFormDialog({
             {list ? "Edit distribution list" : "New distribution list"}
           </DialogTitle>
           <DialogDescription>
-            Recipients receive the consolidated regional bid schedule PDF. Report
-            preset: {CONSOLIDATED_REGIONAL_PRESET_KEY}.
+            Recipients receive the consolidated regional bid schedule PDF.
+            Report preset: {CONSOLIDATED_REGIONAL_PRESET_KEY}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -345,7 +345,11 @@ function ListFormDialog({
             />
           </div>
         </div>
-        <Button onClick={submit} disabled={pending || !name.trim()} className="w-full">
+        <Button
+          onClick={submit}
+          disabled={pending || !name.trim()}
+          className="w-full"
+        >
           {pending && <Loader2 className="size-4 animate-spin" />}
           {list ? "Save changes" : "Create list"}
         </Button>

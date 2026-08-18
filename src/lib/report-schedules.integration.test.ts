@@ -1,6 +1,7 @@
-import { afterAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
+import type { User } from "@/db/schema";
 import {
   distributionLists,
   distributionRuns,
@@ -9,11 +10,10 @@ import {
   savedReports,
   users,
 } from "@/db/schema";
-import type { User } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
+import { getArtifactStorage } from "@/lib/artifact-storage";
 import { createPrincipal } from "@/lib/authorization/principal";
 import { UPCOMING_BID_SCHEDULE_PRESET_KEY } from "@/lib/report-presets";
-import { getArtifactStorage } from "@/lib/artifact-storage";
 import { distributionService } from "@/services/distribution-service";
 import { reportScheduleService } from "@/services/report-schedule-service";
 import { salesforceSyncService } from "@/services/salesforce-sync-service";
@@ -27,14 +27,28 @@ describe("report schedules and run-sync-now", () => {
 
   afterAll(async () => {
     if (listIds.length === 0) return;
-    await db.delete(emailOutbox).where(inArray(emailOutbox.distributionListId, listIds));
-    await db.delete(distributionRuns).where(inArray(distributionRuns.distributionListId, listIds));
-    await db.delete(distributionLists).where(inArray(distributionLists.id, listIds));
+    await db
+      .delete(emailOutbox)
+      .where(inArray(emailOutbox.distributionListId, listIds));
+    await db
+      .delete(distributionRuns)
+      .where(inArray(distributionRuns.distributionListId, listIds));
+    await db
+      .delete(distributionLists)
+      .where(inArray(distributionLists.id, listIds));
   });
 
   it("fires a Friday schedule once per period and attaches wrapped report HTML", async () => {
-    const [rpd] = await db.select().from(users).where(eq(users.role, "rpd")).limit(1);
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [rpd] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "rpd"))
+      .limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     const [report] = await db
       .select()
       .from(savedReports)
@@ -42,8 +56,8 @@ describe("report schedules and run-sync-now", () => {
         and(
           eq(savedReports.ownerId, rpd.id),
           eq(savedReports.presetKey, UPCOMING_BID_SCHEDULE_PRESET_KEY),
-          isNull(savedReports.deletedAt),
-        ),
+          isNull(savedReports.deletedAt)
+        )
       )
       .limit(1);
     const owner = principalFor(rpd, "Central");
@@ -56,9 +70,9 @@ describe("report schedules and run-sync-now", () => {
     });
     listIds.push(schedule.id);
 
-    await expect(reportScheduleService.setPaused(other, schedule.id, true)).rejects.toBeInstanceOf(
-      DomainError,
-    );
+    await expect(
+      reportScheduleService.setPaused(other, schedule.id, true)
+    ).rejects.toBeInstanceOf(DomainError);
 
     const friday = new Date("2026-08-21T13:00:00Z");
     const first = await distributionService.runDueDistributions(friday);
@@ -81,14 +95,18 @@ describe("report schedules and run-sync-now", () => {
       .from(reportArtifacts)
       .where(eq(reportArtifacts.storageKey, outbox[0]!.attachmentStorageKey!));
     expect(artifact?.contentType).toBe("text/html");
-    const stored = await getArtifactStorage().get(outbox[0]!.attachmentStorageKey!);
+    const stored = await getArtifactStorage().get(
+      outbox[0]!.attachmentStorageKey!
+    );
     expect(stored).toBeTruthy();
     const html = new TextDecoder().decode(stored!);
     expect(html).toContain("overflow-wrap: anywhere");
     expect(html).toContain("word-break: break-word");
 
     const second = await distributionService.runDueDistributions(friday);
-    expect(second.find((row) => row.listId === schedule.id)?.skipped).toBe(true);
+    expect(second.find((row) => row.listId === schedule.id)?.skipped).toBe(
+      true
+    );
     const outboxAgain = await db
       .select()
       .from(emailOutbox)
@@ -97,10 +115,17 @@ describe("report schedules and run-sync-now", () => {
   });
 
   it("run-sync-now creates match candidates for an integrate principal", async () => {
-    const [rpd] = await db.select().from(users).where(eq(users.role, "rpd")).limit(1);
-    const result = await salesforceSyncService.runIncremental(principalFor(rpd, "Central"), {
-      pageSize: 50,
-    });
+    const [rpd] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "rpd"))
+      .limit(1);
+    const result = await salesforceSyncService.runIncremental(
+      principalFor(rpd, "Central"),
+      {
+        pageSize: 50,
+      }
+    );
     expect(result.opportunitiesSeen).toBeGreaterThanOrEqual(0);
     expect(result).toHaveProperty("candidatesCreated");
   });

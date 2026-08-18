@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { demoAuthGate, publicUser, isDemoAuthAllowed } from "./mobile-auth";
 import { authMode } from "./auth";
+import { demoAuthGate, isDemoAuthAllowed, publicUser } from "./mobile-auth";
 
 describe("mobile auth contract", () => {
   it("demo gate rejects sso", () => {

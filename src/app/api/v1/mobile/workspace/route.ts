@@ -1,7 +1,12 @@
 import { cookies } from "next/headers";
-import { canViewCorporate, CORPORATE, resolveWorkspace, WORKSPACE_COOKIE } from "@/lib/workspace";
-import { jsonError, jsonOk, withMobileAuth } from "@/lib/mobile-http";
 import { getMobileContext } from "@/lib/mobile-context";
+import { jsonError, jsonOk, withMobileAuth } from "@/lib/mobile-http";
+import {
+  CORPORATE,
+  canViewCorporate,
+  resolveWorkspace,
+  WORKSPACE_COOKIE,
+} from "@/lib/workspace";
 
 export async function POST(req: Request) {
   return withMobileAuth(req, { scopes: "profile:read" }, async (principal) => {

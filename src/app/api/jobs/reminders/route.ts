@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { runReminderSweep } from "@/lib/reminders";
+import { type NextRequest, NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron-auth";
+import { runReminderSweep } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
 

@@ -91,10 +91,7 @@ export const distributionListSchema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().trim().min(1).max(120),
   region: z.string().trim().min(1).nullable(),
-  emails: z
-    .array(z.string().trim().email())
-    .min(1)
-    .max(100),
+  emails: z.array(z.string().trim().email()).min(1).max(100),
   cadence: z.enum(["manual", "weekly"]).default("manual"),
   reportKey: z.string().trim().min(1).max(80),
   timezone: z.string().trim().min(1).max(64).default("America/Chicago"),

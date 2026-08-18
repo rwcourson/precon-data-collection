@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticateBearer, requireScopes } from "@/lib/api-auth";
 import { AI_MODEL_ID } from "@/lib/ai/gateway";
+import { authenticateBearer, requireScopes } from "@/lib/api-auth";
 import { planDashboardWithOptionalLlm } from "@/lib/dashboard-copilot";
 
 const bodySchema = z.object({
@@ -14,9 +14,11 @@ const bodySchema = z.object({
  */
 export async function POST(req: Request) {
   const auth = await authenticateBearer(req.headers.get("authorization"));
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok)
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   const scope = requireScopes(auth.token, "read:dashboards");
-  if (!scope.ok) return NextResponse.json({ error: scope.error }, { status: scope.status });
+  if (!scope.ok)
+    return NextResponse.json({ error: scope.error }, { status: scope.status });
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {

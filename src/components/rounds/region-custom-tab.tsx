@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2, Lock, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { savePostBidData } from "@/actions/post-bid";
+import { CustomColumnFields } from "@/components/rounds/custom-column-fields";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CustomColumnFields } from "@/components/rounds/custom-column-fields";
-import { savePostBidData } from "@/actions/post-bid";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { CustomColumn } from "@/db/schema";
 
 export function RegionCustomTab({
@@ -45,7 +51,7 @@ export function RegionCustomTab({
         toast.success(
           res.audited > 0
             ? `Saved — ${res.audited} post-lock change${res.audited === 1 ? "" : "s"} recorded in the audit log`
-            : "Saved",
+            : "Saved"
         );
         router.refresh();
       } catch (e) {
@@ -65,7 +71,8 @@ export function RegionCustomTab({
         </CardTitle>
         <CardDescription>
           These columns are region-specific and never block Approve &amp; Lock.
-          Demo labels are marked so they are not mistaken for Bryan&apos;s live set.
+          Demo labels are marked so they are not mistaken for Bryan&apos;s live
+          set.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -80,9 +87,23 @@ export function RegionCustomTab({
         />
         {canEdit && (
           <div className="flex justify-end">
-            <Button onClick={save} disabled={pending || !dirty} className="gap-2">
-              {pending ? <Loader2 className="size-4 animate-spin" /> : locked ? <Lock className="size-4" /> : <Save className="size-4" />}
-              {locked ? "Save Correction (audit-logged)" : dirty ? "Save Changes" : "Saved"}
+            <Button
+              onClick={save}
+              disabled={pending || !dirty}
+              className="gap-2"
+            >
+              {pending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : locked ? (
+                <Lock className="size-4" />
+              ) : (
+                <Save className="size-4" />
+              )}
+              {locked
+                ? "Save Correction (audit-logged)"
+                : dirty
+                  ? "Save Changes"
+                  : "Saved"}
             </Button>
           </div>
         )}

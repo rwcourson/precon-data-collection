@@ -4,7 +4,9 @@ import type { Role } from "@/db/schema";
  * Branded session user id — services accept this instead of trusting
  * client-supplied user identifiers for authorization.
  */
-export type AuthenticatedUserId = number & { readonly __brand: "AuthenticatedUserId" };
+export type AuthenticatedUserId = number & {
+  readonly __brand: "AuthenticatedUserId";
+};
 
 export function asAuthenticatedUserId(id: number): AuthenticatedUserId {
   return id as AuthenticatedUserId;

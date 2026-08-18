@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildBidScheduleSections,
-  parseBidScheduleGroupBy,
-  parseBidScheduleSort,
   bidDueUrgency,
   bidSchedulePrefsHref,
   bidScheduleViewHref,
+  buildBidScheduleSections,
+  parseBidScheduleGroupBy,
+  parseBidScheduleSort,
 } from "./bid-schedule";
 import { groupRowsByField } from "./sheets";
 
@@ -100,7 +100,7 @@ describe("bid schedule group/sort", () => {
   it("reuses shared groupRowsByField labeling for blank market sector", () => {
     const grouped = groupRowsByField(
       [row({ id: 1, status: "active", marketSector: null })],
-      (r) => r.marketSector,
+      (r) => r.marketSector
     );
     expect(grouped[0]?.label).toBe("(blank)");
   });
@@ -125,8 +125,8 @@ describe("bid schedule group/sort", () => {
           dir: "asc",
           density: "detail",
         },
-        12,
-      ),
+        12
+      )
     ).toBe("/bid-schedule?section=active&density=detail&view=12");
     expect(
       bidSchedulePrefsHref({
@@ -135,7 +135,7 @@ describe("bid schedule group/sort", () => {
         sort: "bidDueDate",
         dir: "asc",
         density: "detail",
-      }),
+      })
     ).toBe("/bid-schedule?section=active&density=detail&source=prefs");
   });
 });

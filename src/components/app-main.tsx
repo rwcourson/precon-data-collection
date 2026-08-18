@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/sidebar-context";
+import { cn } from "@/lib/utils";
 
 export function AppMain({ children }: { children: ReactNode }) {
   const { collapsed, ready } = useSidebar();
@@ -10,8 +10,9 @@ export function AppMain({ children }: { children: ReactNode }) {
     <div
       className={cn(
         "flex min-h-screen flex-col",
-        ready && "transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        collapsed ? "md:pl-16" : "md:pl-52",
+        ready &&
+          "transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        collapsed ? "md:pl-16" : "md:pl-52"
       )}
     >
       {children}

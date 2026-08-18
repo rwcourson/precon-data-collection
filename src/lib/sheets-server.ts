@@ -2,8 +2,8 @@ import "server-only";
 
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { sheetColumns, sheetPins, sheetRows, users } from "@/db/schema";
 import type { Sheet, SheetColumn, SheetRow } from "@/db/schema";
+import { sheetColumns, sheetPins, sheetRows, users } from "@/db/schema";
 import {
   listSheetsForPrincipal,
   loadSheetForPrincipal,
@@ -20,14 +20,23 @@ import {
 } from "./sheets";
 
 export async function listSheets(
-  principal: Principal,
+  principal: Principal
 ): Promise<SheetSummary[]> {
   const scopedSheets = await listSheetsForPrincipal(principal);
-  const ownerIds = [...new Set(scopedSheets.map((sheet) => sheet.ownerId).filter((id): id is number => id != null))];
+  const ownerIds = [
+    ...new Set(
+      scopedSheets
+        .map((sheet) => sheet.ownerId)
+        .filter((id): id is number => id != null)
+    ),
+  ];
   const [rows, owners, pins] = await Promise.all([
     Promise.resolve(scopedSheets),
     ownerIds.length > 0
-      ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ownerIds))
+      ? db
+          .select({ id: users.id, name: users.name })
+          .from(users)
+          .where(inArray(users.id, ownerIds))
       : Promise.resolve([]),
     db.select().from(sheetPins).where(eq(sheetPins.userId, principal.user.id)),
   ]);
@@ -41,8 +50,11 @@ export async function listSheets(
     const allRows = await db
       .select({ id: sheetRows.id, sheetId: sheetRows.sheetId })
       .from(sheetRows)
-      .where(and(inArray(sheetRows.sheetId, gridIds), isNull(sheetRows.deletedAt)));
-    for (const r of allRows) gridCounts.set(r.sheetId, (gridCounts.get(r.sheetId) ?? 0) + 1);
+      .where(
+        and(inArray(sheetRows.sheetId, gridIds), isNull(sheetRows.deletedAt))
+      );
+    for (const r of allRows)
+      gridCounts.set(r.sheetId, (gridCounts.get(r.sheetId) ?? 0) + 1);
   }
 
   // View counts come from the live dataset, so a sheet's row count is never
@@ -56,10 +68,12 @@ export async function listSheets(
     (
       await Promise.all(
         rows.map(async (sheet) =>
-          (await loadSheetForPrincipal(principal, sheet.id, "manage")) ? sheet.id : null,
-        ),
+          (await loadSheetForPrincipal(principal, sheet.id, "manage"))
+            ? sheet.id
+            : null
+        )
       )
-    ).filter((id): id is number => id != null),
+    ).filter((id): id is number => id != null)
   );
 
   return rows.map((s) => ({
@@ -74,9 +88,7 @@ export async function listSheets(
     updatedAt: s.updatedAt.toISOString(),
     pinned: pinned.has(s.id),
     rowCount:
-      s.kind === "grid"
-        ? (gridCounts.get(s.id) ?? 0)
-        : countMatching(flat, s),
+      s.kind === "grid" ? (gridCounts.get(s.id) ?? 0) : countMatching(flat, s),
     canManage: manageable.has(s.id),
   }));
 }
@@ -85,25 +97,34 @@ export async function listSheets(
  * Archived sheets, newest first. Archiving is reversible on purpose — a Region
  * that clears out a sheet mid-year still needs last year's back.
  */
-export async function listArchivedSheets(
-  principal: Principal,
-): Promise<
-  { id: number; name: string; folder: string; archivedAt: string; canRestore: boolean }[]
+export async function listArchivedSheets(principal: Principal): Promise<
+  {
+    id: number;
+    name: string;
+    folder: string;
+    archivedAt: string;
+    canRestore: boolean;
+  }[]
 > {
   const rows = await listSheetsForPrincipal(principal, { archived: true });
-  return Promise.all(rows.map(async (s) => ({
+  return Promise.all(
+    rows.map(async (s) => ({
       id: s.id,
       name: s.name,
       folder: s.folder,
       archivedAt: s.archivedAt!.toISOString(),
-      canRestore: Boolean(await loadSheetForPrincipal(principal, s.id, "manage")),
-    })));
+      canRestore: Boolean(
+        await loadSheetForPrincipal(principal, s.id, "manage")
+      ),
+    }))
+  );
 }
 
 function countMatching(flat: FlatRow[], sheet: Sheet): number {
   const config = sheet.config ?? BLANK_VIEW_CONFIG;
   if (config.filters.length === 0) return flat.length;
-  return flat.filter((r) => config.filters.every((f) => matchesFilter(r, f))).length;
+  return flat.filter((r) => config.filters.every((f) => matchesFilter(r, f)))
+    .length;
 }
 
 export type SheetViewPayload = {
@@ -112,7 +133,10 @@ export type SheetViewPayload = {
   catalog: ReportFieldDef[];
 };
 
-export async function loadSheetView(sheet: Sheet, principal: Principal): Promise<SheetViewPayload> {
+export async function loadSheetView(
+  sheet: Sheet,
+  principal: Principal
+): Promise<SheetViewPayload> {
   const { rows, catalog } = await getFlatDataset(principal);
   const config = sheet.config ?? BLANK_VIEW_CONFIG;
   return { sheet, result: evaluateView(rows, config, catalog), catalog };
@@ -148,9 +172,12 @@ export async function listFolders(principal: Principal): Promise<string[]> {
 }
 
 export async function listPinnedSheets(
-  principal: Principal,
+  principal: Principal
 ): Promise<{ id: number; name: string }[]> {
-  const pins = await db.select().from(sheetPins).where(eq(sheetPins.userId, principal.user.id));
+  const pins = await db
+    .select()
+    .from(sheetPins)
+    .where(eq(sheetPins.userId, principal.user.id));
   if (pins.length === 0) return [];
   const rows = await listSheetsForPrincipal(principal);
   const pinned = new Set(pins.map((pin) => pin.sheetId));

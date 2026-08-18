@@ -1,9 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { transitionStatus } from "@/actions/pursuits";
+import { StatusBadge } from "@/components/status-badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { StatusBadge } from "@/components/status-badge";
-import { transitionStatus } from "@/actions/pursuits";
 import type { RoundStatus } from "@/db/schema";
 import { STATUS_LABELS } from "@/lib/labels";
 
@@ -28,7 +28,8 @@ export function StatusMenu({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  if (allowed.length === 0) return <StatusBadge status={status} className="h-5" />;
+  if (allowed.length === 0)
+    return <StatusBadge status={status} className="h-5" />;
 
   return (
     <DropdownMenu>
@@ -40,7 +41,9 @@ export function StatusMenu({
         <ChevronDown className="size-3 shrink-0 text-muted-foreground group-hover:text-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <div className="px-2 py-1.5 text-xs text-muted-foreground">Move to…</div>
+        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+          Move to…
+        </div>
         <DropdownMenuSeparator />
         {allowed.map((t) => (
           <DropdownMenuItem
@@ -52,7 +55,9 @@ export function StatusMenu({
                   toast.success(`Moved to ${STATUS_LABELS[t]}`);
                   router.refresh();
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Transition failed");
+                  toast.error(
+                    e instanceof Error ? e.message : "Transition failed"
+                  );
                 }
               })
             }

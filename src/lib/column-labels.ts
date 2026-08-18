@@ -1,8 +1,8 @@
-import { FIELD_DEFS } from "@/lib/fields";
-import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "@/lib/latest-note";
-import { STATUS_LABELS } from "@/lib/labels";
-import { METRIC_DEFS } from "@/lib/metrics";
 import type { RoundStatus } from "@/db/schema";
+import { FIELD_DEFS } from "@/lib/fields";
+import { STATUS_LABELS } from "@/lib/labels";
+import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "@/lib/latest-note";
+import { METRIC_DEFS } from "@/lib/metrics";
 
 const EXTRA_LABELS: Record<string, string> = {
   id: "ID",
@@ -27,8 +27,12 @@ const EXTRA_LABELS: Record<string, string> = {
   [LATEST_NOTE_KEY]: LATEST_NOTE_LABEL,
 };
 
-const FIELD_LABELS = Object.fromEntries(FIELD_DEFS.map((f) => [f.key, f.label]));
-const METRIC_LABELS = Object.fromEntries(METRIC_DEFS.map((m) => [`metric:${m.key}`, m.label]));
+const FIELD_LABELS = Object.fromEntries(
+  FIELD_DEFS.map((f) => [f.key, f.label])
+);
+const METRIC_LABELS = Object.fromEntries(
+  METRIC_DEFS.map((m) => [`metric:${m.key}`, m.label])
+);
 
 export function columnDisplayLabel(key: string): string {
   if (EXTRA_LABELS[key]) return EXTRA_LABELS[key];
@@ -36,7 +40,9 @@ export function columnDisplayLabel(key: string): string {
   if (METRIC_LABELS[key]) return METRIC_LABELS[key];
   if (key.startsWith("custom:")) return key.slice("custom:".length);
   if (key.startsWith("metric:")) {
-    const metric = METRIC_DEFS.find((m) => m.key === key.slice("metric:".length));
+    const metric = METRIC_DEFS.find(
+      (m) => m.key === key.slice("metric:".length)
+    );
     if (metric) return metric.label;
   }
   const agg = key.match(/^(sum|avg|count|min|max):(.+)$/);
@@ -79,10 +85,15 @@ const DISPLAY_PRIORITY = [
 const INTERNAL_KEYS = new Set(["id", "roundId", "jobId"]);
 
 /** Prefer human fields; hide raw IDs unless nothing else is present. */
-export function tableColumnKeys(row: Record<string, unknown>, limit = 6): string[] {
+export function tableColumnKeys(
+  row: Record<string, unknown>,
+  limit = 6
+): string[] {
   const keys = Object.keys(row);
   const preferred = DISPLAY_PRIORITY.filter((key) => keys.includes(key));
-  const rest = keys.filter((key) => !preferred.includes(key) && !INTERNAL_KEYS.has(key));
+  const rest = keys.filter(
+    (key) => !preferred.includes(key) && !INTERNAL_KEYS.has(key)
+  );
   const visible = [...preferred, ...rest];
   return (visible.length > 0 ? visible : keys).slice(0, limit);
 }

@@ -18,8 +18,7 @@ export default function GlobalError({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily:
-            "system-ui, -apple-system, 'Segoe UI', sans-serif",
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif",
           background: "#F4F7FB",
           color: "#1c2433",
         }}
@@ -28,11 +27,19 @@ export default function GlobalError({
           <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px" }}>
             Something went wrong
           </h2>
-          <p style={{ fontSize: 14, lineHeight: 1.5, margin: "0 0 16px", color: "#5b6472" }}>
+          <p
+            style={{
+              fontSize: 14,
+              lineHeight: 1.5,
+              margin: "0 0 16px",
+              color: "#5b6472",
+            }}
+          >
             An unexpected error kept the app from loading.
             {error.digest ? ` Reference: ${error.digest}` : ""}
           </p>
           <button
+            type="button"
             onClick={() => retry()}
             style={{
               height: 32,

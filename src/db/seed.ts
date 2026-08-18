@@ -1,25 +1,37 @@
 /* Seed script: realistic demo dataset. Run with `npm run db:seed` (server stopped). */
+
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
+import { LATEST_NOTE_KEY } from "@/lib/latest-note";
+import { REGION_DEPARTMENTS } from "@/lib/region-departments";
+import { assertDemoSeedAllowed } from "@/lib/runtime-config";
+import { allStandardDashboardDefs } from "@/lib/standard-dashboards";
+import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
+import { REFERENCE_LISTS } from "../lib/reference-data";
+import {
+  consolidatedRegionalReportInsert,
+  upcomingBidScheduleReportInsert,
+} from "../lib/report-presets";
 import { db } from "./index";
+import type { RoundStatus } from "./schema";
 import {
   auditLog,
-  customColumnValues,
   customColumns,
-  dashboardWidgets,
+  customColumnValues,
   dashboards,
+  dashboardWidgets,
   distributionLists,
   distributionRuns,
   emailOutbox,
   estimateRounds,
-  jobs,
   jobRegionVisibility,
+  jobs,
   jobUserVisibility,
   notifications,
-  referenceListValues,
   referenceLists,
+  referenceListValues,
   reportTemplates,
   roundMultiValues,
   roundNoteAttachments,
@@ -30,14 +42,6 @@ import {
   statusTransitions,
   users,
 } from "./schema";
-import { assertDemoSeedAllowed } from "@/lib/runtime-config";
-import { REGION_DEPARTMENTS } from "@/lib/region-departments";
-import { REFERENCE_LISTS } from "../lib/reference-data";
-import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
-import { consolidatedRegionalReportInsert, upcomingBidScheduleReportInsert } from "../lib/report-presets";
-import { allStandardDashboardDefs } from "@/lib/standard-dashboards";
-import { LATEST_NOTE_KEY } from "@/lib/latest-note";
-import type { RoundStatus } from "./schema";
 
 // Deterministic RNG so the demo dataset is stable across reseeds
 function mulberry32(seed: number) {
@@ -50,8 +54,8 @@ function mulberry32(seed: number) {
   };
 }
 const rand = mulberry32(20260806);
-const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
-const pickN = <T,>(arr: T[], n: number): T[] => {
+const pick = <T>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
+const pickN = <T>(arr: T[], n: number): T[] => {
   const copy = [...arr];
   const out: T[] = [];
   for (let i = 0; i < Math.min(n, copy.length); i++) {
@@ -63,35 +67,137 @@ const between = (lo: number, hi: number) => lo + rand() * (hi - lo);
 const round = (v: number, nearest = 1000) => Math.round(v / nearest) * nearest;
 
 const REGION_CITIES: Record<string, [string, string][]> = {
-  Carolinas: [["Charlotte", "NC"], ["Raleigh", "NC"], ["Greenville", "SC"], ["Columbia", "SC"]],
-  Central: [["Birmingham", "AL"], ["Nashville", "TN"], ["Huntsville", "AL"], ["Memphis", "TN"], ["Louisville", "KY"]],
-  Florida: [["Orlando", "FL"], ["Tampa", "FL"], ["Jacksonville", "FL"], ["Miami", "FL"]],
-  Georgia: [["Atlanta", "GA"], ["Savannah", "GA"], ["Augusta", "GA"], ["Columbus", "GA"]],
-  Texas: [["Dallas", "TX"], ["Austin", "TX"], ["Houston", "TX"], ["San Antonio", "TX"]],
+  Carolinas: [
+    ["Charlotte", "NC"],
+    ["Raleigh", "NC"],
+    ["Greenville", "SC"],
+    ["Columbia", "SC"],
+  ],
+  Central: [
+    ["Birmingham", "AL"],
+    ["Nashville", "TN"],
+    ["Huntsville", "AL"],
+    ["Memphis", "TN"],
+    ["Louisville", "KY"],
+  ],
+  Florida: [
+    ["Orlando", "FL"],
+    ["Tampa", "FL"],
+    ["Jacksonville", "FL"],
+    ["Miami", "FL"],
+  ],
+  Georgia: [
+    ["Atlanta", "GA"],
+    ["Savannah", "GA"],
+    ["Augusta", "GA"],
+    ["Columbus", "GA"],
+  ],
+  Texas: [
+    ["Dallas", "TX"],
+    ["Austin", "TX"],
+    ["Houston", "TX"],
+    ["San Antonio", "TX"],
+  ],
 };
 
 const SECTOR_NAMES: [string, string[], [number, number]][] = [
   // Labels must match REFERENCE_LISTS.marketSector so a full-form save can lock and correct.
-  ["Healthcare – Hospital", ["{city} Regional Medical Center Tower", "{city} Children's Hospital Expansion", "St. Vincent's {city} Bed Tower"], [80, 420]],
-  ["Healthcare – Outpatient Facilities", ["{city} Medical Office Building", "{city} Outpatient Pavilion"], [18, 90]],
-  ["Mission Critical – Greenfield Data Center", ["Project Falcon Data Center", "Project Granite Hyperscale Campus", "{city} Colocation Facility Phase II"], [120, 900]],
-  ["Commercial – Office", ["{city} Gateway Office Tower", "Midtown {city} Mixed-Use Office"], [40, 260]],
-  ["Commercial – Other", ["{city} Riverfront District", "The Foundry at {city}"], [60, 350]],
-  ["Education – Higher Education", ["{city} University Science Hall", "{city} State Engineering Complex"], [30, 180]],
-  ["Government – Military", ["Fort {city} Barracks Complex", "{city} AFB Maintenance Hangar"], [45, 240]],
-  ["Industrial – Manufacturing", ["{city} EV Battery Plant", "{city} Assembly Plant Expansion"], [150, 800]],
-  ["Industrial – Food and Beverage", ["{city} Beverage Production Facility", "{city} Cold Storage Distribution"], [35, 160]],
-  ["Infrastructure – Roads & Bridges", ["I-65 {city} Bridge Replacement", "SR-280 {city} Interchange"], [25, 190]],
-  ["Water – Wastewater", ["{city} Water Treatment Plant Upgrade", "{city} WWTP Expansion"], [40, 220]],
-  ["Hospitality – Hotel", ["{city} Convention Hotel", "The Grand {city} Hotel & Spa"], [55, 280]],
-  ["Multi-Family – Apartment", ["{city} Commons Apartments", "Parkline {city} Residences"], [30, 140]],
-  ["Sports & Entertainment – Stadium/Athletic Facility", ["{city} Stadium Renovation", "{city} Arena District"], [90, 500]],
-  ["Science & Tech – Research Institutions", ["{city} Biotech Research Center", "{city} Innovation Labs"], [50, 270]],
+  [
+    "Healthcare – Hospital",
+    [
+      "{city} Regional Medical Center Tower",
+      "{city} Children's Hospital Expansion",
+      "St. Vincent's {city} Bed Tower",
+    ],
+    [80, 420],
+  ],
+  [
+    "Healthcare – Outpatient Facilities",
+    ["{city} Medical Office Building", "{city} Outpatient Pavilion"],
+    [18, 90],
+  ],
+  [
+    "Mission Critical – Greenfield Data Center",
+    [
+      "Project Falcon Data Center",
+      "Project Granite Hyperscale Campus",
+      "{city} Colocation Facility Phase II",
+    ],
+    [120, 900],
+  ],
+  [
+    "Commercial – Office",
+    ["{city} Gateway Office Tower", "Midtown {city} Mixed-Use Office"],
+    [40, 260],
+  ],
+  [
+    "Commercial – Other",
+    ["{city} Riverfront District", "The Foundry at {city}"],
+    [60, 350],
+  ],
+  [
+    "Education – Higher Education",
+    ["{city} University Science Hall", "{city} State Engineering Complex"],
+    [30, 180],
+  ],
+  [
+    "Government – Military",
+    ["Fort {city} Barracks Complex", "{city} AFB Maintenance Hangar"],
+    [45, 240],
+  ],
+  [
+    "Industrial – Manufacturing",
+    ["{city} EV Battery Plant", "{city} Assembly Plant Expansion"],
+    [150, 800],
+  ],
+  [
+    "Industrial – Food and Beverage",
+    ["{city} Beverage Production Facility", "{city} Cold Storage Distribution"],
+    [35, 160],
+  ],
+  [
+    "Infrastructure – Roads & Bridges",
+    ["I-65 {city} Bridge Replacement", "SR-280 {city} Interchange"],
+    [25, 190],
+  ],
+  [
+    "Water – Wastewater",
+    ["{city} Water Treatment Plant Upgrade", "{city} WWTP Expansion"],
+    [40, 220],
+  ],
+  [
+    "Hospitality – Hotel",
+    ["{city} Convention Hotel", "The Grand {city} Hotel & Spa"],
+    [55, 280],
+  ],
+  [
+    "Multi-Family – Apartment",
+    ["{city} Commons Apartments", "Parkline {city} Residences"],
+    [30, 140],
+  ],
+  [
+    "Sports & Entertainment – Stadium/Athletic Facility",
+    ["{city} Stadium Renovation", "{city} Arena District"],
+    [90, 500],
+  ],
+  [
+    "Science & Tech – Research Institutions",
+    ["{city} Biotech Research Center", "{city} Innovation Labs"],
+    [50, 270],
+  ],
 ];
 
 const ESTIMATE_LEAD_NAMES = [
-  "Marcus Webb", "Jenna Kowalski", "David Tran", "Alicia Romero", "Chris Bagwell",
-  "Priya Natarajan", "Sam Whitfield", "Erica Dunn", "Jordan Blake", "Miguel Santos",
+  "Marcus Webb",
+  "Jenna Kowalski",
+  "David Tran",
+  "Alicia Romero",
+  "Chris Bagwell",
+  "Priya Natarajan",
+  "Sam Whitfield",
+  "Erica Dunn",
+  "Jordan Blake",
+  "Miguel Santos",
 ];
 
 const PHASE_SEQUENCES: string[][] = [
@@ -137,21 +243,65 @@ export async function seedDemoData() {
   console.log("Seeding reference lists…");
   for (const [key, list] of Object.entries(REFERENCE_LISTS)) {
     await db.insert(referenceLists).values({ key, label: list.label });
-    await db.insert(referenceListValues).values(
-      list.values.map((value, i) => ({ listKey: key, value, sortOrder: i })),
-    );
+    await db
+      .insert(referenceListValues)
+      .values(
+        list.values.map((value, i) => ({ listKey: key, value, sortOrder: i }))
+      );
   }
 
   console.log("Seeding users…");
   const userRows = await db
     .insert(users)
     .values([
-      { name: DEFAULT_DEMO_RPD.name, title: DEFAULT_DEMO_RPD.title, role: "rpd", region: "Central", preconDepartment: "Central Building Group", email: DEFAULT_DEMO_RPD.email },
-      { name: "Sarah Chen", title: "Preconstruction Manager", role: "pcm", region: "Central", preconDepartment: "Central Heavy Civil", email: "schen@brasfieldgorrie.com" },
-      { name: "Marcus Webb", title: "Senior Estimate Lead", role: "estimate_lead", region: "Central", preconDepartment: "Central Heavy Civil", email: "mwebb@brasfieldgorrie.com" },
-      { name: "Dana Ortiz", title: "Job Site Administrator", role: "admin_jsa", region: "Central", preconDepartment: "Central Building Group", email: "dortiz@brasfieldgorrie.com" },
-      { name: "Patricia Lawson", title: "Division President", role: "leadership", region: "Central", preconDepartment: null, email: "plawson@brasfieldgorrie.com" },
-      { name: "Tom Reeves", title: "Corporate Precon Admin", role: "corporate_admin", region: null, preconDepartment: null, email: "treeves@brasfieldgorrie.com" },
+      {
+        name: DEFAULT_DEMO_RPD.name,
+        title: DEFAULT_DEMO_RPD.title,
+        role: "rpd",
+        region: "Central",
+        preconDepartment: "Central Building Group",
+        email: DEFAULT_DEMO_RPD.email,
+      },
+      {
+        name: "Sarah Chen",
+        title: "Preconstruction Manager",
+        role: "pcm",
+        region: "Central",
+        preconDepartment: "Central Heavy Civil",
+        email: "schen@brasfieldgorrie.com",
+      },
+      {
+        name: "Marcus Webb",
+        title: "Senior Estimate Lead",
+        role: "estimate_lead",
+        region: "Central",
+        preconDepartment: "Central Heavy Civil",
+        email: "mwebb@brasfieldgorrie.com",
+      },
+      {
+        name: "Dana Ortiz",
+        title: "Job Site Administrator",
+        role: "admin_jsa",
+        region: "Central",
+        preconDepartment: "Central Building Group",
+        email: "dortiz@brasfieldgorrie.com",
+      },
+      {
+        name: "Patricia Lawson",
+        title: "Division President",
+        role: "leadership",
+        region: "Central",
+        preconDepartment: null,
+        email: "plawson@brasfieldgorrie.com",
+      },
+      {
+        name: "Tom Reeves",
+        title: "Corporate Precon Admin",
+        role: "corporate_admin",
+        region: null,
+        preconDepartment: null,
+        email: "treeves@brasfieldgorrie.com",
+      },
     ])
     .returning();
   const rpd = userRows.find((u) => u.role === "rpd")!;
@@ -177,21 +327,34 @@ export async function seedDemoData() {
     const [city, state] = pick(REGION_CITIES[region]);
     const [sector, templates, [loM, hiM]] = pick(SECTOR_NAMES);
     const jobName = pick(templates).replace("{city}", city);
-    const mlt = sector.startsWith("Healthcare") ? "Healthcare"
-      : sector.startsWith("Mission Critical") ? "Mission Critical"
-      : sector.startsWith("Industrial") || sector.startsWith("Science") ? "Industrial"
-      : sector.startsWith("Infrastructure") || sector.startsWith("Water") ? "Heavy Civil"
-      : sector.startsWith("Government") ? "Federal"
-      : "Commercial";
+    const mlt = sector.startsWith("Healthcare")
+      ? "Healthcare"
+      : sector.startsWith("Mission Critical")
+        ? "Mission Critical"
+        : sector.startsWith("Industrial") || sector.startsWith("Science")
+          ? "Industrial"
+          : sector.startsWith("Infrastructure") || sector.startsWith("Water")
+            ? "Heavy Civil"
+            : sector.startsWith("Government")
+              ? "Federal"
+              : "Commercial";
 
     // ~10% of jobs are manual/unlinked (Quick ROMs before a Salesforce job exists)
     const isManual = j % 10 === 7;
-    const jobNumber = isManual ? `TBD-${tbdCounter++}` : String(jobNumberCounter++);
+    const jobNumber = isManual
+      ? `TBD-${tbdCounter++}`
+      : String(jobNumberCounter++);
     const sfId = `SF-${sfCounter++}`;
 
     if (!isManual) {
       await db.insert(salesforceJobs).values({
-        sfId, jobNumber, jobName, region, marketSector: sector, city, state,
+        sfId,
+        jobNumber,
+        jobName,
+        region,
+        marketSector: sector,
+        city,
+        state,
         createdDate: `202${4 + (j % 3)}-0${1 + (j % 9)}-15`,
       });
     } else {
@@ -200,23 +363,36 @@ export async function seedDemoData() {
         sfId: `SF-${sfCounter++}`,
         jobNumber: String(jobNumberCounter++),
         jobName: jobName.replace("Phase II", "Ph 2"),
-        region, marketSector: sector, city, state,
+        region,
+        marketSector: sector,
+        city,
+        state,
         createdDate: "2026-07-20",
       });
     }
 
-    const [job] = await db.insert(jobs).values({
-      jobNumber, jobName, region, preconDepartment: dept,
-      salesforceId: isManual ? null : sfId,
-      isLinked: !isManual,
-      createdById: pcm.id,
-    }).returning();
+    const [job] = await db
+      .insert(jobs)
+      .values({
+        jobNumber,
+        jobName,
+        region,
+        preconDepartment: dept,
+        salesforceId: isManual ? null : sfId,
+        isLinked: !isManual,
+        createdById: pcm.id,
+      })
+      .returning();
 
     const phases = pick(PHASE_SEQUENCES);
     const baseValueM = between(loM, hiM);
     const startYear = 2024 + (j % 3);
-    const leadName = region === "Central" && j % 2 === 0 ? estimateLead.name : pick(ESTIMATE_LEAD_NAMES);
-    const isBuilding = !sector.startsWith("Infrastructure") && !sector.startsWith("Water");
+    const leadName =
+      region === "Central" && j % 2 === 0
+        ? estimateLead.name
+        : pick(ESTIMATE_LEAD_NAMES);
+    const isBuilding =
+      !sector.startsWith("Infrastructure") && !sector.startsWith("Water");
 
     for (let p = 0; p < phases.length; p++) {
       const phase = phases[p];
@@ -230,11 +406,22 @@ export async function seedDemoData() {
       else if (bidYear === 2025) status = rand() < 0.8 ? "locked" : "post_bid";
       else {
         const roll = rand();
-        status = roll < 0.22 ? "active" : roll < 0.42 ? "upcoming" : roll < 0.58 ? "outstanding"
-          : roll < 0.72 ? "submitted" : roll < 0.88 ? "post_bid" : "locked";
+        status =
+          roll < 0.22
+            ? "active"
+            : roll < 0.42
+              ? "upcoming"
+              : roll < 0.58
+                ? "outstanding"
+                : roll < 0.72
+                  ? "submitted"
+                  : roll < 0.88
+                    ? "post_bid"
+                    : "locked";
       }
       const isPostBid = ["submitted", "post_bid", "locked"].includes(status);
-      const isComplete = status === "locked" || (status === "post_bid" && rand() < 0.6);
+      const isComplete =
+        status === "locked" || (status === "post_bid" && rand() < 0.6);
 
       const feePct = between(0.032, 0.065);
       const contingencyPct = between(0.008, 0.03);
@@ -251,7 +438,8 @@ export async function seedDemoData() {
       const startDate = `${bidYear}-${String(Math.min(month + 1, 12)).padStart(2, "0")}-01`;
 
       const full = isPostBid; // post-bid fields present once submitted (partially) / complete when locked
-      const partial = status === "submitted" || (status === "post_bid" && !isComplete);
+      const partial =
+        status === "submitted" || (status === "post_bid" && !isComplete);
 
       const values: typeof estimateRounds.$inferInsert = {
         jobId: job.id,
@@ -265,60 +453,120 @@ export async function seedDemoData() {
                 ? "successful"
                 : "unsuccessful"
             : "pending",
-        region, preconDepartment: dept, estimatePhase: phase, bidYear,
+        region,
+        preconDepartment: dept,
+        estimatePhase: phase,
+        bidYear,
         bidDueDate: bidDue,
         drawingsDueDate: `${bidYear}-${String(Math.max(1, month - 1)).padStart(2, "0")}-15`,
         bidReviewDate: `${bidYear}-${String(month).padStart(2, "0")}-01`,
         projectStartDate: startDate,
-        owner: pick(["HCA Healthcare", "Auburn University", "AdventHealth", "Vanderbilt", "USACE", "Private Owner"]),
-        city, state,
+        owner: pick([
+          "HCA Healthcare",
+          "Auburn University",
+          "AdventHealth",
+          "Vanderbilt",
+          "USACE",
+          "Private Owner",
+        ]),
+        city,
+        state,
         estimateLeadId: leadName === estimateLead.name ? estimateLead.id : null,
-        mlt, marketSector: sector,
+        mlt,
+        marketSector: sector,
         contractType: pick(REFERENCE_LISTS.contractType.values),
         procurement: pick(REFERENCE_LISTS.procurement.values),
         designContract: pick(REFERENCE_LISTS.designContract.values),
         statusAtPricing: pick(REFERENCE_LISTS.statusAtPricing.values),
-        internalJointVenture: full ? (rand() < 0.12 ? pick(["IJV – Cross Division", "IJV – Cross Region"]) : "None") : null,
-        awardability: full
-          ? phase.includes("GMP") ? "Work Under Contract – GMP"
-            : phase.includes("Hard Bid") ? "Work Under Contract – Hard Bid"
-            : phase.includes("Early Release") ? "Work Under Contract – Early Release"
-            : "Not Work Under Contract – Budget"
+        internalJointVenture: full
+          ? rand() < 0.12
+            ? pick(["IJV – Cross Division", "IJV – Cross Region"])
+            : "None"
           : null,
-        businessStrategyValues: full ? pick(REFERENCE_LISTS.businessStrategyValues.values) : null,
+        awardability: full
+          ? phase.includes("GMP")
+            ? "Work Under Contract – GMP"
+            : phase.includes("Hard Bid")
+              ? "Work Under Contract – Hard Bid"
+              : phase.includes("Early Release")
+                ? "Work Under Contract – Early Release"
+                : "Not Work Under Contract – Budget"
+          : null,
+        businessStrategyValues: full
+          ? pick(REFERENCE_LISTS.businessStrategyValues.values)
+          : null,
         estimateValue: full ? ev : null,
-        feeBackPage: full && !partial ? round(ev * feePct * between(0.75, 0.95)) : null,
+        feeBackPage:
+          full && !partial ? round(ev * feePct * between(0.75, 0.95)) : null,
         feeExpected: full ? round(ev * feePct) : null,
         contingencyTotal: full && !partial ? round(ev * contingencyPct) : null,
         craftLaborBase: full && !partial ? round(laborTotal * 0.72) : null,
         craftLaborBurden: full && !partial ? round(laborTotal * 0.28) : null,
-        craftLaborManHours: full && !partial ? Math.round(laborTotal / between(52, 68)) : null,
+        craftLaborManHours:
+          full && !partial ? Math.round(laborTotal / between(52, 68)) : null,
         gcBgSort: full && !partial ? round(ev * between(0.04, 0.08)) : null,
         grBgSort: full && !partial ? round(ev * between(0.015, 0.04)) : null,
-        gcProposedOwnerSov: full && !partial ? round(ev * between(0.035, 0.075)) : null,
-        grProposedOwnerSov: full && !partial ? round(ev * between(0.012, 0.038)) : null,
+        gcProposedOwnerSov:
+          full && !partial ? round(ev * between(0.035, 0.075)) : null,
+        grProposedOwnerSov:
+          full && !partial ? round(ev * between(0.012, 0.038)) : null,
         pmMonths: full && !partial ? pmMonths : null,
         fieldSupervisionMonths: full && !partial ? fsMonths : null,
         preconCost: full && !partial ? round(ev * between(0.001, 0.005)) : null,
-        designCost: full && !partial ? (rand() < 0.5 ? round(ev * between(0.005, 0.02)) : 0) : null,
+        designCost:
+          full && !partial
+            ? rand() < 0.5
+              ? round(ev * between(0.005, 0.02))
+              : 0
+            : null,
         selfPerformPriced: full && !partial ? round(ev * spPct) : null,
-        selfPerformProposed: full && !partial ? round(ev * spPct * between(0.5, 1)) : null,
+        selfPerformProposed:
+          full && !partial ? round(ev * spPct * between(0.5, 1)) : null,
         projectScheduleDuration: full && !partial ? duration : null,
-        projectPlanningPreconEngagement: full && !partial ? pick(REFERENCE_LISTS.projectPlanningPreconEngagement.values) : null,
+        projectPlanningPreconEngagement:
+          full && !partial
+            ? pick(REFERENCE_LISTS.projectPlanningPreconEngagement.values)
+            : null,
         gsf: full && !partial && gsf ? gsf : null,
-        hotelKeysUnits: full && !partial && sector.startsWith("Hospitality") ? Math.round(between(150, 600)) : null,
-        materials: full && !partial && rand() < 0.6 ? round(ev * between(0.05, 0.2)) : null,
+        hotelKeysUnits:
+          full && !partial && sector.startsWith("Hospitality")
+            ? Math.round(between(150, 600))
+            : null,
+        materials:
+          full && !partial && rand() < 0.6
+            ? round(ev * between(0.05, 0.2))
+            : null,
         supplies: full && !partial ? 0 : null,
-        equipment: full && !partial && rand() < 0.5 ? round(ev * between(0.01, 0.06)) : null,
+        equipment:
+          full && !partial && rand() < 0.5
+            ? round(ev * between(0.01, 0.06))
+            : null,
         equipmentOperation: full && !partial ? 0 : null,
         subcontracted: full && !partial ? round(ev * between(0.5, 0.82)) : null,
-        marketOrStrategicRates: full && !partial && rand() < 0.5 ? pick(REFERENCE_LISTS.equipmentRates.values) : null,
-        subQuotesReceived: full && !partial && rand() < 0.7 ? Math.round(between(20, 220)) : null,
-        mwdbeSubQuotesReceived: full && !partial && rand() < 0.5 ? Math.round(between(2, 40)) : null,
-        mwdbeSubsPlugged: full && !partial && rand() < 0.5 ? round(ev * between(0.01, 0.12)) : null,
-        costOfWorkBasis: phase === "Rates Only" && full ? round(ev * between(0.9, 1.2)) : null,
-        afmMonths: full && !partial && rand() < 0.4 ? Math.round(duration * between(0.5, 1.5)) : null,
-        peakManpowerHeadcount: full && !partial && rand() < 0.5 ? Math.round(between(80, 900)) : null,
+        marketOrStrategicRates:
+          full && !partial && rand() < 0.5
+            ? pick(REFERENCE_LISTS.equipmentRates.values)
+            : null,
+        subQuotesReceived:
+          full && !partial && rand() < 0.7
+            ? Math.round(between(20, 220))
+            : null,
+        mwdbeSubQuotesReceived:
+          full && !partial && rand() < 0.5 ? Math.round(between(2, 40)) : null,
+        mwdbeSubsPlugged:
+          full && !partial && rand() < 0.5
+            ? round(ev * between(0.01, 0.12))
+            : null,
+        costOfWorkBasis:
+          phase === "Rates Only" && full ? round(ev * between(0.9, 1.2)) : null,
+        afmMonths:
+          full && !partial && rand() < 0.4
+            ? Math.round(duration * between(0.5, 1.5))
+            : null,
+        peakManpowerHeadcount:
+          full && !partial && rand() < 0.5
+            ? Math.round(between(80, 900))
+            : null,
         submittedAt: isPostBid ? new Date(`${bidDue}T15:00:00`) : null,
         lockedAt: status === "locked" ? new Date(`${bidDue}T15:00:00`) : null,
         createdById: pcm.id,
@@ -326,33 +574,69 @@ export async function seedDemoData() {
         updatedAt: now,
       };
 
-      const [inserted] = await db.insert(estimateRounds).values(values).returning();
+      const [inserted] = await db
+        .insert(estimateRounds)
+        .values(values)
+        .returning();
       totalRounds++;
       if (region === "Central") centralRoundIds.push(inserted.id);
 
       // Multi-value fields
       if (full && !partial && spPct > 0) {
-        const types = pickN(REFERENCE_LISTS.selfPerformWorkType.values, 1 + Math.floor(rand() * 3));
+        const types = pickN(
+          REFERENCE_LISTS.selfPerformWorkType.values,
+          1 + Math.floor(rand() * 3)
+        );
         await db.insert(roundMultiValues).values(
-          types.map((v) => ({ roundId: inserted.id, field: "selfPerformWorkType", value: v })),
+          types.map((v) => ({
+            roundId: inserted.id,
+            field: "selfPerformWorkType",
+            value: v,
+          }))
         );
       }
       if (full && !partial) {
-        const services = pickN(REFERENCE_LISTS.supportGroups.values, 1 + Math.floor(rand() * 4));
+        const services = pickN(
+          REFERENCE_LISTS.supportGroups.values,
+          1 + Math.floor(rand() * 4)
+        );
         await db.insert(roundMultiValues).values(
-          services.map((v) => ({ roundId: inserted.id, field: "utilizedSupportServices", value: v })),
+          services.map((v) => ({
+            roundId: inserted.id,
+            field: "utilizedSupportServices",
+            value: v,
+          }))
         );
       }
 
       // Status transition history
       const history: RoundStatus[] = (() => {
         switch (status) {
-          case "active": return ["upcoming", "active"];
-          case "upcoming": return ["upcoming"];
-          case "outstanding": return ["upcoming", "active", "outstanding"];
-          case "submitted": return ["upcoming", "active", "outstanding", "submitted"];
-          case "post_bid": return ["upcoming", "active", "outstanding", "submitted", "post_bid"];
-          case "locked": return ["upcoming", "active", "outstanding", "submitted", "post_bid", "locked"];
+          case "active":
+            return ["upcoming", "active"];
+          case "upcoming":
+            return ["upcoming"];
+          case "outstanding":
+            return ["upcoming", "active", "outstanding"];
+          case "submitted":
+            return ["upcoming", "active", "outstanding", "submitted"];
+          case "post_bid":
+            return [
+              "upcoming",
+              "active",
+              "outstanding",
+              "submitted",
+              "post_bid",
+            ];
+          case "locked":
+            return [
+              "upcoming",
+              "active",
+              "outstanding",
+              "submitted",
+              "post_bid",
+              "locked",
+            ];
         }
       })();
       let prev: string | null = null;
@@ -360,8 +644,15 @@ export async function seedDemoData() {
       for (const s of history) {
         ts += between(5, 30) * 86400_000;
         await db.insert(statusTransitions).values({
-          roundId: inserted.id, fromStatus: prev, toStatus: s,
-          userId: s === "locked" ? rpd.id : s === "submitted" ? estimateLead.id : pcm.id,
+          roundId: inserted.id,
+          fromStatus: prev,
+          toStatus: s,
+          userId:
+            s === "locked"
+              ? rpd.id
+              : s === "submitted"
+                ? estimateLead.id
+                : pcm.id,
           createdAt: new Date(Math.min(ts, now.getTime())),
         });
         prev = s;
@@ -385,38 +676,74 @@ export async function seedDemoData() {
   }
 
   console.log("Seeding custom columns (Section 11 demo)…");
-  const [riverMile] = await db.insert(customColumns).values({
-    scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
-    key: "riverMileMarker", label: "River Mile Marker (demo)", type: "text",
-    createdById: rpd.id,
-  }).returning();
-  const centralIndustrial = await db.insert(customColumns).values([
-    {
-      scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
-      key: "spoilDisposalSite", label: "Spoil Disposal Site (demo)", type: "text",
+  const [riverMile] = await db
+    .insert(customColumns)
+    .values({
+      scope: "region",
+      region: "Central",
+      preconDepartment: "Central Heavy Civil",
+      key: "riverMileMarker",
+      label: "River Mile Marker (demo)",
+      type: "text",
       createdById: rpd.id,
-    },
-    {
-      scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
-      key: "bargeAccess", label: "Barge Access (demo)", type: "dropdown",
-      options: ["Yes", "No", "Seasonal"],
+    })
+    .returning();
+  const centralIndustrial = await db
+    .insert(customColumns)
+    .values([
+      {
+        scope: "region",
+        region: "Central",
+        preconDepartment: "Central Heavy Civil",
+        key: "spoilDisposalSite",
+        label: "Spoil Disposal Site (demo)",
+        type: "text",
+        createdById: rpd.id,
+      },
+      {
+        scope: "region",
+        region: "Central",
+        preconDepartment: "Central Heavy Civil",
+        key: "bargeAccess",
+        label: "Barge Access (demo)",
+        type: "dropdown",
+        options: ["Yes", "No", "Seasonal"],
+        createdById: rpd.id,
+      },
+      {
+        scope: "region",
+        region: "Central",
+        preconDepartment: "Central Heavy Civil",
+        key: "cofferdamRequired",
+        label: "Cofferdam Required (demo)",
+        type: "dropdown",
+        options: ["Yes", "No", "TBD"],
+        createdById: rpd.id,
+      },
+    ])
+    .returning();
+  const [cleanRoom] = await db
+    .insert(customColumns)
+    .values({
+      scope: "region",
+      region: "Georgia",
+      preconDepartment: "Georgia – Mission Critical & Industrial",
+      key: "cleanRoomClass",
+      label: "Clean Room Class",
+      type: "dropdown",
+      options: ["ISO 5", "ISO 6", "ISO 7", "ISO 8", "N/A"],
       createdById: rpd.id,
-    },
-    {
-      scope: "region", region: "Central", preconDepartment: "Central Heavy Civil",
-      key: "cofferdamRequired", label: "Cofferdam Required (demo)", type: "dropdown",
-      options: ["Yes", "No", "TBD"],
-      createdById: rpd.id,
-    },
-  ]).returning();
-  const [cleanRoom] = await db.insert(customColumns).values({
-    scope: "region", region: "Georgia", preconDepartment: "Georgia – Mission Critical & Industrial",
-    key: "cleanRoomClass", label: "Clean Room Class", type: "dropdown",
-    options: ["ISO 5", "ISO 6", "ISO 7", "ISO 8", "N/A"],
-    createdById: rpd.id,
-  }).returning();
+    })
+    .returning();
   await db.insert(auditLog).values([
-    { entity: "schema", entityId: riverMile.id, action: "column_added", field: "River Mile Marker (demo)", newValue: "region:Central", userId: rpd.id },
+    {
+      entity: "schema",
+      entityId: riverMile.id,
+      action: "column_added",
+      field: "River Mile Marker (demo)",
+      newValue: "region:Central",
+      userId: rpd.id,
+    },
     ...centralIndustrial.map((col) => ({
       entity: "schema" as const,
       entityId: col.id,
@@ -425,17 +752,27 @@ export async function seedDemoData() {
       newValue: "region:Central",
       userId: rpd.id,
     })),
-    { entity: "schema", entityId: cleanRoom.id, action: "column_added", field: "Clean Room Class", newValue: "region:Georgia", userId: rpd.id },
+    {
+      entity: "schema",
+      entityId: cleanRoom.id,
+      action: "column_added",
+      field: "Clean Room Class",
+      newValue: "region:Georgia",
+      userId: rpd.id,
+    },
   ]);
 
   // Values for a few Central Heavy Civil rounds
   const chcRounds = await db.query.estimateRounds.findMany({
-    where: (r, { and, eq }) => and(eq(r.preconDepartment, "Central Heavy Civil")),
+    where: (r, { and, eq }) =>
+      and(eq(r.preconDepartment, "Central Heavy Civil")),
     limit: 6,
   });
   for (const r of chcRounds) {
     await db.insert(customColumnValues).values({
-      columnId: riverMile.id, roundId: r.id, value: `RM ${Math.round(between(10, 400))}`,
+      columnId: riverMile.id,
+      roundId: r.id,
+      value: `RM ${Math.round(between(10, 400))}`,
     });
   }
 
@@ -444,7 +781,7 @@ export async function seedDemoData() {
       and(
         eq(r.preconDepartment, "Central Heavy Civil"),
         inArray(r.status, ["active", "upcoming", "outstanding"]),
-        isNull(r.deletedAt),
+        isNull(r.deletedAt)
       ),
     limit: 1,
   });
@@ -468,7 +805,7 @@ export async function seedDemoData() {
     if (firstNote) {
       const png = Buffer.from(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-        "base64",
+        "base64"
       );
       const key = `notes/${firstNote.roundId}/${firstNote.id}/${randomUUID()}-drawing-markups.png`;
       const root = path.join(process.cwd(), ".data", "artifacts");
@@ -486,7 +823,10 @@ export async function seedDemoData() {
         noteId: firstNote.id,
         mentionedUserId: corpAdmin.id,
       });
-      const [noteJob] = await db.select({ jobName: jobs.jobName }).from(jobs).where(eq(jobs.id, noteRound.jobId));
+      const [noteJob] = await db
+        .select({ jobName: jobs.jobName })
+        .from(jobs)
+        .where(eq(jobs.id, noteRound.jobId));
       await db.insert(notifications).values({
         userId: corpAdmin.id,
         title: `${pcm.name} mentioned you on ${noteJob?.jobName ?? "an effort"} — R${noteRound.roundNumber}`,
@@ -502,7 +842,17 @@ export async function seedDemoData() {
     name: "Weekly Region Bid Schedule",
     ownerId: pcm.id,
     config: {
-      columns: ["jobNumber", "jobName", "estimatePhase", "bidYear", "bidDueDate", "estimateLead", "marketSector", "contractType", LATEST_NOTE_KEY],
+      columns: [
+        "jobNumber",
+        "jobName",
+        "estimatePhase",
+        "bidYear",
+        "bidDueDate",
+        "estimateLead",
+        "marketSector",
+        "contractType",
+        LATEST_NOTE_KEY,
+      ],
       groupBy: ["preconDepartment"],
       sortBy: [{ field: "bidDueDate", dir: "asc" }],
       header: "Central Region — Weekly Bid Schedule",
@@ -525,7 +875,9 @@ export async function seedDemoData() {
     },
     sharedWithRegions: ["Central"],
   });
-  await db.insert(savedReports).values(consolidatedRegionalReportInsert(rpd.id));
+  await db
+    .insert(savedReports)
+    .values(consolidatedRegionalReportInsert(rpd.id));
   await db.insert(savedReports).values(upcomingBidScheduleReportInsert(rpd.id));
   for (const def of allStandardDashboardDefs()) {
     const [dash] = await db
@@ -546,7 +898,7 @@ export async function seedDemoData() {
           dashboardId: dash.id,
           sortOrder: i,
           config,
-        })),
+        }))
       );
     }
   }

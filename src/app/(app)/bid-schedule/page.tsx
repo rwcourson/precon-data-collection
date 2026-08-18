@@ -1,32 +1,28 @@
+import { inArray } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { NewPursuitDialog } from "@/components/bid-schedule/new-pursuit-dialog";
+import { listBidScheduleViews } from "@/actions/bid-schedule-views";
 import { ExportDialog } from "@/components/bid-schedule/export-dialog";
-import { BidScheduleSheet } from "@/components/bid-schedule/sheet-table";
-import { PageHeader } from "@/components/page-header";
-import { UrlSelect } from "@/components/url-select";
+import { NewPursuitDialog } from "@/components/bid-schedule/new-pursuit-dialog";
 import { RegionMarketFilter } from "@/components/bid-schedule/region-market-filter";
-import { getReferenceValues } from "@/lib/queries";
-import { regionDepartmentTree } from "@/lib/region-departments";
-import { parseBidScheduleViewConfig } from "@/lib/view-config";
-import { BID_SCHEDULE_SURFACE, resolveBidScheduleTableState } from "@/lib/table-prefs";
+import { BidScheduleSheet } from "@/components/bid-schedule/sheet-table";
+import { TablePrefsDensitySync } from "@/components/bid-schedule/table-prefs-density-sync";
+import { PageHeader } from "@/components/page-header";
+import { Badge } from "@/components/ui/badge";
+import { UrlSelect } from "@/components/url-select";
+import { db } from "@/db";
+import type { RoundStatus } from "@/db/schema";
+import { jobRegionVisibility, reportTemplates } from "@/db/schema";
 import {
-  filterByHierarchy,
-  parseHierarchyFromSearchParams,
-  serializeHierarchy,
-} from "@/lib/bid-schedule-filter";
+  principalCanEditBidSchedule,
+  principalCanMarkStaffing,
+} from "@/lib/authorization/decisions";
+import { allowedTransitions } from "@/lib/authorization/lifecycle";
 import {
   listCustomColumnsForPrincipal,
   listRoundsWithJobsForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { allowedTransitions } from "@/lib/authorization/lifecycle";
-import {
-  principalCanEditBidSchedule,
-  principalCanMarkStaffing,
-} from "@/lib/authorization/decisions";
-import { NEEDS_STAFFING_QUEUE } from "@/lib/staffing";
 import {
   BID_SCHEDULE_GROUP_OPTIONS,
   BID_SCHEDULE_SORT_OPTIONS,
@@ -35,15 +31,22 @@ import {
   parseBidScheduleGroupBy,
   parseBidScheduleSort,
 } from "@/lib/bid-schedule";
-import { inArray } from "drizzle-orm";
+import {
+  filterByHierarchy,
+  parseHierarchyFromSearchParams,
+  serializeHierarchy,
+} from "@/lib/bid-schedule-filter";
 import { calendarDate } from "@/lib/overview-queues";
+import { getReferenceValues } from "@/lib/queries";
+import { regionDepartmentTree } from "@/lib/region-departments";
+import { NEEDS_STAFFING_QUEUE } from "@/lib/staffing";
+import {
+  BID_SCHEDULE_SURFACE,
+  resolveBidScheduleTableState,
+} from "@/lib/table-prefs";
+import { parseBidScheduleViewConfig } from "@/lib/view-config";
 import { getWorkspace } from "@/lib/workspace-server";
-import { db } from "@/db";
-import { jobRegionVisibility, reportTemplates } from "@/db/schema";
-import type { RoundStatus } from "@/db/schema";
-import { listBidScheduleViews } from "@/actions/bid-schedule-views";
 import { tablePrefsService } from "@/services/table-prefs-service";
-import { TablePrefsDensitySync } from "@/components/bid-schedule/table-prefs-density-sync";
 
 const PRE_BID_STATUSES: RoundStatus[] = ["active", "upcoming", "outstanding"];
 
@@ -66,7 +69,10 @@ export default async function BidSchedulePage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const user = principal.user;
   const [rows, lists, templates, customCols, views, prefs] = await Promise.all([
     listRoundsWithJobsForPrincipal(principal, { statuses: PRE_BID_STATUSES }),
@@ -83,7 +89,9 @@ export default async function BidSchedulePage({
     urlViewId: urlViewId && Number.isInteger(urlViewId) ? urlViewId : undefined,
     skipDefaultView,
     urlDensity:
-      params.density === "detail" || params.density === "summary" ? params.density : undefined,
+      params.density === "detail" || params.density === "summary"
+        ? params.density
+        : undefined,
     prefs,
     views: views.map((view) => ({
       id: view.id,
@@ -97,20 +105,32 @@ export default async function BidSchedulePage({
     presentation.source === "view" &&
     presentation.activeViewId != null
   ) {
-    const defaultView = views.find((view) => view.id === presentation.activeViewId);
+    const defaultView = views.find(
+      (view) => view.id === presentation.activeViewId
+    );
     if (defaultView) {
-      redirect(bidScheduleViewHref(parseBidScheduleViewConfig(defaultView.config), defaultView.id));
+      redirect(
+        bidScheduleViewHref(
+          parseBidScheduleViewConfig(defaultView.config),
+          defaultView.id
+        )
+      );
     }
   }
 
   const activeViewId = presentation.activeViewId;
   const activeView =
     activeViewId != null ? views.find((v) => v.id === activeViewId) : undefined;
-  const parsedView = activeView ? parseBidScheduleViewConfig(activeView.config) : undefined;
+  const parsedView = activeView
+    ? parseBidScheduleViewConfig(activeView.config)
+    : undefined;
 
-  const section = SECTIONS.find((s) => s.key === (params.section ?? "all")) ?? SECTIONS[0];
+  const section =
+    SECTIONS.find((s) => s.key === (params.section ?? "all")) ?? SECTIONS[0];
   const allowedRegions =
-    principal.allowedRegions === "all" ? ("all" as const) : principal.allowedRegions;
+    principal.allowedRegions === "all"
+      ? ("all" as const)
+      : principal.allowedRegions;
   const hierarchy = parseHierarchyFromSearchParams(params, {
     workspaceRegion: workspace.region,
     viewRegions: parsedView?.regions,
@@ -130,26 +150,32 @@ export default async function BidSchedulePage({
   const preBid = rows;
   const hierarchicallyVisible = filterByHierarchy(
     preBid.map((r) => ({ ...r, preconDepartment: r.round.preconDepartment })),
-    hierarchy,
+    hierarchy
   );
   const counts = Object.fromEntries(
     SECTIONS.map((s) => [
       s.key,
-      hierarchicallyVisible.filter((r) => s.statuses.includes(r.round.status)).length,
-    ]),
+      hierarchicallyVisible.filter((r) => s.statuses.includes(r.round.status))
+        .length,
+    ])
   );
 
-  let scoped = hierarchicallyVisible.filter((r) => section.statuses.includes(r.round.status));
+  let scoped = hierarchicallyVisible.filter((r) =>
+    section.statuses.includes(r.round.status)
+  );
 
   if (queue === "past-due") {
     scoped = scoped.filter(
-      (r) => r.round.status === "active" && r.round.bidDueDate != null && r.round.bidDueDate < todayKey,
+      (r) =>
+        r.round.status === "active" &&
+        r.round.bidDueDate != null &&
+        r.round.bidDueDate < todayKey
     );
   } else if (queue === "unlinked") {
     scoped = scoped.filter((r) => !r.job.isLinked);
   } else if (queue === NEEDS_STAFFING_QUEUE) {
     scoped = hierarchicallyVisible.filter(
-      (r) => r.round.status === "upcoming" && r.round.teamAssignedAt == null,
+      (r) => r.round.status === "upcoming" && r.round.teamAssignedAt == null
     );
   }
 
@@ -178,7 +204,10 @@ export default async function BidSchedulePage({
     source: skipDefaultView && !params.view ? "prefs" : undefined,
   };
   const queryString = new URLSearchParams(
-    Object.entries(queryParams).filter(([, v]) => Boolean(v)) as [string, string][],
+    Object.entries(queryParams).filter(([, v]) => Boolean(v)) as [
+      string,
+      string,
+    ][]
   ).toString();
 
   const siblingsByJobId: Record<
@@ -195,13 +224,15 @@ export default async function BidSchedulePage({
   const scopedJobIds = new Set(scoped.map((r) => r.job.id));
   for (const { round, job } of rows) {
     if (!scopedJobIds.has(job.id)) continue;
-    (siblingsByJobId[job.id] ??= []).push({
+    const siblings = siblingsByJobId[job.id] ?? [];
+    siblings.push({
       id: round.id,
       estimatePhase: round.estimatePhase,
       bidDueDate: round.bidDueDate,
       status: round.status,
       roundNumber: round.roundNumber,
     });
+    siblingsByJobId[job.id] = siblings;
   }
 
   const jobIds = [...new Set(rows.map((row) => row.job.id))];
@@ -257,8 +288,10 @@ export default async function BidSchedulePage({
   const sectionHref = (key: string) => {
     const p = new URLSearchParams();
     if (hierarchyParams.regions) p.set("regions", hierarchyParams.regions);
-    if (hierarchyParams.departments) p.set("departments", hierarchyParams.departments);
-    else if (region !== "all" && !hierarchyParams.regions) p.set("region", region);
+    if (hierarchyParams.departments)
+      p.set("departments", hierarchyParams.departments);
+    else if (region !== "all" && !hierarchyParams.regions)
+      p.set("region", region);
     p.set("section", key);
     if (groupBy !== "none") p.set("group", groupBy);
     if (sort.field !== "bidDueDate") p.set("sort", sort.field);
@@ -277,13 +310,19 @@ export default async function BidSchedulePage({
       <PageHeader
         title="Bid Schedule"
         description={`Pre-bid pursuit pipeline. New Pursuit is Salesforce-first; No job number yet (ROM) stays unlinked as TBD-…. ${
-          workspace.region ? `${workspace.region} workspace.` : "Corporate view — all Regions."
+          workspace.region
+            ? `${workspace.region} workspace.`
+            : "Corporate view — all Regions."
         }`}
         actions={
           <>
             <ExportDialog
               queryString={queryString}
-              templates={templates.map((t) => ({ id: t.id, name: t.name, config: t.config }))}
+              templates={templates.map((t) => ({
+                id: t.id,
+                name: t.name,
+                config: t.config,
+              }))}
               customCols={customCols.map((c) => ({
                 key: `custom:${c.id}`,
                 label: `${c.label} (${c.region ?? "company"})`,
@@ -295,7 +334,8 @@ export default async function BidSchedulePage({
                 lists={lists}
                 homeRegion={principal.workspace.region ?? principal.user.region}
                 canChooseRegion={
-                  principal.allowedRegions === "all" && principal.workspace.kind === "corporate"
+                  principal.allowedRegions === "all" &&
+                  principal.workspace.kind === "corporate"
                 }
                 previewDuplicates={params.preview === "duplicates"}
               />
@@ -307,7 +347,10 @@ export default async function BidSchedulePage({
       {queue && QUEUE_LABELS[queue] && (
         <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-[13px] text-info-foreground">
           <span>Queue · {QUEUE_LABELS[queue]}</span>
-          <Link href={sectionHref(section.key)} className="text-2xs font-medium hover:underline">
+          <Link
+            href={sectionHref(section.key)}
+            className="text-2xs font-medium hover:underline"
+          >
             Clear
           </Link>
         </div>

@@ -60,7 +60,9 @@ export async function buildForecastPptx(input: {
     {
       label: "Months plotted",
       value: String(series.months.length),
-      sub: series.months.length ? `${series.months[0]?.month} to ${series.months.at(-1)?.month}` : "No dated volume",
+      sub: series.months.length
+        ? `${series.months[0]?.month} to ${series.months.at(-1)?.month}`
+        : "No dated volume",
       anchor: false,
     },
     {
@@ -135,18 +137,21 @@ export async function buildForecastPptx(input: {
         chartColors: [BRAND.blue4, BRAND.blue2],
         valAxisTitle: "$M",
         showValAxisTitle: true,
-      }),
+      })
     );
   } else {
-    chart.addText("No dated volume to plot. Rounds need an estimate value and a start or bid date.", {
-      x: MARGIN,
-      y: 3.2,
-      w: 12.2,
-      h: 0.6,
-      fontFace: FONT.body,
-      fontSize: 15,
-      color: BRAND.gray3,
-    });
+    chart.addText(
+      "No dated volume to plot. Rounds need an estimate value and a start or bid date.",
+      {
+        x: MARGIN,
+        y: 3.2,
+        w: 12.2,
+        h: 0.6,
+        fontFace: FONT.body,
+        fontSize: 15,
+        color: BRAND.gray3,
+      }
+    );
   }
 
   const assumptions = addContentSlide(pptx, {
@@ -161,7 +166,10 @@ export async function buildForecastPptx(input: {
       [tableHeaderCell("Assumption"), tableHeaderCell("Value")],
       [
         tableBodyCell("Pending win probability", 0),
-        tableBodyCell(`${Math.round(series.assumptions.pendingWinProbability * 100)}%`, 0),
+        tableBodyCell(
+          `${Math.round(series.assumptions.pendingWinProbability * 100)}%`,
+          0
+        ),
       ],
       [
         tableBodyCell("Schedule slip on pending work", 1),
@@ -193,7 +201,7 @@ export async function buildForecastPptx(input: {
       ],
       fontFace: FONT.body,
       valign: "middle",
-    },
+    }
   );
 
   const buffer = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;

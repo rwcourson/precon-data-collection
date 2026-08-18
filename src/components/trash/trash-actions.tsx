@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, RotateCcw, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { permanentlyDeleteTrashItem, restoreTrashItem } from "@/actions/recovery";
-import type { TrashItem } from "@/lib/recovery";
+import {
+  permanentlyDeleteTrashItem,
+  restoreTrashItem,
+} from "@/actions/recovery";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { TrashItem } from "@/lib/recovery";
 
 export function TrashActions({
   entityType,
@@ -50,7 +53,11 @@ export function TrashActions({
           })
         }
       >
-        {pending ? <Loader2 className="size-3.5 animate-spin" /> : <RotateCcw className="size-3.5" />}
+        {pending ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <RotateCcw className="size-3.5" />
+        )}
         Restore
       </Button>
       <Button
@@ -73,8 +80,9 @@ export function TrashActions({
           <DialogHeader>
             <DialogTitle>Permanently delete?</DialogTitle>
             <DialogDescription>
-              This cannot be undone. Only corporate admins can permanently delete already soft-deleted
-              items. Type <strong>PERMANENTLY DELETE</strong> to confirm.
+              This cannot be undone. Only corporate admins can permanently
+              delete already soft-deleted items. Type{" "}
+              <strong>PERMANENTLY DELETE</strong> to confirm.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -88,7 +96,11 @@ export function TrashActions({
             />
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+            >
               Cancel
             </Button>
             <Button
@@ -98,17 +110,27 @@ export function TrashActions({
               onClick={() =>
                 startTransition(async () => {
                   try {
-                    await permanentlyDeleteTrashItem(entityType, entityId, confirmation);
+                    await permanentlyDeleteTrashItem(
+                      entityType,
+                      entityId,
+                      confirmation
+                    );
                     toast.success("Item permanently deleted.");
                     setDeleteOpen(false);
                     router.refresh();
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Delete failed");
+                    toast.error(
+                      e instanceof Error ? e.message : "Delete failed"
+                    );
                   }
                 })
               }
             >
-              {pending ? <Loader2 className="size-4 animate-spin" /> : "Delete forever"}
+              {pending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Delete forever"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

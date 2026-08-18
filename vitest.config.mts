@@ -7,7 +7,7 @@ import { defineConfig } from "vitest/config";
 // Use a unique directory per process; never share with Next build or smoke.
 const pgliteTestDir = path.join(
   os.tmpdir(),
-  `precon-vitest-${process.pid}-${Date.now()}`,
+  `precon-vitest-${process.pid}-${Date.now()}`
 );
 fs.mkdirSync(pgliteTestDir, { recursive: true });
 process.env.PGLITE_DATA_DIR = pgliteTestDir;
@@ -32,7 +32,10 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     // These import apps/mobile (Expo tsconfig). Web CI does not install Expo.
-    exclude: ["src/lib/mobile-theme.test.ts", "src/theme/mobile-tokens.test.ts"],
+    exclude: [
+      "src/lib/mobile-theme.test.ts",
+      "src/theme/mobile-tokens.test.ts",
+    ],
     passWithNoTests: false,
     testTimeout: 60_000,
     hookTimeout: 90_000,
@@ -44,9 +47,18 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
-      "server-only": path.resolve(import.meta.dirname, "./src/test/server-only-stub.ts"),
-      "next/cache": path.resolve(import.meta.dirname, "./src/test/next-cache-stub.ts"),
-      "next/headers": path.resolve(import.meta.dirname, "./src/test/next-headers-stub.ts"),
+      "server-only": path.resolve(
+        import.meta.dirname,
+        "./src/test/server-only-stub.ts"
+      ),
+      "next/cache": path.resolve(
+        import.meta.dirname,
+        "./src/test/next-cache-stub.ts"
+      ),
+      "next/headers": path.resolve(
+        import.meta.dirname,
+        "./src/test/next-headers-stub.ts"
+      ),
     },
   },
 });

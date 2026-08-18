@@ -13,7 +13,7 @@ export const widgetConfigSchema = z.object({
         field: z.string().min(1),
         op: z.string().min(1),
         value: z.string(),
-      }),
+      })
     )
     .max(20)
     .optional(),
@@ -59,8 +59,14 @@ const ALLOWED_GROUP_BY = new Set([
   "sizeBucket",
 ]);
 
-export function assertWidgetQueryBounds(config: z.infer<typeof widgetConfigSchema>): void {
-  if (config.metricKey && !ALLOWED_METRICS.has(config.metricKey) && !config.savedReportId) {
+export function assertWidgetQueryBounds(
+  config: z.infer<typeof widgetConfigSchema>
+): void {
+  if (
+    config.metricKey &&
+    !ALLOWED_METRICS.has(config.metricKey) &&
+    !config.savedReportId
+  ) {
     throw new Error(`Metric "${config.metricKey}" is not allowlisted`);
   }
   if (config.groupBy && !ALLOWED_GROUP_BY.has(config.groupBy)) {
@@ -78,7 +84,7 @@ export function assertWidgetQueryBounds(config: z.infer<typeof widgetConfigSchem
 
 export function canPublishDashboard(
   role: string,
-  scope: z.infer<typeof dashboardScopeSchema>,
+  scope: z.infer<typeof dashboardScopeSchema>
 ): boolean {
   if (scope === "personal") return true;
   if (scope === "region") return role === "rpd" || role === "corporate_admin";

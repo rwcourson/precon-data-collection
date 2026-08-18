@@ -22,7 +22,10 @@ type RenderResult =
 
 let chromiumUnavailable = false;
 
-export async function renderPdf(html: string, opts: PdfOptions = {}): Promise<Uint8Array | null> {
+export async function renderPdf(
+  html: string,
+  opts: PdfOptions = {}
+): Promise<Uint8Array | null> {
   if (chromiumUnavailable) return null;
 
   let browser: Awaited<ReturnType<typeof launch>> | null = null;
@@ -46,7 +49,10 @@ export async function renderPdf(html: string, opts: PdfOptions = {}): Promise<Ui
     return new Uint8Array(buffer);
   } catch (err) {
     // One failure means the binary is missing or blocked; stop retrying.
-    console.error("PDF rendering unavailable — falling back to print HTML:", err);
+    console.error(
+      "PDF rendering unavailable — falling back to print HTML:",
+      err
+    );
     chromiumUnavailable = true;
     return null;
   } finally {
@@ -55,7 +61,10 @@ export async function renderPdf(html: string, opts: PdfOptions = {}): Promise<Ui
 }
 
 /** Renders to PDF when possible, otherwise returns the print-ready HTML. */
-export async function renderPdfOrHtml(html: string, opts: PdfOptions = {}): Promise<RenderResult> {
+export async function renderPdfOrHtml(
+  html: string,
+  opts: PdfOptions = {}
+): Promise<RenderResult> {
   const pdf = await renderPdf(html, opts);
   return pdf ? { kind: "pdf", body: pdf } : { kind: "html", body: html };
 }
@@ -64,7 +73,7 @@ export async function renderPdfOrHtml(html: string, opts: PdfOptions = {}): Prom
 export async function pdfResponse(
   html: string,
   filename: string,
-  opts: PdfOptions = {},
+  opts: PdfOptions = {}
 ): Promise<Response> {
   const result = await renderPdfOrHtml(html, opts);
   if (result.kind === "html") {
@@ -104,4 +113,8 @@ const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export const safeName = (s: string) =>
-  s.replace(/[^a-z0-9-_ ]/gi, "").trim().replace(/\s+/g, "-").toLowerCase() || "export";
+  s
+    .replace(/[^a-z0-9-_ ]/gi, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLowerCase() || "export";

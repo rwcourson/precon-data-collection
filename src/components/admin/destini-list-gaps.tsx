@@ -1,6 +1,6 @@
+import { Badge } from "@/components/ui/badge";
 import { compareDestiniLists } from "@/lib/destini-validation-lists";
 import { REFERENCE_LISTS } from "@/lib/reference-data";
-import { Badge } from "@/components/ui/badge";
 
 /** Server-rendered Destini Data Validation vs seeded reference list gaps. */
 export function DestiniListGaps() {
@@ -9,7 +9,8 @@ export function DestiniListGaps() {
   if (gaps.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Seeded reference lists match the Destini Data Validation sheet (dash-insensitive).
+        Seeded reference lists match the Destini Data Validation sheet
+        (dash-insensitive).
       </p>
     );
   }
@@ -17,8 +18,9 @@ export function DestiniListGaps() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        {gaps.length} list{gaps.length === 1 ? "" : "s"} differ from Destini markup. Import still
-        works — these affect dropdown entry, not Destini dollar fields.
+        {gaps.length} list{gaps.length === 1 ? "" : "s"} differ from Destini
+        markup. Import still works — these affect dropdown entry, not Destini
+        dollar fields.
       </p>
       {gaps.map((g) => (
         <div key={g.listKey} className="rounded-md border p-3">

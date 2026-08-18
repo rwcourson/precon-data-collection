@@ -1,7 +1,7 @@
 import "server-only";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { dashboardWidgets, dashboards } from "@/db/schema";
+import { dashboards, dashboardWidgets } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { loadDashboardForPrincipal } from "@/lib/authorization/loaders";
 import type { Principal } from "@/lib/authorization/types";
@@ -38,7 +38,7 @@ export const dashboardService = {
           dashboardId: copy.id,
           sortOrder: i,
           config: widget.config,
-        })),
+        }))
       );
     }
     return copy;
@@ -46,10 +46,18 @@ export const dashboardService = {
 
   async seedStandard(ownerId: number) {
     const existing = await db
-      .select({ name: dashboards.name, region: dashboards.region, scope: dashboards.scope })
+      .select({
+        name: dashboards.name,
+        region: dashboards.region,
+        scope: dashboards.scope,
+      })
       .from(dashboards)
-      .where(and(eq(dashboards.isStandard, true), isNull(dashboards.deletedAt)));
-    const seen = new Set(existing.map((row) => `${row.scope}:${row.region ?? ""}:${row.name}`));
+      .where(
+        and(eq(dashboards.isStandard, true), isNull(dashboards.deletedAt))
+      );
+    const seen = new Set(
+      existing.map((row) => `${row.scope}:${row.region ?? ""}:${row.name}`)
+    );
 
     for (const def of allStandardDashboardDefs()) {
       const key = `${def.scope}:${def.region ?? ""}:${def.name}`;
@@ -72,7 +80,7 @@ export const dashboardService = {
             dashboardId: dash.id,
             sortOrder: i,
             config,
-          })),
+          }))
         );
       }
     }

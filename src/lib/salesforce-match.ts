@@ -62,13 +62,19 @@ export function nameScore(a: string, b: string): number {
   return inter / (A.size + B.size - inter);
 }
 
-function valueProximity(a: number | null | undefined, b: number | null | undefined): number {
+function valueProximity(
+  a: number | null | undefined,
+  b: number | null | undefined
+): number {
   if (a == null || b == null || a <= 0 || b <= 0) return 0;
   const ratio = Math.min(a, b) / Math.max(a, b);
   return ratio;
 }
 
-export function scorePair(job: MatchJob, opp: MatchOpportunity): MatchCandidate {
+export function scorePair(
+  job: MatchJob,
+  opp: MatchOpportunity
+): MatchCandidate {
   const ns = nameScore(job.jobName, opp.jobName);
   const regionMatch =
     normalize(job.region) === normalize(opp.region) && job.region.trim() !== "";
@@ -79,7 +85,11 @@ export function scorePair(job: MatchJob, opp: MatchOpportunity): MatchCandidate 
     normalize(job.jobNumber) === normalize(opp.jobNumber);
   const vp = valueProximity(job.estimateValue, opp.expectedValue);
 
-  let score = ns * 0.55 + (regionMatch ? 0.25 : 0) + (jobNumberMatch ? 0.15 : 0) + vp * 0.05;
+  let score =
+    ns * 0.55 +
+    (regionMatch ? 0.25 : 0) +
+    (jobNumberMatch ? 0.15 : 0) +
+    vp * 0.05;
 
   let discrepancy: string | null = null;
   if (
@@ -120,14 +130,14 @@ export function proposeMatches(
   jobs: MatchJob[],
   opps: MatchOpportunity[],
   suppressions: { jobId: number | null; sfId: string; sourceVersion: string }[],
-  threshold = 0.35,
+  threshold = 0.35
 ): MatchCandidate[] {
   const out: MatchCandidate[] = [];
   const suppressed = new Set(
-    suppressions.map((s) => `${s.jobId ?? "*"}:${s.sfId}:${s.sourceVersion}`),
+    suppressions.map((s) => `${s.jobId ?? "*"}:${s.sfId}:${s.sourceVersion}`)
   );
   const linkedSfIds = new Set(
-    jobs.map((j) => j.salesforceId).filter((id): id is string => Boolean(id)),
+    jobs.map((j) => j.salesforceId).filter((id): id is string => Boolean(id))
   );
 
   for (const opp of opps) {

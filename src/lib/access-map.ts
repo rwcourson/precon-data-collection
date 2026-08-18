@@ -50,7 +50,7 @@ const ROLE_PRIVILEGE: Role[] = [
 
 export function mapIdentity(
   identity: SsoIdentity,
-  access: AccessSettings,
+  access: AccessSettings
 ): { role: Role; region: string | null } {
   const matched = identity.groups
     .map((g) => access.groupRoles[g])
@@ -73,14 +73,16 @@ export type StrictIdentityMapping =
 /** Production mapping never falls back to a default role. */
 export function mapIdentityStrict(
   identity: SsoIdentity,
-  access: AccessSettings,
+  access: AccessSettings
 ): StrictIdentityMapping {
   const matched = identity.groups
     .map((group) => access.groupRoles[group])
     .filter((role): role is Role => Boolean(role));
   const role = ROLE_PRIVILEGE.find((candidate) => matched.includes(candidate));
   if (!role) return { ok: false, reason: "unmapped-role" };
-  const region = identity.groups.map((group) => access.groupRegions[group]).find(Boolean) ?? null;
+  const region =
+    identity.groups.map((group) => access.groupRegions[group]).find(Boolean) ??
+    null;
   if (REGION_BOUND_ROLES.includes(role) && !region) {
     return { ok: false, reason: "missing-region" };
   }

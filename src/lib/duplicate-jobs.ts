@@ -29,7 +29,8 @@ export function normalizeJobName(name: string): string {
 export function trigramSet(name: string): Set<string> {
   const padded = `  ${normalizeJobName(name)} `;
   const grams = new Set<string>();
-  for (let i = 0; i <= padded.length - 3; i++) grams.add(padded.slice(i, i + 3));
+  for (let i = 0; i <= padded.length - 3; i++)
+    grams.add(padded.slice(i, i + 3));
   return grams;
 }
 
@@ -77,21 +78,30 @@ export type DuplicateMatch = {
 };
 
 function normPlace(value: string | null | undefined): string {
-  return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 export function scoreDuplicateJob(
   candidate: DuplicateCandidate,
-  existing: DuplicateExisting,
+  existing: DuplicateExisting
 ): DuplicateMatch {
-  const tokenName = nameScore(normalizeJobName(candidate.jobName), normalizeJobName(existing.jobName));
+  const tokenName = nameScore(
+    normalizeJobName(candidate.jobName),
+    normalizeJobName(existing.jobName)
+  );
   const grams = trigramScore(candidate.jobName, existing.jobName);
   const cityMatch =
-    Boolean(normPlace(candidate.city)) && normPlace(candidate.city) === normPlace(existing.city);
+    Boolean(normPlace(candidate.city)) &&
+    normPlace(candidate.city) === normPlace(existing.city);
   const stateMatch =
-    Boolean(normPlace(candidate.state)) && normPlace(candidate.state) === normPlace(existing.state);
+    Boolean(normPlace(candidate.state)) &&
+    normPlace(candidate.state) === normPlace(existing.state);
   const ownerMatch =
-    Boolean(normPlace(candidate.owner)) && normPlace(candidate.owner) === normPlace(existing.owner);
+    Boolean(normPlace(candidate.owner)) &&
+    normPlace(candidate.owner) === normPlace(existing.owner);
 
   const score =
     tokenName * 0.5 +
@@ -126,7 +136,7 @@ export function scoreDuplicateJob(
 export function findDuplicateJobs(
   candidate: DuplicateCandidate,
   existing: DuplicateExisting[],
-  threshold = DUPLICATE_SCORE_THRESHOLD,
+  threshold = DUPLICATE_SCORE_THRESHOLD
 ): DuplicateMatch[] {
   if (!candidate.jobName.trim()) return [];
   return existing

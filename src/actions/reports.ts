@@ -1,18 +1,17 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { savedReports, type SavedReportConfig } from "@/db/schema";
+import { type SavedReportConfig, savedReports } from "@/db/schema";
 import { loadReportForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getFlatDataset } from "@/lib/export-helpers";
-import {
-  runReportEngine,
-  type ReportResult,
-} from "@/lib/report-engine";
+import { type ReportResult, runReportEngine } from "@/lib/report-engine";
 
-export async function runReport(config: SavedReportConfig): Promise<ReportResult> {
+export async function runReport(
+  config: SavedReportConfig
+): Promise<ReportResult> {
   const principal = await getWebPrincipal();
   const { rows, catalog } = await getFlatDataset(principal);
   const result = runReportEngine(rows, config, catalog);
@@ -22,7 +21,7 @@ export async function runReport(config: SavedReportConfig): Promise<ReportResult
 export async function saveReport(
   name: string,
   config: SavedReportConfig,
-  existingId?: number,
+  existingId?: number
 ) {
   const principal = await getWebPrincipal();
   const user = principal.user;
@@ -58,7 +57,7 @@ export async function deleteReport(id: number) {
 export async function shareReport(
   id: number,
   sharedWithRegions: string[],
-  sharedWithUserIds: number[],
+  sharedWithUserIds: number[]
 ) {
   const principal = await getWebPrincipal();
   const loaded = await loadReportForPrincipal(principal, id, "manage");

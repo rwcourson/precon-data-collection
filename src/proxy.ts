@@ -1,17 +1,24 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { inspectRuntimeConfig, runtimeDiagnostics } from "@/lib/runtime-config";
+import { type NextRequest, NextResponse } from "next/server";
 import { BA_SESSION_COOKIE } from "@/lib/auth-constants";
+import { inspectRuntimeConfig, runtimeDiagnostics } from "@/lib/runtime-config";
 
 /**
  * SSO gate: no session cookie → HTML redirects to /sign-in (chrome-free).
  * Full session validation still happens in (app)/layout + getCurrentUser.
  */
-const EXEMPT_EXACT = new Set(["/sign-in", "/api/health/live", "/api/health/ready"]);
+const EXEMPT_EXACT = new Set([
+  "/sign-in",
+  "/api/health/live",
+  "/api/health/ready",
+]);
 const EXEMPT_PREFIXES = ["/api/auth", "/api/jobs/"];
 
 function isExempt(pathname: string): boolean {
   if (EXEMPT_EXACT.has(pathname)) return true;
-  return EXEMPT_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(p));
+  return EXEMPT_PREFIXES.some(
+    (p) =>
+      pathname === p || pathname.startsWith(`${p}/`) || pathname.startsWith(p)
+  );
 }
 
 function hasSessionCookie(req: NextRequest): boolean {
@@ -43,8 +50,11 @@ export function proxy(req: NextRequest) {
     // Still allow the bare sign-in HTML if config is mid-deploy.
     if (pathname === "/sign-in") return NextResponse.next();
     return NextResponse.json(
-      { error: "Service configuration is unavailable.", diagnostics: runtimeDiagnostics(status) },
-      { status: 503 },
+      {
+        error: "Service configuration is unavailable.",
+        diagnostics: runtimeDiagnostics(status),
+      },
+      { status: 503 }
     );
   }
 
@@ -60,7 +70,7 @@ export function proxy(req: NextRequest) {
       }
       return NextResponse.json(
         { error: "Not signed in. Sign in with Microsoft." },
-        { status: 401 },
+        { status: 401 }
       );
     }
     const signIn = req.nextUrl.clone();
@@ -75,5 +85,7 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

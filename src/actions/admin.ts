@@ -1,20 +1,20 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import {
-  auditLog,
-  customColumns,
-  referenceListValues,
-} from "@/db/schema";
+import { auditLog, customColumns, referenceListValues } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { authorize } from "@/lib/authorization/kernel";
 import { principalAllowsRegion } from "@/lib/authorization/principal";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { Principal } from "@/lib/authorization/types";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
-function requireAdminManage(principal: Principal, section: string, region: string | null = null) {
+function requireAdminManage(
+  principal: Principal,
+  section: string,
+  region: string | null = null
+) {
   const decision = authorize(principal, "manage", {
     type: "admin",
     id: section,
@@ -31,7 +31,9 @@ function requireAdminManage(principal: Principal, section: string, region: strin
         throw DomainError.forbidden("Not permitted to manage Region columns.");
       }
       if (!principalAllowsRegion(principal, region)) {
-        throw DomainError.forbidden("Not permitted to manage columns in that Region.");
+        throw DomainError.forbidden(
+          "Not permitted to manage columns in that Region."
+        );
       }
       return;
     }
@@ -48,7 +50,9 @@ export async function addReferenceValue(listKey: string, value: string) {
     .select()
     .from(referenceListValues)
     .where(eq(referenceListValues.listKey, listKey));
-  if (existing.some((v) => v.value.toLowerCase() === value.trim().toLowerCase()))
+  if (
+    existing.some((v) => v.value.toLowerCase() === value.trim().toLowerCase())
+  )
     throw DomainError.badRequest("That value already exists in the list");
 
   await db.insert(referenceListValues).values({
@@ -107,11 +111,18 @@ export async function addCustomColumn(input: AddColumnInput) {
   if (input.scope === "company") {
     requireAdminManage(principal, "lists");
   } else {
-    if (!input.region) throw DomainError.badRequest("Region is required for Region-scoped columns");
+    if (!input.region)
+      throw DomainError.badRequest(
+        "Region is required for Region-scoped columns"
+      );
     requireAdminManage(principal, "columns", input.region);
   }
-  if (!input.label.trim()) throw DomainError.badRequest("Column label is required");
-  if (input.type === "dropdown" && (!input.options || input.options.length === 0))
+  if (!input.label.trim())
+    throw DomainError.badRequest("Column label is required");
+  if (
+    input.type === "dropdown" &&
+    (!input.options || input.options.length === 0)
+  )
     throw DomainError.badRequest("Dropdown columns need at least one option");
 
   const key = input.label
@@ -125,7 +136,8 @@ export async function addCustomColumn(input: AddColumnInput) {
     .values({
       scope: input.scope,
       region: input.scope === "region" ? input.region : null,
-      preconDepartment: input.scope === "region" ? (input.preconDepartment ?? null) : null,
+      preconDepartment:
+        input.scope === "region" ? (input.preconDepartment ?? null) : null,
       key,
       label: input.label.trim(),
       type: input.type,
@@ -139,7 +151,8 @@ export async function addCustomColumn(input: AddColumnInput) {
     entityId: col.id,
     action: "column_added",
     field: col.label,
-    newValue: input.scope === "company" ? "company-wide" : `region:${input.region}`,
+    newValue:
+      input.scope === "company" ? "company-wide" : `region:${input.region}`,
     userId: user.id,
   });
   revalidatePath("/admin");
@@ -148,7 +161,10 @@ export async function addCustomColumn(input: AddColumnInput) {
 
 export async function deleteCustomColumn(id: number) {
   const principal = await getWebPrincipal();
-  const [col] = await db.select().from(customColumns).where(eq(customColumns.id, id));
+  const [col] = await db
+    .select()
+    .from(customColumns)
+    .where(eq(customColumns.id, id));
   if (!col) return;
 
   if (col.scope === "company") {

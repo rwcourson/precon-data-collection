@@ -15,18 +15,27 @@ describe("copilot markdown", () => {
         "",
         "1. **Texas is a volume outlier.**",
         "2. Central carries the most activity",
-      ].join("\n"),
+      ].join("\n")
     );
-    expect(blocks[0]).toEqual({ type: "p", text: "**Executive Region Scorecard**" });
+    expect(blocks[0]).toEqual({
+      type: "p",
+      text: "**Executive Region Scorecard**",
+    });
     expect(blocks[1]).toEqual({
       type: "p",
       text: "I pulled portfolio context and drafted a page with 8 tiles.",
     });
     expect(blocks[2]).toEqual({ type: "p", text: "**Layout**" });
-    expect(blocks[3]).toEqual({ type: "ul", items: ["Four KPI tiles", "Horizontal bar and donut"] });
+    expect(blocks[3]).toEqual({
+      type: "ul",
+      items: ["Four KPI tiles", "Horizontal bar and donut"],
+    });
     expect(blocks[4]).toEqual({
       type: "ol",
-      items: ["**Texas is a volume outlier.**", "Central carries the most activity"],
+      items: [
+        "**Texas is a volume outlier.**",
+        "Central carries the most activity",
+      ],
     });
   });
 
@@ -42,7 +51,7 @@ describe("copilot markdown", () => {
         "| 4018 | St. Vincent’s Clay County Sterilizer Replacement | JAX | 9/4/26 |",
         "",
         "Next up by bid date:",
-      ].join("\n"),
+      ].join("\n")
     );
     expect(blocks[0]).toEqual({
       type: "p",
@@ -57,7 +66,12 @@ describe("copilot markdown", () => {
       headers: ["Job #", "Job", "Dept", "Bid due"],
       rows: [
         ["4012", "AH Sebring 4th Floor Buildout", "ORL MED", "8/28/26"],
-        ["4018", "St. Vincent’s Clay County Sterilizer Replacement", "JAX", "9/4/26"],
+        [
+          "4018",
+          "St. Vincent’s Clay County Sterilizer Replacement",
+          "JAX",
+          "9/4/26",
+        ],
       ],
     });
     expect(blocks[3]).toEqual({ type: "p", text: "Next up by bid date:" });
@@ -65,7 +79,7 @@ describe("copilot markdown", () => {
 
   it("restores tables that arrived as one pipe-joined line", () => {
     const blocks = parseCopilotMarkdown(
-      "*Highest risk:* | Job # | Job | Dept | Bid due | | -- | -- | -- | -- | | 26879 | AH Sebring 4th Floor Buildout | ORL MED | - |",
+      "*Highest risk:* | Job # | Job | Dept | Bid due | | -- | -- | -- | -- | | 26879 | AH Sebring 4th Floor Buildout | ORL MED | - |"
     );
     expect(blocks[0]).toEqual({ type: "p", text: "*Highest risk:*" });
     expect(blocks[1]).toEqual({

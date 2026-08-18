@@ -4,9 +4,11 @@ import { createDestructiveChallenge } from "@/lib/api-safety";
 
 export async function POST(req: Request) {
   const auth = await authenticateBearer(req.headers.get("authorization"));
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.ok)
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   const scope = requireScopes(auth.token, "write:destructive");
-  if (!scope.ok) return NextResponse.json({ error: scope.error }, { status: scope.status });
+  if (!scope.ok)
+    return NextResponse.json({ error: scope.error }, { status: scope.status });
 
   const body = (await req.json().catch(() => ({}))) as {
     operation?: string;
@@ -14,7 +16,10 @@ export async function POST(req: Request) {
     payload?: unknown;
   };
   if (!body.operation || !body.target) {
-    return NextResponse.json({ error: "operation and target are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "operation and target are required" },
+      { status: 400 }
+    );
   }
 
   const { challenge, expiresAt } = await createDestructiveChallenge({

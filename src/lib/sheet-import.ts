@@ -93,7 +93,16 @@ const DATE_PATTERNS = [
   /^[A-Z][a-z]{2} \d{1,2},? \d{4}$/,
 ];
 
-const BOOLEAN_WORDS = new Set(["true", "false", "yes", "no", "y", "n", "x", "✓"]);
+const BOOLEAN_WORDS = new Set([
+  "true",
+  "false",
+  "yes",
+  "no",
+  "y",
+  "n",
+  "x",
+  "✓",
+]);
 
 function numeric(value: string): boolean {
   const cleaned = value.replace(/[$,%\s]/g, "").replace(/^\((.*)\)$/, "-$1");
@@ -104,23 +113,35 @@ function numeric(value: string): boolean {
  * Type from the values, with the label breaking ties: "Amount" holding 1200 is
  * dollars, "Headcount" holding 1200 is a number.
  */
-export function inferColumnType(label: string, values: (string | null)[]): SheetColumnType {
-  const present = values.filter((v): v is string => v != null && v.trim() !== "");
+export function inferColumnType(
+  label: string,
+  values: (string | null)[]
+): SheetColumnType {
+  const present = values.filter(
+    (v): v is string => v != null && v.trim() !== ""
+  );
   if (present.length === 0) return "text";
 
-  if (present.every((v) => BOOLEAN_WORDS.has(v.trim().toLowerCase()))) return "checkbox";
-  if (present.every((v) => DATE_PATTERNS.some((p) => p.test(v.trim())))) return "date";
+  if (present.every((v) => BOOLEAN_WORDS.has(v.trim().toLowerCase())))
+    return "checkbox";
+  if (present.every((v) => DATE_PATTERNS.some((p) => p.test(v.trim()))))
+    return "date";
 
   if (present.every(numeric)) {
     const currency = present.some((v) => v.includes("$"));
-    return currency || /(\$|cost|value|amount|fee|revenue|price|budget|spend)/i.test(label)
+    return currency ||
+      /(\$|cost|value|amount|fee|revenue|price|budget|spend)/i.test(label)
       ? "dollars"
       : "number";
   }
 
   // A short, repeating vocabulary is a picklist in every spreadsheet that has one.
   const distinct = new Set(present.map((v) => v.trim()));
-  if (distinct.size > 1 && distinct.size <= 12 && present.length >= distinct.size * 3)
+  if (
+    distinct.size > 1 &&
+    distinct.size <= 12 &&
+    present.length >= distinct.size * 3
+  )
     return "dropdown";
 
   return "text";
@@ -133,7 +154,10 @@ const TRUTHY = new Set(["true", "yes", "y", "x", "1", "✓"]);
  * a file behaves exactly like one typed in: "$12,500" becomes 12500, "8/5/2026"
  * becomes 2026-08-05, and a ticked box becomes "true" rather than "Yes".
  */
-export function normalizeValue(type: SheetColumnType, raw: string): string | null {
+export function normalizeValue(
+  type: SheetColumnType,
+  raw: string
+): string | null {
   const value = raw.trim();
   if (value === "") return null;
 
@@ -142,7 +166,9 @@ export function normalizeValue(type: SheetColumnType, raw: string): string | nul
       return TRUTHY.has(value.toLowerCase()) ? "true" : null;
     case "number":
     case "dollars": {
-      const cleaned = value.replace(/[$,%\s]/g, "").replace(/^\((.*)\)$/, "-$1");
+      const cleaned = value
+        .replace(/[$,%\s]/g, "")
+        .replace(/^\((.*)\)$/, "-$1");
       return Number.isFinite(Number(cleaned)) ? String(Number(cleaned)) : value;
     }
     case "date": {
@@ -164,7 +190,9 @@ function toIsoDate(value: string): string | null {
     return `${full}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : parsed.toISOString().slice(0, 10);
 }
 
 /** True when the first row reads as labels rather than another data row. */
@@ -176,7 +204,9 @@ function looksLikeHeader(table: ImportTable): boolean {
   if (first.some((c) => numeric(c) && c.trim() !== "")) return false;
   if (!second) return true;
   // A header is a header when the row under it is shaped differently.
-  return second.some((c, i) => c.trim() !== "" && numeric(c) && !numeric(first[i] ?? ""));
+  return second.some(
+    (c, i) => c.trim() !== "" && numeric(c) && !numeric(first[i] ?? "")
+  );
 }
 
 function defaultWidth(type: SheetColumnType, label: string): number {
@@ -200,7 +230,7 @@ export function buildImportedSheet(table: ImportTable): ImportedSheet {
 
   const width = Math.min(
     IMPORT_MAX_COLUMNS,
-    table.reduce((max, row) => Math.max(max, row.length), 0),
+    table.reduce((max, row) => Math.max(max, row.length), 0)
   );
 
   const labels: string[] = [];
@@ -215,7 +245,7 @@ export function buildImportedSheet(table: ImportTable): ImportedSheet {
     kept.map((row) => {
       const value = (row[i] ?? "").trim();
       return value === "" ? null : value;
-    }),
+    })
   );
 
   const keys: string[] = [];

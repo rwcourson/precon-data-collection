@@ -1,15 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
+import { Check, Loader2, RefreshCw, Unlink, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import {
-  Check,
-  Loader2,
-  RefreshCw,
-  Unlink,
-  X,
-} from "lucide-react";
+  decideMatchCandidate,
+  runSalesforceSync,
+} from "@/actions/salesforce-inbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  decideMatchCandidate,
-  runSalesforceSync,
-} from "@/actions/salesforce-inbox";
 
 export type MatchCandidateRow = {
   id: number;
@@ -59,9 +53,7 @@ export type SyncRunSummary = {
 function formatSignals(signals: Record<string, number | boolean | string>) {
   const entries = Object.entries(signals);
   if (entries.length === 0) return "—";
-  return entries
-    .map(([k, v]) => `${k}: ${String(v)}`)
-    .join(" · ");
+  return entries.map(([k, v]) => `${k}: ${String(v)}`).join(" · ");
 }
 
 export function SalesforceInbox({
@@ -79,7 +71,7 @@ export function SalesforceInbox({
       try {
         const res = await runSalesforceSync();
         toast.success(
-          `Sync complete — ${res.seen} opportunities, ${res.created} new candidates`,
+          `Sync complete — ${res.seen} opportunities, ${res.created} new candidates`
         );
         router.refresh();
       } catch (e) {
@@ -91,7 +83,7 @@ export function SalesforceInbox({
   function decide(
     id: number,
     decision: "approve" | "reject" | "dismiss",
-    note?: string,
+    note?: string
   ) {
     startTransition(async () => {
       try {
@@ -101,7 +93,7 @@ export function SalesforceInbox({
             ? "Match approved and job linked"
             : decision === "reject"
               ? "Match rejected"
-              : "Match dismissed",
+              : "Match dismissed"
         );
         router.refresh();
       } catch (e) {
@@ -220,7 +212,7 @@ export function SalesforceInbox({
                           "approve",
                           c.discrepancy?.includes("job_number_mismatch")
                             ? "confirm-job-number"
-                            : undefined,
+                            : undefined
                         )
                       }
                     >

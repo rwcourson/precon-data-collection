@@ -4,12 +4,17 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { auditLog } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { runDatabricksFeed, type FeedResult } from "@/lib/integrations/databricks/feed";
+import {
+  type FeedResult,
+  runDatabricksFeed,
+} from "@/lib/integrations/databricks/feed";
 import { probeDatabricksTables } from "@/lib/integrations/databricks/read";
 import { listPreconSheets } from "@/lib/integrations/smartsheet/pull";
 import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
-export async function runWarehouseFeed(previewOnly: boolean): Promise<FeedResult> {
+export async function runWarehouseFeed(
+  previewOnly: boolean
+): Promise<FeedResult> {
   const principal = await getWebPrincipal();
   assertPrincipalAdmin(principal, "integrations", "manage", "Warehouse feed");
   const user = principal.user;

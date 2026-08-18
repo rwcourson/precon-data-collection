@@ -1,21 +1,25 @@
-import { AppSidebar } from "@/components/app-sidebar";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { AppMain } from "@/components/app-main";
+import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/sidebar-context";
+import { authMode } from "@/lib/auth";
+import { auth } from "@/lib/auth-server";
 import {
   countPreBidStatusesForPrincipal,
   type PipelineBucketCounts,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { listPinnedSheets } from "@/lib/sheets-server";
-import { authMode } from "@/lib/auth";
-import { auth } from "@/lib/auth-server";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-const EMPTY_COUNTS: PipelineBucketCounts = { active: 0, upcoming: 0, outstanding: 0 };
+const EMPTY_COUNTS: PipelineBucketCounts = {
+  active: 0,
+  upcoming: 0,
+  outstanding: 0,
+};
 
 async function chromeData() {
   try {
@@ -34,7 +38,11 @@ async function chromeData() {
  * Authenticated app chrome. In SSO mode, require a Better Auth session
  * before rendering sidebar/header (proxy also redirects; this is defense in depth).
  */
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   if (authMode() === "sso") {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session?.user) {

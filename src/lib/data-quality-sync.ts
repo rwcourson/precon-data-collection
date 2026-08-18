@@ -24,11 +24,14 @@ export type SyncResult = {
  * migration rather than waiting for someone to press a button.
  */
 export async function syncDataQualityFlags(): Promise<SyncResult> {
-  const [rows, lists] = await Promise.all([getRoundsWithJobs(), getReferenceValues()]);
+  const [rows, lists] = await Promise.all([
+    getRoundsWithJobs(),
+    getReferenceValues(),
+  ]);
   const multiMap = await getMultiValuesForRounds(rows.map((r) => r.round.id));
 
   const scanned = rows.flatMap((r) =>
-    scanRound(r.round, r.job, multiMap.get(r.round.id) ?? {}, lists),
+    scanRound(r.round, r.job, multiMap.get(r.round.id) ?? {}, lists)
   );
   const scannedByKey = new Map(scanned.map((f) => [flagKey(f), f]));
 
@@ -40,8 +43,12 @@ export async function syncDataQualityFlags(): Promise<SyncResult> {
     .filter(([key]) => !existingByKey.has(key))
     .map(([, f]) => ({ ...f, firstSeenAt: now, lastSeenAt: now }));
 
-  const stillPresentIds = existing.filter((f) => scannedByKey.has(flagKey(f))).map((f) => f.id);
-  const staleIds = existing.filter((f) => !scannedByKey.has(flagKey(f))).map((f) => f.id);
+  const stillPresentIds = existing
+    .filter((f) => scannedByKey.has(flagKey(f)))
+    .map((f) => f.id);
+  const staleIds = existing
+    .filter((f) => !scannedByKey.has(flagKey(f)))
+    .map((f) => f.id);
 
   // Chunked because a first-time scan of an imported history can be large.
   for (let i = 0; i < toInsert.length; i += 500) {

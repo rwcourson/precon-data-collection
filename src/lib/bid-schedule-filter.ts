@@ -11,9 +11,14 @@ export type HierarchySelection = {
   departments: string[];
 };
 
-export const EMPTY_HIERARCHY: HierarchySelection = { regions: [], departments: [] };
+export const EMPTY_HIERARCHY: HierarchySelection = {
+  regions: [],
+  departments: [],
+};
 
-export function canonicalizeHierarchy(selection: HierarchySelection): HierarchySelection {
+export function canonicalizeHierarchy(
+  selection: HierarchySelection
+): HierarchySelection {
   const selectedDepts = new Set(expandHierarchy(selection));
   const regions: string[] = [];
   const departments: string[] = [];
@@ -41,13 +46,21 @@ export function isHierarchyEmpty(selection: HierarchySelection): boolean {
   return selection.regions.length === 0 && selection.departments.length === 0;
 }
 
-export function hierarchyEquals(a: HierarchySelection, b: HierarchySelection): boolean {
+export function hierarchyEquals(
+  a: HierarchySelection,
+  b: HierarchySelection
+): boolean {
   const left = expandHierarchy(canonicalizeHierarchy(a)).slice().sort();
   const right = expandHierarchy(canonicalizeHierarchy(b)).slice().sort();
-  return left.length === right.length && left.every((value, i) => value === right[i]);
+  return (
+    left.length === right.length && left.every((value, i) => value === right[i])
+  );
 }
 
-export function toggleRegion(selection: HierarchySelection, region: string): HierarchySelection {
+export function toggleRegion(
+  selection: HierarchySelection,
+  region: string
+): HierarchySelection {
   const expanded = new Set(expandHierarchy(selection));
   const children = departmentsForRegion(region);
   const allOn = children.length > 0 && children.every((d) => expanded.has(d));
@@ -59,7 +72,10 @@ export function toggleRegion(selection: HierarchySelection, region: string): Hie
   return canonicalizeHierarchy({ regions: [], departments: [...expanded] });
 }
 
-export function toggleDepartment(selection: HierarchySelection, department: string): HierarchySelection {
+export function toggleDepartment(
+  selection: HierarchySelection,
+  department: string
+): HierarchySelection {
   const expanded = new Set(expandHierarchy(selection));
   if (expanded.has(department)) expanded.delete(department);
   else expanded.add(department);
@@ -68,7 +84,7 @@ export function toggleDepartment(selection: HierarchySelection, department: stri
 
 export function constrainHierarchy(
   selection: HierarchySelection,
-  allowedRegions: readonly string[] | "all",
+  allowedRegions: readonly string[] | "all"
 ): HierarchySelection {
   if (allowedRegions === "all") return canonicalizeHierarchy(selection);
   const allowed = new Set(allowedRegions);
@@ -89,8 +105,12 @@ export function serializeHierarchy(selection: HierarchySelection): {
 } {
   const canonical = canonicalizeHierarchy(selection);
   return {
-    regions: canonical.regions.length ? canonical.regions.join(PARAM_SEP) : undefined,
-    departments: canonical.departments.length ? canonical.departments.join(PARAM_SEP) : undefined,
+    regions: canonical.regions.length
+      ? canonical.regions.join(PARAM_SEP)
+      : undefined,
+    departments: canonical.departments.length
+      ? canonical.departments.join(PARAM_SEP)
+      : undefined,
   };
 }
 
@@ -109,20 +129,23 @@ export function parseHierarchyFromSearchParams(
     viewRegions?: string[];
     viewDepartments?: string[];
     viewRegion?: string;
-  allowedRegions?: readonly string[] | "all";
-  },
+    allowedRegions?: readonly string[] | "all";
+  }
 ): HierarchySelection {
   const fromUrl: HierarchySelection = {
     regions: parseHierarchyParam(params.regions),
     departments: parseHierarchyParam(params.departments),
   };
-  const hasUrl = !isHierarchyEmpty(fromUrl) || params.regions === "" || params.departments === "";
+  const hasUrl =
+    !isHierarchyEmpty(fromUrl) ||
+    params.regions === "" ||
+    params.departments === "";
   let selected: HierarchySelection;
   if (!isHierarchyEmpty(fromUrl)) {
     selected = fromUrl;
   } else if (hasUrl) {
     selected = EMPTY_HIERARCHY;
-  } else if ((opts?.viewRegions && opts.viewRegions.length) || (opts?.viewDepartments && opts.viewDepartments.length)) {
+  } else if (opts?.viewRegions?.length || opts?.viewDepartments?.length) {
     selected = {
       regions: opts.viewRegions ?? [],
       departments: opts.viewDepartments ?? [],
@@ -141,7 +164,7 @@ export function parseHierarchyFromSearchParams(
 
 export function matchesHierarchy<T extends { preconDepartment: string }>(
   row: T,
-  selection: HierarchySelection,
+  selection: HierarchySelection
 ): boolean {
   if (isHierarchyEmpty(selection)) return true;
   return expandHierarchy(selection).includes(row.preconDepartment);
@@ -149,7 +172,7 @@ export function matchesHierarchy<T extends { preconDepartment: string }>(
 
 export function filterByHierarchy<T extends { preconDepartment: string }>(
   rows: T[],
-  selection: HierarchySelection,
+  selection: HierarchySelection
 ): T[] {
   if (isHierarchyEmpty(selection)) return rows;
   const allowed = new Set(expandHierarchy(selection));

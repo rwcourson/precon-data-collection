@@ -5,7 +5,9 @@ describe("cron authorization matrix", () => {
   it("rejects missing cron secret configuration", () => {
     const previous = process.env.CRON_SECRET;
     delete process.env.CRON_SECRET;
-    const res = authorizeCron(new Request("http://localhost/api/jobs/distribution", { method: "POST" }));
+    const res = authorizeCron(
+      new Request("http://localhost/api/jobs/distribution", { method: "POST" })
+    );
     expect(res?.status).toBe(503);
     if (previous) process.env.CRON_SECRET = previous;
   });
@@ -16,7 +18,7 @@ describe("cron authorization matrix", () => {
       new Request("http://localhost/api/jobs/distribution", {
         method: "POST",
         headers: { authorization: "Bearer wrong-secret-value-123456" },
-      }),
+      })
     );
     expect(res?.status).toBe(401);
   });
@@ -27,7 +29,7 @@ describe("cron authorization matrix", () => {
       new Request("http://localhost/api/jobs/distribution", {
         method: "POST",
         headers: { authorization: "Bearer expected-secret-value-123456" },
-      }),
+      })
     );
     expect(res).toBeNull();
   });

@@ -24,9 +24,18 @@ export async function savePostBidData(input: SaveInput) {
  * Single-cell edit from a sheet grid. Delegates to the same service path as the
  * full post-bid form so sheet cells are not a different rulebook.
  */
-export async function updateRoundCell(roundId: number, key: string, value: string) {
+export async function updateRoundCell(
+  roundId: number,
+  key: string,
+  value: string
+) {
   const principal = await getWebPrincipal();
-  const result = await pursuitService.updateRoundCell(principal, roundId, key, value);
+  const result = await pursuitService.updateRoundCell(
+    principal,
+    roundId,
+    key,
+    value
+  );
   revalidatePath(`/rounds/${roundId}`);
   revalidatePath("/post-bid");
   revalidatePath("/bid-schedule");

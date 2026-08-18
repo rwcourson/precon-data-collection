@@ -1,4 +1,23 @@
 import { asc, desc, eq, isNull } from "drizzle-orm";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { listPeople } from "@/actions/people";
+import { AccessSettingsPanel } from "@/components/admin/access-settings";
+import { AdminTabs } from "@/components/admin/admin-tabs";
+import { ApiTokensPanel } from "@/components/admin/api-tokens-panel";
+import { ColumnsManager } from "@/components/admin/columns-manager";
+import { DestiniImport } from "@/components/admin/destini-import";
+import { DistributionListsPanel } from "@/components/admin/distribution-lists-panel";
+import { FieldPromotionsPanel } from "@/components/admin/field-promotions";
+import { MigrationPanel } from "@/components/admin/migration-panel";
+import { NeedsReview } from "@/components/admin/needs-review";
+import { NotificationSettingsPanel } from "@/components/admin/notification-settings";
+import { PeoplePanel } from "@/components/admin/people-panel";
+import { ReferenceListsManager } from "@/components/admin/reference-lists";
+import { SalesforceInbox } from "@/components/admin/salesforce-inbox";
+import { SourceProbes } from "@/components/admin/source-probes";
+import { WarehouseFeed } from "@/components/admin/warehouse-feed";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -16,11 +35,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TabsContent } from "@/components/ui/tabs";
-import { ReferenceListsManager } from "@/components/admin/reference-lists";
-import { ColumnsManager } from "@/components/admin/columns-manager";
-import { AdminTabs } from "@/components/admin/admin-tabs";
-import { NeedsReview } from "@/components/admin/needs-review";
-import { NotificationSettingsPanel } from "@/components/admin/notification-settings";
 import { db } from "@/db";
 import {
   apiTokens,
@@ -31,33 +45,13 @@ import {
   emailOutbox,
   fieldPromotions,
   jobs,
-  referenceListValues,
   referenceLists,
+  referenceListValues,
   salesforceMatchCandidates,
   salesforceSyncRuns,
   users,
 } from "@/db/schema";
-import { AccessSettingsPanel } from "@/components/admin/access-settings";
-import { MigrationPanel } from "@/components/admin/migration-panel";
-import { WarehouseFeed } from "@/components/admin/warehouse-feed";
-import { SourceProbes } from "@/components/admin/source-probes";
-import { DestiniImport } from "@/components/admin/destini-import";
-import { FieldPromotionsPanel } from "@/components/admin/field-promotions";
-import { DistributionListsPanel } from "@/components/admin/distribution-lists-panel";
-import { SalesforceInbox } from "@/components/admin/salesforce-inbox";
-import { ApiTokensPanel } from "@/components/admin/api-tokens-panel";
 import { authMode, getAccessSettings, SSO_HEADERS } from "@/lib/auth";
-import { fieldLabel, type FlagKind } from "@/lib/data-quality";
-import { emailProvider } from "@/lib/email";
-import { connectMode } from "@/lib/integrations/connect";
-import { databricksConfig } from "@/lib/integrations/databricks/client";
-import { getFeedState } from "@/lib/integrations/databricks/feed";
-import { databricksWritesAllowed } from "@/lib/integrations/databricks/read";
-import { smartsheetConfig } from "@/lib/integrations/smartsheet/client";
-import { buildMigrationReport, cutoverChecklist, getImportSource } from "@/lib/migration";
-import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
-import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
-import { getWorkspace } from "@/lib/workspace-server";
 import {
   principalCanManageCompanyColumns,
   principalCanManagePeople,
@@ -65,19 +59,29 @@ import {
   principalCanManageRegionColumns,
   principalCanViewAudit,
 } from "@/lib/authorization/decisions";
-import { ROLE_LABELS } from "@/lib/labels";
-import { isSuperAdmin } from "@/lib/super-admin";
-import { listPeople } from "@/actions/people";
-import { PeoplePanel } from "@/components/admin/people-panel";
-import { fmtDateTime } from "@/lib/format";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/page-header";
 import {
-  listAdminSectionsForPrincipal,
   type AdminSection,
+  listAdminSectionsForPrincipal,
+  listRoundsWithJobsForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { type FlagKind, fieldLabel } from "@/lib/data-quality";
+import { emailProvider } from "@/lib/email";
+import { fmtDateTime } from "@/lib/format";
+import { connectMode } from "@/lib/integrations/connect";
+import { databricksConfig } from "@/lib/integrations/databricks/client";
+import { getFeedState } from "@/lib/integrations/databricks/feed";
+import { databricksWritesAllowed } from "@/lib/integrations/databricks/read";
+import { smartsheetConfig } from "@/lib/integrations/smartsheet/client";
+import { ROLE_LABELS } from "@/lib/labels";
+import {
+  buildMigrationReport,
+  cutoverChecklist,
+  getImportSource,
+} from "@/lib/migration";
+import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
+import { isSuperAdmin } from "@/lib/super-admin";
+import { getWorkspace } from "@/lib/workspace-server";
 
 const VALID_TABS = new Set([
   "columns",
@@ -102,7 +106,9 @@ export default async function AdminPage({
 }) {
   const params = await searchParams;
   const principal = await getWebPrincipal();
-  const allowedSections = new Set(await listAdminSectionsForPrincipal(principal));
+  const allowedSections = new Set(
+    await listAdminSectionsForPrincipal(principal)
+  );
   if (allowedSections.size === 0) notFound();
   const workspace = await getWorkspace();
   const user = principal.user;
@@ -123,63 +129,85 @@ export default async function AdminPage({
     tokens,
     allJobs,
   ] = await Promise.all([
-      allowedSections.has("lists")
-        ? db.select().from(referenceLists).orderBy(asc(referenceLists.key))
-        : Promise.resolve([]),
-      allowedSections.has("lists")
-        ? db.select().from(referenceListValues).orderBy(asc(referenceListValues.sortOrder))
-        : Promise.resolve([]),
-      allowedSections.has("columns") || allowedSections.has("promotions")
-        ? db.select().from(customColumns).orderBy(asc(customColumns.id))
-        : Promise.resolve([]),
-      db.select().from(users).orderBy(asc(users.id)),
-      allowedSections.has("audit")
-        ? db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(100)
-        : Promise.resolve([]),
-      allowedSections.has("review")
-        ? db.select().from(dataQualityFlags).orderBy(desc(dataQualityFlags.firstSeenAt))
-        : Promise.resolve([]),
-      allowedSections.has("review")
-        ? listRoundsWithJobsForPrincipal(principal)
-        : Promise.resolve([]),
-      getNotificationSettings(),
-      allowedSections.has("notifications")
-        ? db.select().from(emailOutbox).orderBy(desc(emailOutbox.createdAt)).limit(25)
-        : Promise.resolve([]),
-      allowedSections.has("promotions")
-        ? db.select().from(fieldPromotions).orderBy(desc(fieldPromotions.proposedAt))
-        : Promise.resolve([]),
-      allowedSections.has("distribution")
-        ? db
-            .select()
-            .from(distributionLists)
-            .where(isNull(distributionLists.deletedAt))
-            .orderBy(asc(distributionLists.name))
-        : Promise.resolve([]),
-      allowedSections.has("salesforce")
-        ? db
-            .select()
-            .from(salesforceMatchCandidates)
-            .where(eq(salesforceMatchCandidates.status, "pending"))
-            .orderBy(desc(salesforceMatchCandidates.score))
-        : Promise.resolve([]),
-      allowedSections.has("salesforce")
-        ? db.select().from(salesforceSyncRuns).orderBy(desc(salesforceSyncRuns.startedAt)).limit(1)
-        : Promise.resolve([]),
-      allowedSections.has("tokens")
-        ? db.select().from(apiTokens).orderBy(desc(apiTokens.createdAt))
-        : Promise.resolve([]),
-      allowedSections.has("salesforce") ? db.select().from(jobs) : Promise.resolve([]),
-    ]);
+    allowedSections.has("lists")
+      ? db.select().from(referenceLists).orderBy(asc(referenceLists.key))
+      : Promise.resolve([]),
+    allowedSections.has("lists")
+      ? db
+          .select()
+          .from(referenceListValues)
+          .orderBy(asc(referenceListValues.sortOrder))
+      : Promise.resolve([]),
+    allowedSections.has("columns") || allowedSections.has("promotions")
+      ? db.select().from(customColumns).orderBy(asc(customColumns.id))
+      : Promise.resolve([]),
+    db.select().from(users).orderBy(asc(users.id)),
+    allowedSections.has("audit")
+      ? db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(100)
+      : Promise.resolve([]),
+    allowedSections.has("review")
+      ? db
+          .select()
+          .from(dataQualityFlags)
+          .orderBy(desc(dataQualityFlags.firstSeenAt))
+      : Promise.resolve([]),
+    allowedSections.has("review")
+      ? listRoundsWithJobsForPrincipal(principal)
+      : Promise.resolve([]),
+    getNotificationSettings(),
+    allowedSections.has("notifications")
+      ? db
+          .select()
+          .from(emailOutbox)
+          .orderBy(desc(emailOutbox.createdAt))
+          .limit(25)
+      : Promise.resolve([]),
+    allowedSections.has("promotions")
+      ? db
+          .select()
+          .from(fieldPromotions)
+          .orderBy(desc(fieldPromotions.proposedAt))
+      : Promise.resolve([]),
+    allowedSections.has("distribution")
+      ? db
+          .select()
+          .from(distributionLists)
+          .where(isNull(distributionLists.deletedAt))
+          .orderBy(asc(distributionLists.name))
+      : Promise.resolve([]),
+    allowedSections.has("salesforce")
+      ? db
+          .select()
+          .from(salesforceMatchCandidates)
+          .where(eq(salesforceMatchCandidates.status, "pending"))
+          .orderBy(desc(salesforceMatchCandidates.score))
+      : Promise.resolve([]),
+    allowedSections.has("salesforce")
+      ? db
+          .select()
+          .from(salesforceSyncRuns)
+          .orderBy(desc(salesforceSyncRuns.startedAt))
+          .limit(1)
+      : Promise.resolve([]),
+    allowedSections.has("tokens")
+      ? db.select().from(apiTokens).orderBy(desc(apiTokens.createdAt))
+      : Promise.resolve([]),
+    allowedSections.has("salesforce")
+      ? db.select().from(jobs)
+      : Promise.resolve([]),
+  ]);
 
   const showAudit = principalCanViewAudit(principal);
   const managePeople = principalCanManagePeople(principal);
   const people =
-    managePeople && allowedSections.has("people")
-      ? await listPeople()
-      : [];
-  let tab = VALID_TABS.has(params.tab ?? "") ? (params.tab as string) : "columns";
-  if (!allowedSections.has(tab as AdminSection) || (tab === "audit" && !showAudit)) {
+    managePeople && allowedSections.has("people") ? await listPeople() : [];
+  let tab = VALID_TABS.has(params.tab ?? "")
+    ? (params.tab as string)
+    : "columns";
+  if (
+    !allowedSections.has(tab as AdminSection) ||
+    (tab === "audit" && !showAudit)
+  ) {
     tab = allowedSections.has("columns") ? "columns" : [...allowedSections][0]!;
   }
 
@@ -204,12 +232,18 @@ export default async function AdminPage({
   }, {});
 
   // Top repeat offenders, so a migrated column can be cleared in one decision.
-  const groupMap = new Map<string, { field: string; kind: FlagKind; count: number; samples: Set<string> }>();
+  const groupMap = new Map<
+    string,
+    { field: string; kind: FlagKind; count: number; samples: Set<string> }
+  >();
   for (const f of openFlags) {
     const key = `${f.field}\u241F${f.kind}`;
-    const g =
-      groupMap.get(key) ??
-      { field: f.field, kind: f.kind as FlagKind, count: 0, samples: new Set<string>() };
+    const g = groupMap.get(key) ?? {
+      field: f.field,
+      kind: f.kind as FlagKind,
+      count: 0,
+      samples: new Set<string>(),
+    };
     g.count++;
     if (f.value && g.samples.size < 3) g.samples.add(f.value);
     groupMap.set(key, g);
@@ -232,7 +266,7 @@ export default async function AdminPage({
         ? f.resolvedAt == null
         : reviewFilter === "resolved"
           ? f.resolvedAt != null
-          : true,
+          : true
     )
     .filter((f) => kindFilter === "all" || f.kind === kindFilter).length;
 
@@ -242,7 +276,7 @@ export default async function AdminPage({
         ? f.resolvedAt == null
         : reviewFilter === "resolved"
           ? f.resolvedAt != null
-          : true,
+          : true
     )
     .filter((f) => kindFilter === "all" || f.kind === kindFilter)
     .slice(0, 200)
@@ -265,13 +299,14 @@ export default async function AdminPage({
       };
     });
 
-  const [reminderTargets, access, feedState, migration, importSource] = await Promise.all([
-    findReminderTargets(settings),
-    getAccessSettings(),
-    getFeedState(),
-    buildMigrationReport(workspace),
-    getImportSource(),
-  ]);
+  const [reminderTargets, access, feedState, migration, importSource] =
+    await Promise.all([
+      findReminderTargets(settings),
+      getAccessSettings(),
+      getFeedState(),
+      buildMigrationReport(workspace),
+      getImportSource(),
+    ]);
 
   const dbCfg = databricksConfig();
   const checklist = cutoverChecklist(migration, {
@@ -289,8 +324,16 @@ export default async function AdminPage({
       .map((v) => ({ id: v.id, value: v.value, retired: v.retired })),
   }));
 
-  const regionValues = listData.find((l) => l.key === "region")?.values.filter((v) => !v.retired).map((v) => v.value) ?? [];
-  const deptValues = listData.find((l) => l.key === "preconDepartment")?.values.filter((v) => !v.retired).map((v) => v.value) ?? [];
+  const regionValues =
+    listData
+      .find((l) => l.key === "region")
+      ?.values.filter((v) => !v.retired)
+      .map((v) => v.value) ?? [];
+  const deptValues =
+    listData
+      .find((l) => l.key === "preconDepartment")
+      ?.values.filter((v) => !v.retired)
+      .map((v) => v.value) ?? [];
 
   return (
     <div className="space-y-5">
@@ -299,7 +342,11 @@ export default async function AdminPage({
         description={`Two-tier governance: the Corporate Precon Admin owns company-wide columns and reference lists; RPDs independently manage their own Region's columns. You are signed in as ${ROLE_LABELS[user.role]}${user.region ? ` (${user.region})` : ""}.`}
       />
 
-      <AdminTabs value={tab} showAudit={showAudit} reviewCount={openFlags.length}>
+      <AdminTabs
+        value={tab}
+        showAudit={showAudit}
+        reviewCount={openFlags.length}
+      >
         <TabsContent value="columns" className="pt-3">
           <ColumnsManager
             columns={cols.map((c) => ({
@@ -412,7 +459,10 @@ export default async function AdminPage({
         </TabsContent>
 
         <TabsContent value="lists" className="pt-3">
-          <ReferenceListsManager lists={listData} canEdit={principalCanManageReferenceLists(principal)} />
+          <ReferenceListsManager
+            lists={listData}
+            canEdit={principalCanManageReferenceLists(principal)}
+          />
         </TabsContent>
 
         <TabsContent value="review" className="pt-3">
@@ -458,7 +508,8 @@ export default async function AdminPage({
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              Permission denied: managing people requires Corporate Precon Admin.
+              Permission denied: managing people requires Corporate Precon
+              Admin.
             </p>
           )}
         </TabsContent>
@@ -480,7 +531,9 @@ export default async function AdminPage({
             checklist={checklist}
             source={importSource}
             importedAtLabel={
-              importSource ? fmtDateTime(new Date(importSource.importedAt)) : null
+              importSource
+                ? fmtDateTime(new Date(importSource.importedAt))
+                : null
             }
           />
         </TabsContent>
@@ -489,10 +542,13 @@ export default async function AdminPage({
           <TabsContent value="audit" className="pt-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Audit log (latest 100)</CardTitle>
+                <CardTitle className="text-sm">
+                  Audit log (latest 100)
+                </CardTitle>
                 <CardDescription>
-                  Post-lock edits, schema/column changes, reference list changes, and
-                  Salesforce match confirmations — user, timestamp, old and new value.
+                  Post-lock edits, schema/column changes, reference list
+                  changes, and Salesforce match confirmations — user, timestamp,
+                  old and new value.
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-0 pb-0">
@@ -518,10 +574,15 @@ export default async function AdminPage({
                             {a.entity.replace("_", " ")}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs">{a.action.replaceAll("_", " ")}</TableCell>
+                        <TableCell className="text-xs">
+                          {a.action.replaceAll("_", " ")}
+                        </TableCell>
                         <TableCell className="text-xs font-medium">
                           {a.roundId ? (
-                            <Link href={`/rounds/${a.roundId}`} className="hover:underline">
+                            <Link
+                              href={`/rounds/${a.roundId}`}
+                              className="hover:underline"
+                            >
                               {a.field}
                             </Link>
                           ) : (
@@ -530,12 +591,16 @@ export default async function AdminPage({
                         </TableCell>
                         <TableCell className="max-w-64 truncate text-xs">
                           {a.oldValue && (
-                            <span className="text-muted-foreground line-through">{a.oldValue}</span>
+                            <span className="text-muted-foreground line-through">
+                              {a.oldValue}
+                            </span>
                           )}
                           {a.oldValue && a.newValue && " → "}
                           {a.newValue}
                         </TableCell>
-                        <TableCell className="text-xs">{userMap.get(a.userId ?? -1) ?? "System"}</TableCell>
+                        <TableCell className="text-xs">
+                          {userMap.get(a.userId ?? -1) ?? "System"}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -557,7 +622,11 @@ export default async function AdminPage({
             configured={Boolean(dbCfg)}
             table={dbCfg?.table ?? "domain.preconstruction.precon_data_rounds"}
             connectMode={connectMode()}
-            lastRunLabel={feedState.lastRunAt ? fmtDateTime(new Date(feedState.lastRunAt)) : null}
+            lastRunLabel={
+              feedState.lastRunAt
+                ? fmtDateTime(new Date(feedState.lastRunAt))
+                : null
+            }
             canRun={user.role === "corporate_admin"}
             writesAllowed={databricksWritesAllowed()}
           />
@@ -565,7 +634,8 @@ export default async function AdminPage({
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Destini post-bid import</CardTitle>
               <CardDescription>
-                Upload a Destini XLSX/CSV report with preview before write. Also at{" "}
+                Upload a Destini XLSX/CSV report with preview before write. Also
+                at{" "}
                 <Link href="/admin/destini" className="underline">
                   /admin/destini
                 </Link>
@@ -578,11 +648,14 @@ export default async function AdminPage({
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Integration status (Databricks probe)</CardTitle>
+              <CardTitle className="text-sm">
+                Integration status (Databricks probe)
+              </CardTitle>
               <CardDescription>
-                Probed against B&amp;G Unity Catalog via the Pre-Con Time Tool SQL
-                warehouse. Destini + Build are live-capable today; Connect/Salesforce
-                pursuit tables were not found in this catalog.
+                Probed against B&amp;G Unity Catalog via the Pre-Con Time Tool
+                SQL warehouse. Destini + Build are live-capable today;
+                Connect/Salesforce pursuit tables were not found in this
+                catalog.
               </CardDescription>
             </CardHeader>
             <CardContent className="px-0 pb-0">
@@ -596,21 +669,67 @@ export default async function AdminPage({
                 </TableHeader>
                 <TableBody>
                   {[
-                    ["B&G Connect / Salesforce", "Not in UC yet", "No Opportunity / Connect pursuit tables found in this warehouse. Keep mocked lookup until a curated SF view lands.", false],
-                    ["Destini (via Databricks)", "Live-capable", "~10.6k estimates in domain.preconstruction.destiniestimates — GrandTotalCost, StatedFee, contingencies, GC/GR, labor, GSF, PM months. Join on ParentJobNumber.", true],
-                    ["Build / E1 project master", "Live-capable", "domain.general.buildprojectdetails (~36k) supplies Job #, Region, Division, Market Sector, City/State, procurement, contract type, IJV.", true],
-                    ["Project team (Estimate Lead)", "Live-capable", "domain.general.buildprojectteam — Lead/Chief/Team Precon Manager roles for Estimate Lead.", true],
-                    ["BuildingConnected", "Live-capable", "standardized.buildingconnected.projects (~6.3k) for bid due dates / BC metadata; opportunity_project_pairs is nearly empty.", true],
-                    ["Databricks calculated metrics", "Live-capable", "destinicalculatedmetrics mirrors fee %, contingency %, $/SF, fee/PM-month — can replace several app-side formulas.", true],
-                    ["InEight / Sage Estimating", "Legacy mirror", "standardized.sageestimates present (~52k estimates) if older pursuits need backfill.", false],
-                    ["Potential awards", "Partial", "production.curated_tables.potential_awards (~1.8k) for award/bid signals — not a clean win/loss enum.", false],
+                    [
+                      "B&G Connect / Salesforce",
+                      "Not in UC yet",
+                      "No Opportunity / Connect pursuit tables found in this warehouse. Keep mocked lookup until a curated SF view lands.",
+                      false,
+                    ],
+                    [
+                      "Destini (via Databricks)",
+                      "Live-capable",
+                      "~10.6k estimates in domain.preconstruction.destiniestimates — GrandTotalCost, StatedFee, contingencies, GC/GR, labor, GSF, PM months. Join on ParentJobNumber.",
+                      true,
+                    ],
+                    [
+                      "Build / E1 project master",
+                      "Live-capable",
+                      "domain.general.buildprojectdetails (~36k) supplies Job #, Region, Division, Market Sector, City/State, procurement, contract type, IJV.",
+                      true,
+                    ],
+                    [
+                      "Project team (Estimate Lead)",
+                      "Live-capable",
+                      "domain.general.buildprojectteam — Lead/Chief/Team Precon Manager roles for Estimate Lead.",
+                      true,
+                    ],
+                    [
+                      "BuildingConnected",
+                      "Live-capable",
+                      "standardized.buildingconnected.projects (~6.3k) for bid due dates / BC metadata; opportunity_project_pairs is nearly empty.",
+                      true,
+                    ],
+                    [
+                      "Databricks calculated metrics",
+                      "Live-capable",
+                      "destinicalculatedmetrics mirrors fee %, contingency %, $/SF, fee/PM-month — can replace several app-side formulas.",
+                      true,
+                    ],
+                    [
+                      "InEight / Sage Estimating",
+                      "Legacy mirror",
+                      "standardized.sageestimates present (~52k estimates) if older pursuits need backfill.",
+                      false,
+                    ],
+                    [
+                      "Potential awards",
+                      "Partial",
+                      "production.curated_tables.potential_awards (~1.8k) for award/bid signals — not a clean win/loss enum.",
+                      false,
+                    ],
                   ].map(([name, phase, note, live]) => (
                     <TableRow key={name as string}>
-                      <TableCell className="pl-6 text-sm font-medium">{name}</TableCell>
-                      <TableCell>
-                        <Badge variant={live ? "success" : "secondary"}>{phase}</Badge>
+                      <TableCell className="pl-6 text-sm font-medium">
+                        {name}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{note}</TableCell>
+                      <TableCell>
+                        <Badge variant={live ? "success" : "secondary"}>
+                          {phase}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {note}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

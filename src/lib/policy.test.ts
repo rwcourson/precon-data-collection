@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canWriteField, resolveSheetCapability } from "./policy";
 import type { User } from "@/db/schema";
+import { canWriteField, resolveSheetCapability } from "./policy";
 
 function user(partial: Partial<User> & Pick<User, "role">): User {
   return {
@@ -20,7 +20,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "leadership" }), "estimateValue", {
         status: "post_bid",
         region: "Central",
-      }),
+      })
     ).toBe(false);
   });
 
@@ -29,7 +29,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "estimate_lead" }), "estimateValue", {
         status: "post_bid",
         region: "Central",
-      }),
+      })
     ).toBe(true);
   });
 
@@ -38,7 +38,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "rpd" }), "estimateValue", {
         status: "locked",
         region: "Central",
-      }),
+      })
     ).toBe(true);
   });
 
@@ -47,7 +47,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "pcm" }), "estimateValue", {
         status: "post_bid",
         region: "Central",
-      }),
+      })
     ).toBe(false);
   });
 
@@ -56,7 +56,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "rpd", region: "Central" }), "estimateValue", {
         status: "locked",
         region: "Southeast",
-      }),
+      })
     ).toBe(false);
   });
 
@@ -65,7 +65,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "admin_jsa" }), "feeExpected", {
         status: "submitted",
         region: "Central",
-      }),
+      })
     ).toBe(true);
   });
 
@@ -74,7 +74,7 @@ describe("field write policy", () => {
       canWriteField(user({ role: "corporate_admin", region: null }), "city", {
         status: "active",
         region: "Central",
-      }),
+      })
     ).toBe(true);
   });
 });
@@ -85,8 +85,8 @@ describe("sheet ACL", () => {
       resolveSheetCapability(
         user({ role: "corporate_admin", region: null }),
         { region: null, ownerId: null },
-        [],
-      ),
+        []
+      )
     ).toBe("manager");
   });
 
@@ -95,8 +95,8 @@ describe("sheet ACL", () => {
       resolveSheetCapability(
         user({ role: "rpd" }),
         { region: null, ownerId: null },
-        [],
-      ),
+        []
+      )
     ).toBe("viewer");
   });
 
@@ -112,8 +112,8 @@ describe("sheet ACL", () => {
             acl: "manager",
             regionAllowlist: [],
           },
-        ],
-      ),
+        ]
+      )
     ).toBe("manager");
   });
 });

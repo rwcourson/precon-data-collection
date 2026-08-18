@@ -66,13 +66,15 @@ export function WidgetCanvas({
 }) {
   if (loading) {
     return (
-      <div className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-12", className)}>
+      <div
+        className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-12", className)}
+      >
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
             className={cn(
               "h-40 animate-pulse rounded-lg border bg-muted/40",
-              i < 4 ? "lg:col-span-3" : "lg:col-span-6",
+              i < 4 ? "lg:col-span-3" : "lg:col-span-6"
             )}
           />
         ))}
@@ -103,7 +105,9 @@ export function WidgetCanvas({
             key={`${w.config.title}-${idx}`}
             className={cn(
               "flex min-h-0 flex-col overflow-hidden rounded-lg border border-border/80 bg-card shadow-[var(--card-shadow,0_1px_0_rgb(15_23_42/0.04))]",
-              wide ? "sm:col-span-1 lg:col-span-3" : spanClass(w.config.layout?.w),
+              wide
+                ? "sm:col-span-1 lg:col-span-3"
+                : spanClass(w.config.layout?.w)
             )}
           >
             <header className="border-b border-border/70 px-4 py-3">
@@ -112,11 +116,18 @@ export function WidgetCanvas({
                   {w.config.title}
                 </h3>
                 {subtitle && (
-                  <p className="truncate text-2xs text-muted-foreground">{subtitle}</p>
+                  <p className="truncate text-2xs text-muted-foreground">
+                    {subtitle}
+                  </p>
                 )}
               </div>
             </header>
-            <div className={cn("min-h-0 flex-1", kind === "kpi" ? "p-3" : "p-3.5 pt-3")}>
+            <div
+              className={cn(
+                "min-h-0 flex-1",
+                kind === "kpi" ? "p-3" : "p-3.5 pt-3"
+              )}
+            >
               {w.empty ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
                   No data for this filter.
@@ -131,7 +142,10 @@ export function WidgetCanvas({
                 />
               ) : kind === "pie" || kind === "donut" ? (
                 <PieDonutMetricChart
-                  data={(w.series ?? []).map((s) => ({ name: s.name, value: s.value }))}
+                  data={(w.series ?? []).map((s) => ({
+                    name: s.name,
+                    value: s.value,
+                  }))}
                   donut={kind === "donut"}
                   percent={percent}
                 />
@@ -139,18 +153,26 @@ export function WidgetCanvas({
                 <HorizontalBarChart data={w.series ?? []} percent={percent} />
               ) : kind === "bar" ? (
                 <VerticalBarChart
-                  data={(w.series ?? []).map((s) => ({ name: s.name, value: s.value }))}
+                  data={(w.series ?? []).map((s) => ({
+                    name: s.name,
+                    value: s.value,
+                  }))}
                   percent={percent}
                 />
               ) : kind === "stacked_bar" && w.stacked ? (
-                <StackedBarChart data={w.stacked.rows} series={w.stacked.series} />
+                <StackedBarChart
+                  data={w.stacked.rows}
+                  series={w.stacked.series}
+                />
               ) : kind === "area" ? (
                 <AreaMetricChart data={w.trend ?? []} percent={percent} />
               ) : kind === "line" || kind === "projection" ? (
                 <MetricLineChart
                   data={w.trend ?? []}
                   lines={
-                    w.trendKeys ?? [{ key: "value", label: w.config.metricKey ?? "Value" }]
+                    w.trendKeys ?? [
+                      { key: "value", label: w.config.metricKey ?? "Value" },
+                    ]
                   }
                   percent={percent && (w.trendKeys?.length ?? 1) === 1}
                 />

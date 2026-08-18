@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ToolLoopAgent, isStepCount, type InferAgentUIMessage } from "ai";
+import { type InferAgentUIMessage, isStepCount, ToolLoopAgent } from "ai";
 import type { EstimateRound } from "@/db/schema";
 import {
   AI_MODEL_LABEL,
@@ -25,7 +25,7 @@ export type MagnusAgentOptions = {
 export function createMagnusAgent(options: MagnusAgentOptions) {
   if (!isAiConfigured()) {
     throw new Error(
-      "AI gateway is not configured. Use the rules fallback path instead.",
+      "AI gateway is not configured. Use the rules fallback path instead."
     );
   }
 
@@ -51,4 +51,4 @@ export function createMagnusAgent(options: MagnusAgentOptions) {
 export type MagnusAgent = ReturnType<typeof createMagnusAgent>;
 export type MagnusUIMessage = InferAgentUIMessage<MagnusAgent>;
 
-export { isAiConfigured, AI_MODEL_LABEL };
+export { AI_MODEL_LABEL, isAiConfigured };

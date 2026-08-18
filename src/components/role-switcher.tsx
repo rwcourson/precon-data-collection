@@ -1,7 +1,10 @@
 "use client";
 
+import { ChevronsUpDown, UserRound } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { switchUser } from "@/actions/user";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,13 +12,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { ChevronsUpDown, UserRound } from "lucide-react";
 import type { User } from "@/db/schema";
 import { ROLE_LABELS } from "@/lib/labels";
-import { useRouter } from "next/navigation";
 
-export function RoleSwitcher({ users, current }: { users: User[]; current: User }) {
+export function RoleSwitcher({
+  users,
+  current,
+}: {
+  users: User[];
+  current: User;
+}) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -34,14 +40,19 @@ export function RoleSwitcher({ users, current }: { users: User[]; current: User 
           <UserRound className="size-4" />
         </span>
         <span className="flex min-w-0 flex-col items-start leading-tight">
-          <span className="max-w-[28vw] truncate text-sm font-medium sm:max-w-none">{current.name}</span>
+          <span className="max-w-[28vw] truncate text-sm font-medium sm:max-w-none">
+            {current.name}
+          </span>
           <span className="hidden text-xs text-muted-foreground sm:inline">
             {ROLE_LABELS[current.role]}
           </span>
         </span>
         <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[min(18rem,calc(100vw-1.5rem))]">
+      <DropdownMenuContent
+        align="end"
+        className="w-[min(18rem,calc(100vw-1.5rem))]"
+      >
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
           View as another role (Central RPD is the default)
         </div>

@@ -9,7 +9,7 @@ const SUBMITTER_ROLES = new Set(["estimate_lead", "admin_jsa", "rpd"]);
 /** Statuses `actor` may move a round to from its current status. */
 export function allowedTransitionsForUser(
   user: User,
-  round: Pick<EstimateRound, "status">,
+  round: Pick<EstimateRound, "status">
 ): RoundStatus[] {
   const s = round.status;
   const targets: RoundStatus[] = [];
@@ -35,7 +35,7 @@ export function allowedTransitionsForUser(
 
 export function allowedTransitions(
   principal: Principal,
-  round: Pick<EstimateRound, "status">,
+  round: Pick<EstimateRound, "status">
 ): RoundStatus[] {
   return allowedTransitionsForUser(principal.user, round);
 }

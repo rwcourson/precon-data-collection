@@ -1,6 +1,6 @@
-import { NextRequest } from "next/server";
-import { createNoteFromUploadedForm } from "@/lib/note-create";
+import type { NextRequest } from "next/server";
 import { mapError } from "@/lib/mobile-http";
+import { createNoteFromUploadedForm } from "@/lib/note-create";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

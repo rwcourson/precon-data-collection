@@ -80,7 +80,8 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "state",
     label: "State",
     source: "build_project",
-    column: "domain.general.buildprojectdetails.PhysicalStateProvidenceAbbreviation",
+    column:
+      "domain.general.buildprojectdetails.PhysicalStateProvidenceAbbreviation",
   },
   {
     appField: "marketSector",
@@ -216,13 +217,15 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "metric:feeExpectedPct",
     label: "Fee % (stated)",
     source: "destini_metrics",
-    column: "domain.preconstruction.destinicalculatedmetrics.StatedFeePercentOfGrandTotalCost",
+    column:
+      "domain.preconstruction.destinicalculatedmetrics.StatedFeePercentOfGrandTotalCost",
   },
   {
     appField: "metric:feePerPmMonth",
     label: "Fee per PM Month",
     source: "destini_metrics",
-    column: "domain.preconstruction.destinicalculatedmetrics.StatedFeePerPMMonth",
+    column:
+      "domain.preconstruction.destinicalculatedmetrics.StatedFeePerPMMonth",
   },
   {
     appField: "metric:costPerGsf",
@@ -234,7 +237,8 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "metric:contingencyPct",
     label: "Contingency %",
     source: "destini_metrics",
-    column: "domain.preconstruction.destinicalculatedmetrics.AllContingencyPercentOfCost",
+    column:
+      "domain.preconstruction.destinicalculatedmetrics.AllContingencyPercentOfCost",
   },
 
   // Self-perform / GC-GR from cost items
@@ -242,14 +246,16 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "selfPerformPriced",
     label: "Self-Perform $ Priced",
     source: "destini_cost_items",
-    column: "domain.preconstruction.destinicostitems (aggregate by CostType / BenchmarkComponent)",
+    column:
+      "domain.preconstruction.destinicostitems (aggregate by CostType / BenchmarkComponent)",
     notes: "~2.8M cost items; also selfperform_estimates for SP-specific files",
   },
   {
     appField: "selfPerformWorkType",
     label: "Self-Perform Work Type",
     source: "self_perform",
-    column: "domain.preconstruction.selfperform_estimates / destinicostitems.PhaseName",
+    column:
+      "domain.preconstruction.selfperform_estimates / destinicostitems.PhaseName",
   },
 
   // BuildingConnected (subcontractor bidding context)
@@ -258,7 +264,8 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     label: "Bid Due Date",
     source: "buildingconnected",
     column: "standardized.buildingconnected.projects.BidsDueAt",
-    notes: "BC project grain; link to B&G job via Number / opportunity_project_pairs",
+    notes:
+      "BC project grain; link to B&G job via Number / opportunity_project_pairs",
   },
   {
     appField: "owner",
@@ -270,13 +277,15 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "drawingsDueDate",
     label: "Drawings Due",
     source: "manual_only",
-    notes: "Operational Bid Schedule date from the live sheet — not a lock-gate field",
+    notes:
+      "Operational Bid Schedule date from the live sheet — not a lock-gate field",
   },
   {
     appField: "bidReviewDate",
     label: "Bid Review",
     source: "manual_only",
-    notes: "Operational Bid Schedule date from the live sheet — not a lock-gate field",
+    notes:
+      "Operational Bid Schedule date from the live sheet — not a lock-gate field",
   },
 
   // Potential awards (win/loss adjacent)
@@ -284,7 +293,8 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "outcome",
     label: "Outcome / award signal",
     source: "potential_awards",
-    column: "production.curated_tables.potential_awards.ContractAmount + isClosed",
+    column:
+      "production.curated_tables.potential_awards.ContractAmount + isClosed",
     notes: "Not a clean Successful/Unsuccessful enum; useful for award volume",
   },
 
@@ -293,7 +303,8 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
     appField: "statusAtPricing",
     label: "Status at Pricing",
     source: "manual_only",
-    notes: "No Connect/Salesforce opportunity table found in UC under this warehouse",
+    notes:
+      "No Connect/Salesforce opportunity table found in UC under this warehouse",
   },
   {
     appField: "mlt",
@@ -329,16 +340,49 @@ export const LIVE_FIELD_MAP: LiveFieldMap[] = [
 ];
 
 export const DATABRICKS_PROBE_SUMMARY = {
-  warehouse: "B&G Azure Databricks SQL warehouse (shared with Pre-Con Time Tool)",
+  warehouse:
+    "B&G Azure Databricks SQL warehouse (shared with Pre-Con Time Tool)",
   tablesOfInterest: [
-    { table: "domain.preconstruction.destiniestimates", rows: "~10.6k", role: "Estimate round economics" },
-    { table: "domain.preconstruction.destinicalculatedmetrics", rows: "~10.6k", role: "Pre-computed fee/GC/GR/$SF metrics" },
-    { table: "domain.preconstruction.destinicostitems", rows: "~2.8M", role: "Line items for GC/GR/SP sorts" },
-    { table: "domain.general.buildprojectdetails", rows: "~36k", role: "Job master (region, sector, city, contract)" },
-    { table: "domain.general.buildprojectteam", rows: "~248k", role: "Estimate Lead / RPD / PCM roster" },
-    { table: "domain.general.division_structure_current", rows: "52", role: "Region ↔ Division reference" },
-    { table: "standardized.buildingconnected.projects", rows: "~6.3k", role: "Bid due dates, BC project metadata" },
-    { table: "production.curated_tables.potential_awards", rows: "~1.8k", role: "Award/bid outcomes adjacent" },
+    {
+      table: "domain.preconstruction.destiniestimates",
+      rows: "~10.6k",
+      role: "Estimate round economics",
+    },
+    {
+      table: "domain.preconstruction.destinicalculatedmetrics",
+      rows: "~10.6k",
+      role: "Pre-computed fee/GC/GR/$SF metrics",
+    },
+    {
+      table: "domain.preconstruction.destinicostitems",
+      rows: "~2.8M",
+      role: "Line items for GC/GR/SP sorts",
+    },
+    {
+      table: "domain.general.buildprojectdetails",
+      rows: "~36k",
+      role: "Job master (region, sector, city, contract)",
+    },
+    {
+      table: "domain.general.buildprojectteam",
+      rows: "~248k",
+      role: "Estimate Lead / RPD / PCM roster",
+    },
+    {
+      table: "domain.general.division_structure_current",
+      rows: "52",
+      role: "Region ↔ Division reference",
+    },
+    {
+      table: "standardized.buildingconnected.projects",
+      rows: "~6.3k",
+      role: "Bid due dates, BC project metadata",
+    },
+    {
+      table: "production.curated_tables.potential_awards",
+      rows: "~1.8k",
+      role: "Award/bid outcomes adjacent",
+    },
   ],
   joinKey: "ParentJobNumber / JobNumber",
   notFound: [

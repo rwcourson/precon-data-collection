@@ -1,9 +1,11 @@
-import type { ReportFieldDef } from "@/lib/report-engine";
 import { LATEST_NOTE_KEY } from "@/lib/latest-note";
+import type { ReportFieldDef } from "@/lib/report-engine";
 
 export function reportColumnMeta(key: string, catalog: ReportFieldDef[]) {
   const baseKey =
-    key.includes(":") && !key.startsWith("metric:") && !key.startsWith("custom:")
+    key.includes(":") &&
+    !key.startsWith("metric:") &&
+    !key.startsWith("custom:")
       ? key.split(":")[1]
       : key;
   const def = catalog.find((c) => c.key === key || c.key === baseKey);
@@ -18,15 +20,23 @@ export function reportColumnMeta(key: string, catalog: ReportFieldDef[]) {
     type === "dollars" ||
     type === "metric";
   const wide = key === "jobName" || key === LATEST_NOTE_KEY || type === "text";
-  return { numeric, wide, date: type === "date", wrap: key === LATEST_NOTE_KEY };
+  return {
+    numeric,
+    wide,
+    date: type === "date",
+    wrap: key === LATEST_NOTE_KEY,
+  };
 }
 
 export function reportColumnWidth(
   key: string,
   columns: { key: string }[],
-  catalog: ReportFieldDef[],
+  catalog: ReportFieldDef[]
 ): string {
-  const metas = columns.map((c) => ({ key: c.key, ...reportColumnMeta(c.key, catalog) }));
+  const metas = columns.map((c) => ({
+    key: c.key,
+    ...reportColumnMeta(c.key, catalog),
+  }));
   const growKeys = metas.filter((m) => m.wide).map((m) => m.key);
   const growers = growKeys.length > 0 ? growKeys : columns.map((c) => c.key);
   if (growers.includes(key)) {

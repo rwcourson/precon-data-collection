@@ -1,6 +1,6 @@
 import { createSheet } from "@/actions/sheets";
-import { listArchivedSheets, listSheets } from "@/lib/sheets-server";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import { listArchivedSheets, listSheets } from "@/lib/sheets-server";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:sheets" }, async (principal) => {

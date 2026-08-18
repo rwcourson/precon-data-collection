@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { addWidget } from "@/actions/dashboards";
 import { Button } from "@/components/ui/button";
@@ -84,19 +84,29 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
             (e.target as HTMLFormElement).reset();
             router.refresh();
           } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Add widget failed");
+            toast.error(
+              err instanceof Error ? err.message : "Add widget failed"
+            );
           }
         });
       }}
     >
       <div className="grid min-w-[12rem] flex-1 gap-1.5">
         <Label htmlFor="widget-title">Title</Label>
-        <Input id="widget-title" name="title" placeholder="Pursuit volume" required />
+        <Input
+          id="widget-title"
+          name="title"
+          placeholder="Pursuit volume"
+          required
+        />
       </div>
       <div className="grid gap-1.5">
         <Label>Kind</Label>
         <Select
-          items={WIDGET_KINDS.map((k) => ({ value: k, label: k.replaceAll("_", " ") }))}
+          items={WIDGET_KINDS.map((k) => ({
+            value: k,
+            label: k.replaceAll("_", " "),
+          }))}
           value={kind}
           onValueChange={(v) => setKind(v as typeof kind)}
         >
@@ -145,7 +155,11 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
         </div>
       )}
       <Button type="submit" className="gap-1.5" disabled={pending}>
-        {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Plus className="size-4" />
+        )}
         Add widget
       </Button>
     </form>

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { bidScheduleGroupBySchema, createApiTokenSchema } from "./contracts";
 import {
   DomainError,
   findDomainError,
   getDomainErrorHttpStatus,
 } from "./errors";
-import { bidScheduleGroupBySchema, createApiTokenSchema } from "./contracts";
 
 describe("DomainError", () => {
   it("serializes safe fields without a stack", () => {
@@ -22,7 +22,9 @@ describe("DomainError", () => {
   it("maps codes to HTTP statuses", () => {
     expect(getDomainErrorHttpStatus(DomainError.notFound("Round"))).toBe(404);
     expect(getDomainErrorHttpStatus(DomainError.unauthorized())).toBe(401);
-    expect(getDomainErrorHttpStatus(DomainError.unavailable("Email"))).toBe(503);
+    expect(getDomainErrorHttpStatus(DomainError.unavailable("Email"))).toBe(
+      503
+    );
   });
 
   it("finds nested domain errors", () => {
@@ -41,14 +43,14 @@ describe("Zod contracts", () => {
 
   it("requires at least one API token scope", () => {
     expect(() =>
-      createApiTokenSchema.parse({ name: "Magnus", scopes: [] }),
+      createApiTokenSchema.parse({ name: "Magnus", scopes: [] })
     ).toThrow();
     expect(
       createApiTokenSchema.parse({
         name: "Magnus read",
         scopes: ["read:pursuits"],
         expiresAt: "2026-09-01T00:00:00.000Z",
-      }).scopes,
+      }).scopes
     ).toEqual(["read:pursuits"]);
   });
 });

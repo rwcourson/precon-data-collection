@@ -2,33 +2,29 @@
  * Integration tests that drive shipped mobile auth + API handlers against
  * the real DB (PGlite / DATABASE_URL) and real route modules.
  */
-import { describe, expect, it, beforeAll } from "vitest";
-import { ensureDbReady, db } from "@/db";
-import {
-  users,
-  estimateRounds,
-  jobs,
-  sheetColumns,
-} from "@/db/schema";
+
 import { asc, eq, isNull } from "drizzle-orm";
-import {
-  issueDemoSession,
-  resolveMobilePrincipal,
-  isDemoAuthAllowed,
-} from "@/lib/mobile-auth";
+import { beforeAll, describe, expect, it } from "vitest";
+import { POST as adminPost } from "@/app/api/v1/mobile/admin/route";
+import { GET as dashboardsGet } from "@/app/api/v1/mobile/dashboards/route";
 import { GET as meGet } from "@/app/api/v1/mobile/me/route";
 import { GET as overviewGet } from "@/app/api/v1/mobile/overview/route";
 import { POST as pursuitsPost } from "@/app/api/v1/mobile/pursuits/route";
-import { POST as approveLockPost } from "@/app/api/v1/mobile/rounds/[id]/approve-lock/route";
-import { POST as adminPost } from "@/app/api/v1/mobile/admin/route";
-import { isMobileAdminRole } from "@/lib/mobile-admin";
-import { POST as sheetsPost } from "@/app/api/v1/mobile/sheets/route";
-import {
-  PATCH as sheetPatch,
-  GET as sheetGet,
-} from "@/app/api/v1/mobile/sheets/[id]/route";
-import { GET as dashboardsGet } from "@/app/api/v1/mobile/dashboards/route";
 import { POST as reportsPost } from "@/app/api/v1/mobile/reports/route";
+import { POST as approveLockPost } from "@/app/api/v1/mobile/rounds/[id]/approve-lock/route";
+import {
+  GET as sheetGet,
+  PATCH as sheetPatch,
+} from "@/app/api/v1/mobile/sheets/[id]/route";
+import { POST as sheetsPost } from "@/app/api/v1/mobile/sheets/route";
+import { db, ensureDbReady } from "@/db";
+import { estimateRounds, jobs, sheetColumns, users } from "@/db/schema";
+import { isMobileAdminRole } from "@/lib/mobile-admin";
+import {
+  isDemoAuthAllowed,
+  issueDemoSession,
+  resolveMobilePrincipal,
+} from "@/lib/mobile-auth";
 import { CONSOLIDATED_REGIONAL_PRESET } from "@/lib/report-presets";
 
 function bearer(token: string) {
@@ -108,7 +104,7 @@ describe("mobile auth shipped path", () => {
     const res = await meGet(
       new Request("http://localhost/api/v1/mobile/me", {
         headers: bearer(issued.token),
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { user: { id: number; role: string } };
@@ -118,7 +114,7 @@ describe("mobile auth shipped path", () => {
 
   it("GET /overview returns 401 without bearer", async () => {
     const res = await overviewGet(
-      new Request("http://localhost/api/v1/mobile/overview"),
+      new Request("http://localhost/api/v1/mobile/overview")
     );
     expect(res.status).toBe(401);
   });
@@ -129,7 +125,7 @@ describe("mobile auth shipped path", () => {
     const res = await overviewGet(
       new Request("http://localhost/api/v1/mobile/overview", {
         headers: bearer(issued.token),
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -163,7 +159,7 @@ describe("mobile data-view paths (shipped handlers)", () => {
     const corpRes = await dashboardsGet(
       new Request("http://localhost/api/v1/mobile/dashboards?level=corporate", {
         headers: bearer(issued.token),
-      }),
+      })
     );
     expect(corpRes.status).toBe(200);
     const corp = (await corpRes.json()) as {
@@ -186,7 +182,7 @@ describe("mobile data-view paths (shipped handlers)", () => {
     const regRes = await dashboardsGet(
       new Request("http://localhost/api/v1/mobile/dashboards?level=region", {
         headers: bearer(issued.token),
-      }),
+      })
     );
     expect(regRes.status).toBe(200);
     const reg = (await regRes.json()) as {
@@ -203,7 +199,7 @@ describe("mobile data-view paths (shipped handlers)", () => {
     const divRes = await dashboardsGet(
       new Request("http://localhost/api/v1/mobile/dashboards?level=division", {
         headers: bearer(issued.token),
-      }),
+      })
     );
     const div = (await divRes.json()) as { groupBy: string };
     expect(div.groupBy).toBe("marketSector");
@@ -216,15 +212,21 @@ describe("mobile data-view paths (shipped handlers)", () => {
     const created = await sheetsPost(
       new Request("http://localhost/api/v1/mobile/sheets", {
         method: "POST",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           name: `Vitest grid ${Date.now()}`,
           kind: "grid",
           folder: "Mobile",
         }),
-      }),
+      })
     );
-    const createdBody = (await created.json()) as { id: number; data?: { id: number } };
+    const createdBody = (await created.json()) as {
+      id: number;
+      data?: { id: number };
+    };
     const sheetId = createdBody.id ?? createdBody.data?.id;
     expect(created.status).toBeGreaterThanOrEqual(200);
     expect(sheetId).toBeGreaterThan(0);
@@ -233,17 +235,20 @@ describe("mobile data-view paths (shipped handlers)", () => {
     await sheetPatch(
       new Request(`http://localhost/api/v1/mobile/sheets/${sheetId}`, {
         method: "PATCH",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ action: "add-row" }),
       }),
-      { params: Promise.resolve({ id: String(sheetId) }) },
+      { params: Promise.resolve({ id: String(sheetId) }) }
     );
 
     const res = await sheetGet(
       new Request(`http://localhost/api/v1/mobile/sheets/${sheetId}?limit=10`, {
         headers: bearer(issued.token),
       }),
-      { params: Promise.resolve({ id: String(sheetId) }) },
+      { params: Promise.resolve({ id: String(sheetId) }) }
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -254,9 +259,11 @@ describe("mobile data-view paths (shipped handlers)", () => {
         pagination: { total: number };
       };
     };
-    expect(body.data.kind === "grid" || body.data.kind == null || body.data.kind === "view").toBe(
-      true,
-    );
+    expect(
+      body.data.kind === "grid" ||
+        body.data.kind == null ||
+        body.data.kind === "view"
+    ).toBe(true);
     // New grids start with at least the schema columns or zero — if zero, columns array still present
     expect(Array.isArray(body.data.columns)).toBe(true);
     expect(Array.isArray(body.data.rows)).toBe(true);
@@ -265,18 +272,24 @@ describe("mobile data-view paths (shipped handlers)", () => {
       await sheetPatch(
         new Request(`http://localhost/api/v1/mobile/sheets/${sheetId}`, {
           method: "PATCH",
-          headers: { ...bearer(issued.token), "content-type": "application/json" },
+          headers: {
+            ...bearer(issued.token),
+            "content-type": "application/json",
+          },
           body: JSON.stringify({
             cell: { rowId: body.data.rows[0].id, key, value: "scannable-cell" },
           }),
         }),
-        { params: Promise.resolve({ id: String(sheetId) }) },
+        { params: Promise.resolve({ id: String(sheetId) }) }
       );
       const again = await sheetGet(
-        new Request(`http://localhost/api/v1/mobile/sheets/${sheetId}?limit=10`, {
-          headers: bearer(issued.token),
-        }),
-        { params: Promise.resolve({ id: String(sheetId) }) },
+        new Request(
+          `http://localhost/api/v1/mobile/sheets/${sheetId}?limit=10`,
+          {
+            headers: bearer(issued.token),
+          }
+        ),
+        { params: Promise.resolve({ id: String(sheetId) }) }
       );
       const againBody = (await again.json()) as {
         data: { rows: { values: Record<string, string | null> }[] };
@@ -293,7 +306,10 @@ describe("mobile write paths (shipped handlers)", () => {
     const res = await pursuitsPost(
       new Request("http://localhost/api/v1/mobile/pursuits", {
         method: "POST",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           mode: "manual",
           jobName: `Vitest pursuit ${Date.now()}`,
@@ -303,7 +319,7 @@ describe("mobile write paths (shipped handlers)", () => {
           bidYear: new Date().getFullYear(),
           initialStatus: "upcoming",
         }),
-      }),
+      })
     );
     const body = (await res.json()) as {
       data: { jobId: number; roundId: number };
@@ -354,9 +370,9 @@ describe("mobile write paths (shipped handlers)", () => {
     const res = await approveLockPost(
       new Request(
         `http://localhost/api/v1/mobile/rounds/${round.id}/approve-lock`,
-        { method: "POST", headers: bearer(issued.token) },
+        { method: "POST", headers: bearer(issued.token) }
       ),
-      { params: Promise.resolve({ id: String(round.id) }) },
+      { params: Promise.resolve({ id: String(round.id) }) }
     );
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
@@ -369,7 +385,7 @@ describe("mobile write paths (shipped handlers)", () => {
     expect(Array.isArray(missing)).toBe(true);
     expect(
       missing.length > 0 ||
-        /required|blank|cannot lock|missing/i.test(body.error),
+        /required|blank|cannot lock|missing/i.test(body.error)
     ).toBe(true);
   });
 
@@ -379,13 +395,16 @@ describe("mobile write paths (shipped handlers)", () => {
     const createRes = await sheetsPost(
       new Request("http://localhost/api/v1/mobile/sheets", {
         method: "POST",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           kind: "grid",
           name: `Vitest sheet ${Date.now()}`,
           folder: "Tests",
         }),
-      }),
+      })
     );
     expect(createRes.status).toBe(201);
     const { id: sheetId } = (await createRes.json()) as { id: number };
@@ -400,10 +419,13 @@ describe("mobile write paths (shipped handlers)", () => {
     const addRes = await sheetPatch(
       new Request(`http://localhost/api/v1/mobile/sheets/${sheetId}`, {
         method: "PATCH",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ action: "add-row" }),
       }),
-      { params: Promise.resolve({ id: String(sheetId) }) },
+      { params: Promise.resolve({ id: String(sheetId) }) }
     );
     expect(addRes.status).toBe(200);
     const { rowId } = (await addRes.json()) as { rowId: number };
@@ -412,19 +434,22 @@ describe("mobile write paths (shipped handlers)", () => {
     const patchRes = await sheetPatch(
       new Request(`http://localhost/api/v1/mobile/sheets/${sheetId}`, {
         method: "PATCH",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ cell: { rowId, key, value } }),
       }),
-      { params: Promise.resolve({ id: String(sheetId) }) },
+      { params: Promise.resolve({ id: String(sheetId) }) }
     );
     expect(patchRes.status).toBe(200);
 
     const getRes = await sheetGet(
       new Request(
         `http://localhost/api/v1/mobile/sheets/${sheetId}?limit=50&offset=0`,
-        { headers: bearer(issued.token) },
+        { headers: bearer(issued.token) }
       ),
-      { params: Promise.resolve({ id: String(sheetId) }) },
+      { params: Promise.resolve({ id: String(sheetId) }) }
     );
     expect(getRes.status).toBe(200);
     const got = (await getRes.json()) as {
@@ -441,12 +466,15 @@ describe("mobile write paths (shipped handlers)", () => {
     const res = await reportsPost(
       new Request("http://localhost/api/v1/mobile/reports", {
         method: "POST",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           action: "run",
           config: CONSOLIDATED_REGIONAL_PRESET.config,
         }),
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -477,7 +505,7 @@ describe("mobile write paths (shipped handlers)", () => {
             listKey: "marketSector",
             value: `blocked-${role}-${Date.now()}`,
           }),
-        }),
+        })
       );
       expect(res.status).toBe(403);
       const body = (await res.json()) as { error: string };
@@ -492,13 +520,16 @@ describe("mobile write paths (shipped handlers)", () => {
     const res = await adminPost(
       new Request("http://localhost/api/v1/mobile/admin", {
         method: "POST",
-        headers: { ...bearer(issued.token), "content-type": "application/json" },
+        headers: {
+          ...bearer(issued.token),
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           action: "add-reference",
           listKey: "marketSector",
           value,
         }),
-      }),
+      })
     );
     expect(res.status).toBe(200);
   });

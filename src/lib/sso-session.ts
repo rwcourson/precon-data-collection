@@ -2,9 +2,9 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { account } from "@/db/auth-schema";
+import { DomainError } from "@/domain/errors";
 import type { SsoIdentity } from "@/lib/access-map";
 import { getRuntimeConfig } from "@/lib/runtime-config";
-import { DomainError } from "@/domain/errors";
 
 export { BA_SESSION_COOKIE } from "@/lib/auth-constants";
 
@@ -28,7 +28,10 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-function stringClaim(payload: Record<string, unknown>, ...keys: string[]): string | null {
+function stringClaim(
+  payload: Record<string, unknown>,
+  ...keys: string[]
+): string | null {
   for (const key of keys) {
     const v = payload[key];
     if (typeof v === "string" && v.trim()) return v.trim();
@@ -44,7 +47,7 @@ function groupsFromPayload(payload: Record<string, unknown>): string[] {
 
 /** Read Microsoft account id_token claims (groups, job title, name, email). */
 export async function microsoftProfileFromAccount(
-  userId: string,
+  userId: string
 ): Promise<MicrosoftTokenProfile> {
   const empty: MicrosoftTokenProfile = {
     groups: [],
@@ -65,18 +68,21 @@ export async function microsoftProfileFromAccount(
     groups: groupsFromPayload(payload),
     jobTitle: stringClaim(payload, "jobTitle", "job_title", "title"),
     displayName: stringClaim(payload, "name", "given_name"),
-    email: stringClaim(
-      payload,
-      "email",
-      "preferred_username",
-      "upn",
-      "unique_name",
-    )?.toLowerCase() ?? null,
+    email:
+      stringClaim(
+        payload,
+        "email",
+        "preferred_username",
+        "upn",
+        "unique_name"
+      )?.toLowerCase() ?? null,
   };
 }
 
 /** @deprecated prefer microsoftProfileFromAccount */
-export async function groupsFromMicrosoftAccount(userId: string): Promise<string[]> {
+export async function groupsFromMicrosoftAccount(
+  userId: string
+): Promise<string[]> {
   return (await microsoftProfileFromAccount(userId)).groups;
 }
 
@@ -85,7 +91,7 @@ export function assertAllowedEmailDomain(email: string): void {
   const allowed = getRuntimeConfig().ssoAllowedDomains;
   if (!allowed.includes(domain)) {
     throw DomainError.unauthorized(
-      `Email domain is not allowed for SSO (${domain || "unknown"}).`,
+      `Email domain is not allowed for SSO (${domain || "unknown"}).`
     );
   }
 }
@@ -112,7 +118,9 @@ export function identityFromBetterAuthUser(input: {
       ? nameRaw.slice(0, 160)
       : (email.split("@")[0] ?? "User").slice(0, 160);
 
-  const title = input.title?.trim() ? input.title.trim().slice(0, 160) : undefined;
+  const title = input.title?.trim()
+    ? input.title.trim().slice(0, 160)
+    : undefined;
 
   return {
     email,

@@ -1,21 +1,33 @@
+import {
+  ArrowRight,
+  CalendarRange,
+  ClipboardList,
+  FileBarChart2,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
-import { ArrowRight, CalendarRange, ClipboardList, FileBarChart2, ShieldCheck } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/status-badge";
+import { UnlinkedSyncCard } from "@/components/overview/unlinked-sync-card";
 import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/status-badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import type { RoundStatus } from "@/db/schema";
+import { principalCanIntegrate } from "@/lib/authorization/decisions";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
 import { fmtDollars } from "@/lib/format";
 import { STATUS_ORDER } from "@/lib/labels";
-import { getWorkspace } from "@/lib/workspace-server";
+import { buildOverviewQueues } from "@/lib/overview-queues";
 import { getMultiValuesForRounds } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
-import { parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
-import { buildOverviewQueues } from "@/lib/overview-queues";
-import { principalCanIntegrate } from "@/lib/authorization/decisions";
-import { UnlinkedSyncCard } from "@/components/overview/unlinked-sync-card";
-import type { RoundStatus } from "@/db/schema";
+import { getWorkspace } from "@/lib/workspace-server";
 
 export default async function OverviewPage() {
   const workspace = await getWorkspace();
@@ -25,17 +37,27 @@ export default async function OverviewPage() {
 
   const byStatus = new Map<RoundStatus, number>();
   for (const s of STATUS_ORDER) byStatus.set(s, 0);
-  for (const r of regionRows) byStatus.set(r.round.status, (byStatus.get(r.round.status) ?? 0) + 1);
+  for (const r of regionRows)
+    byStatus.set(r.round.status, (byStatus.get(r.round.status) ?? 0) + 1);
 
   const ytd = regionRows.filter((r) => r.round.bidYear === 2026);
-  const ytdVolume = ytd.reduce((sum, r) => sum + (r.round.estimateValue ?? 0), 0);
-  const awaitingPostBid = regionRows.filter((r) =>
-    ["submitted", "post_bid"].includes(r.round.status),
+  const ytdVolume = ytd.reduce(
+    (sum, r) => sum + (r.round.estimateValue ?? 0),
+    0
   );
-  const awaitingApproval = regionRows.filter((r) => r.round.status === "post_bid");
+  const awaitingPostBid = regionRows.filter((r) =>
+    ["submitted", "post_bid"].includes(r.round.status)
+  );
+  const awaitingApproval = regionRows.filter(
+    (r) => r.round.status === "post_bid"
+  );
   const locked2026 = ytd.filter((r) => r.round.status === "locked");
-  const wins = locked2026.filter((r) => r.round.outcome === "successful").length;
-  const decided = locked2026.filter((r) => r.round.outcome !== "pending").length;
+  const wins = locked2026.filter(
+    (r) => r.round.outcome === "successful"
+  ).length;
+  const decided = locked2026.filter(
+    (r) => r.round.outcome !== "pending"
+  ).length;
 
   const scopeLabel = workspace.region ?? "All Regions";
 
@@ -44,10 +66,12 @@ export default async function OverviewPage() {
     .map((r) => r.round.id);
   const multiMap = await getMultiValuesForRounds(postBidIds);
   const allowedRegions =
-    principal.allowedRegions === "all" ? ("all" as const) : principal.allowedRegions;
+    principal.allowedRegions === "all"
+      ? ("all" as const)
+      : principal.allowedRegions;
   const hierarchy = parseHierarchyFromSearchParams(
     {},
-    { workspaceRegion: workspace.region, allowedRegions },
+    { workspaceRegion: workspace.region, allowedRegions }
   );
   const queues = buildOverviewQueues(
     regionRows.map(({ round, job, estimateLeadName }) => ({
@@ -69,7 +93,7 @@ export default async function OverviewPage() {
       teamAssignedAt: round.teamAssignedAt,
     })),
     new Date(),
-    hierarchy,
+    hierarchy
   );
 
   const kpis = [
@@ -131,7 +155,9 @@ export default async function OverviewPage() {
 
       <div>
         <div className="mb-2 flex items-center gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">Action queues</h2>
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Action queues
+          </h2>
           <Separator className="flex-1" />
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2">
@@ -181,7 +207,7 @@ export default async function OverviewPage() {
                   )}
                 </Card>
               </Link>
-            ),
+            )
           )}
         </div>
       </div>
@@ -190,7 +216,9 @@ export default async function OverviewPage() {
         {kpis.map((k) => (
           <Card key={k.label}>
             <CardHeader className="pb-0.5">
-              <CardDescription className="text-[13px]">{k.label}</CardDescription>
+              <CardDescription className="text-[13px]">
+                {k.label}
+              </CardDescription>
               <CardTitle className="font-mono text-xl font-medium tabular-nums">
                 {k.value}
               </CardTitle>
@@ -206,8 +234,8 @@ export default async function OverviewPage() {
         <CardHeader className="pb-2">
           <CardTitle>Pipeline by status</CardTitle>
           <CardDescription>
-            Every estimate round moves through an explicit, audited lifecycle — no
-            checkbox automations.
+            Every estimate round moves through an explicit, audited lifecycle —
+            no checkbox automations.
           </CardDescription>
         </CardHeader>
         <CardContent>

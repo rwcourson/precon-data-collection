@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { parseNumericInput } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { parseNumericInput } from "@/lib/format";
 import { isNumericType } from "@/lib/sheet-format";
 
 export { formatCell, isNumericType } from "@/lib/sheet-format";
@@ -53,7 +53,7 @@ export function CellEditor({
 
   useEffect(() => {
     committed.current = false;
-  }, [value]);
+  }, []);
 
   if (type === "checkbox") {
     return (

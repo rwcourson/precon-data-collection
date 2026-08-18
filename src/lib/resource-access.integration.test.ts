@@ -1,9 +1,21 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { eq } from "drizzle-orm";
-import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
+import { NextRequest } from "next/server";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { GET as annualExportGet } from "@/app/api/export/annual/route";
+import { GET as bidScheduleExportGet } from "@/app/api/export/bid-schedule/route";
+import { GET as dashboardExportGet } from "@/app/api/export/dashboard/route";
+import { GET as sheetExportGet } from "@/app/api/export/sheet/route";
+import { GET as statusExportGet } from "@/app/api/export/status/route";
+import { GET as adminGet } from "@/app/api/v1/mobile/admin/route";
+import { GET as dashboardGet } from "@/app/api/v1/mobile/dashboards/[id]/route";
+import { GET as dashboardsGet } from "@/app/api/v1/mobile/dashboards/route";
+import { GET as jobGet } from "@/app/api/v1/mobile/jobs/[id]/route";
+import { GET as roundGet } from "@/app/api/v1/mobile/rounds/[id]/route";
+import { GET as sheetGet } from "@/app/api/v1/mobile/sheets/[id]/route";
+import { GET as sheetsGet } from "@/app/api/v1/mobile/sheets/route";
 import { db, ensureDbReady } from "@/db";
 import {
   apiTokens,
@@ -14,27 +26,15 @@ import {
   sheets,
   users,
 } from "@/db/schema";
-import { GET as jobGet } from "@/app/api/v1/mobile/jobs/[id]/route";
-import { GET as roundGet } from "@/app/api/v1/mobile/rounds/[id]/route";
-import { GET as dashboardGet } from "@/app/api/v1/mobile/dashboards/[id]/route";
-import { GET as dashboardsGet } from "@/app/api/v1/mobile/dashboards/route";
-import { GET as sheetGet } from "@/app/api/v1/mobile/sheets/[id]/route";
-import { GET as sheetsGet } from "@/app/api/v1/mobile/sheets/route";
-import { GET as adminGet } from "@/app/api/v1/mobile/admin/route";
-import { GET as sheetExportGet } from "@/app/api/export/sheet/route";
-import { GET as statusExportGet } from "@/app/api/export/status/route";
-import { GET as dashboardExportGet } from "@/app/api/export/dashboard/route";
-import { GET as bidScheduleExportGet } from "@/app/api/export/bid-schedule/route";
-import { GET as annualExportGet } from "@/app/api/export/annual/route";
-import { createPrincipal } from "@/lib/authorization/principal";
 import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
-import { issueDemoSession } from "@/lib/mobile-auth";
+import { createPrincipal } from "@/lib/authorization/principal";
 import { DEMO_USER_COOKIE } from "@/lib/current-user";
-import { WORKSPACE_COOKIE } from "@/lib/workspace";
 import {
-  readMobileAdminSection,
   type MobileAdminQueries,
+  readMobileAdminSection,
 } from "@/lib/mobile-admin";
+import { issueDemoSession } from "@/lib/mobile-auth";
+import { WORKSPACE_COOKIE } from "@/lib/workspace";
 
 let pcm: typeof users.$inferSelect;
 let corporateAdmin: typeof users.$inferSelect;
@@ -64,13 +64,16 @@ beforeAll(async () => {
     .from(users)
     .where(eq(users.role, "corporate_admin"))
     .limit(1);
-  if (!pcm || !corporateAdmin || !pcm.region) throw new Error("Required seeded roles are missing");
+  if (!pcm || !corporateAdmin || !pcm.region)
+    throw new Error("Required seeded roles are missing");
 });
 
 afterAll(async () => {
   for (const plaintext of issuedTokenHashes) {
     const { hashToken } = await import("@/lib/api-tokens");
-    await db.delete(apiTokens).where(eq(apiTokens.tokenHash, hashToken(plaintext)));
+    await db
+      .delete(apiTokens)
+      .where(eq(apiTokens.tokenHash, hashToken(plaintext)));
   }
 });
 
@@ -109,46 +112,65 @@ describe("resource access HTTP matrix", () => {
           estimatePhase: "ROM",
           bidYear: 2026,
           createdById: job.createdById,
-        })),
+        }))
       )
       .returning();
 
     try {
       expect(
         (
-          await jobGet(request(`http://localhost/api/v1/mobile/jobs/${createdJobs[0].id}`, token), {
-            params: Promise.resolve({ id: String(createdJobs[0].id) }),
-          })
-        ).status,
+          await jobGet(
+            request(
+              `http://localhost/api/v1/mobile/jobs/${createdJobs[0].id}`,
+              token
+            ),
+            {
+              params: Promise.resolve({ id: String(createdJobs[0].id) }),
+            }
+          )
+        ).status
       ).toBe(200);
       expect(
         (
-          await jobGet(request(`http://localhost/api/v1/mobile/jobs/${createdJobs[1].id}`, token), {
-            params: Promise.resolve({ id: String(createdJobs[1].id) }),
-          })
-        ).status,
+          await jobGet(
+            request(
+              `http://localhost/api/v1/mobile/jobs/${createdJobs[1].id}`,
+              token
+            ),
+            {
+              params: Promise.resolve({ id: String(createdJobs[1].id) }),
+            }
+          )
+        ).status
       ).toBe(404);
       expect(
         (
           await roundGet(
-            request(`http://localhost/api/v1/mobile/rounds/${createdRounds[0].id}`, token),
-            { params: Promise.resolve({ id: String(createdRounds[0].id) }) },
+            request(
+              `http://localhost/api/v1/mobile/rounds/${createdRounds[0].id}`,
+              token
+            ),
+            { params: Promise.resolve({ id: String(createdRounds[0].id) }) }
           )
-        ).status,
+        ).status
       ).toBe(200);
       expect(
         (
           await roundGet(
-            request(`http://localhost/api/v1/mobile/rounds/${createdRounds[1].id}`, token),
-            { params: Promise.resolve({ id: String(createdRounds[1].id) }) },
+            request(
+              `http://localhost/api/v1/mobile/rounds/${createdRounds[1].id}`,
+              token
+            ),
+            { params: Promise.resolve({ id: String(createdRounds[1].id) }) }
           )
-        ).status,
+        ).status
       ).toBe(404);
     } finally {
       for (const round of createdRounds) {
         await db.delete(estimateRounds).where(eq(estimateRounds.id, round.id));
       }
-      for (const job of createdJobs) await db.delete(jobs).where(eq(jobs.id, job.id));
+      for (const job of createdJobs)
+        await db.delete(jobs).where(eq(jobs.id, job.id));
     }
   });
 
@@ -192,7 +214,9 @@ describe("resource access HTTP matrix", () => {
 
     try {
       const { default: JobPage } = await import("@/app/(app)/jobs/[id]/page");
-      const { default: RoundPage } = await import("@/app/(app)/rounds/[id]/page");
+      const { default: RoundPage } = await import(
+        "@/app/(app)/rounds/[id]/page"
+      );
       for (const render of [
         () => JobPage({ params: Promise.resolve({ id: String(job.id) }) }),
         () => RoundPage({ params: Promise.resolve({ id: String(round.id) }) }),
@@ -210,30 +234,34 @@ describe("resource access HTTP matrix", () => {
       }
 
       const exported = await sheetExportGet(
-        new NextRequest(`http://localhost/api/export/sheet?id=${sheet.id}`),
+        new NextRequest(`http://localhost/api/export/sheet?id=${sheet.id}`)
       );
       expect(exported.status).toBe(404);
-      expect(await statusExportGet(new NextRequest("http://localhost/api/export/status"))).toMatchObject({
+      expect(
+        await statusExportGet(
+          new NextRequest("http://localhost/api/export/status")
+        )
+      ).toMatchObject({
         status: 404,
       });
 
       const other = pcm.region === "Florida" ? "Central" : "Florida";
       const dash = await dashboardExportGet(
         new NextRequest(
-          `http://localhost/api/export/dashboard?level=region&region=${encodeURIComponent(other)}`,
-        ),
+          `http://localhost/api/export/dashboard?level=region&region=${encodeURIComponent(other)}`
+        )
       );
       expect(dash.status).toBe(403);
       const bid = await bidScheduleExportGet(
         new NextRequest(
-          `http://localhost/api/export/bid-schedule?region=${encodeURIComponent(other)}&config=${encodeURIComponent(JSON.stringify({ columns: ["jobName"] }))}`,
-        ),
+          `http://localhost/api/export/bid-schedule?region=${encodeURIComponent(other)}&config=${encodeURIComponent(JSON.stringify({ columns: ["jobName"] }))}`
+        )
       );
       expect(bid.status).toBe(403);
       const annual = await annualExportGet(
         new NextRequest(
-          `http://localhost/api/export/annual?region=${encodeURIComponent(other)}&format=xlsx`,
-        ),
+          `http://localhost/api/export/annual?region=${encodeURIComponent(other)}&format=xlsx`
+        )
       );
       expect(annual.status).toBe(403);
     } finally {
@@ -266,26 +294,36 @@ describe("resource access HTTP matrix", () => {
       expect(
         (
           await dashboardGet(
-            request(`http://localhost/api/v1/mobile/dashboards/${created[0].id}`, token),
-            { params: Promise.resolve({ id: String(created[0].id) }) },
+            request(
+              `http://localhost/api/v1/mobile/dashboards/${created[0].id}`,
+              token
+            ),
+            { params: Promise.resolve({ id: String(created[0].id) }) }
           )
-        ).status,
+        ).status
       ).toBe(200);
       expect(
         (
           await dashboardGet(
-            request(`http://localhost/api/v1/mobile/dashboards/${created[1].id}`, token),
-            { params: Promise.resolve({ id: String(created[1].id) }) },
+            request(
+              `http://localhost/api/v1/mobile/dashboards/${created[1].id}`,
+              token
+            ),
+            { params: Promise.resolve({ id: String(created[1].id) }) }
           )
-        ).status,
+        ).status
       ).toBe(404);
 
       const list = await dashboardsGet(
-        request("http://localhost/api/v1/mobile/dashboards", token),
+        request("http://localhost/api/v1/mobile/dashboards", token)
       );
       const body = (await list.json()) as { studio: { id: number }[] };
-      expect(body.studio.map((dashboard) => dashboard.id)).toContain(created[0].id);
-      expect(body.studio.map((dashboard) => dashboard.id)).not.toContain(created[1].id);
+      expect(body.studio.map((dashboard) => dashboard.id)).toContain(
+        created[0].id
+      );
+      expect(body.studio.map((dashboard) => dashboard.id)).not.toContain(
+        created[1].id
+      );
     } finally {
       for (const dashboard of created) {
         await db.delete(dashboards).where(eq(dashboards.id, dashboard.id));
@@ -324,28 +362,49 @@ describe("resource access HTTP matrix", () => {
     });
     try {
       const visible = await sheetGet(
-        request(`http://localhost/api/v1/mobile/sheets/${created[0].id}`, token),
-        { params: Promise.resolve({ id: String(created[0].id) }) },
+        request(
+          `http://localhost/api/v1/mobile/sheets/${created[0].id}`,
+          token
+        ),
+        { params: Promise.resolve({ id: String(created[0].id) }) }
       );
       expect(visible.status).toBe(200);
-      expect(((await visible.json()) as { data: { canManage: boolean } }).data.canManage).toBe(false);
+      expect(
+        ((await visible.json()) as { data: { canManage: boolean } }).data
+          .canManage
+      ).toBe(false);
 
       const denied = await sheetGet(
-        request(`http://localhost/api/v1/mobile/sheets/${created[1].id}`, token),
-        { params: Promise.resolve({ id: String(created[1].id) }) },
+        request(
+          `http://localhost/api/v1/mobile/sheets/${created[1].id}`,
+          token
+        ),
+        { params: Promise.resolve({ id: String(created[1].id) }) }
       );
       expect(denied.status).toBe(404);
 
-      const list = await sheetsGet(request("http://localhost/api/v1/mobile/sheets", token));
-      const ids = ((await list.json()) as { data: { id: number }[] }).data.map((sheet) => sheet.id);
+      const list = await sheetsGet(
+        request("http://localhost/api/v1/mobile/sheets", token)
+      );
+      const ids = ((await list.json()) as { data: { id: number }[] }).data.map(
+        (sheet) => sheet.id
+      );
       expect(ids).toContain(created[0].id);
       expect(ids).not.toContain(created[1].id);
 
-      expect(await loadSheetForPrincipal(principal, created[0].id, "manage")).toBeNull();
-      await db.update(sheetAcls).set({ acl: "manager" }).where(eq(sheetAcls.id, acl.id));
-      expect(await loadSheetForPrincipal(principal, created[0].id, "manage")).not.toBeNull();
+      expect(
+        await loadSheetForPrincipal(principal, created[0].id, "manage")
+      ).toBeNull();
+      await db
+        .update(sheetAcls)
+        .set({ acl: "manager" })
+        .where(eq(sheetAcls.id, acl.id));
+      expect(
+        await loadSheetForPrincipal(principal, created[0].id, "manage")
+      ).not.toBeNull();
     } finally {
-      for (const sheet of created) await db.delete(sheets).where(eq(sheets.id, sheet.id));
+      for (const sheet of created)
+        await db.delete(sheets).where(eq(sheets.id, sheet.id));
     }
   });
 });
@@ -370,7 +429,11 @@ describe("admin query-before-authorization boundary", () => {
 
     const token = await session(pcm);
     expect(
-      (await adminGet(request("http://localhost/api/v1/mobile/admin?section=index", token))).status,
+      (
+        await adminGet(
+          request("http://localhost/api/v1/mobile/admin?section=index", token)
+        )
+      ).status
     ).toBe(404);
   });
 
@@ -378,14 +441,19 @@ describe("admin query-before-authorization boundary", () => {
     const token = await session(corporateAdmin);
     const response = await adminGet(
       new Request("http://localhost/api/v1/mobile/admin?section=index", {
-        headers: { authorization: `Bearer ${token}`, "x-workspace-region": "corporate" },
-      }),
+        headers: {
+          authorization: `Bearer ${token}`,
+          "x-workspace-region": "corporate",
+        },
+      })
     );
     expect(response.status).toBe(200);
-    const keys = ((await response.json()) as { sections: { key: string }[] }).sections.map(
-      (section) => section.key,
+    const keys = (
+      (await response.json()) as { sections: { key: string }[] }
+    ).sections.map((section) => section.key);
+    expect(keys).toEqual(
+      expect.arrayContaining(["tokens", "access", "status", "audit"])
     );
-    expect(keys).toEqual(expect.arrayContaining(["tokens", "access", "status", "audit"]));
   });
 });
 
@@ -398,13 +466,26 @@ describe("scoped-read migration inventory", () => {
       ["src/app/(app)/jobs/[id]/page.tsx", "loadJobForPrincipal"],
       ["src/app/(app)/rounds/[id]/page.tsx", "loadRoundForPrincipal"],
       ["src/app/(app)/sheets/[id]/page.tsx", "loadSheetForPrincipal"],
-      ["src/app/(app)/dashboards/studio/[id]/page.tsx", "loadDashboardForPrincipal"],
-      ["src/app/api/v1/mobile/jobs/[id]/route.ts", "authorizationService.readJob"],
-      ["src/app/api/v1/mobile/rounds/[id]/route.ts", "authorizationService.readRound"],
+      [
+        "src/app/(app)/dashboards/studio/[id]/page.tsx",
+        "loadDashboardForPrincipal",
+      ],
+      [
+        "src/app/api/v1/mobile/jobs/[id]/route.ts",
+        "authorizationService.readJob",
+      ],
+      [
+        "src/app/api/v1/mobile/rounds/[id]/route.ts",
+        "authorizationService.readRound",
+      ],
       ["src/app/api/v1/mobile/sheets/[id]/route.ts", "loadSheetForPrincipal"],
-      ["src/app/api/v1/mobile/dashboards/[id]/route.ts", "authorizationService.readDashboard"],
+      [
+        "src/app/api/v1/mobile/dashboards/[id]/route.ts",
+        "authorizationService.readDashboard",
+      ],
     ] as const;
-    for (const [file, loader] of expectations) expect(source(file), file).toContain(loader);
+    for (const [file, loader] of expectations)
+      expect(source(file), file).toContain(loader);
   });
 
   it("removes unscoped aggregate and export entry points", () => {
@@ -417,20 +498,42 @@ describe("scoped-read migration inventory", () => {
       .join("\n");
     expect(appSource).not.toMatch(/getRoundsWithJobs\(workspace\)/);
     expect(appSource).not.toMatch(/getFlatDataset\(\)/);
-    expect(source("src/app/api/v1/mobile/admin/route.ts")).not.toContain(".from(");
-    expect(source("src/app/(app)/dashboards/studio/page.tsx")).toContain(
-      "listDashboardsForPrincipal",
+    expect(source("src/app/api/v1/mobile/admin/route.ts")).not.toContain(
+      ".from("
     );
-    expect(source("src/app/api/export/sheet/route.ts")).not.toContain("getSheet(");
-    expect(source("src/app/api/export/dashboard/route.ts")).toContain("listRoundsWithJobsForPrincipal");
-    expect(source("src/app/api/export/dashboard/route.ts")).toContain("resolveRegionParam");
-    expect(source("src/app/api/export/bid-schedule/route.ts")).toContain("getWebPrincipal");
-    expect(source("src/app/api/export/bid-schedule/route.ts")).toContain("resolveRegionParam");
-    expect(source("src/app/api/export/annual/route.ts")).toContain("resolveRegionParam");
-    expect(source("src/app/api/export/pptx/route.ts")).toContain("getWebPrincipal");
-    expect(source("src/app/api/export/pptx/route.ts")).toContain("loadDashboardForPrincipal");
-    expect(source("src/app/api/export/report/route.ts")).toContain("getFlatDataset");
-    expect(source("src/app/api/v1/ai/magnus/route.ts")).toContain("listRoundsWithJobsForPrincipal");
+    expect(source("src/app/(app)/dashboards/studio/page.tsx")).toContain(
+      "listDashboardsForPrincipal"
+    );
+    expect(source("src/app/api/export/sheet/route.ts")).not.toContain(
+      "getSheet("
+    );
+    expect(source("src/app/api/export/dashboard/route.ts")).toContain(
+      "listRoundsWithJobsForPrincipal"
+    );
+    expect(source("src/app/api/export/dashboard/route.ts")).toContain(
+      "resolveRegionParam"
+    );
+    expect(source("src/app/api/export/bid-schedule/route.ts")).toContain(
+      "getWebPrincipal"
+    );
+    expect(source("src/app/api/export/bid-schedule/route.ts")).toContain(
+      "resolveRegionParam"
+    );
+    expect(source("src/app/api/export/annual/route.ts")).toContain(
+      "resolveRegionParam"
+    );
+    expect(source("src/app/api/export/pptx/route.ts")).toContain(
+      "getWebPrincipal"
+    );
+    expect(source("src/app/api/export/pptx/route.ts")).toContain(
+      "loadDashboardForPrincipal"
+    );
+    expect(source("src/app/api/export/report/route.ts")).toContain(
+      "getFlatDataset"
+    );
+    expect(source("src/app/api/v1/ai/magnus/route.ts")).toContain(
+      "listRoundsWithJobsForPrincipal"
+    );
   });
 
   function walk(relative: string): string[] {

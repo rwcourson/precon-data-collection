@@ -8,9 +8,9 @@ import {
   salesforceMatchCandidates,
 } from "@/db/schema";
 import {
+  type AdminSection,
   listAdminSectionsForPrincipal,
   loadAdminSectionForPrincipal,
-  type AdminSection,
 } from "@/lib/authorization/loaders";
 import type { Principal } from "@/lib/authorization/types";
 
@@ -63,10 +63,9 @@ const DEFAULT_ADMIN_QUERIES: MobileAdminQueries = {
 export async function readMobileAdminSection(
   principal: Principal,
   section: string,
-  queries: MobileAdminQueries = DEFAULT_ADMIN_QUERIES,
+  queries: MobileAdminQueries = DEFAULT_ADMIN_QUERIES
 ): Promise<
-  | { ok: true; payload: Record<string, unknown> }
-  | { ok: false; status: 404 }
+  { ok: true; payload: Record<string, unknown> } | { ok: false; status: 404 }
 > {
   if (section === "index") {
     const allowed = await listAdminSectionsForPrincipal(principal);

@@ -1,6 +1,10 @@
 "use client";
 
-import { mentionChipClassName, mentionLabel, splitNoteBodyTokens } from "@/lib/note-body";
+import {
+  mentionChipClassName,
+  mentionLabel,
+  splitNoteBodyTokens,
+} from "@/lib/note-body";
 
 export function NoteBody({
   body,
@@ -23,7 +27,7 @@ export function NoteBody({
           </span>
         ) : (
           <span key={index}>{token.value}</span>
-        ),
+        )
       )}
     </span>
   );

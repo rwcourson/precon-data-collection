@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Copy, KeyRound, Loader2, Plus, ShieldOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { createApiToken, revokeApiToken } from "@/actions/api-tokens";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { createApiToken, revokeApiToken } from "@/actions/api-tokens";
-import { apiTokenScopeSchema, type ApiTokenScope } from "@/domain/contracts";
+import { type ApiTokenScope, apiTokenScopeSchema } from "@/domain/contracts";
 
 const ALL_SCOPES = apiTokenScopeSchema.options;
 
@@ -65,7 +65,7 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<ApiTokenScope[]>(["read:pursuits"]);
   const [expiresOn, setExpiresOn] = useState(() =>
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
   const [plaintext, setPlaintext] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -73,9 +73,7 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
 
   function toggleScope(scope: ApiTokenScope) {
     setScopes((prev) =>
-      prev.includes(scope)
-        ? prev.filter((s) => s !== scope)
-        : [...prev, scope],
+      prev.includes(scope) ? prev.filter((s) => s !== scope) : [...prev, scope]
     );
   }
 
@@ -168,11 +166,7 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Expires on</Label>
-            <DatePicker
-              value={expiresOn}
-              onChange={setExpiresOn}
-              required
-            />
+            <DatePicker value={expiresOn} onChange={setExpiresOn} required />
           </div>
           <Button
             onClick={create}
@@ -196,7 +190,12 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
                 <code className="flex-1 truncate rounded bg-background px-2 py-1 font-mono text-xs">
                   {plaintext}
                 </code>
-                <Button size="sm" variant="outline" className="gap-1" onClick={copyToken}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={copyToken}
+                >
                   <Copy className="size-3" />
                   Copy
                 </Button>
@@ -246,7 +245,10 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
                 </TableRow>
               )}
               {tokens.map((t) => (
-                <TableRow key={t.id} className={t.revokedAt ? "opacity-60" : ""}>
+                <TableRow
+                  key={t.id}
+                  className={t.revokedAt ? "opacity-60" : ""}
+                >
                   <TableCell className="pl-6">
                     <p className="text-sm font-medium">{t.name}</p>
                     {t.revokedAt && (
@@ -255,7 +257,9 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{t.tokenPrefix}…</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {t.tokenPrefix}…
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {t.scopes.map((s) => (

@@ -4,22 +4,37 @@
  *
  * Run (server stopped): npm run db:import-smartsheet
  */
-import fs from "fs";
-import path from "path";
+
+import fs from "node:fs";
+import path from "node:path";
 import { eq } from "drizzle-orm";
+import { syncDataQualityFlags } from "../lib/data-quality-sync";
+import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
+import {
+  mergeSmartsheetDrafts,
+  parseSmartsheetRound,
+  type SmartsheetRoundDraft,
+  smartsheetRowToCells,
+} from "../lib/integrations/smartsheet/parse";
+import { IMPORT_SOURCE_KEY } from "../lib/migration-source";
+import { REFERENCE_LISTS } from "../lib/reference-data";
+import {
+  consolidatedRegionalReportInsert,
+  upcomingBidScheduleReportInsert,
+} from "../lib/report-presets";
 import { db } from "./index";
 import {
   appSettings,
   auditLog,
-  customColumnValues,
   customColumns,
+  customColumnValues,
   dataQualityFlags,
   emailOutbox,
   estimateRounds,
   jobs,
   notifications,
-  referenceListValues,
   referenceLists,
+  referenceListValues,
   reportTemplates,
   roundMultiValues,
   salesforceJobs,
@@ -31,18 +46,7 @@ import {
   statusTransitions,
   users,
 } from "./schema";
-import { REFERENCE_LISTS } from "../lib/reference-data";
-import { IMPORT_SOURCE_KEY } from "../lib/migration-source";
-import { syncDataQualityFlags } from "../lib/data-quality-sync";
 import { seedSheetsFromExport } from "./seed-sheets";
-import {
-  mergeSmartsheetDrafts,
-  parseSmartsheetRound,
-  smartsheetRowToCells,
-  type SmartsheetRoundDraft,
-} from "../lib/integrations/smartsheet/parse";
-import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
-import { consolidatedRegionalReportInsert, upcomingBidScheduleReportInsert } from "../lib/report-presets";
 
 const DATA_DIR = path.join(process.cwd(), "data/smartsheet/json");
 
@@ -54,7 +58,9 @@ const DATA_DIR = path.join(process.cwd(), "data/smartsheet/json");
  */
 function submittedStamp(bidDueDate: string | null, bidYear: number): Date {
   const now = new Date();
-  const from = bidDueDate ? new Date(`${bidDueDate}T15:00:00`) : new Date(`${bidYear}-06-30T15:00:00`);
+  const from = bidDueDate
+    ? new Date(`${bidDueDate}T15:00:00`)
+    : new Date(`${bidYear}-06-30T15:00:00`);
   if (Number.isNaN(from.getTime()) || from > now) return now;
   return from;
 }
@@ -91,20 +97,64 @@ async function main() {
   console.log("Seeding reference lists + demo personas…");
   for (const [key, list] of Object.entries(REFERENCE_LISTS)) {
     await db.insert(referenceLists).values({ key, label: list.label });
-    await db.insert(referenceListValues).values(
-      list.values.map((value, i) => ({ listKey: key, value, sortOrder: i })),
-    );
+    await db
+      .insert(referenceListValues)
+      .values(
+        list.values.map((value, i) => ({ listKey: key, value, sortOrder: i }))
+      );
   }
 
   const userRows = await db
     .insert(users)
     .values([
-      { name: DEFAULT_DEMO_RPD.name, title: DEFAULT_DEMO_RPD.title, role: "rpd", region: "Central", preconDepartment: "Central Building Group", email: DEFAULT_DEMO_RPD.email },
-      { name: "Sarah Chen", title: "Preconstruction Manager", role: "pcm", region: "Central", preconDepartment: "Central Building Group", email: "schen@brasfieldgorrie.com" },
-      { name: "Marcus Webb", title: "Senior Estimate Lead", role: "estimate_lead", region: "Central", preconDepartment: "Central Building Group", email: "mwebb@brasfieldgorrie.com" },
-      { name: "Dana Ortiz", title: "Job Site Administrator", role: "admin_jsa", region: "Central", preconDepartment: "Central Building Group", email: "dortiz@brasfieldgorrie.com" },
-      { name: "Patricia Lawson", title: "Division President", role: "leadership", region: "Central", preconDepartment: null, email: "plawson@brasfieldgorrie.com" },
-      { name: "Tom Reeves", title: "Corporate Precon Admin", role: "corporate_admin", region: null, preconDepartment: null, email: "treeves@brasfieldgorrie.com" },
+      {
+        name: DEFAULT_DEMO_RPD.name,
+        title: DEFAULT_DEMO_RPD.title,
+        role: "rpd",
+        region: "Central",
+        preconDepartment: "Central Building Group",
+        email: DEFAULT_DEMO_RPD.email,
+      },
+      {
+        name: "Sarah Chen",
+        title: "Preconstruction Manager",
+        role: "pcm",
+        region: "Central",
+        preconDepartment: "Central Building Group",
+        email: "schen@brasfieldgorrie.com",
+      },
+      {
+        name: "Marcus Webb",
+        title: "Senior Estimate Lead",
+        role: "estimate_lead",
+        region: "Central",
+        preconDepartment: "Central Building Group",
+        email: "mwebb@brasfieldgorrie.com",
+      },
+      {
+        name: "Dana Ortiz",
+        title: "Job Site Administrator",
+        role: "admin_jsa",
+        region: "Central",
+        preconDepartment: "Central Building Group",
+        email: "dortiz@brasfieldgorrie.com",
+      },
+      {
+        name: "Patricia Lawson",
+        title: "Division President",
+        role: "leadership",
+        region: "Central",
+        preconDepartment: null,
+        email: "plawson@brasfieldgorrie.com",
+      },
+      {
+        name: "Tom Reeves",
+        title: "Corporate Precon Admin",
+        role: "corporate_admin",
+        region: null,
+        preconDepartment: null,
+        email: "treeves@brasfieldgorrie.com",
+      },
     ])
     .returning();
   const pcm = userRows.find((u) => u.role === "pcm")!;
@@ -114,10 +164,12 @@ async function main() {
   const allFiles = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".json"));
   const files = allFiles.filter(
     (f) =>
-      /Bid_Schedule|Post_Bid_Data_Collection|Estimate_Metrics_Capture/i.test(f) &&
+      /Bid_Schedule|Post_Bid_Data_Collection|Estimate_Metrics_Capture/i.test(
+        f
+      ) &&
       !/Self_Perform_Estimate_Metrics|Checklist|Backup|Roster|Consolidated|Dashboard|Scoreboard|Cost_Tracking/i.test(
-        f,
-      ),
+        f
+      )
   );
   const skipped = allFiles.filter((f) => !files.includes(f));
 
@@ -125,12 +177,20 @@ async function main() {
   const byKey = new Map<string, SmartsheetRoundDraft>();
 
   for (const file of files) {
-    const sheet = JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf8"));
+    const sheet = JSON.parse(
+      fs.readFileSync(path.join(DATA_DIR, file), "utf8")
+    );
     for (const row of sheet.rows ?? []) {
-      const draft = parseSmartsheetRound(smartsheetRowToCells(sheet, row), file);
+      const draft = parseSmartsheetRound(
+        smartsheetRowToCells(sheet, row),
+        file
+      );
       if (!draft) continue;
       const existing = byKey.get(draft.key);
-      byKey.set(draft.key, existing ? mergeSmartsheetDrafts(existing, draft) : draft);
+      byKey.set(
+        draft.key,
+        existing ? mergeSmartsheetDrafts(existing, draft) : draft
+      );
     }
   }
 
@@ -141,8 +201,10 @@ async function main() {
   const roundNoByJob = new Map<string, number>();
   let roundCount = 0;
 
-  const drafts = [...byKey.values()].sort((a, b) =>
-    a.jobNumber.localeCompare(b.jobNumber) || a.estimatePhase.localeCompare(b.estimatePhase),
+  const drafts = [...byKey.values()].sort(
+    (a, b) =>
+      a.jobNumber.localeCompare(b.jobNumber) ||
+      a.estimatePhase.localeCompare(b.estimatePhase)
   );
 
   for (const draft of drafts) {
@@ -252,7 +314,9 @@ async function main() {
           ? submittedStamp(draft.bidDueDate, draft.bidYear)
           : null,
         lockedAt:
-          draft.status === "locked" ? submittedStamp(draft.bidDueDate, draft.bidYear) : null,
+          draft.status === "locked"
+            ? submittedStamp(draft.bidDueDate, draft.bidYear)
+            : null,
         createdById: pcm.id,
       })
       .returning();
@@ -291,20 +355,22 @@ async function main() {
 
   const scan = await syncDataQualityFlags();
 
-  await db.insert(savedReports).values(consolidatedRegionalReportInsert(rpd.id));
+  await db
+    .insert(savedReports)
+    .values(consolidatedRegionalReportInsert(rpd.id));
   await db.insert(savedReports).values(upcomingBidScheduleReportInsert(rpd.id));
 
   console.log("Rebuilding the workspace sheet tree…");
   const tree = await seedSheetsFromExport(DATA_DIR);
 
   console.log(
-    `Done. Imported ${jobMap.size} jobs / ${roundCount} estimate rounds from Smartsheet.`,
+    `Done. Imported ${jobMap.size} jobs / ${roundCount} estimate rounds from Smartsheet.`
   );
   console.log(
-    `Needs-review queue built: ${scan.open.toLocaleString()} values need a decision.`,
+    `Needs-review queue built: ${scan.open.toLocaleString()} values need a decision.`
   );
   console.log(
-    `Workspace rebuilt: ${tree.views} pursuit views + ${tree.grids} standalone sheets (${tree.rows.toLocaleString()} rows).`,
+    `Workspace rebuilt: ${tree.views} pursuit views + ${tree.grids} standalone sheets (${tree.rows.toLocaleString()} rows).`
   );
   process.exit(0);
 }

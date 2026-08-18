@@ -1,17 +1,17 @@
-import { cache } from "react";
-import { cookies, headers } from "next/headers";
-import { db, ensureDbReady } from "@/db";
-import { users } from "@/db/schema";
 import { asc } from "drizzle-orm";
+import { cookies, headers } from "next/headers";
+import { cache } from "react";
+import { db, ensureDbReady } from "@/db";
 import type { User } from "@/db/schema";
-import { authMode, resolveSsoUser } from "./auth";
-import { getMobileContext } from "./mobile-context";
+import { users } from "@/db/schema";
 import { auth } from "@/lib/auth-server";
+import { pickDefaultDemoUser } from "@/lib/demo-identity";
 import {
   identityFromBetterAuthUser,
   microsoftProfileFromAccount,
 } from "@/lib/sso-session";
-import { pickDefaultDemoUser } from "@/lib/demo-identity";
+import { authMode, resolveSsoUser } from "./auth";
+import { getMobileContext } from "./mobile-context";
 
 const COOKIE = "demo-user-id";
 
@@ -22,62 +22,61 @@ const COOKIE = "demo-user-id";
  * - Demo: persona cookie / first seeded user.
  * - Mobile REST: AsyncLocalStorage principal.
  */
-export const getCurrentUser = cache(async function getCurrentUser(): Promise<User> {
-  await ensureDbReady();
+export const getCurrentUser = cache(
+  async function getCurrentUser(): Promise<User> {
+    await ensureDbReady();
 
-  const mobile = getMobileContext();
-  if (mobile?.user) return mobile.user;
+    const mobile = getMobileContext();
+    if (mobile?.user) return mobile.user;
 
-  if (authMode() === "sso") {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      throw new Error("Not signed in.");
+    if (authMode() === "sso") {
+      const session = await auth.api.getSession({ headers: await headers() });
+      if (!session?.user) {
+        throw new Error("Not signed in.");
+      }
+
+      const profile = await microsoftProfileFromAccount(session.user.id);
+      const email = (session.user.email || profile.email || "")
+        .trim()
+        .toLowerCase();
+      if (!email) {
+        throw new Error(
+          "Not signed in — Microsoft session has no email claim."
+        );
+      }
+
+      const name = profile.displayName?.trim() || session.user.name || email;
+
+      const identity = identityFromBetterAuthUser({
+        email,
+        name,
+        groups: profile.groups,
+        title: profile.jobTitle,
+      });
+      return resolveSsoUser(identity);
     }
 
-    const profile = await microsoftProfileFromAccount(session.user.id);
-    const email = (
-      session.user.email ||
-      profile.email ||
-      ""
-    )
-      .trim()
-      .toLowerCase();
-    if (!email) {
-      throw new Error("Not signed in — Microsoft session has no email claim.");
+    // Defense in depth: runtime-config already rejects demo auth on hosted
+    // production, but never resolve a cookie-selected identity there either.
+    // Preview deployments run demo personas behind Vercel Authentication.
+    if (
+      process.env.VERCEL_ENV === "production" ||
+      (process.env.VERCEL && !process.env.VERCEL_ENV)
+    ) {
+      throw new Error(
+        "Demo authentication is forbidden on hosted production deployments."
+      );
     }
 
-    const name =
-      (profile.displayName && profile.displayName.trim()) ||
-      session.user.name ||
-      email;
-
-    const identity = identityFromBetterAuthUser({
-      email,
-      name,
-      groups: profile.groups,
-      title: profile.jobTitle,
-    });
-    return resolveSsoUser(identity);
+    const store = await cookies();
+    const id = Number(store.get(COOKIE)?.value);
+    const all = await db.select().from(users).orderBy(asc(users.id));
+    if (all.length === 0) {
+      throw new Error("No users seeded — run `npm run db:seed` first.");
+    }
+    return all.find((u) => u.id === id) ?? pickDefaultDemoUser(all);
   }
-
-  // Defense in depth: runtime-config already rejects demo auth on hosted
-  // production, but never resolve a cookie-selected identity there either.
-  // Preview deployments run demo personas behind Vercel Authentication.
-  if (
-    process.env.VERCEL_ENV === "production" ||
-    (process.env.VERCEL && !process.env.VERCEL_ENV)
-  ) {
-    throw new Error("Demo authentication is forbidden on hosted production deployments.");
-  }
-
-  const store = await cookies();
-  const id = Number(store.get(COOKIE)?.value);
-  const all = await db.select().from(users).orderBy(asc(users.id));
-  if (all.length === 0) {
-    throw new Error("No users seeded — run `npm run db:seed` first.");
-  }
-  return all.find((u) => u.id === id) ?? pickDefaultDemoUser(all);
-});
+);
 
 export const getAllUsers = cache(async function getAllUsers(): Promise<User[]> {
   await ensureDbReady();

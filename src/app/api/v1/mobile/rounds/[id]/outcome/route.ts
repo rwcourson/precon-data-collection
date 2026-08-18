@@ -4,28 +4,32 @@ import { pursuitService } from "@/services/pursuit-service";
 
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  return withMobileAuth(req, { scopes: "write:pursuits" }, async (principal) => {
-    const { id } = await ctx.params;
-    const roundId = Number(id);
-    if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
-    let body: { outcome?: string };
-    try {
-      body = await req.json();
-    } catch {
-      return jsonError("Invalid JSON", 400);
+  return withMobileAuth(
+    req,
+    { scopes: "write:pursuits" },
+    async (principal) => {
+      const { id } = await ctx.params;
+      const roundId = Number(id);
+      if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
+      let body: { outcome?: string };
+      try {
+        body = await req.json();
+      } catch {
+        return jsonError("Invalid JSON", 400);
+      }
+      if (!body.outcome) return jsonError("outcome is required", 400);
+      try {
+        await pursuitService.setOutcome(
+          principal.authorization,
+          roundId,
+          body.outcome as OutcomeValue
+        );
+        return jsonOk({ ok: true, outcome: body.outcome });
+      } catch (err) {
+        return mapError(err);
+      }
     }
-    if (!body.outcome) return jsonError("outcome is required", 400);
-    try {
-      await pursuitService.setOutcome(
-        principal.authorization,
-        roundId,
-        body.outcome as OutcomeValue,
-      );
-      return jsonOk({ ok: true, outcome: body.outcome });
-    } catch (err) {
-      return mapError(err);
-    }
-  });
+  );
 }

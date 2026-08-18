@@ -1,12 +1,16 @@
 import { buildAnnualReport } from "@/lib/annual-report";
-import { jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:reports" }, async (principal) => {
     try {
-      const year = Number(new URL(req.url).searchParams.get("year") ?? new Date().getFullYear());
-      const rows = await listRoundsWithJobsForPrincipal(principal.authorization);
+      const year = Number(
+        new URL(req.url).searchParams.get("year") ?? new Date().getFullYear()
+      );
+      const rows = await listRoundsWithJobsForPrincipal(
+        principal.authorization
+      );
       const data = buildAnnualReport({
         rows,
         region: principal.authorization.workspace.region,

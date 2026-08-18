@@ -1,9 +1,5 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
   Copy,
   Folder,
@@ -20,6 +16,19 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  archiveSheet,
+  duplicateSheet,
+  restoreSheet,
+  toggleSheetPin,
+} from "@/actions/sheets";
+import { NewSheetDialog } from "@/components/sheets/new-sheet-dialog";
+import { RenameFolderDialog } from "@/components/sheets/rename-folder-dialog";
+import { RenameSheetDialog } from "@/components/sheets/rename-sheet-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,10 +39,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { NewSheetDialog } from "@/components/sheets/new-sheet-dialog";
-import { RenameFolderDialog } from "@/components/sheets/rename-folder-dialog";
-import { RenameSheetDialog } from "@/components/sheets/rename-sheet-dialog";
-import { archiveSheet, duplicateSheet, restoreSheet, toggleSheetPin } from "@/actions/sheets";
 import { groupIntoFolders, type SheetSummary } from "@/lib/sheets";
 
 /**
@@ -82,7 +87,7 @@ export function SheetBrowser({
       (s) =>
         s.name.toLowerCase().includes(q) ||
         s.folder.toLowerCase().includes(q) ||
-        (s.description ?? "").toLowerCase().includes(q),
+        (s.description ?? "").toLowerCase().includes(q)
     );
   }, [sheets, query]);
 
@@ -113,9 +118,12 @@ export function SheetBrowser({
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          {sheets.length} sheet{sheets.length === 1 ? "" : "s"} in {workspaceLabel}
+          {sheets.length} sheet{sheets.length === 1 ? "" : "s"} in{" "}
+          {workspaceLabel}
         </p>
-        {pending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+        {pending && (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        )}
         <div className="ml-auto">
           {canCreate ? (
             <NewSheetDialog folders={folders} workspaceLabel={workspaceLabel} />
@@ -139,8 +147,12 @@ export function SheetBrowser({
                 sheet={s}
                 canDuplicate={canCreate}
                 onPin={() => run(() => toggleSheetPin(s.id))}
-                onDuplicate={() => run(() => duplicateSheet(s.id), `Copied "${s.name}"`)}
-                onArchive={() => run(() => archiveSheet(s.id), `Archived "${s.name}"`)}
+                onDuplicate={() =>
+                  run(() => duplicateSheet(s.id), `Copied "${s.name}"`)
+                }
+                onArchive={() =>
+                  run(() => archiveSheet(s.id), `Archived "${s.name}"`)
+                }
                 onRename={() => setRenaming(s)}
               />
             ))}
@@ -150,7 +162,9 @@ export function SheetBrowser({
 
       {tree.length === 0 && (
         <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="text-sm font-medium">No sheets yet in {workspaceLabel}</p>
+          <p className="text-sm font-medium">
+            No sheets yet in {workspaceLabel}
+          </p>
           <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground">
             {workspaceRegion
               ? "Create a bid schedule view, a post-bid checklist, or a standalone tracker. Sheets you make here stay in this Region's workspace."
@@ -164,7 +178,9 @@ export function SheetBrowser({
           <h2 className="group/folder flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             <FolderOpen className="size-3.5" />
             {folder.name}
-            <span className="font-normal normal-case">({folder.sheets.length})</span>
+            <span className="font-normal normal-case">
+              ({folder.sheets.length})
+            </span>
             {folder.sheets.some((s) => s.canManage) && (
               <button
                 type="button"
@@ -189,8 +205,12 @@ export function SheetBrowser({
                 sheet={s}
                 canDuplicate={canCreate}
                 onPin={() => run(() => toggleSheetPin(s.id))}
-                onDuplicate={() => run(() => duplicateSheet(s.id), `Copied "${s.name}"`)}
-                onArchive={() => run(() => archiveSheet(s.id), `Archived "${s.name}"`)}
+                onDuplicate={() =>
+                  run(() => duplicateSheet(s.id), `Copied "${s.name}"`)
+                }
+                onArchive={() =>
+                  run(() => archiveSheet(s.id), `Archived "${s.name}"`)
+                }
                 onRename={() => setRenaming(s)}
               />
             ))}
@@ -221,7 +241,8 @@ export function SheetBrowser({
                       {s.name}
                     </p>
                     <p className="truncate text-2xs text-muted-foreground">
-                      {s.folder} · archived {new Date(s.archivedAt).toLocaleDateString("en-US")}
+                      {s.folder} · archived{" "}
+                      {new Date(s.archivedAt).toLocaleDateString("en-US")}
                     </p>
                   </div>
                   {s.canRestore ? (
@@ -230,7 +251,9 @@ export function SheetBrowser({
                       size="sm"
                       className="shrink-0 gap-1.5"
                       disabled={pending}
-                      onClick={() => run(() => restoreSheet(s.id), `Restored "${s.name}"`)}
+                      onClick={() =>
+                        run(() => restoreSheet(s.id), `Restored "${s.name}"`)
+                      }
                     >
                       <Undo2 className="size-3.5" /> Restore
                     </Button>
@@ -298,13 +321,18 @@ function SheetCard({
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="secondary" size="sm">
-            {sheet.rowCount.toLocaleString()} row{sheet.rowCount === 1 ? "" : "s"}
+            {sheet.rowCount.toLocaleString()} row
+            {sheet.rowCount === 1 ? "" : "s"}
           </Badge>
           <Badge variant={sheet.region == null ? "teal" : "outline"} size="sm">
             {sheet.region ?? "Corporate"}
           </Badge>
           {sheet.sourceSheet && (
-            <Badge variant="outline" size="sm" className="text-muted-foreground">
+            <Badge
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground"
+            >
               from Smartsheet
             </Badge>
           )}
@@ -316,7 +344,7 @@ function SheetCard({
           render={
             <button
               type="button"
-                    className="absolute top-2.5 right-2.5 rounded p-1 text-muted-foreground/50 transition-colors outline-none group-hover:text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted data-popup-open:text-foreground"
+              className="absolute top-2.5 right-2.5 rounded p-1 text-muted-foreground/50 transition-colors outline-none group-hover:text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted data-popup-open:text-foreground"
               aria-label={`Actions for ${sheet.name}`}
             />
           }

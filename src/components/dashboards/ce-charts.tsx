@@ -5,6 +5,7 @@
  * Values are pre-scaled so axes stay readable (CE only formats tooltips).
  */
 
+import { ModernCard } from "@rwcourson/chart-elements/cards";
 import {
   BarColumnChart,
   ChartFrame,
@@ -13,17 +14,16 @@ import {
   PieDonutChart,
   WaterfallChart,
 } from "@rwcourson/chart-elements/charts";
-import { ModernCard } from "@rwcourson/chart-elements/cards";
 import { DataTable } from "@rwcourson/chart-elements/tables";
-import { cn } from "@/lib/utils";
 import {
   dollarsCompact,
   formatTableCell,
   humanizeCategory,
   metricScaleKind,
-  scaleForMetric,
   type ScaleKind,
+  scaleForMetric,
 } from "@/components/dashboards/chart-format";
+import { cn } from "@/lib/utils";
 
 export { dollarsCompact };
 
@@ -32,7 +32,11 @@ function kindFromPercent(percent?: boolean): ScaleKind {
 }
 
 /** Shared empty-state for short/empty series — never throw on blank canvas. */
-export function ChartEmptyState({ label = "No data for this view." }: { label?: string }) {
+export function ChartEmptyState({
+  label = "No data for this view.",
+}: {
+  label?: string;
+}) {
   return (
     <div className="flex h-[240px] w-full items-center justify-center rounded-md border border-dashed bg-muted/20 px-4 text-center text-sm text-muted-foreground">
       {label}
@@ -112,7 +116,7 @@ export function TrendChart({
     seriesKeys.map((key) => {
       const v = row[key];
       return v == null ? 0 : Number(v);
-    }),
+    })
   );
   const scaled = scaleForMetric(raw, kindFromPercent(percent));
   const rows = data.map((row, ri) => {
@@ -177,7 +181,11 @@ export function VolumeByGroupChart({
 }) {
   return (
     <HorizontalBarChart
-      data={data.map((d) => ({ name: d.name, value: d.volume, secondary: d.rounds }))}
+      data={data.map((d) => ({
+        name: d.name,
+        value: d.volume,
+        secondary: d.rounds,
+      }))}
       valueLabel="Pursuit Volume"
     />
   );
@@ -196,7 +204,7 @@ export function HorizontalBarChart({
   const sorted = [...data].sort((a, b) => b.value - a.value);
   const scaled = scaleForMetric(
     sorted.map((d) => d.value),
-    kindFromPercent(percent),
+    kindFromPercent(percent)
   );
   const height = Math.max(240, Math.min(520, sorted.length * 44 + 48));
   return (
@@ -227,7 +235,7 @@ export function VerticalBarChart({
   if (!data.length) return <ChartEmptyState />;
   const scaled = scaleForMetric(
     data.map((d) => d.value),
-    kindFromPercent(percent),
+    kindFromPercent(percent)
   );
   return (
     <div className="h-[300px] w-full min-h-[240px]">
@@ -291,7 +299,7 @@ export function AreaMetricChart({
   percent?: boolean;
 }) {
   const raw = data.map((row) =>
-    row[dataKey] == null ? 0 : Number(row[dataKey]),
+    row[dataKey] == null ? 0 : Number(row[dataKey])
   );
   const scaled = scaleForMetric(raw, kindFromPercent(percent));
   return (
@@ -323,12 +331,16 @@ export function PieDonutMetricChart({
 }) {
   if (!data.length) return <ChartEmptyState />;
   // Collapse tiny slices + humanize labels so callouts don't pile up.
-  const total = data.reduce((s, d) => s + (Number.isFinite(d.value) ? d.value : 0), 0);
+  const total = data.reduce(
+    (s, d) => s + (Number.isFinite(d.value) ? d.value : 0),
+    0
+  );
   const cleaned = data
     .map((d) => ({ name: humanizeCategory(d.name), value: d.value }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
-  if (!cleaned.length) return <ChartEmptyState label="No positive values to chart." />;
+  if (!cleaned.length)
+    return <ChartEmptyState label="No positive values to chart." />;
   const top = cleaned.slice(0, 6);
   const rest = cleaned.slice(6);
   const restSum = rest.reduce((s, d) => s + d.value, 0);
@@ -394,7 +406,11 @@ export function ComboMetricChart({
 export function WaterfallMetricChart({
   points,
 }: {
-  points: { name: string; value: number; type: "increase" | "decrease" | "total" }[];
+  points: {
+    name: string;
+    value: number;
+    type: "increase" | "decrease" | "total";
+  }[];
 }) {
   if (!points.length) return <ChartEmptyState />;
   const finite = points.filter((p) => Number.isFinite(p.value));
@@ -450,7 +466,11 @@ export function KpiMetricCard({
         metric={{
           label,
           value: numeric,
-          format: percent ? "percent" : Math.abs(numeric) >= 1000 ? "currency" : "number",
+          format: percent
+            ? "percent"
+            : Math.abs(numeric) >= 1000
+              ? "currency"
+              : "number",
           compact: true,
         }}
         size="md"
@@ -462,7 +482,9 @@ export function KpiMetricCard({
 
   return (
     <div className="border-l-2 border-[var(--chart-1)] px-3 py-2.5">
-      <p className="text-3xl font-semibold tracking-tight tabular-nums">{value}</p>
+      <p className="text-3xl font-semibold tracking-tight tabular-nums">
+        {value}
+      </p>
       {sub && <p className="mt-1.5 text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -503,6 +525,9 @@ export function CeDataTable({
 }
 
 /** @internal helper for callers that need scale kind from metric key */
-export function scaleKindForWidget(metricKey?: string | null, percent?: boolean) {
+export function scaleKindForWidget(
+  metricKey?: string | null,
+  percent?: boolean
+) {
   return metricScaleKind(metricKey, percent);
 }

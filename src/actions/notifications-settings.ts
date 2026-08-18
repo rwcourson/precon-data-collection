@@ -4,19 +4,26 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { appSettings, auditLog } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { assertPrincipalAdmin } from "@/services/mutation-policy";
 import {
   DEFAULT_SETTINGS,
   getNotificationSettings,
+  type NotificationSettings,
   runReminderSweep,
   SETTINGS_KEY,
-  type NotificationSettings,
   type SweepResult,
 } from "@/lib/reminders";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
-export async function saveNotificationSettings(next: Partial<NotificationSettings>) {
+export async function saveNotificationSettings(
+  next: Partial<NotificationSettings>
+) {
   const principal = await getWebPrincipal();
-  assertPrincipalAdmin(principal, "notifications", "edit", "Notification settings");
+  assertPrincipalAdmin(
+    principal,
+    "notifications",
+    "edit",
+    "Notification settings"
+  );
   const user = principal.user;
 
   const current = await getNotificationSettings();
@@ -25,12 +32,21 @@ export async function saveNotificationSettings(next: Partial<NotificationSetting
     ...current,
     ...next,
     graceDays: clampDays(next.graceDays ?? current.graceDays, 0, 60),
-    escalateAfterDays: clampDays(next.escalateAfterDays ?? current.escalateAfterDays, 1, 180),
+    escalateAfterDays: clampDays(
+      next.escalateAfterDays ?? current.escalateAfterDays,
+      1,
+      180
+    ),
   };
 
   await db
     .insert(appSettings)
-    .values({ key: SETTINGS_KEY, value: merged, updatedById: user.id, updatedAt: new Date() })
+    .values({
+      key: SETTINGS_KEY,
+      value: merged,
+      updatedById: user.id,
+      updatedAt: new Date(),
+    })
     .onConflictDoUpdate({
       target: appSettings.key,
       set: { value: merged, updatedById: user.id, updatedAt: new Date() },
@@ -51,7 +67,12 @@ export async function saveNotificationSettings(next: Partial<NotificationSetting
 
 export async function runRemindersNow(): Promise<SweepResult> {
   const principal = await getWebPrincipal();
-  assertPrincipalAdmin(principal, "notifications", "edit", "Notification settings");
+  assertPrincipalAdmin(
+    principal,
+    "notifications",
+    "edit",
+    "Notification settings"
+  );
   const result = await runReminderSweep({ force: true });
   revalidatePath("/admin");
   revalidatePath("/", "layout");

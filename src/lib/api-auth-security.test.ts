@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { switchUser } from "@/actions/user";
 import { db } from "@/db";
 import { apiTokens, users } from "@/db/schema";
@@ -32,17 +32,28 @@ describe("bearer token security", () => {
     try {
       const valid = await authenticateBearer(`Bearer ${secret.plaintext}`);
       expect(valid.ok).toBe(true);
-      const [used] = await db.select().from(apiTokens).where(eq(apiTokens.id, token.id));
+      const [used] = await db
+        .select()
+        .from(apiTokens)
+        .where(eq(apiTokens.id, token.id));
       expect(used.lastUsedAt).not.toBeNull();
-      await db.update(apiTokens).set({ revokedAt: new Date() }).where(eq(apiTokens.id, token.id));
-      expect((await authenticateBearer(`Bearer ${secret.plaintext}`)).ok).toBe(false);
+      await db
+        .update(apiTokens)
+        .set({ revokedAt: new Date() })
+        .where(eq(apiTokens.id, token.id));
+      expect((await authenticateBearer(`Bearer ${secret.plaintext}`)).ok).toBe(
+        false
+      );
     } finally {
       await db.delete(apiTokens).where(eq(apiTokens.id, token.id));
     }
   });
 
   it("requires the route's declared scope and intersects token/workspace Regions", async () => {
-    const [owner] = await db.select().from(users).where(eq(users.role, "corporate_admin"));
+    const [owner] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "corporate_admin"));
     const secret = generateApiTokenSecret();
     const [token] = await db
       .insert(apiTokens)
@@ -63,14 +74,19 @@ describe("bearer token security", () => {
           "x-workspace-region": "Central",
         },
       });
-      const allowed = await withMobileAuth(req, { scopes: "read:pursuits" }, async (principal) =>
-        jsonOk({ regions: principal.authorization.allowedRegions }),
+      const allowed = await withMobileAuth(
+        req,
+        { scopes: "read:pursuits" },
+        async (principal) =>
+          jsonOk({ regions: principal.authorization.allowedRegions })
       );
       expect(allowed.status).toBe(200);
       expect(await allowed.json()).toEqual({ regions: [] });
 
-      const denied = await withMobileAuth(req, { scopes: "write:pursuits" }, async () =>
-        jsonOk({ unexpected: true }),
+      const denied = await withMobileAuth(
+        req,
+        { scopes: "write:pursuits" },
+        async () => jsonOk({ unexpected: true })
       );
       expect(denied.status).toBe(403);
     } finally {
@@ -91,9 +107,15 @@ describe("bearer token security", () => {
     vi.stubEnv("MICROSOFT_TENANT_ID", "test-tenant-id");
     try {
       const result = await resolveMobilePrincipal(`Bearer ${issued.token}`);
-      expect(result).toMatchObject({ ok: false, status: 401, error: "Demo session is disabled" });
+      expect(result).toMatchObject({
+        ok: false,
+        status: 401,
+        error: "Demo session is disabled",
+      });
     } finally {
-      await db.delete(apiTokens).where(eq(apiTokens.tokenHash, hashToken(issued.token)));
+      await db
+        .delete(apiTokens)
+        .where(eq(apiTokens.tokenHash, hashToken(issued.token)));
     }
   });
 
@@ -124,10 +146,26 @@ describe("bearer token security", () => {
       })
       .returning();
     try {
-      expect(await revokeDemoSessionTokens({ apply: false, namePrefix: "phase4-demo-session:" })).toEqual({ mode: "dry-run", matched: 1 });
-      expect((await db.select().from(apiTokens).where(eq(apiTokens.id, token.id)))[0].revokedAt).toBeNull();
-      expect(await revokeDemoSessionTokens({ apply: true, namePrefix: "phase4-demo-session:" })).toEqual({ mode: "apply", matched: 1 });
-      expect((await db.select().from(apiTokens).where(eq(apiTokens.id, token.id)))[0].revokedAt).not.toBeNull();
+      expect(
+        await revokeDemoSessionTokens({
+          apply: false,
+          namePrefix: "phase4-demo-session:",
+        })
+      ).toEqual({ mode: "dry-run", matched: 1 });
+      expect(
+        (await db.select().from(apiTokens).where(eq(apiTokens.id, token.id)))[0]
+          .revokedAt
+      ).toBeNull();
+      expect(
+        await revokeDemoSessionTokens({
+          apply: true,
+          namePrefix: "phase4-demo-session:",
+        })
+      ).toEqual({ mode: "apply", matched: 1 });
+      expect(
+        (await db.select().from(apiTokens).where(eq(apiTokens.id, token.id)))[0]
+          .revokedAt
+      ).not.toBeNull();
     } finally {
       await db.delete(apiTokens).where(eq(apiTokens.id, token.id));
     }
@@ -151,7 +189,8 @@ describe("mobile route scope declaration boundary", () => {
     for (const file of files) {
       const source = fs.readFileSync(file, "utf8");
       calls += source.match(/withMobileAuth\(/g)?.length ?? 0;
-      declarations += source.match(/withMobileAuth\(req,\s*\{\s*scopes:/g)?.length ?? 0;
+      declarations +=
+        source.match(/withMobileAuth\(\s*req,\s*\{\s*scopes:/g)?.length ?? 0;
     }
     expect(calls).toBeGreaterThan(0);
     expect(declarations).toBe(calls);

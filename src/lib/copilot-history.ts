@@ -17,14 +17,20 @@ export type CopilotHistoryStore = {
 };
 
 export const COPILOT_HISTORY_LIMIT = 30;
-export const EMPTY_COPILOT_HISTORY: CopilotHistoryStore = { activeId: "", conversations: [] };
+export const EMPTY_COPILOT_HISTORY: CopilotHistoryStore = {
+  activeId: "",
+  conversations: [],
+};
 
 function storageKey(userId: number) {
   return `precon.copilot.history.v1.${userId}`;
 }
 
 const listeners = new Map<number, Set<() => void>>();
-const snapshots = new Map<number, { raw: string; store: CopilotHistoryStore }>();
+const snapshots = new Map<
+  number,
+  { raw: string; store: CopilotHistoryStore }
+>();
 
 function parseStore(raw: string, fallbackId: string): CopilotHistoryStore {
   try {
@@ -33,7 +39,7 @@ function parseStore(raw: string, fallbackId: string): CopilotHistoryStore {
       return { activeId: fallbackId, conversations: [] };
     }
     const conversations = parsed.conversations.filter(
-      (row) => row && typeof row.id === "string" && Array.isArray(row.messages),
+      (row) => row && typeof row.id === "string" && Array.isArray(row.messages)
     );
     const activeId =
       conversations.some((row) => row.id === parsed.activeId) && parsed.activeId
@@ -70,7 +76,9 @@ export function newConversationId() {
   return `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function emptyConversation(id = newConversationId()): CopilotConversation {
+export function emptyConversation(
+  id = newConversationId()
+): CopilotConversation {
   return { id, title: "New chat", updatedAt: Date.now(), messages: [] };
 }
 
@@ -92,7 +100,9 @@ function slimPart(part: Record<string, unknown>): Record<string, unknown> {
   return { ...part, output: output.slice(0, 24), result: undefined };
 }
 
-export function slimMessages(messages: CopilotHistoryMessage[]): CopilotHistoryMessage[] {
+export function slimMessages(
+  messages: CopilotHistoryMessage[]
+): CopilotHistoryMessage[] {
   return messages.slice(-80).map((message) => ({
     ...message,
     parts: message.parts.map(slimPart),
@@ -101,7 +111,7 @@ export function slimMessages(messages: CopilotHistoryMessage[]): CopilotHistoryM
 
 export function upsertConversation(
   store: CopilotHistoryStore,
-  conversation: CopilotConversation,
+  conversation: CopilotConversation
 ): CopilotHistoryStore {
   const next = {
     ...conversation,
@@ -124,7 +134,10 @@ export function loadCopilotHistory(userId: number): CopilotHistoryStore {
   if (cached && cached.raw === raw) return cached.store;
   const store = raw
     ? parseStore(raw, cached?.store.activeId || newConversationId())
-    : { activeId: cached?.store.activeId || newConversationId(), conversations: [] };
+    : {
+        activeId: cached?.store.activeId || newConversationId(),
+        conversations: [],
+      };
   snapshots.set(userId, { raw, store });
   return store;
 }

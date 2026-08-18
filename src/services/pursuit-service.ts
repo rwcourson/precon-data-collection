@@ -3,45 +3,49 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
   auditLog,
-  customColumnValues,
   customColumns,
+  customColumnValues,
   estimateRounds,
   jobs,
   notifications,
+  type RoundStatus,
   roundMultiValues,
   statusTransitions,
   users,
-  type RoundStatus,
 } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
+import { authorize } from "@/lib/authorization/kernel";
+import { allowedTransitions } from "@/lib/authorization/lifecycle";
 import {
   loadJobForPrincipal,
   loadRoundForPrincipal,
 } from "@/lib/authorization/loaders";
 import type { Principal } from "@/lib/authorization/types";
-import { authorize } from "@/lib/authorization/kernel";
-import { MULTI_FIELD_KEYS, ROUND_COLUMN_KEYS } from "@/lib/fields";
-import { connectProvider } from "@/lib/integrations/connect";
+import { type DuplicateMatch, findDuplicateJobs } from "@/lib/duplicate-jobs";
 import { deliverQueued, queueEmails } from "@/lib/email";
-import { planOutcomeUpdate, type OutcomeValue } from "@/lib/outcome";
-import { allowedTransitions } from "@/lib/authorization/lifecycle";
+import { MULTI_FIELD_KEYS, ROUND_COLUMN_KEYS } from "@/lib/fields";
+import { resolveCreatorHomeRegion } from "@/lib/home-region";
+import { connectProvider } from "@/lib/integrations/connect";
 import { STATUS_LABELS } from "@/lib/labels";
-import { getMultiValues, getReferenceValues, getRoundWithJob } from "@/lib/queries";
+import { type OutcomeValue, planOutcomeUpdate } from "@/lib/outcome";
+import {
+  getMultiValues,
+  getReferenceValues,
+  getRoundWithJob,
+} from "@/lib/queries";
 import { getNotificationSettings } from "@/lib/reminders";
 import { planSalesforceLink } from "@/lib/salesforce-link";
-import { evaluateLockGate, validateFieldValue } from "@/lib/validation";
-import { findDuplicateJobs, type DuplicateMatch } from "@/lib/duplicate-jobs";
-import { resolveCreatorHomeRegion } from "@/lib/home-region";
-import {
-  assertPrincipalCanCreatePursuit,
-  requireAuthorized,
-} from "@/services/mutation-policy";
-import { recordHomeRegionVisibility } from "@/services/visibility-service";
 import {
   transactionFault,
   updateRoundIfUnchanged,
   withTransaction,
 } from "@/lib/transactions";
+import { evaluateLockGate, validateFieldValue } from "@/lib/validation";
+import {
+  assertPrincipalCanCreatePursuit,
+  requireAuthorized,
+} from "@/services/mutation-policy";
+import { recordHomeRegionVisibility } from "@/services/visibility-service";
 
 export type CreatePursuitInput = {
   mode: "salesforce" | "manual";
@@ -64,13 +68,26 @@ export type CreatePursuitInput = {
   confirmDuplicate?: boolean;
 };
 
-export type CreatePursuitCreated = { kind: "created"; jobId: number; roundId: number };
-export type CreatePursuitDuplicates = { kind: "duplicates"; matches: DuplicateMatch[] };
-export type CreatePursuitResult = CreatePursuitCreated | CreatePursuitDuplicates;
+export type CreatePursuitCreated = {
+  kind: "created";
+  jobId: number;
+  roundId: number;
+};
+export type CreatePursuitDuplicates = {
+  kind: "duplicates";
+  matches: DuplicateMatch[];
+};
+export type CreatePursuitResult =
+  | CreatePursuitCreated
+  | CreatePursuitDuplicates;
 
-export function requireCreatedPursuit(result: CreatePursuitResult): CreatePursuitCreated {
+export function requireCreatedPursuit(
+  result: CreatePursuitResult
+): CreatePursuitCreated {
   if (result.kind !== "created") {
-    throw new Error(`Expected a created pursuit, received ${result.matches.length} duplicate match(es).`);
+    throw new Error(
+      `Expected a created pursuit, received ${result.matches.length} duplicate match(es).`
+    );
   }
   return result;
 }
@@ -102,9 +119,16 @@ function isUniqueViolation(error: unknown): boolean {
   let current: unknown = error;
   for (let depth = 0; depth < 5 && current != null; depth++) {
     if (typeof current === "object") {
-      const e = current as { code?: unknown; message?: unknown; cause?: unknown };
+      const e = current as {
+        code?: unknown;
+        message?: unknown;
+        cause?: unknown;
+      };
       if (e.code === "23505") return true;
-      if (typeof e.message === "string" && /duplicate key value|unique constraint/i.test(e.message)) {
+      if (
+        typeof e.message === "string" &&
+        /duplicate key value|unique constraint/i.test(e.message)
+      ) {
         return true;
       }
       current = e.cause;
@@ -133,7 +157,10 @@ async function generateTbdJobNumber(): Promise<string> {
 
 /** Transport-neutral pursuit mutations — caller supplies an explicit principal. */
 export const pursuitService = {
-  async createPursuit(principal: Principal, input: CreatePursuitInput): Promise<CreatePursuitResult> {
+  async createPursuit(
+    principal: Principal,
+    input: CreatePursuitInput
+  ): Promise<CreatePursuitResult> {
     const homeRegion = resolveCreatorHomeRegion(principal, input.region);
     assertPrincipalCanCreatePursuit(principal, homeRegion);
     const user = principal.user;
@@ -157,7 +184,10 @@ export const pursuitService = {
       state = state ?? sf.state;
       marketSector = marketSector ?? sf.marketSector;
     } else {
-      if (!input.jobName?.trim()) throw DomainError.badRequest("Job Name is required for manual pursuits");
+      if (!input.jobName?.trim())
+        throw DomainError.badRequest(
+          "Job Name is required for manual pursuits"
+        );
       jobName = input.jobName.trim();
       jobNumber = await generateTbdJobNumber();
     }
@@ -177,7 +207,13 @@ export const pursuitService = {
         })
         .from(jobs)
         .leftJoin(users, eq(jobs.createdById, users.id))
-        .leftJoin(estimateRounds, and(eq(estimateRounds.jobId, jobs.id), isNull(estimateRounds.deletedAt)))
+        .leftJoin(
+          estimateRounds,
+          and(
+            eq(estimateRounds.jobId, jobs.id),
+            isNull(estimateRounds.deletedAt)
+          )
+        )
         .where(isNull(jobs.deletedAt));
       const latest = new Map<number, (typeof existingRows)[number]>();
       for (const row of existingRows) {
@@ -186,14 +222,17 @@ export const pursuitService = {
           latest.set(row.jobId, row);
           continue;
         }
-        const prevAt = prev.lastActivityAt ? new Date(prev.lastActivityAt).getTime() : 0;
-        const nextAt = row.lastActivityAt ? new Date(row.lastActivityAt).getTime() : 0;
+        const prevAt = prev.lastActivityAt
+          ? new Date(prev.lastActivityAt).getTime()
+          : 0;
+        const nextAt = row.lastActivityAt
+          ? new Date(row.lastActivityAt).getTime()
+          : 0;
         if (nextAt >= prevAt) latest.set(row.jobId, row);
       }
-      const matches = findDuplicateJobs(
-        { jobName, city, state, owner: null },
-        [...latest.values()],
-      );
+      const matches = findDuplicateJobs({ jobName, city, state, owner: null }, [
+        ...latest.values(),
+      ]);
       if (matches.length > 0) return { kind: "duplicates", matches };
     }
 
@@ -307,8 +346,14 @@ export const pursuitService = {
     throw lastError;
   },
 
-  async transitionStatus(principal: Principal, roundId: number, to: RoundStatus) {
-    const loaded = await loadRoundForPrincipal(principal, roundId, { capability: "edit" });
+  async transitionStatus(
+    principal: Principal,
+    roundId: number,
+    to: RoundStatus
+  ) {
+    const loaded = await loadRoundForPrincipal(principal, roundId, {
+      capability: "edit",
+    });
     if (!loaded) throw DomainError.notFound("Round not found");
     const round = loaded.value.round;
     const user = principal.user;
@@ -319,14 +364,14 @@ export const pursuitService = {
       throw DomainError.badRequest(
         "Rounds cannot be locked through a direct status change.",
         "Locking requires the required-field gate.",
-        "Use the Approve & Lock flow instead.",
+        "Use the Approve & Lock flow instead."
       );
     }
 
     const allowed = allowedTransitions(principal, round);
     if (!allowed.includes(to)) {
       throw DomainError.forbidden(
-        `${user.name} cannot move this round from ${STATUS_LABELS[round.status]} to ${STATUS_LABELS[to]}`,
+        `${user.name} cannot move this round from ${STATUS_LABELS[round.status]} to ${STATUS_LABELS[to]}`
       );
     }
 
@@ -353,19 +398,29 @@ export const pursuitService = {
 
       let emailIds: number[] = [];
       if (to === "submitted") {
-        const [job] = await tx.select().from(jobs).where(eq(jobs.id, round.jobId));
+        const [job] = await tx
+          .select()
+          .from(jobs)
+          .where(eq(jobs.id, round.jobId));
         const targetId =
           round.estimateLeadId ??
-          (await tx.select().from(users).where(eq(users.role, "estimate_lead")))[0]?.id;
+          (
+            await tx.select().from(users).where(eq(users.role, "estimate_lead"))
+          )[0]?.id;
         if (targetId) {
           const title = `Post-bid data needed: ${job?.jobName ?? "Pursuit"}`;
           const body = `${round.estimatePhase} (Bid Year ${round.bidYear}) moved to Submitted. Complete the remaining post-bid fields.`;
           const settings = await getNotificationSettings(tx);
           if (settings.inApp) {
-            await tx.insert(notifications).values({ userId: targetId, title, body, roundId });
+            await tx
+              .insert(notifications)
+              .values({ userId: targetId, title, body, roundId });
           }
           if (settings.email) {
-            const [target] = await tx.select().from(users).where(eq(users.id, targetId));
+            const [target] = await tx
+              .select()
+              .from(users)
+              .where(eq(users.id, targetId));
             if (target?.email) {
               emailIds = await queueEmails(
                 [
@@ -378,7 +433,7 @@ export const pursuitService = {
                     roundId,
                   },
                 ],
-                tx,
+                tx
               );
             }
           }
@@ -394,14 +449,21 @@ export const pursuitService = {
       try {
         await deliverQueued(queuedEmailIds);
       } catch (error) {
-        console.error("Post-transition email delivery failed; outbox will retry.", error);
+        console.error(
+          "Post-transition email delivery failed; outbox will retry.",
+          error
+        );
       }
     }
 
     return { roundId, status: to };
   },
 
-  async assignEstimateLead(principal: Principal, roundId: number, userId: number | null) {
+  async assignEstimateLead(
+    principal: Principal,
+    roundId: number,
+    userId: number | null
+  ) {
     await requireRoundFieldWrite(principal, roundId, "estimateLead");
     await db
       .update(estimateRounds)
@@ -425,7 +487,7 @@ export const pursuitService = {
     const plan = planSalesforceLink(
       job,
       sf,
-      existingRounds.map((r) => r.id),
+      existingRounds.map((r) => r.id)
     );
 
     await db.update(jobs).set(plan.patch).where(eq(jobs.id, plan.jobId));
@@ -455,7 +517,9 @@ export const pursuitService = {
     // Prefer the snapshot the client rendered with; the fresh read below would
     // make the optimistic guard vacuous (it always matches itself).
     const clientSnapshot =
-      input.expectedUpdatedAt != null ? new Date(input.expectedUpdatedAt) : null;
+      input.expectedUpdatedAt != null
+        ? new Date(input.expectedUpdatedAt)
+        : null;
     const expectedUpdatedAt =
       clientSnapshot && !Number.isNaN(clientSnapshot.getTime())
         ? clientSnapshot
@@ -499,7 +563,10 @@ export const pursuitService = {
       }
     }
 
-    if (input.estimateLeadId !== undefined && input.estimateLeadId !== round.estimateLeadId) {
+    if (
+      input.estimateLeadId !== undefined &&
+      input.estimateLeadId !== round.estimateLeadId
+    ) {
       patch.estimateLeadId = input.estimateLeadId;
       changedFields.push("estimateLead");
       if (locked) {
@@ -516,12 +583,17 @@ export const pursuitService = {
       }
     }
 
-    const multiChanges: { key: string; previous: string[]; next: string[] }[] = [];
+    const multiChanges: { key: string; previous: string[]; next: string[] }[] =
+      [];
     for (const key of MULTI_FIELD_KEYS) {
       if (!(key in input.multiValues)) continue;
       const next = [...new Set(input.multiValues[key])];
       const previous = existingMulti[key] ?? [];
-      if (JSON.stringify([...previous].sort()) === JSON.stringify([...next].sort())) continue;
+      if (
+        JSON.stringify([...previous].sort()) ===
+        JSON.stringify([...next].sort())
+      )
+        continue;
       multiChanges.push({ key, previous, next });
       changedFields.push(key);
       if (locked) {
@@ -546,14 +618,20 @@ export const pursuitService = {
     }[] = [];
     const colIds = Object.keys(input.customValues).map(Number);
     if (colIds.length > 0) {
-      const cols = await db.select().from(customColumns).where(inArray(customColumns.id, colIds));
+      const cols = await db
+        .select()
+        .from(customColumns)
+        .where(inArray(customColumns.id, colIds));
       for (const col of cols) {
         const raw = input.customValues[col.id] ?? "";
         const [existing] = await db
           .select()
           .from(customColumnValues)
           .where(
-            and(eq(customColumnValues.columnId, col.id), eq(customColumnValues.roundId, round.id)),
+            and(
+              eq(customColumnValues.columnId, col.id),
+              eq(customColumnValues.roundId, round.id)
+            )
           );
         const previous = existing?.value ?? "";
         if (previous === raw || (!existing && !raw)) continue;
@@ -588,7 +666,11 @@ export const pursuitService = {
         const { appendEntityVersion } = await import("@/lib/recovery");
         await appendEntityVersion("round", round.id, { ...round }, user.id, tx);
       }
-      if (Object.keys(patch).length > 0 || multiChanges.length > 0 || customChanges.length > 0) {
+      if (
+        Object.keys(patch).length > 0 ||
+        multiChanges.length > 0 ||
+        customChanges.length > 0
+      ) {
         await updateRoundIfUnchanged(tx, {
           roundId: round.id,
           expectedStatus: round.status,
@@ -601,13 +683,20 @@ export const pursuitService = {
         await tx
           .delete(roundMultiValues)
           .where(
-            and(eq(roundMultiValues.roundId, round.id), eq(roundMultiValues.field, change.key)),
+            and(
+              eq(roundMultiValues.roundId, round.id),
+              eq(roundMultiValues.field, change.key)
+            )
           );
         transactionFault.maybeThrow("after-multi-delete");
         if (change.next.length > 0) {
-          await tx
-            .insert(roundMultiValues)
-            .values(change.next.map((value) => ({ roundId: round.id, field: change.key, value })));
+          await tx.insert(roundMultiValues).values(
+            change.next.map((value) => ({
+              roundId: round.id,
+              field: change.key,
+              value,
+            }))
+          );
         }
       }
       for (const change of customChanges) {
@@ -617,9 +706,11 @@ export const pursuitService = {
             .set({ value: change.next || null })
             .where(eq(customColumnValues.id, change.existingId));
         } else if (change.next) {
-          await tx
-            .insert(customColumnValues)
-            .values({ columnId: change.columnId, roundId: round.id, value: change.next });
+          await tx.insert(customColumnValues).values({
+            columnId: change.columnId,
+            roundId: round.id,
+            value: change.next,
+          });
         }
       }
       if (auditRows.length > 0) await tx.insert(auditLog).values(auditRows);
@@ -627,10 +718,16 @@ export const pursuitService = {
     return { changed: Object.keys(patch).length, audited: auditRows.length };
   },
 
-  async updateRoundCell(principal: Principal, roundId: number, key: string, value: string) {
+  async updateRoundCell(
+    principal: Principal,
+    roundId: number,
+    key: string,
+    value: string
+  ) {
     if (key.startsWith("custom:")) {
       const columnId = Number(key.slice("custom:".length));
-      if (!Number.isInteger(columnId)) throw DomainError.badRequest("Unknown column");
+      if (!Number.isInteger(columnId))
+        throw DomainError.badRequest("Unknown column");
       return pursuitService.savePostBidData(principal, {
         roundId,
         values: {},
@@ -640,7 +737,7 @@ export const pursuitService = {
     }
     if (!ROUND_COLUMN_KEYS.includes(key)) {
       throw DomainError.badRequest(
-        "That column is not editable from a sheet — open the record instead.",
+        "That column is not editable from a sheet — open the record instead."
       );
     }
     return pursuitService.savePostBidData(principal, {
@@ -668,11 +765,13 @@ export const pursuitService = {
         deleted: false,
         round: { status: round.status, region: round.region },
       },
-      "Round",
+      "Round"
     );
 
     if (round.status !== "post_bid") {
-      throw DomainError.badRequest("Record must be in Post-Bid Data Entry to approve");
+      throw DomainError.badRequest(
+        "Record must be in Post-Bid Data Entry to approve"
+      );
     }
 
     const row = await getRoundWithJob(roundId);
@@ -709,7 +808,11 @@ export const pursuitService = {
     return { ok: true as const };
   },
 
-  async setOutcome(principal: Principal, roundId: number, outcome: OutcomeValue) {
+  async setOutcome(
+    principal: Principal,
+    roundId: number,
+    outcome: OutcomeValue
+  ) {
     const loaded = await loadRoundForPrincipal(principal, roundId);
     if (!loaded) throw DomainError.notFound("Round not found");
     const round = loaded.value.round;
@@ -731,7 +834,7 @@ export const pursuitService = {
           deleted: false,
           round: { status: round.status, region: round.region },
         },
-        "Round",
+        "Round"
       );
     }
 
@@ -751,7 +854,11 @@ export const pursuitService = {
   },
 };
 
-async function requireRoundFieldWrite(principal: Principal, roundId: number, fieldKey: string) {
+async function requireRoundFieldWrite(
+  principal: Principal,
+  roundId: number,
+  fieldKey: string
+) {
   const loaded = await loadRoundForPrincipal(principal, roundId, {
     capability: "edit",
     fieldKey,
@@ -762,7 +869,7 @@ async function requireRoundFieldWrite(principal: Principal, roundId: number, fie
     if (!readable) throw DomainError.notFound("Round not found");
     throw DomainError.forbidden(
       `Not permitted to edit field ${fieldKey}`,
-      "Field policy or role does not allow this write.",
+      "Field policy or role does not allow this write."
     );
   }
   const decision = authorize(principal, "edit", {
@@ -772,7 +879,7 @@ async function requireRoundFieldWrite(principal: Principal, roundId: number, fie
   if (!decision.allowed) {
     throw DomainError.forbidden(
       `Not permitted to edit field ${fieldKey}`,
-      `Authorization denied (${decision.reason}).`,
+      `Authorization denied (${decision.reason}).`
     );
   }
   return loaded.value.round;

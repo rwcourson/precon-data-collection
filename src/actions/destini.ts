@@ -1,21 +1,21 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { auditLog, estimateRounds, jobs } from "@/db/schema";
+import { DomainError } from "@/domain/errors";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   DESTINI_WRITABLE_KEYS,
+  type DestiniMappedRow,
+  type DestiniWritableKey,
   filterWritableValues,
   mapDestiniSheet,
   parseDestiniCsv,
   parseDestiniWorkbook,
-  type DestiniMappedRow,
-  type DestiniWritableKey,
 } from "@/lib/destini-import";
-import { DomainError } from "@/domain/errors";
 import { FIELD_MAP } from "@/lib/fields";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { pursuitService } from "@/services/pursuit-service";
 
 /** Preview is open to signed-in principals; confirm applies the same field policy as interactive edits. */
@@ -63,7 +63,9 @@ export type DestiniPreviewResult = {
   rows: DestiniPreviewRow[];
 };
 
-async function buildPreview(mapped: DestiniMappedRow[]): Promise<DestiniPreviewRow[]> {
+async function buildPreview(
+  mapped: DestiniMappedRow[]
+): Promise<DestiniPreviewRow[]> {
   const out: DestiniPreviewRow[] = [];
 
   for (let index = 0; index < mapped.length; index++) {
@@ -107,13 +109,20 @@ async function buildPreview(mapped: DestiniMappedRow[]): Promise<DestiniPreviewR
     const rounds = await db
       .select()
       .from(estimateRounds)
-      .where(and(eq(estimateRounds.jobId, job.id), isNull(estimateRounds.deletedAt)));
+      .where(
+        and(eq(estimateRounds.jobId, job.id), isNull(estimateRounds.deletedAt))
+      );
 
     const sorted = [...rounds].sort((a, b) => b.roundNumber - a.roundNumber);
     base.rounds = sorted.map((r) => {
-      const current: Partial<Record<DestiniWritableKey, number | string | null>> = {};
+      const current: Partial<
+        Record<DestiniWritableKey, number | string | null>
+      > = {};
       for (const key of DESTINI_WRITABLE_KEYS) {
-        current[key] = (r as Record<string, unknown>)[key] as number | string | null;
+        current[key] = (r as Record<string, unknown>)[key] as
+          | number
+          | string
+          | null;
       }
       return {
         id: r.id,
@@ -143,17 +152,19 @@ async function buildPreview(mapped: DestiniMappedRow[]): Promise<DestiniPreviewR
 
     const target = base.rounds.find((r) => r.id === base.suggestedRoundId);
     if (target) {
-      base.diffs = DESTINI_WRITABLE_KEYS.filter((key) => key in row.values).map((key) => {
-        const current = target.current[key] ?? null;
-        const incoming = row.values[key] ?? null;
-        return {
-          key,
-          label: FIELD_MAP[key]?.label ?? key,
-          current,
-          incoming,
-          changed: String(current ?? "") !== String(incoming ?? ""),
-        };
-      });
+      base.diffs = DESTINI_WRITABLE_KEYS.filter((key) => key in row.values).map(
+        (key) => {
+          const current = target.current[key] ?? null;
+          const incoming = row.values[key] ?? null;
+          return {
+            key,
+            label: FIELD_MAP[key]?.label ?? key,
+            current,
+            incoming,
+            changed: String(current ?? "") !== String(incoming ?? ""),
+          };
+        }
+      );
     }
 
     out.push(base);
@@ -177,7 +188,9 @@ export async function previewDestiniRows(input: {
 }
 
 /** Preview CSV text (vertical or tabular). */
-export async function previewDestiniCsvText(text: string): Promise<DestiniPreviewResult> {
+export async function previewDestiniCsvText(
+  text: string
+): Promise<DestiniPreviewResult> {
   await assertImporter();
   const parsed = parseDestiniCsv(text);
   return {
@@ -188,7 +201,9 @@ export async function previewDestiniCsvText(text: string): Promise<DestiniPrevie
 }
 
 /** Preview an uploaded .xlsx / .csv file. */
-export async function previewDestiniFile(formData: FormData): Promise<DestiniPreviewResult> {
+export async function previewDestiniFile(
+  formData: FormData
+): Promise<DestiniPreviewResult> {
   await assertImporter();
   const file = formData.get("file");
   if (!(file instanceof File)) throw new Error("No file uploaded.");
@@ -224,7 +239,8 @@ export async function confirmDestiniImport(input: {
   const principal = await assertImporter();
   const values = filterWritableValues(input.values);
   const keys = Object.keys(values) as DestiniWritableKey[];
-  if (keys.length === 0) throw DomainError.badRequest("No Destini fields to import.");
+  if (keys.length === 0)
+    throw DomainError.badRequest("No Destini fields to import.");
 
   const stringValues: Record<string, string> = {};
   for (const key of keys) {

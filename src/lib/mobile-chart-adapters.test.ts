@@ -51,7 +51,9 @@ describe("mobile-chart-adapters (shipped)", () => {
       locked: 227,
       post_bid: 14,
     });
-    expect(pts.some((p) => p.label.includes("locked") || p.value === 227)).toBe(true);
+    expect(pts.some((p) => p.label.includes("locked") || p.value === 227)).toBe(
+      true
+    );
     expect(pts.every((p) => p.value > 0)).toBe(true);
   });
 

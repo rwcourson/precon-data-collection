@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import { and, eq, isNull, ne } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { estimateRounds, jobs, users, type User } from "@/db/schema";
+import { estimateRounds, jobs, type User, users } from "@/db/schema";
 import {
   countPreBidStatusesForPrincipal,
   listRoundsWithJobsForPrincipal,
@@ -56,7 +56,12 @@ async function seeded(): Promise<{
   const [floridaRound] = await db
     .select()
     .from(estimateRounds)
-    .where(and(eq(estimateRounds.region, "Florida"), isNull(estimateRounds.deletedAt)))
+    .where(
+      and(
+        eq(estimateRounds.region, "Florida"),
+        isNull(estimateRounds.deletedAt)
+      )
+    )
     .limit(1);
   expect(pcm).toBeDefined();
   expect(leadership).toBeDefined();
@@ -64,14 +69,26 @@ async function seeded(): Promise<{
   expect(centralJob).toBeDefined();
   expect(floridaJob).toBeDefined();
   expect(floridaRound).toBeDefined();
-  return { pcm, leadership, corporate, estimateLead, adminJsa, rpd, centralJob, floridaJob, floridaRound };
+  return {
+    pcm,
+    leadership,
+    corporate,
+    estimateLead,
+    adminJsa,
+    rpd,
+    centralJob,
+    floridaJob,
+    floridaRound,
+  };
 }
 
 describe("characterization: current job visibility per role × region", () => {
   it("pcm in Central workspace sees Central jobs and not Florida jobs", async () => {
     const { pcm, centralJob, floridaJob, floridaRound } = await seeded();
     const actor = principalFor(pcm, "Central");
-    expect((await loadJobForPrincipal(actor, centralJob.id))?.value.id).toBe(centralJob.id);
+    expect((await loadJobForPrincipal(actor, centralJob.id))?.value.id).toBe(
+      centralJob.id
+    );
     expect(await loadJobForPrincipal(actor, floridaJob.id)).toBeNull();
     expect(await loadRoundForPrincipal(actor, floridaRound.id)).toBeNull();
 
@@ -82,10 +99,13 @@ describe("characterization: current job visibility per role × region", () => {
   });
 
   it("estimate_lead, admin_jsa, and rpd in Central workspace match pcm (own region only)", async () => {
-    const { estimateLead, adminJsa, rpd, centralJob, floridaJob } = await seeded();
+    const { estimateLead, adminJsa, rpd, centralJob, floridaJob } =
+      await seeded();
     for (const user of [estimateLead, adminJsa, rpd]) {
       const actor = principalFor(user, "Central");
-      expect((await loadJobForPrincipal(actor, centralJob.id))?.value.id).toBe(centralJob.id);
+      expect((await loadJobForPrincipal(actor, centralJob.id))?.value.id).toBe(
+        centralJob.id
+      );
       expect(await loadJobForPrincipal(actor, floridaJob.id)).toBeNull();
       const listed = await listRoundsWithJobsForPrincipal(actor);
       expect(listed.every((row) => row.job.region === "Central")).toBe(true);
@@ -95,8 +115,12 @@ describe("characterization: current job visibility per role × region", () => {
   it("corporate_admin in corporate workspace sees every region", async () => {
     const { corporate, centralJob, floridaJob } = await seeded();
     const actor = principalFor(corporate, null);
-    expect((await loadJobForPrincipal(actor, centralJob.id))?.value.id).toBe(centralJob.id);
-    expect((await loadJobForPrincipal(actor, floridaJob.id))?.value.id).toBe(floridaJob.id);
+    expect((await loadJobForPrincipal(actor, centralJob.id))?.value.id).toBe(
+      centralJob.id
+    );
+    expect((await loadJobForPrincipal(actor, floridaJob.id))?.value.id).toBe(
+      floridaJob.id
+    );
 
     const listed = await listRoundsWithJobsForPrincipal(actor);
     const regions = new Set(listed.map((row) => row.job.region));
@@ -109,9 +133,13 @@ describe("characterization: current job visibility per role × region", () => {
     const corporateWs = principalFor(leadership, null);
     const centralWs = principalFor(leadership, "Central");
 
-    expect((await loadJobForPrincipal(corporateWs, floridaJob.id))?.value.id).toBe(floridaJob.id);
+    expect(
+      (await loadJobForPrincipal(corporateWs, floridaJob.id))?.value.id
+    ).toBe(floridaJob.id);
     expect(await loadJobForPrincipal(centralWs, floridaJob.id)).toBeNull();
-    expect((await loadJobForPrincipal(centralWs, centralJob.id))?.value.id).toBe(centralJob.id);
+    expect(
+      (await loadJobForPrincipal(centralWs, centralJob.id))?.value.id
+    ).toBe(centralJob.id);
 
     const corpList = await listRoundsWithJobsForPrincipal(corporateWs);
     const pinnedList = await listRoundsWithJobsForPrincipal(centralWs);
@@ -122,14 +150,20 @@ describe("characterization: current job visibility per role × region", () => {
 
   it("pre-bid bucket counts for Central workspace are a subset of corporate_admin totals", async () => {
     const { pcm, corporate } = await seeded();
-    const central = await countPreBidStatusesForPrincipal(principalFor(pcm, "Central"));
-    const all = await countPreBidStatusesForPrincipal(principalFor(corporate, null));
-    expect(central.active + central.upcoming + central.outstanding).toBeGreaterThan(0);
+    const central = await countPreBidStatusesForPrincipal(
+      principalFor(pcm, "Central")
+    );
+    const all = await countPreBidStatusesForPrincipal(
+      principalFor(corporate, null)
+    );
+    expect(
+      central.active + central.upcoming + central.outstanding
+    ).toBeGreaterThan(0);
     expect(all.active).toBeGreaterThanOrEqual(central.active);
     expect(all.upcoming).toBeGreaterThanOrEqual(central.upcoming);
     expect(all.outstanding).toBeGreaterThanOrEqual(central.outstanding);
     expect(all.active + all.upcoming + all.outstanding).toBeGreaterThan(
-      central.active + central.upcoming + central.outstanding,
+      central.active + central.upcoming + central.outstanding
     );
   });
 

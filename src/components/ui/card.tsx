@@ -1,6 +1,6 @@
-import * as React from "react"
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Card({
   className,
@@ -17,7 +17,7 @@ function Card({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -30,7 +30,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
@@ -43,17 +43,20 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-[13px] leading-relaxed text-ink-secondary", className)}
+      className={cn(
+        "text-[13px] leading-relaxed text-ink-secondary",
+        className
+      )}
       {...props}
     />
-  )
+  );
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
@@ -66,7 +69,7 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
@@ -76,7 +79,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("px-(--card-spacing)", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -89,15 +92,15 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 export {
   Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
   CardAction,
-  CardDescription,
   CardContent,
-}
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+};

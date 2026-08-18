@@ -1,8 +1,5 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
   FileSpreadsheet,
   FileText,
@@ -11,6 +8,25 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  addSheetColumn,
+  addSheetRow,
+  deleteSheetColumn,
+  deleteSheetRow,
+  reorderSheetColumns,
+  updateSheetCell,
+  updateSheetColumn,
+} from "@/actions/sheets";
+import {
+  type ColumnFilters,
+  DataGrid,
+  type GridColumn,
+  type GridRow,
+  type SortState,
+} from "@/components/sheets/data-grid";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,24 +45,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DataGrid,
-  type ColumnFilters,
-  type GridColumn,
-  type GridRow,
-  type SortState,
-} from "@/components/sheets/data-grid";
-import {
-  addSheetColumn,
-  addSheetRow,
-  deleteSheetColumn,
-  deleteSheetRow,
-  reorderSheetColumns,
-  updateSheetCell,
-  updateSheetColumn,
-} from "@/actions/sheets";
-import { SHEET_COLUMN_TYPES } from "@/lib/sheets";
 import type { SheetColumn, SheetColumnType, SheetRow } from "@/db/schema";
+import { SHEET_COLUMN_TYPES } from "@/lib/sheets";
 
 /**
  * A standalone sheet: its own columns and rows, for the Smartsheet tabs that
@@ -96,7 +96,7 @@ export function GridSheet({
         options: c.options ?? undefined,
         editable: canEdit,
       })),
-    [displayColumns, widths, canEdit],
+    [displayColumns, widths, canEdit]
   );
 
   const gridRows: GridRow[] = useMemo(
@@ -108,10 +108,10 @@ export function GridSheet({
             const raw = r.values[c.key] ?? null;
             const numeric = ["number", "dollars"].includes(c.type);
             return [c.key, numeric && raw != null ? Number(raw) : raw];
-          }),
+          })
         ),
       })),
-    [rows, displayColumns],
+    [rows, displayColumns]
   );
 
   async function editCell(rowId: number, key: string, value: string) {
@@ -150,7 +150,9 @@ export function GridSheet({
             items={[
               { value: "", label: "No grouping" },
               ...columns
-                .filter((c) => ["text", "dropdown", "date", "contact"].includes(c.type))
+                .filter((c) =>
+                  ["text", "dropdown", "date", "contact"].includes(c.type)
+                )
                 .map((c) => ({ value: c.key, label: c.label })),
             ]}
             value={groupBy}
@@ -162,7 +164,9 @@ export function GridSheet({
             <SelectContent>
               <SelectItem value="">No grouping</SelectItem>
               {columns
-                .filter((c) => ["text", "dropdown", "date", "contact"].includes(c.type))
+                .filter((c) =>
+                  ["text", "dropdown", "date", "contact"].includes(c.type)
+                )
                 .map((c) => (
                   <SelectItem key={c.key} value={c.key}>
                     {c.label}
@@ -173,7 +177,9 @@ export function GridSheet({
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
-          {pending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+          {pending && (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -186,12 +192,19 @@ export function GridSheet({
             size="sm"
             variant="outline"
             nativeButton={false}
-            render={<a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />}
+            render={
+              <a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />
+            }
           >
             <FileText className="size-4" /> PDF
           </Button>
           {canEdit && (
-            <Button size="sm" className="gap-1.5" onClick={newRow} disabled={pending}>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={newRow}
+              disabled={pending}
+            >
               <Plus className="size-4" /> Add row
             </Button>
           )}
@@ -207,7 +220,9 @@ export function GridSheet({
         onFiltersChange={setGridFilters}
         groupBy={groupBy || null}
         widths={widths}
-        onWidthChange={(key, width) => setWidths((prev) => ({ ...prev, [key]: width }))}
+        onWidthChange={(key, width) =>
+          setWidths((prev) => ({ ...prev, [key]: width }))
+        }
         onColumnOrderChange={
           canManage
             ? (keys) => {
@@ -220,7 +235,9 @@ export function GridSheet({
                     await reorderSheetColumns(sheetId, ids);
                   } catch (e) {
                     toast.error(
-                      e instanceof Error ? e.message : "Could not reorder columns",
+                      e instanceof Error
+                        ? e.message
+                        : "Could not reorder columns"
                     );
                   }
                 });
@@ -242,7 +259,11 @@ export function GridSheet({
                         await deleteSheetRow(row.id);
                         router.refresh();
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Could not delete the row");
+                        toast.error(
+                          e instanceof Error
+                            ? e.message
+                            : "Could not delete the row"
+                        );
                       }
                     })
                   }
@@ -282,7 +303,9 @@ function AddColumnDialog({ sheetId }: { sheetId: number }) {
         setType("text");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not add the column");
+        toast.error(
+          e instanceof Error ? e.message : "Could not add the column"
+        );
       }
     });
   }
@@ -303,7 +326,11 @@ function AddColumnDialog({ sheetId }: { sheetId: number }) {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Name</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} autoFocus />
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              autoFocus
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Type</Label>
@@ -335,7 +362,11 @@ function AddColumnDialog({ sheetId }: { sheetId: number }) {
             </div>
           )}
         </div>
-        <Button onClick={submit} disabled={pending || !label.trim()} className="w-full">
+        <Button
+          onClick={submit}
+          disabled={pending || !label.trim()}
+          className="w-full"
+        >
           {pending && <Loader2 className="size-4 animate-spin" />}
           Add column
         </Button>
@@ -361,7 +392,9 @@ function ManageColumnsDialog({
         await fn();
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not update the column");
+        toast.error(
+          e instanceof Error ? e.message : "Could not update the column"
+        );
       }
     });
 
@@ -386,10 +419,14 @@ function ManageColumnsDialog({
                 className="h-8"
                 onBlur={(e) => {
                   if (e.target.value.trim() && e.target.value !== c.label)
-                    run(() => updateSheetColumn(c.id, { label: e.target.value }));
+                    run(() =>
+                      updateSheetColumn(c.id, { label: e.target.value })
+                    );
                 }}
               />
-              <span className="w-16 shrink-0 text-2xs text-muted-foreground">{c.type}</span>
+              <span className="w-16 shrink-0 text-2xs text-muted-foreground">
+                {c.type}
+              </span>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -403,7 +440,8 @@ function ManageColumnsDialog({
           ))}
         </div>
         <p className="text-2xs text-muted-foreground">
-          Sheet id {sheetId} · {columns.length} column{columns.length === 1 ? "" : "s"}
+          Sheet id {sheetId} · {columns.length} column
+          {columns.length === 1 ? "" : "s"}
         </p>
       </DialogContent>
     </Dialog>

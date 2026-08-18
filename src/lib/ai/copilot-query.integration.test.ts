@@ -1,10 +1,10 @@
-import { afterAll, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { users } from "@/db/schema";
 import type { User } from "@/db/schema";
-import { createPrincipal } from "@/lib/authorization/principal";
+import { users } from "@/db/schema";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { createPrincipal } from "@/lib/authorization/principal";
 import { EMPTY_HIERARCHY } from "@/lib/bid-schedule-filter";
 import { filterNeedsStaffing } from "@/lib/staffing";
 import { copilotQueryService } from "@/services/copilot-query-service";
@@ -23,7 +23,11 @@ describe("copilot Principal-scoped tools", () => {
   });
 
   it("needs-staffing matches the phase-7 preset rows", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     const principal = principalFor(pcm, "Central");
     const listed = await listRoundsWithJobsForPrincipal(principal);
     const preset = filterNeedsStaffing(
@@ -34,22 +38,33 @@ describe("copilot Principal-scoped tools", () => {
         roundId: round.id,
         homeRegion: job.region,
       })),
-      EMPTY_HIERARCHY,
+      EMPTY_HIERARCHY
     );
     const tool = await copilotQueryService.queryNeedsStaffing(principal);
-    expect(tool.map((row) => row.roundId).sort()).toEqual(preset.map((row) => row.roundId).sort());
+    expect(tool.map((row) => row.roundId).sort()).toEqual(
+      preset.map((row) => row.roundId).sort()
+    );
   });
 
   it("person history answers from estimateLead + staffing marks for 2026", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
-    const [lead] = await db.select().from(users).where(eq(users.role, "estimate_lead")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
+    const [lead] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "estimate_lead"))
+      .limit(1);
     const principal = principalFor(pcm, "Central");
     const listed = await listRoundsWithJobsForPrincipal(principal);
     const expected = listed
       .filter(
         ({ round }) =>
           round.bidYear === 2026 &&
-          (round.estimateLeadId === lead.id || round.teamAssignedById === lead.id),
+          (round.estimateLeadId === lead.id ||
+            round.teamAssignedById === lead.id)
       )
       .map(({ round }) => round.id)
       .sort();
@@ -63,9 +78,16 @@ describe("copilot Principal-scoped tools", () => {
   });
 
   it("notes search returns round_notes with round citations", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     const principal = principalFor(pcm, "Central");
-    const hits = await copilotQueryService.searchNotes(principal, "ROM package");
+    const hits = await copilotQueryService.searchNotes(
+      principal,
+      "ROM package"
+    );
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0]?.excerpt).toMatch(/ROM package/i);
     expect(hits[0]?.citation).toMatch(/round \d+/);
@@ -97,6 +119,8 @@ describe("copilot Principal-scoped tools", () => {
       name: "Marcus Webb",
       year: 2026,
     });
-    expect(history.efforts.every((row) => row.homeRegion !== "Central")).toBe(true);
+    expect(history.efforts.every((row) => row.homeRegion !== "Central")).toBe(
+      true
+    );
   });
 });

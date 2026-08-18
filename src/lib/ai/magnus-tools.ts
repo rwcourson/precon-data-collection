@@ -5,11 +5,14 @@ import { z } from "zod";
 import type { EstimateRound } from "@/db/schema";
 import type { Principal } from "@/lib/authorization/types";
 import {
+  type CopilotPlan,
   planDashboardFromPrompt,
   planDashboardWithOptionalLlm,
-  type CopilotPlan,
 } from "@/lib/dashboard-copilot";
-import { dashboardCreateSchema, widgetConfigSchema } from "@/lib/dashboard-domain";
+import {
+  dashboardCreateSchema,
+  widgetConfigSchema,
+} from "@/lib/dashboard-domain";
 import { resolveWidgets } from "@/lib/dashboard-query";
 import { sanitizePlan } from "@/lib/dashboard-sanitize";
 import { fmtDollars, fmtNumber, fmtPercent } from "@/lib/format";
@@ -27,11 +30,13 @@ const REGION_LABELS = [
 function filterRounds(
   rounds: EstimateRound[],
   region?: string | null,
-  bidYear?: number | null,
+  bidYear?: number | null
 ): EstimateRound[] {
   let out = rounds;
   if (region) {
-    out = out.filter((r) => (r.region || "").toLowerCase() === region.toLowerCase());
+    out = out.filter(
+      (r) => (r.region || "").toLowerCase() === region.toLowerCase()
+    );
   }
   if (bidYear != null) {
     out = out.filter((r) => r.bidYear === bidYear);
@@ -41,8 +46,14 @@ function filterRounds(
 
 function buildBrief(rounds: EstimateRound[]): string {
   const totals = computeStats("all", rounds);
-  const byRegion = rollup(rounds, (r) => r.region || "Unclassified").slice(0, 8);
-  const bySector = rollup(rounds, (r) => r.marketSector || "Unclassified").slice(0, 8);
+  const byRegion = rollup(rounds, (r) => r.region || "Unclassified").slice(
+    0,
+    8
+  );
+  const bySector = rollup(
+    rounds,
+    (r) => r.marketSector || "Unclassified"
+  ).slice(0, 8);
   const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
   return [
     `Rounds: ${fmtNumber(totals.rounds)}`,
@@ -54,11 +65,11 @@ function buildBrief(rounds: EstimateRound[]): string {
     "Volume by region:",
     ...byRegion.map(
       (g) =>
-        `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds · win ${fmtPercent(g.winRate)}`,
+        `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds · win ${fmtPercent(g.winRate)}`
     ),
     "Volume by market sector:",
     ...bySector.map(
-      (g) => `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds`,
+      (g) => `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds`
     ),
   ].join("\n");
 }
@@ -91,7 +102,8 @@ function createPrincipalDataTools(principal: Principal) {
         department: z.string().optional(),
         bidYear: z.number().int().optional(),
       }),
-      execute: async (input) => copilotQueryService.queryEfforts(principal, input),
+      execute: async (input) =>
+        copilotQueryService.queryEfforts(principal, input),
     }),
     query_needs_staffing: tool({
       description:
@@ -112,7 +124,8 @@ function createPrincipalDataTools(principal: Principal) {
       inputSchema: z.object({
         query: z.string(),
       }),
-      execute: async ({ query }) => copilotQueryService.searchNotes(principal, query),
+      execute: async ({ query }) =>
+        copilotQueryService.searchNotes(principal, query),
     }),
     person_history: tool({
       description:
@@ -122,7 +135,8 @@ function createPrincipalDataTools(principal: Principal) {
         userId: z.number().int().optional(),
         year: z.number().int().min(2015).max(2040),
       }),
-      execute: async (input) => copilotQueryService.personHistory(principal, input),
+      execute: async (input) =>
+        copilotQueryService.personHistory(principal, input),
     }),
     plan_chart: tool({
       description:
@@ -130,7 +144,8 @@ function createPrincipalDataTools(principal: Principal) {
       inputSchema: z.object({
         intent: z.string().min(2).max(500),
       }),
-      execute: async ({ intent }) => copilotQueryService.planChart(principal, intent),
+      execute: async ({ intent }) =>
+        copilotQueryService.planChart(principal, intent),
     }),
   };
 }
@@ -209,7 +224,9 @@ export function createMagnusTools(ctx: MagnusToolContext) {
           .string()
           .min(2)
           .max(500)
-          .describe("User request for the dashboard / scorecard / report visuals"),
+          .describe(
+            "User request for the dashboard / scorecard / report visuals"
+          ),
         preferRegion: z.enum(REGION_LABELS).optional(),
       }),
       execute: async ({ intent, preferRegion }) => {
@@ -245,7 +262,8 @@ export function createMagnusTools(ctx: MagnusToolContext) {
           .optional(),
       }),
       execute: async ({ instruction, previousPlan }) => {
-        const base = (previousPlan as CopilotPlan | undefined) ?? ctx.previousPlan;
+        const base =
+          (previousPlan as CopilotPlan | undefined) ?? ctx.previousPlan;
         const seed = base
           ? `Refine this dashboard named "${base.name}" with widgets: ${base.widgets
               .map((w) => `${w.kind}:${w.title}`)

@@ -1,3 +1,4 @@
+import { saveAccessSettings } from "@/actions/access";
 import {
   addCustomColumn,
   addReferenceValue,
@@ -5,44 +6,45 @@ import {
   setReferenceValueRetired,
 } from "@/actions/admin";
 import { createApiToken, revokeApiToken } from "@/actions/api-tokens";
-import { saveAccessSettings } from "@/actions/access";
 import {
-  confirmDestiniImport,
-  previewDestiniCsvText,
-} from "@/actions/destini";
+  confirmLegacyBaseline,
+  rescanDataQuality,
+  resolveFlag,
+} from "@/actions/data-quality";
+import { confirmDestiniImport, previewDestiniCsvText } from "@/actions/destini";
 import {
   deleteDistributionList,
   sendDistributionNow,
   upsertDistributionList,
 } from "@/actions/distribution";
 import {
+  proposeFieldPromotion,
+  reviewFieldPromotion,
+} from "@/actions/governance";
+import {
   probeSmartsheetRead,
   probeWarehouseRead,
   runWarehouseFeed,
 } from "@/actions/integrations";
+import { saveNotificationSettings } from "@/actions/notifications-settings";
 import {
   decideMatchCandidate,
   runSalesforceSync,
 } from "@/actions/salesforce-inbox";
-import {
-  confirmLegacyBaseline,
-  resolveFlag,
-  rescanDataQuality,
-} from "@/actions/data-quality";
-import {
-  proposeFieldPromotion,
-  reviewFieldPromotion,
-} from "@/actions/governance";
-import { saveNotificationSettings } from "@/actions/notifications-settings";
-import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
-import { isMobileAdminRole, readMobileAdminSection } from "@/lib/mobile-admin";
 import { principalCanManageReferenceLists } from "@/lib/authorization/decisions";
+import { isMobileAdminRole, readMobileAdminSection } from "@/lib/mobile-admin";
+import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:admin" }, async (principal) => {
     const section = new URL(req.url).searchParams.get("section") ?? "index";
-    const result = await readMobileAdminSection(principal.authorization, section);
-    return result.ok ? jsonOk(result.payload) : jsonError("Not found", result.status);
+    const result = await readMobileAdminSection(
+      principal.authorization,
+      section
+    );
+    return result.ok
+      ? jsonOk(result.payload)
+      : jsonError("Not found", result.status);
   });
 }
 
@@ -95,14 +97,17 @@ export async function POST(req: Request) {
             return jsonError(
               "Only the Corporate Precon Admin manages company-wide reference lists",
               403,
-              { code: "FORBIDDEN" },
+              { code: "FORBIDDEN" }
             );
           }
           await addReferenceValue(String(body.listKey), String(body.value));
           return jsonOk({ ok: true });
         }
         case "retire-reference": {
-          await setReferenceValueRetired(Number(body.id), Boolean(body.retired));
+          await setReferenceValueRetired(
+            Number(body.id),
+            Boolean(body.retired)
+          );
           return jsonOk({ ok: true });
         }
         case "add-column": {
@@ -122,11 +127,15 @@ export async function POST(req: Request) {
           return jsonOk({ ok: true });
         }
         case "access": {
-          await saveAccessSettings(body as Parameters<typeof saveAccessSettings>[0]);
+          await saveAccessSettings(
+            body as Parameters<typeof saveAccessSettings>[0]
+          );
           return jsonOk({ ok: true });
         }
         case "warehouse": {
-          const result = await runWarehouseFeed(Boolean(body.previewOnly ?? true));
+          const result = await runWarehouseFeed(
+            Boolean(body.previewOnly ?? true)
+          );
           return jsonOk({ result });
         }
         case "probe-warehouse": {
@@ -141,7 +150,7 @@ export async function POST(req: Request) {
         }
         case "destini-confirm": {
           const result = await confirmDestiniImport(
-            body as Parameters<typeof confirmDestiniImport>[0],
+            body as Parameters<typeof confirmDestiniImport>[0]
           );
           return jsonOk({ result });
         }
@@ -164,7 +173,7 @@ export async function POST(req: Request) {
           await decideMatchCandidate(
             Number(body.id),
             body.decision as "approve" | "reject" | "dismiss",
-            body.note as string | undefined,
+            body.note as string | undefined
           );
           return jsonOk({ ok: true });
         }
@@ -179,19 +188,22 @@ export async function POST(req: Request) {
           return jsonOk({ result: await confirmLegacyBaseline() });
         }
         case "promote": {
-          await proposeFieldPromotion(Number(body.columnId), body.note as string | undefined);
+          await proposeFieldPromotion(
+            Number(body.columnId),
+            body.note as string | undefined
+          );
           return jsonOk({ ok: true });
         }
         case "review-promotion": {
           await reviewFieldPromotion(
             Number(body.id),
-            body.decision as Parameters<typeof reviewFieldPromotion>[1],
+            body.decision as Parameters<typeof reviewFieldPromotion>[1]
           );
           return jsonOk({ ok: true });
         }
         case "notification-settings": {
           await saveNotificationSettings(
-            body as Parameters<typeof saveNotificationSettings>[0],
+            body as Parameters<typeof saveNotificationSettings>[0]
           );
           return jsonOk({ ok: true });
         }

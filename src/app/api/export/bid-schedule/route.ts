@@ -1,17 +1,17 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import type { ExportTemplateConfig } from "@/db/schema";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { applyBidScheduleExportScope } from "@/lib/bid-schedule";
 import {
   buildPrintHtml,
   buildWorkbook,
-  getFlatDataset,
   type ExportColumn,
+  getFlatDataset,
 } from "@/lib/export-helpers";
-import { formatReportValue } from "@/lib/report-engine";
-import { applyBidScheduleExportScope } from "@/lib/bid-schedule";
 import { pdfResponse } from "@/lib/pdf";
+import { formatReportValue } from "@/lib/report-engine";
 import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 // Synchronous xlsx/PDF build; PDF uses headless Chromium.
@@ -31,7 +31,10 @@ export async function GET(req: NextRequest) {
     return new Response("No columns selected", { status: 400 });
   }
 
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const scoped = resolveRegionParam(workspace, params.get("region"));
   if ("error" in scoped) return new Response(scoped.error, { status: 403 });
 
@@ -54,7 +57,8 @@ export async function GET(req: NextRequest) {
   });
 
   const title = config.header || "Bid Schedule";
-  const footer = config.footer || "Brasfield & Gorrie Preconstruction — Confidential";
+  const footer =
+    config.footer || "Brasfield & Gorrie Preconstruction — Confidential";
 
   if (format === "pdf") {
     const html = buildPrintHtml({

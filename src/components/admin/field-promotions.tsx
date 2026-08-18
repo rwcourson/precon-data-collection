@@ -1,9 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { ArrowUpCircle, Loader2, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { reviewFieldPromotion } from "@/actions/governance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { reviewFieldPromotion } from "@/actions/governance";
 
 export type FieldPromotionRow = {
   id: number;
@@ -59,7 +59,7 @@ export function FieldPromotionsPanel({
         toast.success(
           decision === "promote"
             ? "Column promoted to company-wide"
-            : "Promotion rejected",
+            : "Promotion rejected"
         );
         router.refresh();
       } catch (e) {
@@ -77,8 +77,8 @@ export function FieldPromotionsPanel({
         </CardTitle>
         <CardDescription>
           Region-specific columns proposed for company-wide adoption. Corporate
-          Precon Admin confirms or rejects each request — promoted columns appear
-          in every Region&apos;s exports and report builder.
+          Precon Admin confirms or rejects each request — promoted columns
+          appear in every Region&apos;s exports and report builder.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-0 pb-0">

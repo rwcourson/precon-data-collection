@@ -1,4 +1,7 @@
-import { isCopilotToolName, verifyCopilotToolRequest } from "@/lib/ai/copilot-bridge";
+import {
+  isCopilotToolName,
+  verifyCopilotToolRequest,
+} from "@/lib/ai/copilot-bridge";
 import { mapError } from "@/lib/mobile-http";
 import { copilotQueryService } from "@/services/copilot-query-service";
 
@@ -35,8 +38,15 @@ export async function POST(req: Request) {
   const workspaceHeader = req.headers.get("x-eve-workspace");
   const workspaceRegion = workspaceHeader === "" ? null : workspaceHeader;
   try {
-    const principal = await copilotQueryService.principalForUserId(userId, workspaceRegion);
-    const result = await copilotQueryService.execute(principal, tool, body.input ?? {});
+    const principal = await copilotQueryService.principalForUserId(
+      userId,
+      workspaceRegion
+    );
+    const result = await copilotQueryService.execute(
+      principal,
+      tool,
+      body.input ?? {}
+    );
     return Response.json(result);
   } catch (error) {
     return mapError(error);

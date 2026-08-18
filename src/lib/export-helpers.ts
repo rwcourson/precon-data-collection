@@ -1,22 +1,19 @@
 import ExcelJS from "exceljs";
 import {
-  getCustomValuesForRounds,
-  getMultiValuesForRounds,
-} from "./queries";
-import {
   listCustomColumnsForPrincipal,
   listRoundsWithJobsForPrincipal,
 } from "./authorization/loaders";
 import type { Principal } from "./authorization/types";
 import { LATEST_NOTE_KEY } from "./latest-note";
 import { latestNoteCellsForRounds } from "./latest-note-query";
+import { METRIC_DEFS } from "./metrics";
+import { getCustomValuesForRounds, getMultiValuesForRounds } from "./queries";
 import {
   buildFieldCatalog,
-  flattenRound,
   type FlatRow,
+  flattenRound,
   type ReportFieldDef,
 } from "./report-engine";
-import { METRIC_DEFS } from "./metrics";
 
 export type ExportColumn = { key: string; label: string; type: string };
 
@@ -42,8 +39,8 @@ export async function getFlatDataset(principal: Principal): Promise<{
       r.estimateLeadName,
       multiMap.get(r.round.id) ?? {},
       customMap.get(r.round.id) ?? {},
-      noteMap.get(r.round.id) ?? null,
-    ),
+      noteMap.get(r.round.id) ?? null
+    )
   );
   return { rows, catalog: buildFieldCatalog(customCols) };
 }
@@ -90,7 +87,11 @@ export async function buildWorkbook(opts: {
   const headerRow = ws.addRow(opts.columns.map((c) => c.label));
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1E3A5F" },
+    };
     cell.border = { bottom: { style: "thin" } };
     cell.alignment = { vertical: "middle", wrapText: true };
   });
@@ -101,7 +102,7 @@ export async function buildWorkbook(opts: {
       opts.columns.map((c) => {
         const v = r[c.key];
         return v == null || v === "" ? null : v;
-      }),
+      })
     );
     opts.columns.forEach((c, i) => {
       const fmt = excelFormat(c.type, c.key);
@@ -123,7 +124,7 @@ export async function buildWorkbook(opts: {
       (groups.get(key) ?? groups.set(key, []).get(key)!).push(r);
     }
     for (const [groupName, groupRows] of [...groups.entries()].sort((a, b) =>
-      a[0].localeCompare(b[0]),
+      a[0].localeCompare(b[0])
     )) {
       const gr = ws.addRow([`${groupName}  (${groupRows.length})`]);
       ws.mergeCells(gr.number, 1, gr.number, Math.max(2, opts.columns.length));
@@ -148,7 +149,7 @@ export async function buildWorkbook(opts: {
     }
     const maxLen = Math.max(
       c.label.length,
-      ...opts.rows.slice(0, 200).map((r) => String(r[c.key] ?? "").length),
+      ...opts.rows.slice(0, 200).map((r) => String(r[c.key] ?? "").length)
     );
     col.width = Math.min(42, Math.max(10, maxLen + 2));
   });
@@ -158,7 +159,10 @@ export async function buildWorkbook(opts: {
 }
 
 const esc = (s: unknown) =>
-  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
 /** Print-ready HTML used as the PDF export path (browser print → Save as PDF). */
 export function buildPrintHtml(opts: {
@@ -177,7 +181,9 @@ export function buildPrintHtml(opts: {
       .map((c) => {
         const numeric = ["dollars", "number", "metric"].includes(c.type);
         const note = c.key === LATEST_NOTE_KEY;
-        const cls = [numeric ? "num" : "", note ? "note" : ""].filter(Boolean).join(" ");
+        const cls = [numeric ? "num" : "", note ? "note" : ""]
+          .filter(Boolean)
+          .join(" ");
         return `<td${cls ? ` class="${cls}"` : ""}>${esc(opts.formatValue(c.key, r[c.key] ?? null))}</td>`;
       })
       .join("")}</tr>`;
@@ -188,7 +194,9 @@ export function buildPrintHtml(opts: {
       const key = groupBy.map((g) => String(r[g] ?? "—")).join(" / ");
       (groups.get(key) ?? groups.set(key, []).get(key)!).push(r);
     }
-    for (const [name, rows] of [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    for (const [name, rows] of [...groups.entries()].sort((a, b) =>
+      a[0].localeCompare(b[0])
+    )) {
       bodyRows += `<tr class="group"><td colspan="${opts.columns.length}">${esc(name)} (${rows.length})</td></tr>`;
       bodyRows += rows.map(rowHtml).join("");
     }

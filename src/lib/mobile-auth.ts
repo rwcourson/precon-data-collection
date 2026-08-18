@@ -1,14 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db, ensureDbReady } from "@/db";
-import { apiTokens, users, type User } from "@/db/schema";
-import { getRuntimeConfig } from "@/lib/runtime-config";
-import {
-  generateApiTokenSecret,
-  tokenIsExpired,
-} from "@/lib/api-tokens";
-import { authenticateBearer, type AuthedToken } from "@/lib/api-auth";
+import { apiTokens, type User, users } from "@/db/schema";
+import { type AuthedToken, authenticateBearer } from "@/lib/api-auth";
+import { generateApiTokenSecret, tokenIsExpired } from "@/lib/api-tokens";
 import { createPrincipal } from "@/lib/authorization/principal";
 import type { Principal } from "@/lib/authorization/types";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 const MOBILE_ALL_SCOPES = [
   "profile:read",
@@ -60,8 +57,10 @@ export function publicUser(user: User) {
  * createdById. Only valid when AUTH_MODE=demo.
  */
 export async function issueDemoSession(
-  userId: number,
-): Promise<{ token: string; user: User } | { error: string; status: 403 | 404 }> {
+  userId: number
+): Promise<
+  { token: string; user: User } | { error: string; status: 403 | 404 }
+> {
   await ensureDbReady();
   if (!isDemoAuthAllowed()) {
     return {
@@ -81,8 +80,8 @@ export async function issueDemoSession(
       and(
         eq(apiTokens.createdById, userId),
         eq(apiTokens.name, sessionName),
-        isNull(apiTokens.revokedAt),
-      ),
+        isNull(apiTokens.revokedAt)
+      )
     );
 
   // Always mint a fresh secret so we can return plaintext once; revoke prior.
@@ -112,7 +111,7 @@ export async function issueDemoSession(
  * Demo sessions and personal API tokens both map to createdById.
  */
 export async function resolveMobilePrincipal(
-  authHeader: string | null,
+  authHeader: string | null
 ): Promise<
   | { ok: true; principal: MobilePrincipal }
   | { ok: false; status: 401 | 403; error: string }
@@ -156,9 +155,15 @@ export async function resolveMobilePrincipal(
 }
 
 /** Pure helper for tests: demo gate predicate. */
-export function demoAuthGate(mode: "demo" | "sso"): { allowed: boolean; reason?: string } {
+export function demoAuthGate(mode: "demo" | "sso"): {
+  allowed: boolean;
+  reason?: string;
+} {
   if (mode !== "demo") {
-    return { allowed: false, reason: "Demo auth is disabled (AUTH_MODE is not demo)." };
+    return {
+      allowed: false,
+      reason: "Demo auth is disabled (AUTH_MODE is not demo).",
+    };
   }
   return { allowed: true };
 }

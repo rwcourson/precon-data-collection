@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 /**
  * Deterministic OpenAPI 3.1 generator for mobile v1 endpoints.
  * Scans route files for operation metadata comments and known paths.
@@ -6,7 +7,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHash } from "node:crypto";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mobileRoot = path.join(root, "src/app/api/v1/mobile");
@@ -46,7 +46,8 @@ function walk(dir, base = "") {
 function methodsOf(source) {
   const methods = [];
   for (const m of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
-    if (new RegExp(`export async function ${m}\\b`).test(source)) methods.push(m);
+    if (new RegExp(`export async function ${m}\\b`).test(source))
+      methods.push(m);
   }
   return methods;
 }
@@ -84,19 +85,18 @@ for (const file of walk(mobileRoot).sort()) {
       operationId: operationId(method, routePath),
       summary: `${method} ${routePath}`,
       security: [{ bearerAuth: scopes }],
-      parameters:
-        routePath.includes("{")
-          ? [
-              {
-                name: routePath.match(/\{([^}]+)\}/)[1],
-                in: "path",
-                required: true,
-                schema: { type: "string" },
-              },
-            ]
-          : [],
+      parameters: routePath.includes("{")
+        ? [
+            {
+              name: routePath.match(/\{([^}]+)\}/)[1],
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ]
+        : [],
       responses: {
-        "200": {
+        200: {
           description: "Success",
           content: {
             "application/json": {
@@ -104,9 +104,9 @@ for (const file of walk(mobileRoot).sort()) {
             },
           },
         },
-        "401": { description: "Unauthorized" },
-        "403": { description: "Forbidden" },
-        "404": { description: "Not found" },
+        401: { description: "Unauthorized" },
+        403: { description: "Forbidden" },
+        404: { description: "Not found" },
       },
     };
     if (method !== "GET") {
@@ -155,7 +155,12 @@ fs.writeFileSync(path.join(outDir, "openapi.sha256"), `${hash}\n`);
 const ops = [];
 for (const [p, methods] of Object.entries(paths)) {
   for (const [m, op] of Object.entries(methods)) {
-    ops.push({ method: m.toUpperCase(), path: p, operationId: op.operationId, scopes: op.security[0].bearerAuth });
+    ops.push({
+      method: m.toUpperCase(),
+      path: p,
+      operationId: op.operationId,
+      scopes: op.security[0].bearerAuth,
+    });
   }
 }
 const clientTs = `/* AUTO-GENERATED — do not edit. Run: node scripts/generate-openapi.mjs */
@@ -181,10 +186,13 @@ export function createGeneratedMobileClient(baseUrl: string): GeneratedMobileCli
 }
 `;
 fs.mkdirSync(path.join(root, "apps/mobile/src/generated"), { recursive: true });
-fs.writeFileSync(path.join(root, "apps/mobile/src/generated/mobile-api.ts"), clientTs);
+fs.writeFileSync(
+  path.join(root, "apps/mobile/src/generated/mobile-api.ts"),
+  clientTs
+);
 fs.mkdirSync(path.join(root, "src/generated"), { recursive: true });
 fs.writeFileSync(path.join(root, "src/generated/mobile-api.ts"), clientTs);
 
 process.stdout.write(
-  `OpenAPI generated: ${Object.keys(paths).length} paths, ${ops.length} operations, sha256=${hash.slice(0, 12)}…\n`,
+  `OpenAPI generated: ${Object.keys(paths).length} paths, ${ops.length} operations, sha256=${hash.slice(0, 12)}…\n`
 );

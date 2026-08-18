@@ -1,7 +1,7 @@
 import {
   filterByHierarchy,
-  serializeHierarchy,
   type HierarchySelection,
+  serializeHierarchy,
 } from "@/lib/bid-schedule-filter";
 
 export const NEEDS_STAFFING_QUEUE = "needs-staffing";

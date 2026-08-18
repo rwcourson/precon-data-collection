@@ -1,24 +1,26 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { authMode } from "@/lib/auth";
-import { getRuntimeConfig } from "@/lib/runtime-config";
-import { DEMO_USER_COOKIE } from "@/lib/current-user";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { DEMO_USER_COOKIE } from "@/lib/current-user";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import {
-  canViewCorporate,
   CORPORATE,
+  canViewCorporate,
   resolveWorkspace,
   WORKSPACE_COOKIE,
 } from "@/lib/workspace";
-import { and, eq, isNull } from "drizzle-orm";
 
 export async function switchUser(userId: number) {
   if (getRuntimeConfig().appEnv !== "demo" || authMode() !== "demo") {
-    throw new Error("Personas are a demo feature — identity comes from SSO here.");
+    throw new Error(
+      "Personas are a demo feature — identity comes from SSO here."
+    );
   }
   const store = await cookies();
   store.set(DEMO_USER_COOKIE, String(userId), { path: "/" });
@@ -35,7 +37,8 @@ export async function switchWorkspace(region: string) {
     region === CORPORATE
       ? canViewCorporate(user)
       : resolveWorkspace(user, region).region === region;
-  if (!allowed) throw new Error("You do not have access to that Region workspace.");
+  if (!allowed)
+    throw new Error("You do not have access to that Region workspace.");
 
   const store = await cookies();
   store.set(WORKSPACE_COOKIE, region, { path: "/" });
@@ -48,6 +51,8 @@ export async function markAllNotificationsRead() {
   await db
     .update(notifications)
     .set({ readAt: new Date() })
-    .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt)));
+    .where(
+      and(eq(notifications.userId, user.id), isNull(notifications.readAt))
+    );
   revalidatePath("/", "layout");
 }

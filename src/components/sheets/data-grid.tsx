@@ -1,14 +1,6 @@
 "use client";
 
 import {
-  useCallback,
-  useMemo,
-  useState,
-  type DragEvent,
-  type PointerEvent,
-  type ReactNode,
-} from "react";
-import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -18,6 +10,19 @@ import {
   Lock,
   X,
 } from "lucide-react";
+import {
+  type DragEvent,
+  type PointerEvent,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+import {
+  CellEditor,
+  formatCell,
+  isNumericType,
+} from "@/components/sheets/cell-editor";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -26,14 +31,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CellEditor, formatCell, isNumericType } from "@/components/sheets/cell-editor";
 import {
   beginColumnResize,
   COLUMN_RESIZE_HANDLE_CLASS,
   dropPlaceForPoint,
   moveColumnKey,
 } from "@/lib/sheet-grid";
+import { cn } from "@/lib/utils";
 
 /**
  * The grid behind both kinds of sheet. Column resize, click-to-sort, per-column
@@ -61,7 +65,10 @@ export type GridRow = {
 };
 
 export type SortState = { key: string; dir: "asc" | "desc" } | null;
-export type ColumnFilters = Record<string, { text?: string; values?: string[] }>;
+export type ColumnFilters = Record<
+  string,
+  { text?: string; values?: string[] }
+>;
 
 export function DataGrid({
   columns,
@@ -95,15 +102,18 @@ export function DataGrid({
   unit?: string;
 }) {
   const [filterOpen, setFilterOpen] = useState<string | null>(null);
-  const [editing, setEditing] = useState<{ rowId: number; key: string } | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [dragOver, setDragOver] = useState<{ key: string; place: "before" | "after" } | null>(
-    null,
+  const [editing, setEditing] = useState<{ rowId: number; key: string } | null>(
+    null
   );
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [dragOver, setDragOver] = useState<{
+    key: string;
+    place: "before" | "after";
+  } | null>(null);
 
   const widthOf = useCallback(
     (col: GridColumn) => widths[col.key] ?? col.width,
-    [widths],
+    [widths]
   );
 
   const onResizeStart = (col: GridColumn, e: PointerEvent<HTMLElement>) => {
@@ -129,22 +139,30 @@ export function DataGrid({
     if (!onColumnOrderChange) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
-    setDragOver((prev) => (prev?.key === key && prev.place === place ? prev : { key, place }));
+    const place = dropPlaceForPoint(
+      e.clientX,
+      e.currentTarget.getBoundingClientRect()
+    );
+    setDragOver((prev) =>
+      prev?.key === key && prev.place === place ? prev : { key, place }
+    );
   };
 
   const onHeaderDrop = (key: string, e: DragEvent<HTMLElement>) => {
     if (!onColumnOrderChange) return;
     e.preventDefault();
     const from = e.dataTransfer.getData("text/plain");
-    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
+    const place = dropPlaceForPoint(
+      e.clientX,
+      e.currentTarget.getBoundingClientRect()
+    );
     setDragOver(null);
     if (!from) return;
     const next = moveColumnKey(
       columns.map((c) => c.key),
       from,
       key,
-      place,
+      place
     );
     if (next.some((k, i) => k !== columns[i]?.key)) onColumnOrderChange(next);
   };
@@ -155,11 +173,14 @@ export function DataGrid({
         const f = filters[col.key];
         if (!f) return true;
         const text = formatCell(col.type, row.cells[col.key]);
-        if (f.text?.trim() && !text.toLowerCase().includes(f.text.trim().toLowerCase()))
+        if (
+          f.text?.trim() &&
+          !text.toLowerCase().includes(f.text.trim().toLowerCase())
+        )
           return false;
         if (f.values?.length && !f.values.includes(text)) return false;
         return true;
-      }),
+      })
     );
 
     if (sort) {
@@ -171,9 +192,13 @@ export function DataGrid({
         if (av == null && bv == null) cmp = 0;
         else if (av == null) cmp = 1;
         else if (bv == null) cmp = -1;
-        else if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
+        else if (typeof av === "number" && typeof bv === "number")
+          cmp = av - bv;
         else if (col && isNumericType(col.type)) cmp = Number(av) - Number(bv);
-        else cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+        else
+          cmp = String(av).localeCompare(String(bv), undefined, {
+            numeric: true,
+          });
         return sort.dir === "asc" ? cmp : -cmp;
       });
     }
@@ -185,12 +210,15 @@ export function DataGrid({
     const map = new Map<string, GridRow[]>();
     for (const row of display) {
       const col = columns.find((c) => c.key === groupBy);
-      const key = formatCell(col?.type ?? "text", row.cells[groupBy]) || "(blank)";
+      const key =
+        formatCell(col?.type ?? "text", row.cells[groupBy]) || "(blank)";
       const bucket = map.get(key);
       if (bucket) bucket.push(row);
       else map.set(key, [row]);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }));
+    return [...map.entries()].sort((a, b) =>
+      a[0].localeCompare(b[0], undefined, { numeric: true })
+    );
   }, [display, groupBy, columns]);
 
   const uniqueValues = useMemo(() => {
@@ -204,18 +232,21 @@ export function DataGrid({
         if (set.size > 200) break;
       }
       if (set.size > 0 && set.size <= 200) {
-        map[col.key] = [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        map[col.key] = [...set].sort((a, b) =>
+          a.localeCompare(b, undefined, { numeric: true })
+        );
       }
     }
     return map;
   }, [columns, rows]);
 
   const activeFilters = Object.values(filters).filter(
-    (f) => f?.text?.trim() || f?.values?.length,
+    (f) => f?.text?.trim() || f?.values?.length
   ).length;
 
   const actionWidth = rowActions ? 96 : 0;
-  const totalWidth = columns.reduce((sum, c) => sum + widthOf(c), 0) + actionWidth;
+  const totalWidth =
+    columns.reduce((sum, c) => sum + widthOf(c), 0) + actionWidth;
   const colSpan = columns.length + (rowActions ? 1 : 0);
 
   const renderRow = (row: GridRow) => (
@@ -229,10 +260,12 @@ export function DataGrid({
             className={cn(
               "overflow-hidden border-r border-border/40 px-2 py-1.5 align-top last:border-r-0",
               isNumericType(col.type) && "text-right tabular-nums",
-              canEdit && "cursor-text hover:bg-primary/5",
+              canEdit && "cursor-text hover:bg-primary/5"
             )}
             style={{ width: widthOf(col) }}
-            onDoubleClick={() => canEdit && setEditing({ rowId: row.id, key: col.key })}
+            onDoubleClick={() =>
+              canEdit && setEditing({ rowId: row.id, key: col.key })
+            }
             title={row.locked && col.editable ? row.lockReason : undefined}
           >
             {isEditing && onEditCell ? (
@@ -249,7 +282,9 @@ export function DataGrid({
             ) : col.render ? (
               col.render(row)
             ) : (
-              <span className="block truncate">{formatCell(col.type, row.cells[col.key])}</span>
+              <span className="block truncate">
+                {formatCell(col.type, row.cells[col.key])}
+              </span>
             )}
           </td>
         );
@@ -266,7 +301,8 @@ export function DataGrid({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
-          {display.length.toLocaleString()} of {rows.length.toLocaleString()} {unit}
+          {display.length.toLocaleString()} of {rows.length.toLocaleString()}{" "}
+          {unit}
           {rows.length === 1 ? "" : "s"}
           {activeFilters > 0
             ? ` · ${activeFilters} column filter${activeFilters === 1 ? "" : "s"}`
@@ -313,13 +349,14 @@ export function DataGrid({
                     onDragEnd={() => setDragOver(null)}
                     className={cn(
                       "relative h-9 select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0",
-                      onColumnOrderChange && "cursor-grab active:cursor-grabbing",
+                      onColumnOrderChange &&
+                        "cursor-grab active:cursor-grabbing",
                       dragOver?.key === col.key &&
                         dragOver.place === "before" &&
                         "shadow-[-2px_0_0_0_var(--color-primary)]",
                       dragOver?.key === col.key &&
                         dragOver.place === "after" &&
-                        "shadow-[2px_0_0_0_var(--color-primary)]",
+                        "shadow-[2px_0_0_0_var(--color-primary)]"
                     )}
                     style={{ width: widthOf(col) }}
                   >
@@ -329,7 +366,7 @@ export function DataGrid({
                         className={cn(
                           "flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-0.5 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                           isNumericType(col.type) && "justify-end",
-                          isSorted && "text-foreground",
+                          isSorted && "text-foreground"
                         )}
                         onClick={() =>
                           onSortChange(
@@ -337,7 +374,7 @@ export function DataGrid({
                               ? { key: col.key, dir: "asc" }
                               : sort.dir === "asc"
                                 ? { key: col.key, dir: "desc" }
-                                : null,
+                                : null
                           )
                         }
                         title={col.label}
@@ -355,7 +392,9 @@ export function DataGrid({
                       </button>
                       <Popover
                         open={filterOpen === col.key}
-                        onOpenChange={(open) => setFilterOpen(open ? col.key : null)}
+                        onOpenChange={(open) =>
+                          setFilterOpen(open ? col.key : null)
+                        }
                       >
                         <PopoverTrigger
                           render={
@@ -363,7 +402,7 @@ export function DataGrid({
                               type="button"
                               className={cn(
                                 "rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground",
-                                hasFilter && "bg-primary/10 text-primary",
+                                hasFilter && "bg-primary/10 text-primary"
                               )}
                               aria-label={`Filter ${col.label}`}
                             />
@@ -371,7 +410,10 @@ export function DataGrid({
                         >
                           <Filter className="size-3" />
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="w-64 gap-2 p-3">
+                        <PopoverContent
+                          align="start"
+                          className="w-64 gap-2 p-3"
+                        >
                           <FilterPanel
                             label={col.label}
                             filter={filters[col.key]}
@@ -389,9 +431,7 @@ export function DataGrid({
                       </Popover>
                     </div>
                     <div
-                      role="separator"
-                      aria-orientation="vertical"
-                      aria-label={`Resize ${col.label}`}
+                      aria-hidden="true"
                       onPointerDown={(e) => onResizeStart(col, e)}
                       onMouseDown={(e) => e.stopPropagation()}
                       draggable={false}
@@ -400,13 +440,18 @@ export function DataGrid({
                   </th>
                 );
               })}
-              {rowActions && <th style={{ width: actionWidth }} className="h-9" />}
+              {rowActions && (
+                <th style={{ width: actionWidth }} className="h-9" />
+              )}
             </tr>
           </thead>
           <tbody>
             {display.length === 0 && (
               <tr>
-                <td colSpan={colSpan} className="h-28 text-center text-sm text-muted-foreground">
+                <td
+                  colSpan={colSpan}
+                  className="h-28 text-center text-sm text-muted-foreground"
+                >
                   {emptyMessage}
                 </td>
               </tr>
@@ -475,7 +520,11 @@ function GroupSection({
   return (
     <>
       <tr className="border-b bg-muted/60">
-        <td colSpan={1} className="px-2 py-1.5" style={{ width: widthOf(columns[0]) }}>
+        <td
+          colSpan={1}
+          className="px-2 py-1.5"
+          style={{ width: widthOf(columns[0]) }}
+        >
           <button
             type="button"
             onClick={onToggle}
@@ -487,7 +536,9 @@ function GroupSection({
               <ChevronDown className="size-3.5" />
             )}
             <span className="truncate">{label}</span>
-            <span className="font-normal text-muted-foreground">({rows.length})</span>
+            <span className="font-normal text-muted-foreground">
+              ({rows.length})
+            </span>
           </button>
         </td>
         {columns.slice(1).map((col, i) => (
@@ -497,7 +548,10 @@ function GroupSection({
             style={{ width: widthOf(col) }}
           >
             {totals[i + 1] != null
-              ? formatCell(col.type === "metric" ? "number" : col.type, totals[i + 1])
+              ? formatCell(
+                  col.type === "metric" ? "number" : col.type,
+                  totals[i + 1]
+                )
               : ""}
           </td>
         ))}

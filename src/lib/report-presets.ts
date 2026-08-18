@@ -4,7 +4,8 @@ import { LATEST_NOTE_KEY } from "@/lib/latest-note";
 export { weekPeriodKey } from "@/lib/distribution-schedule";
 
 /** Consolidated regional bid schedule — all divisions in the active workspace. */
-export const CONSOLIDATED_REGIONAL_PRESET_KEY = "consolidated_regional_bid_schedule";
+export const CONSOLIDATED_REGIONAL_PRESET_KEY =
+  "consolidated_regional_bid_schedule";
 
 export const CONSOLIDATED_REGIONAL_PRESET: {
   name: string;

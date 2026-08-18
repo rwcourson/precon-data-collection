@@ -30,12 +30,8 @@ export type RuntimeConfig = {
   microsoftClientSecret?: string;
   microsoftTenantId?: string;
   apiTokenMaxTtlDays: number;
-  email:
-    | { mode: "stub" }
-    | { mode: "resend"; apiKey: string; from: string };
-  storage:
-    | { mode: "local" }
-    | { mode: "vercel-blob"; token: string };
+  email: { mode: "stub" } | { mode: "resend"; apiKey: string; from: string };
+  storage: { mode: "local" } | { mode: "vercel-blob"; token: string };
   integrations: {
     connect: ConnectMode;
     smartsheet: SmartsheetMode;
@@ -51,7 +47,9 @@ export class RuntimeConfigError extends Error {
   readonly issues: RuntimeConfigIssue[];
 
   constructor(issues: RuntimeConfigIssue[]) {
-    super(`Runtime configuration is invalid (${issues.map((issue) => issue.key).join(", ")})`);
+    super(
+      `Runtime configuration is invalid (${issues.map((issue) => issue.key).join(", ")})`
+    );
     this.name = "RuntimeConfigError";
     this.issues = issues;
   }
@@ -63,7 +61,7 @@ function oneOf<T extends string>(
   env: RuntimeEnvironment,
   key: string,
   values: readonly T[],
-  issues: RuntimeConfigIssue[],
+  issues: RuntimeConfigIssue[]
 ): T | undefined {
   const value = env[key]?.trim();
   if (value && values.includes(value as T)) return value as T;
@@ -75,11 +73,17 @@ function required(
   env: RuntimeEnvironment,
   key: string,
   issues: RuntimeConfigIssue[],
-  minimumLength = 1,
+  minimumLength = 1
 ): string | undefined {
   const value = env[key]?.trim();
   if (value && value.length >= minimumLength) return value;
-  issues.push({ key, reason: minimumLength > 1 ? `must contain at least ${minimumLength} characters` : "is required" });
+  issues.push({
+    key,
+    reason:
+      minimumLength > 1
+        ? `must contain at least ${minimumLength} characters`
+        : "is required",
+  });
   return undefined;
 }
 
@@ -88,7 +92,7 @@ function parsedUrl(
   key: string,
   protocols: readonly string[],
   issues: RuntimeConfigIssue[],
-  requiredValue = true,
+  requiredValue = true
 ): string | undefined {
   const value = env[key]?.trim();
   if (!value) {
@@ -100,7 +104,10 @@ function parsedUrl(
     if (!protocols.includes(url.protocol)) throw new Error("protocol");
     return value;
   } catch {
-    issues.push({ key, reason: `must be a valid ${protocols.join(" or ")} URL` });
+    issues.push({
+      key,
+      reason: `must be a valid ${protocols.join(" or ")} URL`,
+    });
     return undefined;
   }
 }
@@ -110,17 +117,24 @@ function boundedInteger(
   key: string,
   minimum: number,
   maximum: number,
-  issues: RuntimeConfigIssue[],
+  issues: RuntimeConfigIssue[]
 ): number | undefined {
   const raw = env[key]?.trim();
   const value = raw ? Number(raw) : Number.NaN;
-  if (Number.isInteger(value) && value >= minimum && value <= maximum) return value;
-  issues.push({ key, reason: `must be an integer from ${minimum} to ${maximum}` });
+  if (Number.isInteger(value) && value >= minimum && value <= maximum)
+    return value;
+  issues.push({
+    key,
+    reason: `must be an integer from ${minimum} to ${maximum}`,
+  });
   return undefined;
 }
 
 /** Preview hosts change per branch. Production must keep an explicit APP_ORIGIN. */
-function hostedHttpsOrigin(env: RuntimeEnvironment, hostKey: "VERCEL_BRANCH_URL" | "VERCEL_URL"): string | undefined {
+function hostedHttpsOrigin(
+  env: RuntimeEnvironment,
+  hostKey: "VERCEL_BRANCH_URL" | "VERCEL_URL"
+): string | undefined {
   const host = env[hostKey]?.trim().replace(/\/$/, "");
   if (!host) return undefined;
   const url = host.includes("://") ? host : `https://${host}`;
@@ -132,7 +146,9 @@ function hostedHttpsOrigin(env: RuntimeEnvironment, hostKey: "VERCEL_BRANCH_URL"
   }
 }
 
-function withDerivedPreviewOrigins(env: RuntimeEnvironment): RuntimeEnvironment {
+function withDerivedPreviewOrigins(
+  env: RuntimeEnvironment
+): RuntimeEnvironment {
   if (env.APP_ENV?.trim() === "production") return env;
   const resolved: RuntimeEnvironment = { ...env };
   const branchOrigin = hostedHttpsOrigin(env, "VERCEL_BRANCH_URL");
@@ -144,9 +160,11 @@ function withDerivedPreviewOrigins(env: RuntimeEnvironment): RuntimeEnvironment 
     try {
       resolved.ALLOWED_ORIGINS = [
         ...new Set(
-          [new URL(resolved.APP_ORIGIN).origin, branchOrigin, deployOrigin].filter(
-            (value): value is string => Boolean(value),
-          ),
+          [
+            new URL(resolved.APP_ORIGIN).origin,
+            branchOrigin,
+            deployOrigin,
+          ].filter((value): value is string => Boolean(value))
         ),
       ].join(",");
     } catch {
@@ -160,7 +178,7 @@ function originList(
   env: RuntimeEnvironment,
   appOrigin: string | undefined,
   production: boolean,
-  issues: RuntimeConfigIssue[],
+  issues: RuntimeConfigIssue[]
 ): string[] {
   const raw = env.ALLOWED_ORIGINS?.trim();
   if (!raw) {
@@ -168,15 +186,24 @@ function originList(
     return [];
   }
   const origins: string[] = [];
-  for (const candidate of raw.split(",").map((value) => value.trim()).filter(Boolean)) {
+  for (const candidate of raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)) {
     try {
       const url = new URL(candidate);
-      if (url.origin !== candidate || (production && url.protocol !== "https:")) {
+      if (
+        url.origin !== candidate ||
+        (production && url.protocol !== "https:")
+      ) {
         throw new Error("origin");
       }
       origins.push(candidate);
     } catch {
-      issues.push({ key: "ALLOWED_ORIGINS", reason: "must contain only absolute origins" });
+      issues.push({
+        key: "ALLOWED_ORIGINS",
+        reason: "must contain only absolute origins",
+      });
       return [];
     }
   }
@@ -187,26 +214,61 @@ function originList(
 }
 
 export function inspectRuntimeConfig(
-  env: RuntimeEnvironment = process.env,
+  env: RuntimeEnvironment = process.env
 ): RuntimeConfigStatus {
   env = withDerivedPreviewOrigins(env);
   const issues: RuntimeConfigIssue[] = [];
-  const appEnv = oneOf(env, "APP_ENV", ["local", "demo", "production"] as const, issues);
+  const appEnv = oneOf(
+    env,
+    "APP_ENV",
+    ["local", "demo", "production"] as const,
+    issues
+  );
   const production = appEnv === "production";
   const authMode = oneOf(env, "AUTH_MODE", ["demo", "sso"] as const, issues);
-  const databaseMode = oneOf(env, "DATABASE_MODE", ["pglite", "postgres"] as const, issues);
-  const emailMode = oneOf(env, "EMAIL_MODE", ["stub", "resend"] as const, issues);
+  const databaseMode = oneOf(
+    env,
+    "DATABASE_MODE",
+    ["pglite", "postgres"] as const,
+    issues
+  );
+  const emailMode = oneOf(
+    env,
+    "EMAIL_MODE",
+    ["stub", "resend"] as const,
+    issues
+  );
   const storageMode = oneOf(
     env,
     "PRIVATE_STORAGE_MODE",
     ["local", "vercel-blob"] as const,
-    issues,
+    issues
   );
-  const connect = oneOf(env, "CONNECT_MODE", ["disabled", "mock", "rest"] as const, issues);
-  const smartsheet = oneOf(env, "SMARTSHEET_MODE", ["disabled", "api"] as const, issues);
-  const databricks = oneOf(env, "DATABRICKS_MODE", ["disabled", "sql"] as const, issues);
+  const connect = oneOf(
+    env,
+    "CONNECT_MODE",
+    ["disabled", "mock", "rest"] as const,
+    issues
+  );
+  const smartsheet = oneOf(
+    env,
+    "SMARTSHEET_MODE",
+    ["disabled", "api"] as const,
+    issues
+  );
+  const databricks = oneOf(
+    env,
+    "DATABRICKS_MODE",
+    ["disabled", "sql"] as const,
+    issues
+  );
 
-  const appOrigin = parsedUrl(env, "APP_ORIGIN", production ? ["https:"] : ["http:", "https:"], issues);
+  const appOrigin = parsedUrl(
+    env,
+    "APP_ORIGIN",
+    production ? ["https:"] : ["http:", "https:"],
+    issues
+  );
   const allowedOrigins = originList(env, appOrigin, production, issues);
 
   // Full production (APP_ENV=production) requires SSO, Resend, Blob, etc.
@@ -221,10 +283,16 @@ export function inspectRuntimeConfig(
     env.VERCEL_ENV?.trim() === "production" ||
     (Boolean(env.VERCEL?.trim()) && !env.VERCEL_ENV?.trim());
   if (authMode === "demo" && hostedProduction) {
-    issues.push({ key: "AUTH_MODE", reason: "must be sso on hosted production deployments" });
+    issues.push({
+      key: "AUTH_MODE",
+      reason: "must be sso on hosted production deployments",
+    });
   }
   if (appEnv === "demo" && authMode !== "demo") {
-    issues.push({ key: "AUTH_MODE", reason: "must be demo in the demo environment" });
+    issues.push({
+      key: "AUTH_MODE",
+      reason: "must be demo in the demo environment",
+    });
   }
 
   let database: RuntimeConfig["database"] | undefined;
@@ -232,27 +300,46 @@ export function inspectRuntimeConfig(
     const dataDir = required(env, "PGLITE_DATA_DIR", issues);
     // PGlite is never valid on Vercel (ephemeral filesystem) regardless of APP_ENV.
     if (production || env.VERCEL_ENV === "production" || env.VERCEL === "1") {
-      issues.push({ key: "DATABASE_MODE", reason: "PGlite is forbidden on Vercel; use postgres" });
+      issues.push({
+        key: "DATABASE_MODE",
+        reason: "PGlite is forbidden on Vercel; use postgres",
+      });
     }
     if (dataDir) database = { mode: "pglite", dataDir };
   } else if (databaseMode === "postgres") {
-    const url = parsedUrl(env, "DATABASE_URL", ["postgres:", "postgresql:"], issues);
+    const url = parsedUrl(
+      env,
+      "DATABASE_URL",
+      ["postgres:", "postgresql:"],
+      issues
+    );
     const unpooledUrl = parsedUrl(
       env,
       "DATABASE_URL_UNPOOLED",
       ["postgres:", "postgresql:"],
       issues,
-      production,
+      production
     );
-    if (url) database = { mode: "postgres", url, ...(unpooledUrl ? { unpooledUrl } : {}) };
+    if (url)
+      database = {
+        mode: "postgres",
+        url,
+        ...(unpooledUrl ? { unpooledUrl } : {}),
+      };
   }
   if (production && databaseMode !== "postgres") {
-    issues.push({ key: "DATABASE_MODE", reason: "must be postgres in production" });
+    issues.push({
+      key: "DATABASE_MODE",
+      reason: "must be postgres in production",
+    });
     if (!env.DATABASE_URL?.trim()) {
       issues.push({ key: "DATABASE_URL", reason: "is required in production" });
     }
     if (!env.DATABASE_URL_UNPOOLED?.trim()) {
-      issues.push({ key: "DATABASE_URL_UNPOOLED", reason: "is required in production" });
+      issues.push({
+        key: "DATABASE_URL_UNPOOLED",
+        reason: "is required in production",
+      });
     }
   }
 
@@ -263,13 +350,31 @@ export function inspectRuntimeConfig(
   const ssoTrustSecret = env.SSO_TRUST_SECRET?.trim() || undefined;
   const rawDomains = env.SSO_ALLOWED_DOMAINS?.trim();
   const ssoAllowedDomains = rawDomains
-    ? [...new Set(rawDomains.split(",").map((domain) => domain.trim().toLowerCase()).filter(Boolean))]
+    ? [
+        ...new Set(
+          rawDomains
+            .split(",")
+            .map((domain) => domain.trim().toLowerCase())
+            .filter(Boolean)
+        ),
+      ]
     : [];
   if ((production || authMode === "sso") && ssoAllowedDomains.length === 0) {
-    issues.push({ key: "SSO_ALLOWED_DOMAINS", reason: "is required when AUTH_MODE=sso" });
+    issues.push({
+      key: "SSO_ALLOWED_DOMAINS",
+      reason: "is required when AUTH_MODE=sso",
+    });
   }
-  if (ssoAllowedDomains.some((domain) => !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(domain))) {
-    issues.push({ key: "SSO_ALLOWED_DOMAINS", reason: "must contain comma-separated DNS domains" });
+  if (
+    ssoAllowedDomains.some(
+      (domain) =>
+        !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(domain)
+    )
+  ) {
+    issues.push({
+      key: "SSO_ALLOWED_DOMAINS",
+      reason: "must contain comma-separated DNS domains",
+    });
   }
 
   let betterAuthSecret: string | undefined;
@@ -280,22 +385,40 @@ export function inspectRuntimeConfig(
   if (authMode === "sso") {
     betterAuthSecret = required(env, "BETTER_AUTH_SECRET", issues, 32);
     betterAuthUrl =
-      parsedUrl(env, "BETTER_AUTH_URL", production ? ["https:"] : ["http:", "https:"], issues, false) ||
-      appOrigin;
+      parsedUrl(
+        env,
+        "BETTER_AUTH_URL",
+        production ? ["https:"] : ["http:", "https:"],
+        issues,
+        false
+      ) || appOrigin;
     if (!betterAuthUrl) {
-      issues.push({ key: "BETTER_AUTH_URL", reason: "is required when AUTH_MODE=sso (or set APP_ORIGIN)" });
+      issues.push({
+        key: "BETTER_AUTH_URL",
+        reason: "is required when AUTH_MODE=sso (or set APP_ORIGIN)",
+      });
     }
     microsoftClientId = required(env, "MICROSOFT_CLIENT_ID", issues, 8);
     microsoftClientSecret = required(env, "MICROSOFT_CLIENT_SECRET", issues, 8);
     microsoftTenantId = required(env, "MICROSOFT_TENANT_ID", issues, 8);
   }
 
-  const apiTokenMaxTtlDays = boundedInteger(env, "API_TOKEN_MAX_TTL_DAYS", 1, 365, issues);
+  const apiTokenMaxTtlDays = boundedInteger(
+    env,
+    "API_TOKEN_MAX_TTL_DAYS",
+    1,
+    365,
+    issues
+  );
 
   let email: RuntimeConfig["email"] | undefined;
   if (emailMode === "stub") {
     email = { mode: "stub" };
-    if (production) issues.push({ key: "EMAIL_MODE", reason: "stub delivery is forbidden in production" });
+    if (production)
+      issues.push({
+        key: "EMAIL_MODE",
+        reason: "stub delivery is forbidden in production",
+      });
   } else if (emailMode === "resend") {
     const apiKey = required(env, "RESEND_API_KEY", issues, 12);
     const from = required(env, "EMAIL_FROM", issues);
@@ -308,20 +431,33 @@ export function inspectRuntimeConfig(
   let storage: RuntimeConfig["storage"] | undefined;
   if (storageMode === "local") {
     storage = { mode: "local" };
-    if (production) issues.push({ key: "PRIVATE_STORAGE_MODE", reason: "local storage is forbidden in production" });
+    if (production)
+      issues.push({
+        key: "PRIVATE_STORAGE_MODE",
+        reason: "local storage is forbidden in production",
+      });
   } else if (storageMode === "vercel-blob") {
     const token = required(env, "BLOB_READ_WRITE_TOKEN", issues, 12);
     if (token) storage = { mode: "vercel-blob", token };
   }
 
   if (production && connect === "mock") {
-    issues.push({ key: "CONNECT_MODE", reason: "mock integration is forbidden in production" });
+    issues.push({
+      key: "CONNECT_MODE",
+      reason: "mock integration is forbidden in production",
+    });
   }
   if (connect === "rest") {
-    parsedUrl(env, "CONNECT_API_URL", production ? ["https:"] : ["http:", "https:"], issues);
+    parsedUrl(
+      env,
+      "CONNECT_API_URL",
+      production ? ["https:"] : ["http:", "https:"],
+      issues
+    );
     required(env, "CONNECT_API_TOKEN", issues, 12);
   }
-  if (smartsheet === "api") required(env, "SMARTSHEET_ACCESS_TOKEN", issues, 12);
+  if (smartsheet === "api")
+    required(env, "SMARTSHEET_ACCESS_TOKEN", issues, 12);
   if (databricks === "sql") {
     parsedUrl(env, "DATABRICKS_HOST", ["https:"], issues);
     required(env, "DATABRICKS_TOKEN", issues, 12);
@@ -341,7 +477,9 @@ export function inspectRuntimeConfig(
     !smartsheet ||
     !databricks
   ) {
-    const unique = new Map(issues.map((issue) => [`${issue.key}:${issue.reason}`, issue]));
+    const unique = new Map(
+      issues.map((issue) => [`${issue.key}:${issue.reason}`, issue])
+    );
     return { ok: false, config: null, issues: [...unique.values()] };
   }
 
@@ -370,7 +508,9 @@ export function inspectRuntimeConfig(
   };
 }
 
-export function getRuntimeConfig(env: RuntimeEnvironment = process.env): RuntimeConfig {
+export function getRuntimeConfig(
+  env: RuntimeEnvironment = process.env
+): RuntimeConfig {
   const status = inspectRuntimeConfig(env);
   if (!status.ok) throw new RuntimeConfigError(status.issues);
   return status.config;
@@ -394,17 +534,28 @@ export function runtimeDiagnostics(status: RuntimeConfigStatus) {
   };
 }
 
-export function assertDemoSeedAllowed(env: RuntimeEnvironment = process.env): void {
+export function assertDemoSeedAllowed(
+  env: RuntimeEnvironment = process.env
+): void {
   const status = inspectRuntimeConfig(env);
   if (!status.ok) throw new RuntimeConfigError(status.issues);
   if (status.config.appEnv !== "demo") {
-    throw new RuntimeConfigError([{ key: "APP_ENV", reason: "must be demo to seed" }]);
+    throw new RuntimeConfigError([
+      { key: "APP_ENV", reason: "must be demo to seed" },
+    ]);
   }
   if (status.config.database.mode !== "pglite") {
-    throw new RuntimeConfigError([{ key: "DATABASE_MODE", reason: "must be pglite to seed demo data" }]);
+    throw new RuntimeConfigError([
+      { key: "DATABASE_MODE", reason: "must be pglite to seed demo data" },
+    ]);
   }
   const databaseUrl = env.DATABASE_URL?.trim();
   if (databaseUrl && /^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
-    throw new RuntimeConfigError([{ key: "DATABASE_URL", reason: "hosted Postgres is forbidden for demo seeding" }]);
+    throw new RuntimeConfigError([
+      {
+        key: "DATABASE_URL",
+        reason: "hosted Postgres is forbidden for demo seeding",
+      },
+    ]);
   }
 }

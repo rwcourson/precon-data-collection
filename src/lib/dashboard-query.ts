@@ -2,7 +2,11 @@ import type { DashboardWidgetConfig, EstimateRound } from "@/db/schema";
 import { fmtDollars, fmtNumber, fmtPercent } from "@/lib/format";
 import { computeStats, rollup } from "@/lib/rollup";
 
-export type WidgetSeriesPoint = { name: string; value: number; secondary?: number };
+export type WidgetSeriesPoint = {
+  name: string;
+  value: number;
+  secondary?: number;
+};
 export type WidgetTrendPoint = Record<string, string | number | null>;
 export type WidgetTableRow = Record<string, string | number | null>;
 
@@ -24,7 +28,11 @@ export type WidgetResolved = {
   };
   /** WaterfallChart points (increase / decrease / total). */
   waterfall?: {
-    points: { name: string; value: number; type: "increase" | "decrease" | "total" }[];
+    points: {
+      name: string;
+      value: number;
+      type: "increase" | "decrease" | "total";
+    }[];
   };
 };
 
@@ -54,7 +62,13 @@ function sizeBucketLabel(value: number | null | undefined): string {
   return "$250M+";
 }
 
-const SIZE_BUCKET_ORDER = ["<$10M", "$10–50M", "$50–100M", "$100–250M", "$250M+"];
+const SIZE_BUCKET_ORDER = [
+  "<$10M",
+  "$10–50M",
+  "$50–100M",
+  "$100–250M",
+  "$250M+",
+];
 
 function groupValue(r: EstimateRound, groupBy: string): string {
   switch (groupBy) {
@@ -83,7 +97,10 @@ function groupValue(r: EstimateRound, groupBy: string): string {
   }
 }
 
-function applyFilters(rounds: EstimateRound[], filters?: DashboardWidgetConfig["filters"]) {
+function applyFilters(
+  rounds: EstimateRound[],
+  filters?: DashboardWidgetConfig["filters"]
+) {
   if (!filters?.length) return rounds;
   return rounds.filter((r) => {
     for (const f of filters) {
@@ -100,16 +117,20 @@ function applyFilters(rounds: EstimateRound[], filters?: DashboardWidgetConfig["
           if (!left.toLowerCase().includes(right.toLowerCase())) return false;
           break;
         case "gt":
-          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln > rn)) return false;
+          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln > rn))
+            return false;
           break;
         case "lt":
-          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln < rn)) return false;
+          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln < rn))
+            return false;
           break;
         case "gte":
-          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln >= rn)) return false;
+          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln >= rn))
+            return false;
           break;
         case "lte":
-          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln <= rn)) return false;
+          if (!(Number.isFinite(ln) && Number.isFinite(rn) && ln <= rn))
+            return false;
           break;
         default:
           return false;
@@ -120,13 +141,20 @@ function applyFilters(rounds: EstimateRound[], filters?: DashboardWidgetConfig["
 }
 
 /** If filters wipe the set, drop them so the canvas never shows empty-by-mistake. */
-function roundsForWidget(rounds: EstimateRound[], filters?: DashboardWidgetConfig["filters"]) {
+function roundsForWidget(
+  rounds: EstimateRound[],
+  filters?: DashboardWidgetConfig["filters"]
+) {
   const filtered = applyFilters(rounds, filters);
-  if (filtered.length === 0 && filters?.length) return { rounds: rounds, filtersDropped: true };
+  if (filtered.length === 0 && filters?.length)
+    return { rounds: rounds, filtersDropped: true };
   return { rounds: filtered, filtersDropped: false };
 }
 
-function metricFromStats(stats: ReturnType<typeof computeStats>, metric: MetricKey): number | null {
+function metricFromStats(
+  stats: ReturnType<typeof computeStats>,
+  metric: MetricKey
+): number | null {
   switch (metric) {
     case "estimateValue":
       return stats.volume;
@@ -147,9 +175,17 @@ function metricFromStats(stats: ReturnType<typeof computeStats>, metric: MetricK
   }
 }
 
-function formatMetric(metric: MetricKey, value: number | null, format?: string | null): string {
+function formatMetric(
+  metric: MetricKey,
+  value: number | null,
+  format?: string | null
+): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  if (format === "percent" || metric === "winRate" || metric === "feeExpectedPct") {
+  if (
+    format === "percent" ||
+    metric === "winRate" ||
+    metric === "feeExpectedPct"
+  ) {
     return fmtPercent(value);
   }
   if (format === "number" || metric === "roundCount") return fmtNumber(value);
@@ -174,7 +210,7 @@ function resolveMetric(config: DashboardWidgetConfig): MetricKey {
 /** Execute one widget config against estimate rounds (read-only). */
 export function resolveWidget(
   config: DashboardWidgetConfig,
-  allRounds: EstimateRound[],
+  allRounds: EstimateRound[]
 ): WidgetResolved {
   const { rounds, filtersDropped } = roundsForWidget(allRounds, config.filters);
   const metric = resolveMetric(config);
@@ -195,10 +231,17 @@ export function resolveWidget(
     };
   }
 
-  if (config.kind === "line" || config.kind === "area" || config.kind === "projection") {
+  if (
+    config.kind === "line" ||
+    config.kind === "area" ||
+    config.kind === "projection"
+  ) {
     const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
     const trend = years.map((y) => {
-      const stats = computeStats(String(y), rounds.filter((r) => r.bidYear === y));
+      const stats = computeStats(
+        String(y),
+        rounds.filter((r) => r.bidYear === y)
+      );
       return {
         year: y,
         value: metricFromStats(stats, metric) ?? 0,
@@ -236,7 +279,7 @@ export function resolveWidget(
       const row: Record<string, string | number> = { year: y };
       for (const g of groups) {
         const subset = rounds.filter(
-          (r) => r.bidYear === y && groupValue(r, groupBy) === g,
+          (r) => r.bidYear === y && groupValue(r, groupBy) === g
         );
         row[g] = metricFromStats(computeStats(g, subset), metric) ?? 0;
       }
@@ -253,7 +296,10 @@ export function resolveWidget(
     // Dual-axis story: volume (bars) + win rate (line) by bid year.
     const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
     const rows = years.map((y) => {
-      const stats = computeStats(String(y), rounds.filter((r) => r.bidYear === y));
+      const stats = computeStats(
+        String(y),
+        rounds.filter((r) => r.bidYear === y)
+      );
       return {
         year: String(y),
         volume: stats.volume,
@@ -274,9 +320,18 @@ export function resolveWidget(
 
   if (config.kind === "waterfall") {
     // Portfolio bridge by outcome — increase/decrease then total.
-    const won = computeStats("won", rounds.filter((r) => r.outcome === "successful"));
-    const lost = computeStats("lost", rounds.filter((r) => r.outcome === "unsuccessful"));
-    const pending = computeStats("pending", rounds.filter((r) => r.outcome === "pending"));
+    const won = computeStats(
+      "won",
+      rounds.filter((r) => r.outcome === "successful")
+    );
+    const lost = computeStats(
+      "lost",
+      rounds.filter((r) => r.outcome === "unsuccessful")
+    );
+    const pending = computeStats(
+      "pending",
+      rounds.filter((r) => r.outcome === "pending")
+    );
     const total = computeStats("all", rounds);
     const points: NonNullable<WidgetResolved["waterfall"]>["points"] = [
       { name: "Won", value: won.volume, type: "increase" },
@@ -295,7 +350,8 @@ export function resolveWidget(
   let groups = rollup(rounds, (r) => groupValue(r, groupBy));
   if (groupBy === "sizeBucket") {
     groups = [...groups].sort(
-      (a, b) => SIZE_BUCKET_ORDER.indexOf(a.key) - SIZE_BUCKET_ORDER.indexOf(b.key),
+      (a, b) =>
+        SIZE_BUCKET_ORDER.indexOf(a.key) - SIZE_BUCKET_ORDER.indexOf(b.key)
     );
   } else {
     groups = groups.slice(0, 12);
@@ -358,7 +414,7 @@ export function resolveWidget(
 
 export function resolveWidgets(
   configs: DashboardWidgetConfig[],
-  allRounds: EstimateRound[],
+  allRounds: EstimateRound[]
 ): WidgetResolved[] {
   return configs.map((c) => resolveWidget(c, allRounds));
 }

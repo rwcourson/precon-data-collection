@@ -9,7 +9,11 @@ export type StandardDashboardDef = {
   widgets: DashboardWidgetConfig[];
 };
 
-function kpi(title: string, metricKey: DashboardWidgetConfig["metricKey"], groupBy?: string): DashboardWidgetConfig {
+function kpi(
+  title: string,
+  metricKey: DashboardWidgetConfig["metricKey"],
+  groupBy?: string
+): DashboardWidgetConfig {
   return {
     title,
     kind: "kpi",
@@ -19,7 +23,11 @@ function kpi(title: string, metricKey: DashboardWidgetConfig["metricKey"], group
   };
 }
 
-function bar(title: string, metricKey: DashboardWidgetConfig["metricKey"], groupBy: string): DashboardWidgetConfig {
+function bar(
+  title: string,
+  metricKey: DashboardWidgetConfig["metricKey"],
+  groupBy: string
+): DashboardWidgetConfig {
   return {
     title,
     kind: "bar",

@@ -7,7 +7,7 @@ describe("planDashboardFromPrompt", () => {
     expect(plan.widgets.length).toBeGreaterThanOrEqual(4);
     expect(plan.widgets.some((w) => w.metricKey === "winRate")).toBe(true);
     const filtered = plan.widgets.filter((w) =>
-      w.filters?.some((f) => f.field === "region" && f.value === "Florida"),
+      w.filters?.some((f) => f.field === "region" && f.value === "Florida")
     );
     expect(filtered.length).toBeGreaterThan(0);
     expect(plan.name.toLowerCase()).toMatch(/florida|win rate/);

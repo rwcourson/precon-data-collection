@@ -9,7 +9,10 @@ import { applicableRequiredKeys } from "./validation";
  * human decides whether it is a real value, a typo, or a list gap.
  */
 
-export type FlagKind = "missing_required" | "unknown_list_value" | "unlinked_job";
+export type FlagKind =
+  | "missing_required"
+  | "unknown_list_value"
+  | "unlinked_job";
 
 export const FLAG_LABELS: Record<FlagKind, string> = {
   missing_required: "Missing required value",
@@ -32,10 +35,12 @@ export function scanRound(
   round: EstimateRound,
   job: Job,
   multi: Record<string, string[]>,
-  lists: Record<string, string[]>,
+  lists: Record<string, string[]>
 ): ScannedFlag[] {
   const flags: ScannedFlag[] = [];
-  const expectComplete = ["submitted", "post_bid", "locked"].includes(round.status);
+  const expectComplete = ["submitted", "post_bid", "locked"].includes(
+    round.status
+  );
   const record = round as unknown as Record<string, unknown>;
 
   for (const key of applicableRequiredKeys(round)) {
@@ -43,12 +48,22 @@ export function scanRound(
     if (["jobNumber", "jobName", "estimateLead"].includes(key)) continue;
     if (MULTI_FIELD_KEYS.includes(key)) {
       if ((multi[key] ?? []).length === 0)
-        flags.push({ roundId: round.id, field: key, kind: "missing_required", value: null });
+        flags.push({
+          roundId: round.id,
+          field: key,
+          kind: "missing_required",
+          value: null,
+        });
       continue;
     }
     const v = record[key];
     if (v === null || v === undefined || v === "")
-      flags.push({ roundId: round.id, field: key, kind: "missing_required", value: null });
+      flags.push({
+        roundId: round.id,
+        field: key,
+        kind: "missing_required",
+        value: null,
+      });
   }
 
   // Dropdown values that do not match the managed list — kept, not coerced.
@@ -58,11 +73,18 @@ export function scanRound(
     if (!allowed || allowed.length === 0) continue;
 
     const values =
-      def.type === "multi" ? (multi[def.key] ?? []) : [record[def.key]].filter(Boolean);
+      def.type === "multi"
+        ? (multi[def.key] ?? [])
+        : [record[def.key]].filter(Boolean);
     for (const raw of values) {
       const value = String(raw);
       if (value === "" || allowed.includes(value)) continue;
-      flags.push({ roundId: round.id, field: def.key, kind: "unknown_list_value", value });
+      flags.push({
+        roundId: round.id,
+        field: def.key,
+        kind: "unknown_list_value",
+        value,
+      });
     }
   }
 
@@ -79,8 +101,12 @@ export function scanRound(
 }
 
 /** Stable identity for a flag so rescans update rather than duplicate. */
-export const flagKey = (f: { roundId: number; field: string; kind: string; value: string | null }) =>
-  `${f.roundId}\u241F${f.field}\u241F${f.kind}\u241F${f.value ?? ""}`;
+export const flagKey = (f: {
+  roundId: number;
+  field: string;
+  kind: string;
+  value: string | null;
+}) => `${f.roundId}\u241F${f.field}\u241F${f.kind}\u241F${f.value ?? ""}`;
 
 export function fieldLabel(field: string): string {
   return FIELD_MAP[field]?.label ?? field;

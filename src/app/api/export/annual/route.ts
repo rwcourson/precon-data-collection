@@ -1,9 +1,9 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { buildAnnualReport, renderAnnualReportHtml } from "@/lib/annual-report";
-import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
-import { pdfResponse, safeName } from "@/lib/pdf";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
+import { pdfResponse, safeName } from "@/lib/pdf";
 import type { FlatRow } from "@/lib/report-engine";
 import type { RollupStats } from "@/lib/rollup";
 import { resolveRegionParam } from "@/lib/workspace";
@@ -38,7 +38,10 @@ const toGroupRow = (g: RollupStats): FlatRow => ({
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const format = params.get("format") ?? "pdf";
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
 
   // A Region workspace pins the scope; Corporate may target any single Region.
   const scoped = resolveRegionParam(workspace, params.get("region"));
@@ -89,7 +92,9 @@ export async function GET(req: NextRequest) {
 
   const html = renderAnnualReportHtml(report);
   if (format === "html") {
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+    return new Response(html, {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   }
   return pdfResponse(html, title, { landscape: false });
 }

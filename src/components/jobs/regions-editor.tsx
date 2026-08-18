@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { UserPlus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   addJobRegionVisibility,
   addJobUserVisibility,
@@ -44,9 +44,14 @@ export function RegionsEditor({
   const [pending, startTransition] = useTransition();
   const [addUserId, setAddUserId] = useState<string>("");
 
-  const visibleRegions = state.allRegions.filter((region) => state.regions.includes(region));
+  const visibleRegions = state.allRegions.filter((region) =>
+    state.regions.includes(region)
+  );
   const visibleSet = useMemo(() => new Set(state.regions), [state.regions]);
-  const pinnedIds = useMemo(() => new Set(state.pins.map((pin) => pin.userId)), [state.pins]);
+  const pinnedIds = useMemo(
+    () => new Set(state.pins.map((pin) => pin.userId)),
+    [state.pins]
+  );
 
   const peopleByRegion = useMemo(() => {
     const groups = new Map<string, JobVisibilityState["directory"]>();
@@ -58,7 +63,9 @@ export function RegionsEditor({
     return groups;
   }, [state.directory, visibleRegions]);
 
-  const oneOffs = state.pins.filter((pin) => !pin.region || !visibleSet.has(pin.region));
+  const oneOffs = state.pins.filter(
+    (pin) => !pin.region || !visibleSet.has(pin.region)
+  );
 
   const addCandidates = useMemo(() => {
     const byRegion = new Map<string, JobVisibilityState["directory"]>();
@@ -81,7 +88,9 @@ export function RegionsEditor({
         setState(await getJobVisibility(jobId));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not update region");
+        toast.error(
+          err instanceof Error ? err.message : "Could not update region"
+        );
       }
     });
   }
@@ -96,7 +105,9 @@ export function RegionsEditor({
         setState(await getJobVisibility(jobId));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not add that person");
+        toast.error(
+          err instanceof Error ? err.message : "Could not add that person"
+        );
       }
     });
   }
@@ -108,7 +119,9 @@ export function RegionsEditor({
         setState(await getJobVisibility(jobId));
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not remove that person");
+        toast.error(
+          err instanceof Error ? err.message : "Could not remove that person"
+        );
       }
     });
   }
@@ -121,7 +134,8 @@ export function RegionsEditor({
           {state.allRegions.map((region) => {
             const on = state.regions.includes(region);
             const isHome = region === state.homeRegion;
-            const canToggle = state.manageableRegions.includes(region) && !isHome;
+            const canToggle =
+              state.manageableRegions.includes(region) && !isHome;
             return (
               <button
                 key={region}
@@ -130,8 +144,10 @@ export function RegionsEditor({
                 onClick={() => toggleRegion(region, !on)}
                 className={cn(
                   "rounded-full border px-2.5 py-0.5 text-sm",
-                  on ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground",
-                  !canToggle && "cursor-default opacity-80",
+                  on
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "text-muted-foreground",
+                  !canToggle && "cursor-default opacity-80"
                 )}
                 title={
                   isHome
@@ -154,8 +170,8 @@ export function RegionsEditor({
       <div>
         <p className={SECTION_LABEL}>Team</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Everyone in a visible region can already see this job. Add someone from
-          another region if they need access on their own.
+          Everyone in a visible region can already see this job. Add someone
+          from another region if they need access on their own.
         </p>
 
         <div className="mt-3 space-y-3">
@@ -167,7 +183,9 @@ export function RegionsEditor({
                   {region}
                   {region === state.homeRegion ? " · home" : ""}
                   <span className="ml-1.5 font-normal text-muted-foreground">
-                    {people.length === 1 ? "1 person" : `${people.length} people`}
+                    {people.length === 1
+                      ? "1 person"
+                      : `${people.length} people`}
                   </span>
                 </p>
                 {people.length > 0 ? (
@@ -176,7 +194,9 @@ export function RegionsEditor({
                       <li key={user.id} className="text-sm leading-6">
                         {user.name}
                         {user.title ? (
-                          <span className="ml-1.5 text-muted-foreground">{user.title}</span>
+                          <span className="ml-1.5 text-muted-foreground">
+                            {user.title}
+                          </span>
                         ) : null}
                       </li>
                     ))}
@@ -196,7 +216,11 @@ export function RegionsEditor({
           {oneOffs.length > 0 ? (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {oneOffs.map((pin) => (
-                <Badge key={pin.userId} variant="secondary" className="gap-1 text-sm">
+                <Badge
+                  key={pin.userId}
+                  variant="secondary"
+                  className="gap-1 text-sm"
+                >
                   {personLine(pin)}
                   {pin.region ? ` · ${pin.region}` : ""}
                   {state.canAssignUsers && (
@@ -212,14 +236,19 @@ export function RegionsEditor({
               ))}
             </div>
           ) : (
-            <p className="mt-1 text-sm text-muted-foreground">No one-off people yet.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No one-off people yet.
+            </p>
           )}
 
           {state.canAssignUsers ? (
             <div className="mt-2 flex gap-2">
               <Select
                 items={addCandidates.flatMap(([, people]) =>
-                  people.map((user) => ({ value: String(user.id), label: personLine(user) })),
+                  people.map((user) => ({
+                    value: String(user.id),
+                    label: personLine(user),
+                  }))
                 )}
                 value={addUserId}
                 onValueChange={(value) => setAddUserId(value ?? "")}
@@ -246,7 +275,12 @@ export function RegionsEditor({
                   )}
                 </SelectContent>
               </Select>
-              <Button type="button" size="sm" onClick={addPerson} disabled={pending || !addUserId}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={addPerson}
+                disabled={pending || !addUserId}
+              >
                 <UserPlus className="size-3.5" /> Add
               </Button>
             </div>

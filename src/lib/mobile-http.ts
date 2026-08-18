@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
+import type { ApiTokenScope } from "@/domain/contracts";
 import { DomainError } from "@/domain/errors";
+import { requireScopes } from "@/lib/api-auth";
+import { createPrincipal } from "@/lib/authorization/principal";
 import {
-  resolveMobilePrincipal,
   type MobilePrincipal,
+  resolveMobilePrincipal,
 } from "@/lib/mobile-auth";
 import { runWithMobileContext } from "@/lib/mobile-context";
-import { createPrincipal } from "@/lib/authorization/principal";
-import { requireScopes } from "@/lib/api-auth";
-import type { ApiTokenScope } from "@/domain/contracts";
 
 export const WORKSPACE_HEADER = "x-workspace-region";
 
@@ -18,7 +18,7 @@ export function jsonOk<T>(data: T, init?: { status?: number }) {
 export function jsonError(
   error: string,
   status: number,
-  extra?: Record<string, unknown>,
+  extra?: Record<string, unknown>
 ) {
   return NextResponse.json({ error, ...extra }, { status });
 }
@@ -64,9 +64,11 @@ export function mapError(err: unknown): NextResponse {
 export async function withMobileAuth(
   req: Request,
   requirements: { scopes: ApiTokenScope | readonly ApiTokenScope[] },
-  handler: (principal: MobilePrincipal, req: Request) => Promise<NextResponse>,
+  handler: (principal: MobilePrincipal, req: Request) => Promise<NextResponse>
 ): Promise<NextResponse> {
-  const resolved = await resolveMobilePrincipal(req.headers.get("authorization"));
+  const resolved = await resolveMobilePrincipal(
+    req.headers.get("authorization")
+  );
   if (!resolved.ok) {
     return jsonError(resolved.error, resolved.status);
   }
@@ -88,7 +90,7 @@ export async function withMobileAuth(
   try {
     return await runWithMobileContext(
       { user: resolved.principal.user, workspaceCookie, authorization },
-      () => handler(principal, req),
+      () => handler(principal, req)
     );
   } catch (err) {
     return mapError(err);

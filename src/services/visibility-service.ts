@@ -19,10 +19,7 @@ async function loadJobRow(jobId: number) {
   return job;
 }
 
-function jobDescriptor(
-  job: typeof jobs.$inferSelect,
-  region: string | null,
-) {
+function jobDescriptor(job: typeof jobs.$inferSelect, region: string | null) {
   return {
     type: "job" as const,
     id: job.id,
@@ -36,7 +33,7 @@ function jobDescriptor(
 /** Insert the home-region visibility row (idempotent). Used by create + seed. */
 export async function recordHomeRegionVisibility(
   tx: Pick<typeof db, "insert">,
-  job: { id: number; region: string; createdById: number | null },
+  job: { id: number; region: string; createdById: number | null }
 ): Promise<void> {
   await tx
     .insert(jobRegionVisibility)
@@ -55,7 +52,10 @@ export const visibilityService = {
     if (!loaded) throw DomainError.notFound("Job not found");
     const job = loaded.value;
     const [regions, pins] = await Promise.all([
-      db.select().from(jobRegionVisibility).where(eq(jobRegionVisibility.jobId, jobId)),
+      db
+        .select()
+        .from(jobRegionVisibility)
+        .where(eq(jobRegionVisibility.jobId, jobId)),
       db
         .select({
           userId: jobUserVisibility.userId,
@@ -79,7 +79,7 @@ export const visibilityService = {
       principal,
       "visibility.manage-region",
       jobDescriptor(job, target),
-      "Job visibility",
+      "Job visibility"
     );
     const [row] = await db
       .insert(jobRegionVisibility)
@@ -114,11 +114,16 @@ export const visibilityService = {
       principal,
       "visibility.manage-region",
       jobDescriptor(job, target),
-      "Job visibility",
+      "Job visibility"
     );
     const deleted = await db
       .delete(jobRegionVisibility)
-      .where(and(eq(jobRegionVisibility.jobId, job.id), eq(jobRegionVisibility.region, target)))
+      .where(
+        and(
+          eq(jobRegionVisibility.jobId, job.id),
+          eq(jobRegionVisibility.region, target)
+        )
+      )
       .returning({ id: jobRegionVisibility.id });
     if (deleted.length > 0) {
       await db.insert(auditLog).values({
@@ -140,9 +145,13 @@ export const visibilityService = {
       principal,
       "visibility.assign-user",
       jobDescriptor(job, job.region),
-      "Job visibility",
+      "Job visibility"
     );
-    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+    const [targetUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
     if (!targetUser) throw DomainError.notFound("User not found");
     const [row] = await db
       .insert(jobUserVisibility)
@@ -173,11 +182,16 @@ export const visibilityService = {
       principal,
       "visibility.assign-user",
       jobDescriptor(job, job.region),
-      "Job visibility",
+      "Job visibility"
     );
     const deleted = await db
       .delete(jobUserVisibility)
-      .where(and(eq(jobUserVisibility.jobId, job.id), eq(jobUserVisibility.userId, userId)))
+      .where(
+        and(
+          eq(jobUserVisibility.jobId, job.id),
+          eq(jobUserVisibility.userId, userId)
+        )
+      )
       .returning({ id: jobUserVisibility.id });
     if (deleted.length > 0) {
       await db.insert(auditLog).values({

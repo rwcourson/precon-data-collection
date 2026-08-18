@@ -1,5 +1,9 @@
 import type { EstimateRound, Role, RoundStatus, User } from "@/db/schema";
-import { authorize, resolveKernelSheetCapability, sheetCapabilityRank as kernelSheetCapabilityRank } from "@/lib/authorization/kernel";
+import {
+  authorize,
+  sheetCapabilityRank as kernelSheetCapabilityRank,
+  resolveKernelSheetCapability,
+} from "@/lib/authorization/kernel";
 import { createPrincipal } from "@/lib/authorization/principal";
 
 /**
@@ -8,13 +12,17 @@ import { createPrincipal } from "@/lib/authorization/principal";
  */
 
 const policyPrincipal = (user: User) =>
-  createPrincipal({ user, authSource: "service", workspaceRegion: user.region });
+  createPrincipal({
+    user,
+    authSource: "service",
+    workspaceRegion: user.region,
+  });
 
 /** Default: who may write a field key given round lifecycle. */
 export function canWriteField(
   user: User,
   fieldKey: string,
-  round: Pick<EstimateRound, "status" | "region">,
+  round: Pick<EstimateRound, "status" | "region">
 ): boolean {
   return authorize(policyPrincipal(user), "edit", {
     type: "round",
@@ -48,7 +56,7 @@ export function resolveSheetCapability(
     grantRole: Role | null;
     acl: SheetCapability;
     regionAllowlist: string[] | null;
-  }[],
+  }[]
 ): SheetCapability | null {
   return resolveKernelSheetCapability(policyPrincipal(user), {
     region: sheet.region,
@@ -60,11 +68,11 @@ export function resolveSheetCapability(
 export function assertCanWriteField(
   user: User,
   fieldKey: string,
-  round: Pick<EstimateRound, "status" | "region">,
+  round: Pick<EstimateRound, "status" | "region">
 ): void {
   if (!canWriteField(user, fieldKey, round)) {
     throw new Error(
-      `Permission denied: cannot write field "${fieldKey}" as ${user.role} while status is ${round.status}. Ask an RPD/SPD or Corporate Admin if you need access.`,
+      `Permission denied: cannot write field "${fieldKey}" as ${user.role} while status is ${round.status}. Ask an RPD/SPD or Corporate Admin if you need access.`
     );
   }
 }
@@ -78,12 +86,12 @@ export function assertSheetCapability(
     acl: SheetCapability;
     regionAllowlist: string[] | null;
   }[],
-  needed: SheetCapability,
+  needed: SheetCapability
 ): void {
   const have = resolveSheetCapability(user, sheet, acls);
   if (!have || sheetCapabilityRank(have) < sheetCapabilityRank(needed)) {
     throw new Error(
-      `Permission denied: sheet requires ${needed} access (you have ${have ?? "none"}). Ask a sheet manager or Corporate Admin.`,
+      `Permission denied: sheet requires ${needed} access (you have ${have ?? "none"}). Ask a sheet manager or Corporate Admin.`
     );
   }
 }
@@ -95,7 +103,14 @@ export function defaultAllowedStatusesForRole(role: Role): RoundStatus[] {
     case "admin_jsa":
       return ["submitted", "post_bid"];
     case "rpd":
-      return ["submitted", "post_bid", "locked", "active", "upcoming", "outstanding"];
+      return [
+        "submitted",
+        "post_bid",
+        "locked",
+        "active",
+        "upcoming",
+        "outstanding",
+      ];
     case "pcm":
       return ["active", "upcoming", "outstanding"];
     case "corporate_admin":

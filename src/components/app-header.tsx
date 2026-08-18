@@ -1,18 +1,18 @@
+import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { Suspense } from "react";
-import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { User } from "@/db/schema";
 import { notifications } from "@/db/schema";
-import { getAllUsers, getCurrentUser } from "@/lib/current-user";
-import { NotificationsBell } from "./notifications-bell";
-import { RoleSwitcher } from "./role-switcher";
-import { MobileNav } from "./mobile-nav";
-import { GlobalSearch } from "./global-search";
-import { ThemeToggle } from "./theme-toggle";
 import { authMode } from "@/lib/auth";
+import { getAllUsers, getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/labels";
-import type { User } from "@/db/schema";
+import { GlobalSearch } from "./global-search";
+import { MobileNav } from "./mobile-nav";
+import { NotificationsBell } from "./notifications-bell";
+import { RoleSwitcher } from "./role-switcher";
+import { ThemeToggle } from "./theme-toggle";
 export async function AppHeader() {
   let user: User | null = null;
   let users: User[] = [];

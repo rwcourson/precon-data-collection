@@ -61,7 +61,8 @@ function normalizeFilterValue(field: string, value: string): string | null {
 
   if (field === "outcome") {
     if (OUTCOME_VALUES.has(lower)) return lower;
-    if (/(^won$|win|award|successful|success)/i.test(lower)) return "successful";
+    if (/(^won$|win|award|successful|success)/i.test(lower))
+      return "successful";
     if (/(^lost$|lose|unsuccessful|fail)/i.test(lower)) return "unsuccessful";
     if (/pending|open|undecided/.test(lower)) return "pending";
     return null;
@@ -81,7 +82,10 @@ function normalizeFilterValue(field: string, value: string): string | null {
   }
 
   if (field === "region") {
-    return REGION_ALIASES[lower] ?? (/^[A-Z]/.test(raw) ? raw : raw.replace(/^./, (c) => c.toUpperCase()));
+    return (
+      REGION_ALIASES[lower] ??
+      (/^[A-Z]/.test(raw) ? raw : raw.replace(/^./, (c) => c.toUpperCase()))
+    );
   }
 
   if (field === "bidYear") {
@@ -144,19 +148,19 @@ function polishTitle(
   title: string,
   metricKey: string,
   groupBy: string | null,
-  kind: string,
+  kind: string
 ): string {
   const trimmed = title.trim();
   const looksRaw =
     !trimmed ||
     /[a-z][A-Z]/.test(trimmed) ||
     /\b(estimateValue|feeExpected|roundCount|winRate|sizeBucket|marketSector|bidYear|preconDepartment)\b/.test(
-      trimmed,
+      trimmed
     );
   if (!looksRaw) return trimmed;
 
   const metric = METRIC_LABELS[metricKey] ?? metricKey;
-  const group = groupBy ? GROUP_LABELS[groupBy] ?? groupBy : null;
+  const group = groupBy ? (GROUP_LABELS[groupBy] ?? groupBy) : null;
   switch (kind) {
     case "kpi":
       return metric;
@@ -179,7 +183,9 @@ function polishTitle(
   }
 }
 
-export function sanitizeWidgetConfig(config: DashboardWidgetConfig): DashboardWidgetConfig {
+export function sanitizeWidgetConfig(
+  config: DashboardWidgetConfig
+): DashboardWidgetConfig {
   const filters = (config.filters ?? [])
     .map((f) => {
       let field = f.field.trim();
@@ -189,7 +195,9 @@ export function sanitizeWidgetConfig(config: DashboardWidgetConfig): DashboardWi
       if (!ALLOWED_FILTER_FIELDS.has(field)) return null;
       const value = normalizeFilterValue(field, f.value);
       if (value == null) return null;
-      const op = ["eq", "contains", "gt", "lt", "gte", "lte"].includes(f.op) ? f.op : "eq";
+      const op = ["eq", "contains", "gt", "lt", "gte", "lte"].includes(f.op)
+        ? f.op
+        : "eq";
       return { field, op, value };
     })
     .filter((f): f is NonNullable<typeof f> => Boolean(f));

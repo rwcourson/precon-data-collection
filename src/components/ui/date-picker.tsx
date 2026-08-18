@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { CalendarDays } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -57,7 +57,7 @@ export function DatePicker({
           "flex w-full items-center justify-between gap-2 rounded-md border border-input/80 bg-transparent text-left text-sm transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 dark:bg-input/30",
           size === "sm" ? "h-7 px-1.5 text-[13px]" : "h-7 px-2.5",
           !selected && "text-muted-foreground",
-          className,
+          className
         )}
       >
         <span className="min-w-0 truncate">

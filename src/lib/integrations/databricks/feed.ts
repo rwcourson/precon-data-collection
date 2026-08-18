@@ -1,7 +1,7 @@
 import "server-only";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { appSettings } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { METRIC_DEFS } from "@/lib/metrics";
 import {
   getAllCustomColumns,
@@ -42,7 +42,10 @@ export const DEFAULT_FEED_STATE: FeedState = {
 };
 
 export async function getFeedState(): Promise<FeedState> {
-  const [row] = await db.select().from(appSettings).where(eq(appSettings.key, FEED_STATE_KEY));
+  const [row] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, FEED_STATE_KEY));
   if (!row) return DEFAULT_FEED_STATE;
   return { ...DEFAULT_FEED_STATE, ...(row.value as Partial<FeedState>) };
 }
@@ -61,7 +64,10 @@ export type FeedRow = Record<string, string | number | boolean | null>;
 
 /** Builds the full outbound row set. Read-only — safe to call for a preview. */
 export async function buildFeedRows(): Promise<FeedRow[]> {
-  const [rounds, customCols] = await Promise.all([getRoundsWithJobs(), getAllCustomColumns()]);
+  const [rounds, customCols] = await Promise.all([
+    getRoundsWithJobs(),
+    getAllCustomColumns(),
+  ]);
   const ids = rounds.map((r) => r.round.id);
   const [multiMap, customMap] = await Promise.all([
     getMultiValuesForRounds(ids),
@@ -72,7 +78,9 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
   return rounds.map(({ round, job, estimateLeadName }) => {
     const multi = multiMap.get(round.id) ?? {};
     const custom: Record<string, string | null> = {};
-    for (const [colId, value] of Object.entries(customMap.get(round.id) ?? {})) {
+    for (const [colId, value] of Object.entries(
+      customMap.get(round.id) ?? {}
+    )) {
       const col = colById.get(Number(colId));
       if (col) custom[col.label] = value;
     }
@@ -102,8 +110,10 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
       submitted_at: round.submittedAt?.toISOString() ?? null,
       locked_at: round.lockedAt?.toISOString() ?? null,
       updated_at: round.updatedAt.toISOString(),
-      self_perform_work_types: (multi.selfPerformWorkType ?? []).join("; ") || null,
-      utilized_support_services: (multi.utilizedSupportServices ?? []).join("; ") || null,
+      self_perform_work_types:
+        (multi.selfPerformWorkType ?? []).join("; ") || null,
+      utilized_support_services:
+        (multi.utilizedSupportServices ?? []).join("; ") || null,
       custom_columns: JSON.stringify(custom),
     };
 
@@ -116,7 +126,8 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
   });
 }
 
-const toSnake = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+const toSnake = (s: string) =>
+  s.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
 
 export type FeedResult = {
   configured: boolean;
@@ -134,7 +145,7 @@ export type FeedResult = {
  * chance of the warehouse drifting from the system of record.
  */
 export async function runDatabricksFeed(
-  opts: { previewOnly?: boolean } = {},
+  opts: { previewOnly?: boolean } = {}
 ): Promise<FeedResult> {
   const rows = await buildFeedRows();
   const cfg = databricksConfig();
@@ -164,16 +175,21 @@ export async function runDatabricksFeed(
 
   try {
     const columns = Object.keys(rows[0] ?? {});
-    await runStatement(cfg, `CREATE TABLE IF NOT EXISTS ${cfg.table} (${ddl(columns)})`);
+    await runStatement(
+      cfg,
+      `CREATE TABLE IF NOT EXISTS ${cfg.table} (${ddl(columns)})`
+    );
     await runStatement(cfg, `TRUNCATE TABLE ${cfg.table}`);
 
     // Chunked so a large year does not blow past the statement size limit.
     for (let i = 0; i < rows.length; i += 200) {
       const chunk = rows.slice(i, i + 200);
-      const values = chunk.map((r) => `(${columns.map((c) => sqlLiteral(r[c])).join(",")})`);
+      const values = chunk.map(
+        (r) => `(${columns.map((c) => sqlLiteral(r[c])).join(",")})`
+      );
       await runStatement(
         cfg,
-        `INSERT INTO ${cfg.table} (${columns.join(",")}) VALUES ${values.join(",")}`,
+        `INSERT INTO ${cfg.table} (${columns.join(",")}) VALUES ${values.join(",")}`
       );
     }
 
@@ -184,7 +200,12 @@ export async function runDatabricksFeed(
       lastError: null,
     };
     await setFeedState(state);
-    return { configured: true, rows: rows.length, status: "pushed", table: cfg.table };
+    return {
+      configured: true,
+      rows: rows.length,
+      status: "pushed",
+      table: cfg.table,
+    };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     await setFeedState({
@@ -206,7 +227,10 @@ export async function runDatabricksFeed(
 /** Everything lands as STRING or DOUBLE; the warehouse casts downstream. */
 function ddl(columns: string[]): string {
   return columns
-    .map((c) => `${c} ${c.startsWith("metric_") || NUMERIC.has(c) ? "DOUBLE" : "STRING"}`)
+    .map(
+      (c) =>
+        `${c} ${c.startsWith("metric_") || NUMERIC.has(c) ? "DOUBLE" : "STRING"}`
+    )
     .join(", ");
 }
 

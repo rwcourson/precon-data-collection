@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { updateSheetMeta } from "@/actions/sheets";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { updateSheetMeta } from "@/actions/sheets";
 import type { SheetSummary } from "@/lib/sheets";
 
 export function RenameSheetDialog({
@@ -41,7 +41,9 @@ export function RenameSheetDialog({
         onClose();
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not update the sheet");
+        toast.error(
+          e instanceof Error ? e.message : "Could not update the sheet"
+        );
       }
     });
   }
@@ -58,7 +60,11 @@ export function RenameSheetDialog({
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Folder</Label>

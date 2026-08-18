@@ -16,13 +16,14 @@ export function isCopilotToolName(value: string): value is CopilotToolName {
 
 export function copilotToolSecret(): string {
   const configured =
-    process.env.BETTER_AUTH_SECRET?.trim() || process.env.AI_GATEWAY_API_KEY?.trim();
+    process.env.BETTER_AUTH_SECRET?.trim() ||
+    process.env.AI_GATEWAY_API_KEY?.trim();
   if (configured) return configured;
   // A well-known fallback would let anyone forge tool-call HMACs on a hosted
   // deployment, so it is only acceptable on a developer machine.
   if (process.env.VERCEL || process.env.APP_ENV === "production") {
     throw new Error(
-      "Copilot tool signing requires BETTER_AUTH_SECRET or AI_GATEWAY_API_KEY on hosted deployments.",
+      "Copilot tool signing requires BETTER_AUTH_SECRET or AI_GATEWAY_API_KEY on hosted deployments."
     );
   }
   return "precon-demo-copilot";
@@ -37,7 +38,9 @@ export const COPILOT_TOOL_MAX_SKEW_MS = 120_000;
  * Must stay in lockstep with agent/lib/app-bridge.ts.
  */
 function copilotToolSigningKey(): Buffer {
-  return createHmac("sha256", copilotToolSecret()).update("copilot-tools-v1").digest();
+  return createHmac("sha256", copilotToolSecret())
+    .update("copilot-tools-v1")
+    .digest();
 }
 
 export function sha256Hex(rawBody: string): string {
@@ -53,13 +56,17 @@ export type CopilotToolSignatureInput = {
   rawBody: string;
 };
 
-export function signCopilotToolRequest(input: CopilotToolSignatureInput): string {
+export function signCopilotToolRequest(
+  input: CopilotToolSignatureInput
+): string {
   const payload = `${input.timestamp}:${input.principalId}:${input.tool}:${sha256Hex(input.rawBody)}`;
-  return createHmac("sha256", copilotToolSigningKey()).update(payload).digest("hex");
+  return createHmac("sha256", copilotToolSigningKey())
+    .update(payload)
+    .digest("hex");
 }
 
 export function verifyCopilotToolRequest(
-  input: CopilotToolSignatureInput & { hmac: string | null; now?: number },
+  input: CopilotToolSignatureInput & { hmac: string | null; now?: number }
 ): boolean {
   if (!input.hmac) return false;
   if (!Number.isFinite(input.timestamp)) return false;
@@ -77,8 +84,10 @@ export function verifyCopilotToolRequest(
 }
 
 export function copilotAppOrigin(): string {
-  const fromEnv = process.env.APP_ORIGIN?.trim() || process.env.EVE_APP_ORIGIN?.trim();
+  const fromEnv =
+    process.env.APP_ORIGIN?.trim() || process.env.EVE_APP_ORIGIN?.trim();
   if (fromEnv) return fromEnv.replace(/\/$/, "");
-  if (process.env.VERCEL_URL?.trim()) return `https://${process.env.VERCEL_URL.trim()}`;
+  if (process.env.VERCEL_URL?.trim())
+    return `https://${process.env.VERCEL_URL.trim()}`;
   return "http://127.0.0.1:3000";
 }

@@ -10,6 +10,12 @@
 export const SYNC_EXPORT_ROW_LIMIT = 2000;
 export const SYNC_EXPORT_BYTE_LIMIT = 25 * 1024 * 1024;
 
-export function shouldExportAsync(rowEstimate: number, estimatedBytes: number): boolean {
-  return rowEstimate > SYNC_EXPORT_ROW_LIMIT || estimatedBytes > SYNC_EXPORT_BYTE_LIMIT;
+export function shouldExportAsync(
+  rowEstimate: number,
+  estimatedBytes: number
+): boolean {
+  return (
+    rowEstimate > SYNC_EXPORT_ROW_LIMIT ||
+    estimatedBytes > SYNC_EXPORT_BYTE_LIMIT
+  );
 }

@@ -10,9 +10,9 @@ import {
   isAiConfigured,
 } from "@/lib/ai/gateway";
 import {
+  type CopilotPlan,
   planDashboardFromPrompt,
   planDashboardWithOptionalLlm,
-  type CopilotPlan,
 } from "@/lib/dashboard-copilot";
 import { fmtDollars, fmtNumber, fmtPercent } from "@/lib/format";
 import { toPlainText } from "@/lib/plain-text";
@@ -52,20 +52,23 @@ function detectRegion(prompt: string): (typeof REGION_LABELS)[number] | null {
 
 function filterRounds(
   rounds: EstimateRound[],
-  region: string | null,
+  region: string | null
 ): EstimateRound[] {
   if (!region) return rounds;
   return rounds.filter(
-    (r) => (r.region || "").toLowerCase() === region.toLowerCase(),
+    (r) => (r.region || "").toLowerCase() === region.toLowerCase()
   );
 }
 
 function buildDataBrief(rounds: EstimateRound[]): string {
   const totals = computeStats("all", rounds);
-  const byRegion = rollup(rounds, (r) => r.region || "Unclassified").slice(0, 8);
+  const byRegion = rollup(rounds, (r) => r.region || "Unclassified").slice(
+    0,
+    8
+  );
   const bySector = rollup(
     rounds,
-    (r) => r.marketSector || "Unclassified",
+    (r) => r.marketSector || "Unclassified"
   ).slice(0, 8);
   const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
 
@@ -79,12 +82,11 @@ function buildDataBrief(rounds: EstimateRound[]): string {
     "Volume by region:",
     ...byRegion.map(
       (g) =>
-        `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds · win ${fmtPercent(g.winRate)}`,
+        `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds · win ${fmtPercent(g.winRate)}`
     ),
     "Volume by market sector:",
     ...bySector.map(
-      (g) =>
-        `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds`,
+      (g) => `  - ${g.key}: ${fmtDollars(g.volume, true)} · ${g.rounds} rounds`
     ),
   ];
   return lines.join("\n");
@@ -93,7 +95,7 @@ function buildDataBrief(rounds: EstimateRound[]): string {
 /** Explicit “build me a view” language. */
 function looksLikeExplicitDashboard(prompt: string): boolean {
   return /(dashboard|scorecard|chart|graph|viz|visuali[sz]|pie|donut|bar chart|bucket|build (me )?a|create (me )?a|make (me )?a|show me\b|widget|canvas|save (this )?view)/i.test(
-    prompt,
+    prompt
   );
 }
 
@@ -103,12 +105,14 @@ function looksLikeExplicitDashboard(prompt: string): boolean {
  */
 function looksLikeDataViewQuestion(prompt: string): boolean {
   return /(win.?rate|hit rate|success rate|pursuit volume|pipeline|fee\b|contingenc|how many|rounds?|by region|by sector|scorecard|overview|summary)/i.test(
-    prompt,
+    prompt
   );
 }
 
 function shouldBuildCanvas(prompt: string): boolean {
-  return looksLikeExplicitDashboard(prompt) || looksLikeDataViewQuestion(prompt);
+  return (
+    looksLikeExplicitDashboard(prompt) || looksLikeDataViewQuestion(prompt)
+  );
 }
 
 function rulesAnswer(prompt: string, rounds: EstimateRound[]): string {
@@ -134,7 +138,9 @@ function rulesAnswer(prompt: string, rounds: EstimateRound[]): string {
   }
   if (/volume|how much|pipeline/.test(q)) {
     const top = rollup(scoped, (r) => r.region || "Unclassified").slice(0, 3);
-    const bits = top.map((g) => `${g.key} ${fmtDollars(g.volume, true)}`).join("; ");
+    const bits = top
+      .map((g) => `${g.key} ${fmtDollars(g.volume, true)}`)
+      .join("; ");
     return `Pursuit volume ${scopeLabel} is ${fmtDollars(totals.volume, true)} across ${fmtNumber(totals.rounds)} rounds. Top regions: ${bits || "—"}.`;
   }
   if (/how many|count|rounds/.test(q)) {
@@ -147,7 +153,7 @@ const PLAIN_TEXT_RULES = `Write in plain prose only. Never use Markdown — no b
 
 async function llmAnswer(
   prompt: string,
-  rounds: EstimateRound[],
+  rounds: EstimateRound[]
 ): Promise<{ text: string; engine: "opus5-zdr" | "rules" }> {
   if (!isAiConfigured()) {
     return { text: rulesAnswer(prompt, rounds), engine: "rules" };
@@ -193,7 +199,7 @@ const routeSchema = z.object({
  */
 export async function runMagnusTurn(
   prompt: string,
-  rounds: EstimateRound[],
+  rounds: EstimateRound[]
 ): Promise<MagnusTurn> {
   const trimmed = prompt.trim();
   if (trimmed.length < 2) {
@@ -213,7 +219,7 @@ export async function runMagnusTurn(
     !buildCanvas &&
     !/\?$/.test(trimmed) &&
     !/^(what|who|when|where|why|how|which|is|are|do|does|did|can|could|would|should|tell me|explain|summarize)\b/i.test(
-      trimmed,
+      trimmed
     )
   ) {
     try {
@@ -239,7 +245,7 @@ Model: ${AI_MODEL_LABEL}.`,
       llmAnswer(trimmed, rounds),
     ]);
     const text = toPlainText(
-      `${answer.text}\n\nI also built “${plan.name}” on the canvas with ${plan.widgets.length} widgets — review it, then save if you want it in Studio.`,
+      `${answer.text}\n\nI also built “${plan.name}” on the canvas with ${plan.widgets.length} widgets — review it, then save if you want it in Studio.`
     );
     return {
       mode: "dashboard",
@@ -261,7 +267,10 @@ Model: ${AI_MODEL_LABEL}.`,
 
 /** Explicit dashboard build (skips Q&A routing). */
 export async function runMagnusDashboard(prompt: string): Promise<CopilotPlan> {
-  if (!looksLikeExplicitDashboard(prompt) && prompt.trim().split(/\s+/).length < 4) {
+  if (
+    !looksLikeExplicitDashboard(prompt) &&
+    prompt.trim().split(/\s+/).length < 4
+  ) {
     return planDashboardFromPrompt(`Executive scorecard: ${prompt}`);
   }
   return planDashboardWithOptionalLlm(prompt);

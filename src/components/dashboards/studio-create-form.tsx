@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { createDashboard } from "@/actions/dashboards";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ import {
 
 export function StudioCreateForm() {
   const [pending, startTransition] = useTransition();
-  const [scope, setScope] = useState<"personal" | "region" | "corporate">("personal");
+  const [scope, setScope] = useState<"personal" | "region" | "corporate">(
+    "personal"
+  );
   const router = useRouter();
 
   return (
@@ -70,7 +72,11 @@ export function StudioCreateForm() {
         </Select>
       </div>
       <Button type="submit" className="gap-1.5" disabled={pending}>
-        {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Plus className="size-4" />
+        )}
         Create
       </Button>
     </form>

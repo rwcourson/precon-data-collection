@@ -5,7 +5,7 @@ export function moveColumnKey(
   keys: string[],
   fromKey: string,
   toKey: string,
-  place: "before" | "after",
+  place: "before" | "after"
 ): string[] {
   if (fromKey === toKey) return keys;
   const from = keys.indexOf(fromKey);
@@ -20,7 +20,10 @@ export function moveColumnKey(
   return next;
 }
 
-export function dropPlaceForPoint(clientX: number, rect: DOMRect): "before" | "after" {
+export function dropPlaceForPoint(
+  clientX: number,
+  rect: DOMRect
+): "before" | "after" {
   return clientX < rect.left + rect.width / 2 ? "before" : "after";
 }
 
@@ -61,7 +64,8 @@ export function beginColumnResize(opts: {
     handle.removeEventListener("pointermove", onMove);
     handle.removeEventListener("pointerup", onUp);
     handle.removeEventListener("pointercancel", onUp);
-    if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+    if (handle.hasPointerCapture(pointerId))
+      handle.releasePointerCapture(pointerId);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
     onEnd?.();

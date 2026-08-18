@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { renameFolder } from "@/actions/sheets";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { renameFolder } from "@/actions/sheets";
 
 /**
  * Renaming a folder moves every sheet in it that the person is allowed to move,
@@ -44,11 +44,15 @@ export function RenameFolderDialog({
     startTransition(async () => {
       try {
         const { moved } = await renameFolder(folder, target);
-        toast.success(`Moved ${moved} sheet${moved === 1 ? "" : "s"} into "${target}"`);
+        toast.success(
+          `Moved ${moved} sheet${moved === 1 ? "" : "s"} into "${target}"`
+        );
         onClose();
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not rename the folder");
+        toast.error(
+          e instanceof Error ? e.message : "Could not rename the folder"
+        );
       }
     });
   }

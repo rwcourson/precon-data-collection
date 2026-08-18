@@ -4,9 +4,15 @@ import {
   serializeHierarchy,
 } from "@/lib/bid-schedule-filter";
 import { filterNeedsStaffing, needsStaffingHref } from "@/lib/staffing";
-import { buildOverviewQueues, calendarDate, type OverviewQueueInput } from "./overview-queues";
+import {
+  buildOverviewQueues,
+  calendarDate,
+  type OverviewQueueInput,
+} from "./overview-queues";
 
-function row(partial: Partial<OverviewQueueInput> & Pick<OverviewQueueInput, "roundId">): OverviewQueueInput {
+function row(
+  partial: Partial<OverviewQueueInput> & Pick<OverviewQueueInput, "roundId">
+): OverviewQueueInput {
   return {
     jobId: partial.roundId,
     jobNumber: `J-${partial.roundId}`,
@@ -36,10 +42,15 @@ describe("overview queues", () => {
         row({ roundId: 3, status: "post_bid", missingRequiredCount: 2 }),
         row({ roundId: 4, status: "active", bidDueDate: "2026-08-01" }),
         row({ roundId: 5, status: "active", bidDueDate: "2026-08-20" }),
-        row({ roundId: 6, status: "upcoming", isLinked: false, jobNumber: "TBD-0042" }),
+        row({
+          roundId: 6,
+          status: "upcoming",
+          isLinked: false,
+          jobNumber: "TBD-0042",
+        }),
         row({ roundId: 7, status: "locked", missingRequiredCount: 0 }),
       ],
-      today,
+      today
     );
 
     expect(queues.map((q) => [q.id, q.count])).toEqual([
@@ -49,7 +60,9 @@ describe("overview queues", () => {
       ["unlinked", 1],
       ["awaiting-lock", 2],
     ]);
-    expect(queues[0]?.href).toBe("/bid-schedule?section=upcoming&queue=needs-staffing");
+    expect(queues[0]?.href).toBe(
+      "/bid-schedule?section=upcoming&queue=needs-staffing"
+    );
     expect(queues[1]?.href).toBe("/post-bid?queue=incomplete");
     expect(queues[2]?.href).toBe("/bid-schedule?section=active&queue=past-due");
     expect(queues[3]?.href).toBe("/bid-schedule?queue=unlinked");
@@ -59,14 +72,18 @@ describe("overview queues", () => {
   it("does not treat blank bid due as past due", () => {
     const queues = buildOverviewQueues(
       [row({ roundId: 1, status: "active", bidDueDate: null })],
-      today,
+      today
     );
     expect(queues.find((q) => q.id === "past-bid-due")?.count).toBe(0);
   });
 
   it("needs-staffing overview count equals the preset-filtered schedule and deep-link", () => {
     const rows = [
-      row({ roundId: 1, status: "upcoming", preconDepartment: "Central Building Group" }),
+      row({
+        roundId: 1,
+        status: "upcoming",
+        preconDepartment: "Central Building Group",
+      }),
       row({ roundId: 2, status: "upcoming", preconDepartment: "Florida" }),
       row({
         roundId: 3,
@@ -74,12 +91,20 @@ describe("overview queues", () => {
         preconDepartment: "Central Nashville",
         teamAssignedAt: "2026-08-14T12:00:00.000Z",
       }),
-      row({ roundId: 4, status: "active", preconDepartment: "Central Building Group" }),
-      row({ roundId: 5, status: "upcoming", preconDepartment: "Central Heavy Civil" }),
+      row({
+        roundId: 4,
+        status: "active",
+        preconDepartment: "Central Building Group",
+      }),
+      row({
+        roundId: 5,
+        status: "upcoming",
+        preconDepartment: "Central Heavy Civil",
+      }),
     ];
     const hierarchy = parseHierarchyFromSearchParams(
       {},
-      { workspaceRegion: "Central", allowedRegions: ["Central"] },
+      { workspaceRegion: "Central", allowedRegions: ["Central"] }
     );
     const queues = buildOverviewQueues(rows, today, hierarchy);
     const staffing = queues.find((q) => q.id === "needs-staffing");
@@ -90,18 +115,26 @@ describe("overview queues", () => {
 
     const href = staffing?.href ?? "";
     expect(href).toBe(needsStaffingHref(hierarchy));
-    const params = Object.fromEntries(new URL(href, "http://local").searchParams.entries());
+    const params = Object.fromEntries(
+      new URL(href, "http://local").searchParams.entries()
+    );
     expect(params.section).toBe("upcoming");
     expect(params.queue).toBe("needs-staffing");
-    const fromLink = parseHierarchyFromSearchParams(params, { allowedRegions: ["Central"] });
+    const fromLink = parseHierarchyFromSearchParams(params, {
+      allowedRegions: ["Central"],
+    });
     expect(serializeHierarchy(fromLink)).toEqual(serializeHierarchy(hierarchy));
-    expect(filterNeedsStaffing(rows, fromLink).map((r) => r.roundId).sort()).toEqual([1, 5]);
+    expect(
+      filterNeedsStaffing(rows, fromLink)
+        .map((r) => r.roundId)
+        .sort()
+    ).toEqual([1, 5]);
   });
 
   it("does not treat a lead assignment as staffed — only teamAssignedAt counts", () => {
     const queues = buildOverviewQueues(
       [row({ roundId: 1, status: "upcoming", teamAssignedAt: null })],
-      today,
+      today
     );
     expect(queues.find((q) => q.id === "needs-staffing")?.count).toBe(1);
   });

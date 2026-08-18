@@ -37,7 +37,9 @@ const div = (a: number | null, b: number | null): number | null =>
 
 /** Sums only when at least one operand is present, so all-blank stays null. */
 const addSome = (...xs: (number | null)[]): number | null =>
-  xs.every((x) => x == null) ? null : xs.reduce<number>((s, x) => s + (x ?? 0), 0);
+  xs.every((x) => x == null)
+    ? null
+    : xs.reduce<number>((s, x) => s + (x ?? 0), 0);
 
 const diff = (a: number | null, b: number | null): number | null =>
   a == null && b == null ? null : (a ?? 0) - (b ?? 0);
@@ -51,7 +53,8 @@ const directCost = (r: EstimateRound): number | null =>
 const craftLaborTotal = (r: EstimateRound): number | null =>
   addSome(r.craftLaborBase, r.craftLaborBurden);
 
-const gcGrBgSort = (r: EstimateRound): number | null => addSome(r.gcBgSort, r.grBgSort);
+const gcGrBgSort = (r: EstimateRound): number | null =>
+  addSome(r.gcBgSort, r.grBgSort);
 
 const gcGrOwnerSov = (r: EstimateRound): number | null =>
   addSome(r.gcProposedOwnerSov, r.grProposedOwnerSov);
@@ -141,7 +144,8 @@ export const METRIC_DEFS: MetricDef[] = [
     format: "percent",
     group: "Contingency & Risk",
     note: "Combined margin and risk carried in the estimate",
-    calc: (r) => div(addSome(r.feeBackPage, r.contingencyTotal), r.estimateValue),
+    calc: (r) =>
+      div(addSome(r.feeBackPage, r.contingencyTotal), r.estimateValue),
   },
   {
     key: "contingencyToFeeRatio",
@@ -324,7 +328,8 @@ export const METRIC_DEFS: MetricDef[] = [
     format: "dollars",
     group: "Staffing & Productivity",
     note: "PM months + field supervision months",
-    calc: (r) => div(r.feeExpected, addSome(r.pmMonths, r.fieldSupervisionMonths)),
+    calc: (r) =>
+      div(r.feeExpected, addSome(r.pmMonths, r.fieldSupervisionMonths)),
   },
   {
     key: "revenuePerPmYear",
@@ -334,7 +339,9 @@ export const METRIC_DEFS: MetricDef[] = [
     headline: true,
     note: "Estimate Value / (PM Months / 12)",
     calc: (r) =>
-      r.pmMonths == null || r.pmMonths === 0 ? null : div(r.estimateValue, r.pmMonths / 12),
+      r.pmMonths == null || r.pmMonths === 0
+        ? null
+        : div(r.estimateValue, r.pmMonths / 12),
   },
   {
     key: "revenuePerPmMonth",
@@ -515,7 +522,8 @@ export const METRIC_DEFS: MetricDef[] = [
     format: "percent",
     group: "Cost Composition",
     note: "Share of the estimate carried by purchased scope",
-    calc: (r) => div(addSome(r.subcontracted, r.materials, r.equipment), r.estimateValue),
+    calc: (r) =>
+      div(addSome(r.subcontracted, r.materials, r.equipment), r.estimateValue),
   },
   {
     key: "selfPerformToSubRatio",
@@ -626,17 +634,22 @@ export const METRIC_DEFS: MetricDef[] = [
 ];
 
 export const METRIC_MAP: Record<string, MetricDef> = Object.fromEntries(
-  METRIC_DEFS.map((m) => [m.key, m]),
+  METRIC_DEFS.map((m) => [m.key, m])
 );
 
 export const METRIC_GROUPS: MetricGroup[] = [
   ...new Set(METRIC_DEFS.map((m) => m.group)),
 ];
 
-export const HEADLINE_METRIC_KEYS = METRIC_DEFS.filter((m) => m.headline).map((m) => m.key);
+export const HEADLINE_METRIC_KEYS = METRIC_DEFS.filter((m) => m.headline).map(
+  (m) => m.key
+);
 
-export function formatMetricValue(value: number | null, format: MetricFormat): string {
-  if (value == null || !isFinite(value)) return "—";
+export function formatMetricValue(
+  value: number | null,
+  format: MetricFormat
+): string {
+  if (value == null || !Number.isFinite(value)) return "—";
   switch (format) {
     case "percent":
       return `${(value * 100).toFixed(1)}%`;

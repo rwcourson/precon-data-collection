@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { parseBidScheduleViewConfig } from "@/lib/view-config";
+import { describe, expect, it } from "vitest";
 import {
   parseUserTablePrefsConfig,
   resolveBidScheduleTableState,
 } from "@/lib/table-prefs";
+import { parseBidScheduleViewConfig } from "@/lib/view-config";
 
 const LEGACY_VIEW = {
   section: "upcoming",
@@ -24,14 +24,20 @@ describe("user table prefs config", () => {
       columnWidths: { jobName: 280 },
       defaultViewId: 12,
     });
-    expect(parsed.columns).toEqual(parseBidScheduleViewConfig(LEGACY_VIEW).columns);
+    expect(parsed.columns).toEqual(
+      parseBidScheduleViewConfig(LEGACY_VIEW).columns
+    );
     expect(parsed.density).toBe("summary");
     expect(parsed.columnWidths).toEqual({ jobName: 280 });
     expect(parsed.defaultViewId).toBe(12);
   });
 
   it("falls back to empty prefs for garbage JSONB", () => {
-    const parsed = parseUserTablePrefsConfig({ nope: true, columns: "bad", defaultViewId: "x" });
+    const parsed = parseUserTablePrefsConfig({
+      nope: true,
+      columns: "bad",
+      defaultViewId: "x",
+    });
     expect(parsed.version).toBe(1);
     expect(parsed.columns).toBeUndefined();
     expect(parsed.columnWidths).toBeUndefined();
@@ -47,8 +53,17 @@ describe("resolveBidScheduleTableState precedence", () => {
     defaultViewId: 2,
   });
   const views = [
-    { id: 1, config: { columns: ["jobName", "status"], density: "summary" as const } },
-    { id: 2, config: { columns: ["jobName", "bidDueDate"], density: "detail" as const } },
+    {
+      id: 1,
+      config: { columns: ["jobName", "status"], density: "summary" as const },
+    },
+    {
+      id: 2,
+      config: {
+        columns: ["jobName", "bidDueDate"],
+        density: "detail" as const,
+      },
+    },
   ];
 
   it("applies a named view over prefs", () => {
@@ -98,7 +113,7 @@ describe("bid-schedule width storage", () => {
   it("does not keep a localStorage path for column widths", () => {
     const source = fs.readFileSync(
       path.join(process.cwd(), "src/components/bid-schedule/sheet-table.tsx"),
-      "utf8",
+      "utf8"
     );
     expect(source).not.toMatch(/localStorage/);
     expect(source).not.toMatch(/precon-bid-schedule-col-widths/);

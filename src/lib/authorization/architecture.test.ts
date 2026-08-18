@@ -11,7 +11,10 @@ function sourceFiles(root: string): string[] {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     const absolute = path.join(root, entry.name);
     if (entry.isDirectory()) output.push(...sourceFiles(absolute));
-    else if (/\.(?:ts|tsx)$/.test(entry.name) && !entry.name.endsWith(".test.ts")) {
+    else if (
+      /\.(?:ts|tsx)$/.test(entry.name) &&
+      !entry.name.endsWith(".test.ts")
+    ) {
       output.push(path.relative(process.cwd(), absolute));
     }
   }
@@ -45,11 +48,15 @@ describe("authorization architecture boundary", () => {
   });
 
   it("keeps application services free of ambient transport identity", () => {
-    const serviceFiles = files.filter((file) => file.startsWith("src/services/"));
+    const serviceFiles = files.filter((file) =>
+      file.startsWith("src/services/")
+    );
     expect(serviceFiles.length).toBeGreaterThan(0);
     for (const file of serviceFiles) {
       const source = fs.readFileSync(file, "utf8");
-      expect(source, file).not.toMatch(/next\/(?:headers|navigation)|getCurrentUser|getWorkspace|mobileContext/);
+      expect(source, file).not.toMatch(
+        /next\/(?:headers|navigation)|getCurrentUser|getWorkspace|mobileContext/
+      );
       expect(source, file).toMatch(/Principal/);
     }
   });

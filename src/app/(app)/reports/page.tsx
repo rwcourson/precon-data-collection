@@ -1,7 +1,9 @@
-import Link from "next/link";
 import { BookOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import { ReportBuilder } from "@/components/reports/report-builder";
+import { ReportSchedulesPanel } from "@/components/reports/report-schedules-panel";
+import { Button } from "@/components/ui/button";
 import {
   listCustomColumnsForPrincipal,
   listDirectoryUsersForPrincipal,
@@ -10,13 +12,14 @@ import {
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getReferenceValues } from "@/lib/queries";
 import { buildFieldCatalog } from "@/lib/report-engine";
-import { PageHeader } from "@/components/page-header";
 import { getWorkspace } from "@/lib/workspace-server";
-import { ReportSchedulesPanel } from "@/components/reports/report-schedules-panel";
 import { reportScheduleService } from "@/services/report-schedule-service";
 
 export default async function ReportsPage() {
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const user = principal.user;
   const [allUsers, visible, customCols, lists, schedules] = await Promise.all([
     listDirectoryUsersForPrincipal(principal),
@@ -35,7 +38,9 @@ export default async function ReportsPage() {
       <PageHeader
         title="Custom Report Builder"
         description={`Combine Bid Schedule, post-bid, and calculated summary data in one report — filter, group, aggregate, sort, save, share, and export. Results are scoped to the ${
-          workspace.region ? `${workspace.region} workspace` : "Corporate workspace (all Regions)"
+          workspace.region
+            ? `${workspace.region} workspace`
+            : "Corporate workspace (all Regions)"
         }.`}
         actions={
           <Button

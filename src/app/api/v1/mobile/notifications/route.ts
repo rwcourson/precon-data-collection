@@ -1,9 +1,9 @@
+import { desc, eq } from "drizzle-orm";
 import { markAllNotificationsRead } from "@/actions/user";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
 import { jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
-import { desc, eq } from "drizzle-orm";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:notifications" }, async () => {

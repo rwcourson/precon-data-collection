@@ -1,14 +1,14 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import type { SavedReportConfig } from "@/db/schema";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   buildPrintHtml,
   buildWorkbook,
-  getFlatDataset,
   type ExportColumn,
+  getFlatDataset,
 } from "@/lib/export-helpers";
-import { formatReportValue, runReportEngine } from "@/lib/report-engine";
 import { pdfResponse } from "@/lib/pdf";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { formatReportValue, runReportEngine } from "@/lib/report-engine";
 
 export const dynamic = "force-dynamic";
 // Synchronous xlsx/PDF build; PDF uses headless Chromium.
@@ -35,7 +35,9 @@ export async function GET(req: NextRequest) {
 
   const columns: ExportColumn[] = result.columns.map((c) => {
     const baseKey =
-      c.key.includes(":") && !c.key.startsWith("metric:") && !c.key.startsWith("custom:")
+      c.key.includes(":") &&
+      !c.key.startsWith("metric:") &&
+      !c.key.startsWith("custom:")
         ? c.key.split(":")[1]
         : c.key;
     const def = catalog.find((x) => x.key === baseKey);

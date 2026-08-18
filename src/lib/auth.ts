@@ -1,18 +1,18 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { appSettings, users, type Role, type User } from "@/db/schema";
+import { appSettings, type Role, type User, users } from "@/db/schema";
+import { DomainError } from "@/domain/errors";
 import {
+  type AccessSettings,
   DEFAULT_ACCESS,
   mapIdentity,
   mapIdentityStrict,
-  type AccessSettings,
   type SsoIdentity,
 } from "@/lib/access-map";
-import { getRuntimeConfig } from "@/lib/runtime-config";
-import { DomainError } from "@/domain/errors";
-import { readForwardedSsoIdentity, ssoHeaderNames } from "@/lib/sso-trust";
 import { ROLE_LABELS } from "@/lib/labels";
+import { getRuntimeConfig } from "@/lib/runtime-config";
+import { readForwardedSsoIdentity, ssoHeaderNames } from "@/lib/sso-trust";
 import {
   isSuperAdminEmail,
   SUPER_ADMIN_ROLE,
@@ -67,13 +67,17 @@ function isPlaceholderTitle(title: string | null | undefined): boolean {
 }
 
 /** Prefer IdP display name; keep roster name when IdP only has an email local-part. */
-export function resolveDisplayName(identity: SsoIdentity, existing?: User | null): string {
+export function resolveDisplayName(
+  identity: SsoIdentity,
+  existing?: User | null
+): string {
   const fromIdp = identity.name?.trim() ?? "";
   const looksLikeLocalPart =
     !fromIdp ||
     fromIdp.includes("@") ||
     fromIdp.toLowerCase() === "microsoft user" ||
-    (identity.email && fromIdp.toLowerCase() === identity.email.split("@")[0]?.toLowerCase());
+    (identity.email &&
+      fromIdp.toLowerCase() === identity.email.split("@")[0]?.toLowerCase());
 
   if (fromIdp && !looksLikeLocalPart) return fromIdp.slice(0, 160);
   if (existing?.name?.trim()) return existing.name.trim().slice(0, 160);
@@ -85,7 +89,7 @@ export function resolveDisplayName(identity: SsoIdentity, existing?: User | null
 export function resolveJobTitle(
   identity: SsoIdentity,
   role: Role,
-  existing?: User | null,
+  existing?: User | null
 ): string {
   if (identity.title?.trim() && !isPlaceholderTitle(identity.title)) {
     return identity.title.trim().slice(0, 160);
@@ -122,7 +126,7 @@ export async function resolveSsoUser(identity: SsoIdentity): Promise<User> {
       throw DomainError.unauthorized(
         mapping.reason === "unmapped-role"
           ? "SSO identity has no mapped application role. Ask a Precon admin to map your Entra groups."
-          : "SSO identity is missing a required Region mapping.",
+          : "SSO identity is missing a required Region mapping."
       );
     }
     role = mapping.role;

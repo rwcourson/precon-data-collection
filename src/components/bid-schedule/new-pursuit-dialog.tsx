@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2, Plus, Search, Unlink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  type CreatePursuitInput,
+  createPursuit,
+  searchSalesforceJobs,
+} from "@/actions/pursuits";
+import { showJobInMyRegion } from "@/actions/visibility";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,14 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  createPursuit,
-  searchSalesforceJobs,
-  type CreatePursuitInput,
-} from "@/actions/pursuits";
-import { showJobInMyRegion } from "@/actions/visibility";
 import type { DuplicateMatch } from "@/lib/duplicate-jobs";
 
 type SfJob = {
@@ -74,14 +74,14 @@ export function NewPursuitDialog({
 }) {
   const [open, setOpen] = useState(previewDuplicates);
   const [mode, setMode] = useState<"salesforce" | "manual">(
-    previewDuplicates ? "manual" : "salesforce",
+    previewDuplicates ? "manual" : "salesforce"
   );
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SfJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SfJob | null>(null);
   const [manualName, setManualName] = useState(
-    previewDuplicates ? "Auburn Football Performance Center" : "",
+    previewDuplicates ? "Auburn Football Performance Center" : ""
   );
   const [form, setForm] = useState<Record<string, string>>({
     initialStatus: "upcoming",
@@ -89,12 +89,13 @@ export function NewPursuitDialog({
     region: homeRegion ?? "",
   });
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>(
-    previewDuplicates ? [PREVIEW_DUPLICATE] : [],
+    previewDuplicates ? [PREVIEW_DUPLICATE] : []
   );
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  const set = (k: string, v: string | null) => setForm((f) => ({ ...f, [k]: v ?? "" }));
+  const set = (k: string, v: string | null) =>
+    setForm((f) => ({ ...f, [k]: v ?? "" }));
 
   async function runSearch(q: string) {
     setQuery(q);
@@ -116,12 +117,16 @@ export function NewPursuitDialog({
     if (canChooseRegion) required.unshift("region");
     for (const k of required) {
       if (!(k === "region" ? region : form[k])) {
-        toast.error("Region, Precon Department, Estimate Phase, and Bid Year are required");
+        toast.error(
+          "Region, Precon Department, Estimate Phase, and Bid Year are required"
+        );
         return;
       }
     }
     if (mode === "salesforce" && !selected) {
-      toast.error("Select a job from Salesforce / Connect, or switch to No job number yet (ROM)");
+      toast.error(
+        "Select a job from Salesforce / Connect, or switch to No job number yet (ROM)"
+      );
       return;
     }
     if (mode === "manual" && !manualName.trim()) {
@@ -156,7 +161,7 @@ export function NewPursuitDialog({
         toast.success(
           mode === "manual"
             ? "ROM created as TBD-… and left unlinked — link to Salesforce when the number arrives"
-            : "Pursuit created from Salesforce / Connect",
+            : "Pursuit created from Salesforce / Connect"
         );
         setOpen(false);
         setSelected(null);
@@ -166,7 +171,9 @@ export function NewPursuitDialog({
         setDuplicates([]);
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to create pursuit");
+        toast.error(
+          e instanceof Error ? e.message : "Failed to create pursuit"
+        );
       }
     });
   }
@@ -180,7 +187,9 @@ export function NewPursuitDialog({
         setDuplicates([]);
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not add to your region");
+        toast.error(
+          e instanceof Error ? e.message : "Could not add to your region"
+        );
       }
     });
   }
@@ -194,15 +203,17 @@ export function NewPursuitDialog({
         <DialogHeader>
           <DialogTitle>New Pursuit</DialogTitle>
           <DialogDescription>
-            Salesforce first — look up the job number in B&amp;G Connect. Use
-            No job number yet (ROM) only when Precon is pricing before Salesforce
+            Salesforce first — look up the job number in B&amp;G Connect. Use No
+            job number yet (ROM) only when Precon is pricing before Salesforce
             has a number. That path stays unlinked as TBD-….
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="salesforce">From Salesforce / Connect</TabsTrigger>
+            <TabsTrigger value="salesforce">
+              From Salesforce / Connect
+            </TabsTrigger>
             <TabsTrigger value="manual">No job number yet (ROM)</TabsTrigger>
           </TabsList>
 
@@ -226,11 +237,15 @@ export function NewPursuitDialog({
                     #{selected.jobNumber} — {selected.jobName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Salesforce office {selected.region} · {selected.marketSector} · {selected.city},{" "}
-                    {selected.state}
+                    Salesforce office {selected.region} ·{" "}
+                    {selected.marketSector} · {selected.city}, {selected.state}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelected(null)}
+                >
                   Change
                 </Button>
               </div>
@@ -262,9 +277,9 @@ export function NewPursuitDialog({
 
           <TabsContent value="manual" className="space-y-3 pt-2">
             <div className="flex items-center gap-2 rounded-md border border-dashed bg-muted/40 p-2.5 text-xs text-muted-foreground">
-              <Unlink className="size-3.5 shrink-0" />
-              A placeholder Job Number is assigned. When the job appears in
-              Salesforce later, the system suggests candidate matches to link.
+              <Unlink className="size-3.5 shrink-0" />A placeholder Job Number
+              is assigned. When the job appears in Salesforce later, the system
+              suggests candidate matches to link.
             </div>
             <div className="space-y-1.5">
               <Label>Job Name</Label>
@@ -279,7 +294,12 @@ export function NewPursuitDialog({
 
         <div className="grid grid-cols-2 gap-3">
           {canChooseRegion ? (
-            <SelectField label="Region *" value={form.region} onChange={(v) => set("region", v)} options={lists.region ?? []} />
+            <SelectField
+              label="Region *"
+              value={form.region}
+              onChange={(v) => set("region", v)}
+              options={lists.region ?? []}
+            />
           ) : (
             <div className="space-y-1.5">
               <Label className="text-xs">Home region</Label>
@@ -288,9 +308,24 @@ export function NewPursuitDialog({
               </p>
             </div>
           )}
-          <SelectField label="Precon Department *" value={form.preconDepartment} onChange={(v) => set("preconDepartment", v)} options={lists.preconDepartment ?? []} />
-          <SelectField label="Estimate Phase *" value={form.estimatePhase} onChange={(v) => set("estimatePhase", v)} options={lists.estimatePhase ?? []} />
-          <SelectField label="Bid Year *" value={form.bidYear} onChange={(v) => set("bidYear", v)} options={lists.bidYear ?? []} />
+          <SelectField
+            label="Precon Department *"
+            value={form.preconDepartment}
+            onChange={(v) => set("preconDepartment", v)}
+            options={lists.preconDepartment ?? []}
+          />
+          <SelectField
+            label="Estimate Phase *"
+            value={form.estimatePhase}
+            onChange={(v) => set("estimatePhase", v)}
+            options={lists.estimatePhase ?? []}
+          />
+          <SelectField
+            label="Bid Year *"
+            value={form.bidYear}
+            onChange={(v) => set("bidYear", v)}
+            options={lists.bidYear ?? []}
+          />
           <div className="space-y-1.5">
             <Label className="text-xs">Bid Due Date</Label>
             <DatePicker
@@ -298,16 +333,40 @@ export function NewPursuitDialog({
               onChange={(next) => set("bidDueDate", next)}
             />
           </div>
-          <SelectField label="MLT" value={form.mlt} onChange={(v) => set("mlt", v)} options={lists.mlt ?? []} />
-          <SelectField label="Contract Type" value={form.contractType} onChange={(v) => set("contractType", v)} options={lists.contractType ?? []} />
-          <SelectField label="Procurement" value={form.procurement} onChange={(v) => set("procurement", v)} options={lists.procurement ?? []} />
-          <SelectField label="Status at Pricing" value={form.statusAtPricing} onChange={(v) => set("statusAtPricing", v)} options={lists.statusAtPricing ?? []} />
+          <SelectField
+            label="MLT"
+            value={form.mlt}
+            onChange={(v) => set("mlt", v)}
+            options={lists.mlt ?? []}
+          />
+          <SelectField
+            label="Contract Type"
+            value={form.contractType}
+            onChange={(v) => set("contractType", v)}
+            options={lists.contractType ?? []}
+          />
+          <SelectField
+            label="Procurement"
+            value={form.procurement}
+            onChange={(v) => set("procurement", v)}
+            options={lists.procurement ?? []}
+          />
+          <SelectField
+            label="Status at Pricing"
+            value={form.statusAtPricing}
+            onChange={(v) => set("statusAtPricing", v)}
+            options={lists.statusAtPricing ?? []}
+          />
           <SelectField
             label="Bid Schedule Section"
             value={form.initialStatus}
             onChange={(v) => set("initialStatus", v)}
             options={["active", "upcoming", "outstanding"]}
-            labels={{ active: "Active", upcoming: "Upcoming", outstanding: "Outstanding" }}
+            labels={{
+              active: "Active",
+              upcoming: "Upcoming",
+              outstanding: "Outstanding",
+            }}
           />
         </div>
 
@@ -317,8 +376,13 @@ export function NewPursuitDialog({
             <AlertDescription>
               <ul className="mt-2 space-y-2">
                 {duplicates.map((match) => (
-                  <li key={match.jobId} className="rounded-md border bg-background/70 p-2">
-                    <p className="text-sm font-medium text-foreground">{match.jobName}</p>
+                  <li
+                    key={match.jobId}
+                    className="rounded-md border bg-background/70 p-2"
+                  >
+                    <p className="text-sm font-medium text-foreground">
+                      {match.jobName}
+                    </p>
                     <p className="text-xs">
                       {match.jobNumber} · {match.homeRegion}
                       {match.creatorName ? ` · ${match.creatorName}` : ""}
@@ -347,12 +411,21 @@ export function NewPursuitDialog({
         )}
 
         {duplicates.length > 0 ? (
-          <Button onClick={() => submit(true)} disabled={pending} variant="outline" className="w-full">
+          <Button
+            onClick={() => submit(true)}
+            disabled={pending}
+            variant="outline"
+            className="w-full"
+          >
             {pending && <Loader2 className="size-4 animate-spin" />}
             Create anyway
           </Button>
         ) : (
-          <Button onClick={() => submit(false)} disabled={pending} className="w-full">
+          <Button
+            onClick={() => submit(false)}
+            disabled={pending}
+            className="w-full"
+          >
             {pending && <Loader2 className="size-4 animate-spin" />}
             Create Pursuit
           </Button>

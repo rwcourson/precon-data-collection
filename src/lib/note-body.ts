@@ -9,7 +9,9 @@ export function escapeNoteHtml(body: string): string {
 }
 
 /** Phase 6: `@[userId]` tokens. Display name is resolved at render time. */
-export type NoteBodyToken = { type: "text"; value: string } | { type: "mention"; userId: number };
+export type NoteBodyToken =
+  | { type: "text"; value: string }
+  | { type: "mention"; userId: number };
 
 export function splitNoteBodyTokens(body: string): NoteBodyToken[] {
   const tokens: NoteBodyToken[] = [];
@@ -17,11 +19,13 @@ export function splitNoteBodyTokens(body: string): NoteBodyToken[] {
   let last = 0;
   for (const match of body.matchAll(re)) {
     const index = match.index ?? 0;
-    if (index > last) tokens.push({ type: "text", value: body.slice(last, index) });
+    if (index > last)
+      tokens.push({ type: "text", value: body.slice(last, index) });
     tokens.push({ type: "mention", userId: Number(match[1]) });
     last = index + match[0].length;
   }
-  if (last < body.length) tokens.push({ type: "text", value: body.slice(last) });
+  if (last < body.length)
+    tokens.push({ type: "text", value: body.slice(last) });
   return tokens.length > 0 ? tokens : [{ type: "text", value: body }];
 }
 
@@ -29,9 +33,12 @@ export function extractMentionUserIds(body: string): number[] {
   return [
     ...new Set(
       splitNoteBodyTokens(body)
-        .filter((token): token is Extract<NoteBodyToken, { type: "mention" }> => token.type === "mention")
+        .filter(
+          (token): token is Extract<NoteBodyToken, { type: "mention" }> =>
+            token.type === "mention"
+        )
         .map((token) => token.userId)
-        .filter((id) => Number.isInteger(id) && id > 0),
+        .filter((id) => Number.isInteger(id) && id > 0)
     ),
   ];
 }
@@ -40,7 +47,10 @@ export function formatMentionToken(userId: number): string {
   return `@[${userId}]`;
 }
 
-export function mentionLabel(userId: number, names: Record<number, string>): string {
+export function mentionLabel(
+  userId: number,
+  names: Record<number, string>
+): string {
   return `@${names[userId] ?? `user ${userId}`}`;
 }
 
@@ -59,11 +69,13 @@ export function firstLine(body: string, max = 120): string {
   return `${line.slice(0, max - 1)}…`;
 }
 
-export function previewLatestNote(note: {
-  authorName: string | null;
-  createdAt: Date | string;
-  body: string;
-} | null): string {
+export function previewLatestNote(
+  note: {
+    authorName: string | null;
+    createdAt: Date | string;
+    body: string;
+  } | null
+): string {
   if (!note) return "";
   const age = relativeAge(note.createdAt);
   const author = note.authorName?.trim() || "Someone";

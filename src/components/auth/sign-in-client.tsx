@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
 export function SignInClient({
@@ -19,7 +19,7 @@ export function SignInClient({
     setError(null);
     try {
       const callbackURL =
-        initialNext && initialNext.startsWith("/") && !initialNext.startsWith("//")
+        initialNext?.startsWith("/") && !initialNext.startsWith("//")
           ? initialNext
           : "/";
       const result = await authClient.signIn.social({
@@ -52,7 +52,8 @@ export function SignInClient({
               className="size-8 bg-white"
               style={{
                 mask: 'url("/bg-ampersand.png") center / contain no-repeat',
-                WebkitMask: 'url("/bg-ampersand.png") center / contain no-repeat',
+                WebkitMask:
+                  'url("/bg-ampersand.png") center / contain no-repeat',
               }}
             />
           </div>

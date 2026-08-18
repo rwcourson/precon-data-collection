@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { StudioCreateForm } from "@/components/dashboards/studio-create-form";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -15,8 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StudioCreateForm } from "@/components/dashboards/studio-create-form";
-import { PageHeader } from "@/components/page-header";
 import { listDashboardsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDateTime } from "@/lib/format";
@@ -35,7 +35,9 @@ export default async function DashboardStudioPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Create dashboard</CardTitle>
-          <CardDescription>Start with a blank canvas and add widgets on the detail page.</CardDescription>
+          <CardDescription>
+            Start with a blank canvas and add widgets on the detail page.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <StudioCreateForm />
@@ -45,11 +47,15 @@ export default async function DashboardStudioPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Your dashboards</CardTitle>
-          <CardDescription>{rows.length} dashboard{rows.length === 1 ? "" : "s"} available.</CardDescription>
+          <CardDescription>
+            {rows.length} dashboard{rows.length === 1 ? "" : "s"} available.
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {rows.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-muted-foreground">No dashboards yet.</p>
+            <p className="px-6 pb-6 text-sm text-muted-foreground">
+              No dashboards yet.
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -87,7 +93,9 @@ export default async function DashboardStudioPage() {
                           Standard
                         </Badge>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Personal</span>
+                        <span className="text-sm text-muted-foreground">
+                          Personal
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

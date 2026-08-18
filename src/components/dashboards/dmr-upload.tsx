@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { importDmrUpload } from "@/actions/dmr";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,9 @@ function parseCsv(text: string): { jobNumber: string; dmrValue: number }[] {
   const start = lines[0]!.toLowerCase().includes("jobnumber") ? 1 : 0;
 
   for (let i = start; i < lines.length; i++) {
-    const parts = lines[i]!.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+    const parts = lines[i]!.split(",").map((p) =>
+      p.trim().replace(/^"|"$/g, "")
+    );
     const jobNumber = parts[0];
     const dmrValue = Number(parts[1]?.replace(/[$,]/g, ""));
     if (!jobNumber || !Number.isFinite(dmrValue)) continue;
@@ -75,7 +77,11 @@ export function DmrUpload() {
         />
       </div>
       <Button type="submit" size="sm" className="gap-1.5" disabled={pending}>
-        {pending ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Upload className="size-4" />
+        )}
         Upload &amp; reconcile
       </Button>
     </form>

@@ -116,7 +116,11 @@ function parseCell(v: unknown): string | number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (v instanceof Date) return v.toISOString().slice(0, 10);
   if (typeof v === "object") {
-    const o = v as { result?: unknown; text?: string; richText?: { text: string }[] };
+    const o = v as {
+      result?: unknown;
+      text?: string;
+      richText?: { text: string }[];
+    };
     if (o.result != null) return parseCell(o.result);
     if (o.richText) return parseCell(o.richText.map((t) => t.text).join(""));
     if (o.text) return parseCell(o.text);
@@ -124,7 +128,11 @@ function parseCell(v: unknown): string | number | null {
   const s = String(v).trim();
   if (!s) return null;
   const n = Number(s.replace(/[$,]/g, ""));
-  if (!Number.isNaN(n) && /[\d.]/.test(s) && !/[a-zA-Z]/.test(s.replace(/[eE]/g, ""))) {
+  if (
+    !Number.isNaN(n) &&
+    /[\d.]/.test(s) &&
+    !/[a-zA-Z]/.test(s.replace(/[eE]/g, ""))
+  ) {
     return n;
   }
   return s;
@@ -140,7 +148,7 @@ function resolveKey(label: string): string | null {
 }
 
 function applyMapping(
-  pairs: { label: string; value: unknown }[],
+  pairs: { label: string; value: unknown }[]
 ): DestiniMappedRow {
   const values: DestiniMappedRow["values"] = {};
   const unmappedHeaders: string[] = [];
@@ -182,22 +190,27 @@ function applyMapping(
     values[key as DestiniWritableKey] = parsed;
   }
 
-  return { jobNumber, jobName, estimatePhase, values, unmappedHeaders, skippedEmpty };
+  return {
+    jobNumber,
+    jobName,
+    estimatePhase,
+    values,
+    unmappedHeaders,
+    skippedEmpty,
+  };
 }
 
 /** Map a header row + data row (tabular CSV / multi-job sheet). */
 export function mapDestiniRow(
   headers: string[],
-  cells: unknown[],
+  cells: unknown[]
 ): DestiniMappedRow {
-  return applyMapping(
-    headers.map((label, i) => ({ label, value: cells[i] })),
-  );
+  return applyMapping(headers.map((label, i) => ({ label, value: cells[i] })));
 }
 
 export function mapDestiniSheet(
   headers: string[],
-  rows: unknown[][],
+  rows: unknown[][]
 ): DestiniMappedRow[] {
   return rows
     .filter((r) => r.some((c) => c != null && String(c).trim() !== ""))
@@ -216,8 +229,12 @@ export function parseDestiniVerticalSheet(rows: unknown[][]): DestiniMappedRow {
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r] ?? [];
     const cells = row.map((c) => normLabel(String(c ?? "")));
-    const di = cells.findIndex((c) => c === "data point" || c === "data points");
-    const ii = cells.findIndex((c) => c === "input" || c === "value" || c === "response");
+    const di = cells.findIndex(
+      (c) => c === "data point" || c === "data points"
+    );
+    const ii = cells.findIndex(
+      (c) => c === "input" || c === "value" || c === "response"
+    );
     if (di >= 0 && ii >= 0) {
       headerIdx = r;
       labelCol = di;
@@ -249,12 +266,21 @@ export function parseDestiniVerticalSheet(rows: unknown[][]): DestiniMappedRow {
 
 export type DestiniDetectResult =
   | { format: "vertical"; sheetName: string; rows: unknown[][] }
-  | { format: "tabular"; sheetName: string; headers: string[]; rows: unknown[][] };
+  | {
+      format: "tabular";
+      sheetName: string;
+      headers: string[];
+      rows: unknown[][];
+    };
 
 function cellText(v: unknown): string {
   if (v == null) return "";
   if (typeof v === "object") {
-    const o = v as { result?: unknown; text?: string; richText?: { text: string }[] };
+    const o = v as {
+      result?: unknown;
+      text?: string;
+      richText?: { text: string }[];
+    };
     if (o.result != null) return cellText(o.result);
     if (o.richText) return o.richText.map((t) => t.text).join("");
     if (o.text) return o.text;
@@ -280,10 +306,7 @@ function sheetToMatrix(ws: ExcelJS.Worksheet): unknown[][] {
 function looksVertical(matrix: unknown[][]): boolean {
   for (const row of matrix.slice(0, 20)) {
     const cells = (row ?? []).map((c) => normLabel(cellText(c)));
-    if (
-      cells.includes("data point") ||
-      cells.includes("data points")
-    ) {
+    if (cells.includes("data point") || cells.includes("data points")) {
       return true;
     }
   }
@@ -292,7 +315,7 @@ function looksVertical(matrix: unknown[][]): boolean {
 
 /** Detect format from an in-memory workbook matrix set. */
 export function detectDestiniFormat(
-  sheets: { name: string; rows: unknown[][] }[],
+  sheets: { name: string; rows: unknown[][] }[]
 ): DestiniDetectResult {
   const preferred =
     sheets.find((s) => /report/i.test(s.name)) ??
@@ -304,14 +327,16 @@ export function detectDestiniFormat(
   }
 
   if (looksVertical(preferred.rows) || /report/i.test(preferred.name)) {
-    return { format: "vertical", sheetName: preferred.name, rows: preferred.rows };
+    return {
+      format: "vertical",
+      sheetName: preferred.name,
+      rows: preferred.rows,
+    };
   }
 
   // Tabular: first non-empty row = headers
   const headerRow =
-    preferred.rows.find((r) =>
-      (r ?? []).some((c) => cellText(c).trim()),
-    ) ?? [];
+    preferred.rows.find((r) => (r ?? []).some((c) => cellText(c).trim())) ?? [];
   const headers = headerRow.map((c) => cellText(c).trim());
   const dataRows = preferred.rows
     .slice(preferred.rows.indexOf(headerRow) + 1)
@@ -332,7 +357,7 @@ export type DestiniParseFileResult = {
 
 /** Parse an .xlsx buffer (server-side). */
 export async function parseDestiniWorkbook(
-  buffer: ArrayBuffer | Buffer,
+  buffer: ArrayBuffer | Buffer
 ): Promise<DestiniParseFileResult> {
   const wb = new ExcelJS.Workbook();
   // exceljs typings accept Buffer in practice; cast keeps us off their Buffer brand.
@@ -409,7 +434,7 @@ export function parseDestiniCsv(text: string): DestiniParseFileResult {
 }
 
 export function filterWritableValues(
-  values: Record<string, number | string | null | undefined>,
+  values: Record<string, number | string | null | undefined>
 ): Partial<Record<DestiniWritableKey, number | string | null>> {
   const out: Partial<Record<DestiniWritableKey, number | string | null>> = {};
   for (const key of DESTINI_WRITABLE_KEYS) {

@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Archive, ArchiveRestore, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { addReferenceValue, setReferenceValueRetired } from "@/actions/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { addReferenceValue, setReferenceValueRetired } from "@/actions/admin";
 
 type ListValue = { id: number; value: string; retired: boolean };
 type RefList = { key: string; label: string; values: ListValue[] };
@@ -36,10 +42,13 @@ export function ReferenceListsManager({
         <CardContent className="space-y-0.5 px-3">
           {lists.map((l) => (
             <button
+              type="button"
               key={l.key}
               onClick={() => setSelected(l.key)}
               className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent ${
-                selected === l.key ? "bg-accent font-medium" : "text-muted-foreground"
+                selected === l.key
+                  ? "bg-accent font-medium"
+                  : "text-muted-foreground"
               }`}
             >
               {l.label}
@@ -55,8 +64,9 @@ export function ReferenceListsManager({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">{list?.label}</CardTitle>
           <CardDescription>
-            Dropdown fields must match these managed values — no free-text override.
-            Retired values stay on historical records but disappear from new entry.
+            Dropdown fields must match these managed values — no free-text
+            override. Retired values stay on historical records but disappear
+            from new entry.
             {!canEdit && " Only the Corporate Precon Admin can edit."}
           </CardDescription>
         </CardHeader>
@@ -74,7 +84,9 @@ export function ReferenceListsManager({
                     setNewValue("");
                     router.refresh();
                   } catch (err) {
-                    toast.error(err instanceof Error ? err.message : "Add failed");
+                    toast.error(
+                      err instanceof Error ? err.message : "Add failed"
+                    );
                   }
                 });
               }}
@@ -85,7 +97,11 @@ export function ReferenceListsManager({
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
               />
-              <Button type="submit" size="sm" disabled={pending || !newValue.trim()}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={pending || !newValue.trim()}
+              >
                 <Plus className="size-3.5" /> Add
               </Button>
             </form>
@@ -95,7 +111,9 @@ export function ReferenceListsManager({
               <span
                 key={v.id}
                 className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
-                  v.retired ? "border-dashed bg-muted/50 text-muted-foreground line-through" : "bg-background"
+                  v.retired
+                    ? "border-dashed bg-muted/50 text-muted-foreground line-through"
+                    : "bg-background"
                 }`}
               >
                 {v.value}
@@ -104,7 +122,11 @@ export function ReferenceListsManager({
                     variant="ghost"
                     size="icon-xs"
                     className="-mr-1 size-5 text-muted-foreground"
-                    title={v.retired ? "Restore" : "Retire (historical records keep it)"}
+                    title={
+                      v.retired
+                        ? "Restore"
+                        : "Retire (historical records keep it)"
+                    }
                     aria-label={`${v.retired ? "Restore" : "Retire"} ${v.value}`}
                     onClick={() =>
                       startTransition(async () => {
@@ -112,7 +134,9 @@ export function ReferenceListsManager({
                           await setReferenceValueRetired(v.id, !v.retired);
                           router.refresh();
                         } catch (err) {
-                          toast.error(err instanceof Error ? err.message : "Update failed");
+                          toast.error(
+                            err instanceof Error ? err.message : "Update failed"
+                          );
                         }
                       })
                     }

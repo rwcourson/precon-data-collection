@@ -61,7 +61,7 @@ function addMonths(month: MonthKey, delta: number): MonthKey {
 
 function winFactor(
   outcome: ForecastRoundInput["outcome"],
-  pendingWinProbability: number,
+  pendingWinProbability: number
 ): number {
   if (outcome === "successful") return 1;
   if (outcome === "unsuccessful") return 0;
@@ -74,7 +74,7 @@ function winFactor(
  */
 export function buildForecastSeries(
   rounds: ForecastRoundInput[],
-  assumptions: ForecastAssumptions = DEFAULT_FORECAST_ASSUMPTIONS,
+  assumptions: ForecastAssumptions = DEFAULT_FORECAST_ASSUMPTIONS
 ): ForecastSeries {
   const excluded: ForecastSeries["excluded"] = [];
   const byMonth = new Map<

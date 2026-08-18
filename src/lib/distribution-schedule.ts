@@ -8,12 +8,18 @@ export function weekPeriodKey(date: Date, timezone: string): string {
     month: "2-digit",
     day: "2-digit",
   });
-  const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
-  const d = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+  const parts = Object.fromEntries(
+    fmt.formatToParts(date).map((p) => [p.type, p.value])
+  );
+  const d = new Date(
+    Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))
+  );
   const day = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  const week = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
@@ -29,7 +35,7 @@ const WEEKDAY_INDEX: Record<string, number> = {
 
 export function zonedDateParts(
   now: Date,
-  timeZone: string,
+  timeZone: string
 ): { date: string; weekday: number; hour: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -40,7 +46,9 @@ export function zonedDateParts(
     hour: "2-digit",
     hourCycle: "h23",
   });
-  const parts = Object.fromEntries(fmt.formatToParts(now).map((p) => [p.type, p.value]));
+  const parts = Object.fromEntries(
+    fmt.formatToParts(now).map((p) => [p.type, p.value])
+  );
   return {
     date: `${parts.year}-${parts.month}-${parts.day}`,
     weekday: WEEKDAY_INDEX[parts.weekday ?? "Sun"] ?? 0,
@@ -53,7 +61,7 @@ export function schedulePeriodKey(
   now: Date,
   timeZone: string,
   weekday: number,
-  hour: number,
+  hour: number
 ): string {
   const parts = zonedDateParts(now, timeZone);
   return `${parts.date}-${weekday}-${String(hour).padStart(2, "0")}`;
@@ -63,7 +71,7 @@ export function isScheduleDue(
   now: Date,
   timeZone: string,
   weekday: number,
-  hour: number,
+  hour: number
 ): boolean {
   const parts = zonedDateParts(now, timeZone);
   return parts.weekday === weekday && parts.hour === hour;

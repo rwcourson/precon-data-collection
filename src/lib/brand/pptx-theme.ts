@@ -37,7 +37,7 @@ function logos() {
 
 export function createBrandedPptx(
   pptx: Pres,
-  meta: { title: string; subject?: string },
+  meta: { title: string; subject?: string }
 ): void {
   pptx.defineLayout({ name: "WIDE", width: SLIDE_W, height: SLIDE_H });
   pptx.layout = "WIDE";
@@ -62,7 +62,7 @@ export function addTitleSlide(
     title: string;
     lead?: string;
     meta?: string[];
-  },
+  }
 ): Slide {
   const slide = pptx.addSlide();
   slide.addShape(pptx.ShapeType.rect, {
@@ -132,7 +132,9 @@ export function addTitleSlide(
       margin: 0,
     });
   }
-  const footer = [COMPANY_NAME, ...(input.meta ?? [])].filter(Boolean).join("  ·  ");
+  const footer = [COMPANY_NAME, ...(input.meta ?? [])]
+    .filter(Boolean)
+    .join("  ·  ");
   slide.addText(footer, {
     x: MARGIN,
     y: 6.95,
@@ -154,7 +156,7 @@ export function addContentSlide(
     page: number;
     pages: number;
     footerNote?: string;
-  },
+  }
 ): Slide {
   const slide = pptx.addSlide();
   slide.addShape(pptx.ShapeType.rect, {

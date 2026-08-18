@@ -1,4 +1,9 @@
-import type { CustomColumn, EstimateRound, Job, SavedReportConfig } from "@/db/schema";
+import type {
+  CustomColumn,
+  EstimateRound,
+  Job,
+  SavedReportConfig,
+} from "@/db/schema";
 import { FIELD_DEFS, type FieldType } from "./fields";
 import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "./latest-note";
 import { METRIC_DEFS } from "./metrics";
@@ -20,7 +25,9 @@ export type ReportFieldDef = {
   category: string;
 };
 
-export function buildFieldCatalog(customCols: CustomColumn[]): ReportFieldDef[] {
+export function buildFieldCatalog(
+  customCols: CustomColumn[]
+): ReportFieldDef[] {
   const catalog: ReportFieldDef[] = [];
   for (const f of FIELD_DEFS) {
     catalog.push({
@@ -31,10 +38,30 @@ export function buildFieldCatalog(customCols: CustomColumn[]): ReportFieldDef[] 
     });
   }
   catalog.push(
-    { key: "status", label: "Lifecycle Status", type: "dropdown", category: "Lifecycle" },
-    { key: "outcome", label: "Outcome", type: "dropdown", category: "Lifecycle" },
-    { key: "roundNumber", label: "Round #", type: "number", category: "Lifecycle" },
-    { key: LATEST_NOTE_KEY, label: LATEST_NOTE_LABEL, type: "text", category: "Notes" },
+    {
+      key: "status",
+      label: "Lifecycle Status",
+      type: "dropdown",
+      category: "Lifecycle",
+    },
+    {
+      key: "outcome",
+      label: "Outcome",
+      type: "dropdown",
+      category: "Lifecycle",
+    },
+    {
+      key: "roundNumber",
+      label: "Round #",
+      type: "number",
+      category: "Lifecycle",
+    },
+    {
+      key: LATEST_NOTE_KEY,
+      label: LATEST_NOTE_LABEL,
+      type: "text",
+      category: "Notes",
+    }
   );
   for (const m of METRIC_DEFS) {
     catalog.push({
@@ -61,7 +88,7 @@ export function flattenRound(
   estimateLeadName: string | null,
   multi: Record<string, string[]>,
   customValues: Record<number, string | null>,
-  latestNote: string | null = null,
+  latestNote: string | null = null
 ): FlatRow {
   const row: FlatRow = {
     id: round.id,
@@ -99,7 +126,10 @@ function compare(a: string | number | null, b: string | number | null): number {
   return String(a).localeCompare(String(b));
 }
 
-function applyFilter(row: FlatRow, f: { field: string; op: string; value: string }): boolean {
+function applyFilter(
+  row: FlatRow,
+  f: { field: string; op: string; value: string }
+): boolean {
   const v = row[f.field];
   switch (f.op) {
     case "eq":
@@ -107,7 +137,9 @@ function applyFilter(row: FlatRow, f: { field: string; op: string; value: string
     case "neq":
       return String(v ?? "").toLowerCase() !== f.value.toLowerCase();
     case "contains":
-      return String(v ?? "").toLowerCase().includes(f.value.toLowerCase());
+      return String(v ?? "")
+        .toLowerCase()
+        .includes(f.value.toLowerCase());
     case "gt":
       return v != null && Number(v) > Number(f.value);
     case "lt":
@@ -128,9 +160,10 @@ export type ReportResult = {
 export function runReportEngine(
   flatRows: FlatRow[],
   config: SavedReportConfig,
-  catalog: ReportFieldDef[],
+  catalog: ReportFieldDef[]
 ): ReportResult {
-  const labelOf = (key: string) => catalog.find((c) => c.key === key)?.label ?? key;
+  const labelOf = (key: string) =>
+    catalog.find((c) => c.key === key)?.label ?? key;
 
   let rows = flatRows;
   for (const f of config.filters) rows = rows.filter((r) => applyFilter(r, f));
@@ -170,11 +203,15 @@ export function runReportEngine(
   for (const [key, groupRows] of groups) {
     const parts = key.split("␟");
     const row: FlatRow = {};
-    config.groupBy.forEach((g, i) => (row[g] = parts[i]));
+    for (const [i, g] of config.groupBy.entries()) {
+      row[g] = parts[i];
+    }
     for (const a of config.aggregations) {
       const nums = groupRows
         .map((r) => r[a.field])
-        .filter((v): v is number => typeof v === "number" && isFinite(v));
+        .filter(
+          (v): v is number => typeof v === "number" && Number.isFinite(v)
+        );
       switch (a.fn) {
         case "count":
           row[`count:${a.field}`] = groupRows.length;
@@ -183,7 +220,9 @@ export function runReportEngine(
           row[`sum:${a.field}`] = nums.reduce((s, n) => s + n, 0);
           break;
         case "avg":
-          row[`avg:${a.field}`] = nums.length ? nums.reduce((s, n) => s + n, 0) / nums.length : null;
+          row[`avg:${a.field}`] = nums.length
+            ? nums.reduce((s, n) => s + n, 0) / nums.length
+            : null;
           break;
         case "min":
           row[`min:${a.field}`] = nums.length ? Math.min(...nums) : null;
@@ -214,25 +253,36 @@ export function runReportEngine(
 export function formatReportValue(
   key: string,
   value: string | number | null,
-  catalog: ReportFieldDef[],
+  catalog: ReportFieldDef[]
 ): string {
   if (key === LATEST_NOTE_KEY && (value == null || value === "")) return "";
   if (value == null || value === "") return "—";
-  const baseKey = key.includes(":") && !key.startsWith("metric:") && !key.startsWith("custom:")
-    ? key.split(":")[1]
-    : key;
+  const baseKey =
+    key.includes(":") &&
+    !key.startsWith("metric:") &&
+    !key.startsWith("custom:")
+      ? key.split(":")[1]
+      : key;
   const def = catalog.find((c) => c.key === baseKey);
   const isCount = key.startsWith("count:");
   if (isCount) return String(value);
   if (typeof value === "number") {
     if (def?.type === "dollars")
-      return value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+      return value.toLocaleString("en-US", {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      });
     if (def?.type === "metric") {
       const metricKey = baseKey.replace("metric:", "");
       const m = METRIC_DEFS.find((x) => x.key === metricKey);
       if (m?.format === "percent") return `${(value * 100).toFixed(1)}%`;
       if (m?.format === "dollars")
-        return value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+        return value.toLocaleString("en-US", {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+        });
       return value.toFixed(2);
     }
     return value.toLocaleString("en-US", { maximumFractionDigits: 1 });

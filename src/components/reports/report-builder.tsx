@@ -1,8 +1,5 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
   ChevronDown,
   FileSpreadsheet,
@@ -15,9 +12,24 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  deleteReport,
+  runReport,
+  saveReport,
+  shareReport,
+} from "@/actions/reports";
 import { Badge, BadgeRemove } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -47,10 +59,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteReport, runReport, saveReport, shareReport } from "@/actions/reports";
-import { formatReportValue, type ReportFieldDef, type ReportResult } from "@/lib/report-engine";
-import { reportColumnMeta, reportColumnWidth } from "@/lib/report-layout";
 import type { SavedReportConfig } from "@/db/schema";
+import {
+  formatReportValue,
+  type ReportFieldDef,
+  type ReportResult,
+} from "@/lib/report-engine";
+import { reportColumnMeta, reportColumnWidth } from "@/lib/report-layout";
 import { cn } from "@/lib/utils";
 
 type SavedReportRow = {
@@ -75,7 +90,14 @@ const OPS = [
 const AGG_FNS = ["sum", "avg", "count", "min", "max"] as const;
 
 const EMPTY: SavedReportConfig = {
-  fields: ["region", "jobName", "estimatePhase", "bidYear", "estimateValue", "metric:feeExpectedPct"],
+  fields: [
+    "region",
+    "jobName",
+    "estimatePhase",
+    "bidYear",
+    "estimateValue",
+    "metric:feeExpectedPct",
+  ],
   filters: [],
   groupBy: [],
   aggregations: [],
@@ -104,9 +126,10 @@ export function ReportBuilder({
   const [shareOpen, setShareOpen] = useState(false);
   const router = useRouter();
 
-  const labelOf = (key: string) => catalog.find((c) => c.key === key)?.label ?? key;
+  const labelOf = (key: string) =>
+    catalog.find((c) => c.key === key)?.label ?? key;
   const numericFields = catalog.filter((c) =>
-    ["number", "dollars", "metric"].includes(c.type),
+    ["number", "dollars", "metric"].includes(c.type)
   );
 
   const categories = [...new Set(catalog.map((c) => c.category))];
@@ -151,70 +174,75 @@ export function ReportBuilder({
     <div className="space-y-4">
       <div className="grid items-start gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
         <Card className="h-fit lg:sticky lg:top-20">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Saved Reports</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 px-3">
-          <button
-            type="button"
-            className="w-full rounded-md border border-dashed px-2.5 py-2 text-left text-xs text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-            onClick={() => {
-              setConfig(EMPTY);
-              setName("");
-              setReportId(null);
-              setResult(null);
-            }}
-          >
-            <Plus className="mr-1 inline size-3" /> New blank report
-          </button>
-          {saved.map((r) => (
-            <div
-              key={r.id}
-              className={`group flex items-center justify-between rounded-md px-2.5 py-2 text-sm hover:bg-accent ${
-                reportId === r.id ? "bg-accent" : ""
-              }`}
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Saved Reports</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 px-3">
+            <button
+              type="button"
+              className="w-full rounded-md border border-dashed px-2.5 py-2 text-left text-xs text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+              onClick={() => {
+                setConfig(EMPTY);
+                setName("");
+                setReportId(null);
+                setResult(null);
+              }}
             >
-              <button
-                type="button"
-                className="flex-1 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                onClick={() => load(r)}
+              <Plus className="mr-1 inline size-3" /> New blank report
+            </button>
+            {saved.map((r) => (
+              <div
+                key={r.id}
+                className={`group flex items-center justify-between rounded-md px-2.5 py-2 text-sm hover:bg-accent ${
+                  reportId === r.id ? "bg-accent" : ""
+                }`}
               >
-                <p className="font-medium leading-tight">{r.name}</p>
-                <p className="text-2xs text-muted-foreground">
-                  {r.ownerId === currentUserId ? "Mine" : `Shared by ${r.ownerName}`}
-                  {r.sharedWithRegions.length > 0 && ` · shared with ${r.sharedWithRegions.join(", ")}`}
-                </p>
-              </button>
-              {r.ownerId === currentUserId && (
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
-                  aria-label={`Delete report ${r.name}`}
-                  onClick={async () => {
-                    try {
-                      await deleteReport(r.id);
-                      if (reportId === r.id) setReportId(null);
-                      router.refresh();
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : "Delete failed");
-                    }
-                  }}
+                <button
+                  type="button"
+                  className="flex-1 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  onClick={() => load(r)}
                 >
-                  <Trash2 />
-                </Button>
-              )}
-            </div>
-          ))}
-          {saved.length === 0 && (
-            <p className="px-2 py-3 text-xs text-muted-foreground">
-              No saved reports yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                  <p className="font-medium leading-tight">{r.name}</p>
+                  <p className="text-2xs text-muted-foreground">
+                    {r.ownerId === currentUserId
+                      ? "Mine"
+                      : `Shared by ${r.ownerName}`}
+                    {r.sharedWithRegions.length > 0 &&
+                      ` · shared with ${r.sharedWithRegions.join(", ")}`}
+                  </p>
+                </button>
+                {r.ownerId === currentUserId && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                    aria-label={`Delete report ${r.name}`}
+                    onClick={async () => {
+                      try {
+                        await deleteReport(r.id);
+                        if (reportId === r.id) setReportId(null);
+                        router.refresh();
+                      } catch (e) {
+                        toast.error(
+                          e instanceof Error ? e.message : "Delete failed"
+                        );
+                      }
+                    }}
+                  >
+                    <Trash2 />
+                  </Button>
+                )}
+              </div>
+            ))}
+            {saved.length === 0 && (
+              <p className="px-2 py-3 text-xs text-muted-foreground">
+                No saved reports yet.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
+        <Card>
           <CardContent className="space-y-4">
             {/* Fields */}
             <div className="space-y-1.5">
@@ -226,7 +254,10 @@ export function ReportBuilder({
                     <BadgeRemove
                       label={labelOf(f)}
                       onClick={() =>
-                        setConfig((c) => ({ ...c, fields: c.fields.filter((x) => x !== f) }))
+                        setConfig((c) => ({
+                          ...c,
+                          fields: c.fields.filter((x) => x !== f),
+                        }))
                       }
                     />
                   </Badge>
@@ -257,10 +288,15 @@ export function ReportBuilder({
                     onChange={(v) =>
                       setConfig((c) => ({
                         ...c,
-                        filters: c.filters.map((x, j) => (j === i ? { ...x, field: v } : x)),
+                        filters: c.filters.map((x, j) =>
+                          j === i ? { ...x, field: v } : x
+                        ),
                       }))
                     }
-                    options={catalog.map((c) => ({ value: c.key, label: c.label }))}
+                    options={catalog.map((c) => ({
+                      value: c.key,
+                      label: c.label,
+                    }))}
                     className="w-52"
                   />
                   <MiniSelect
@@ -268,7 +304,9 @@ export function ReportBuilder({
                     onChange={(v) =>
                       setConfig((c) => ({
                         ...c,
-                        filters: c.filters.map((x, j) => (j === i ? { ...x, op: v } : x)),
+                        filters: c.filters.map((x, j) =>
+                          j === i ? { ...x, op: v } : x
+                        ),
                       }))
                     }
                     options={OPS}
@@ -283,7 +321,7 @@ export function ReportBuilder({
                         setConfig((c) => ({
                           ...c,
                           filters: c.filters.map((x, j) =>
-                            j === i ? { ...x, value: e.target.value } : x,
+                            j === i ? { ...x, value: e.target.value } : x
                           ),
                         }))
                       }
@@ -295,7 +333,10 @@ export function ReportBuilder({
                     className="text-muted-foreground hover:text-destructive"
                     aria-label="Remove filter"
                     onClick={() =>
-                      setConfig((c) => ({ ...c, filters: c.filters.filter((_, j) => j !== i) }))
+                      setConfig((c) => ({
+                        ...c,
+                        filters: c.filters.filter((_, j) => j !== i),
+                      }))
                     }
                   >
                     <X />
@@ -309,7 +350,10 @@ export function ReportBuilder({
                 onClick={() =>
                   setConfig((c) => ({
                     ...c,
-                    filters: [...c.filters, { field: "status", op: "eq", value: "" }],
+                    filters: [
+                      ...c.filters,
+                      { field: "status", op: "eq", value: "" },
+                    ],
                   }))
                 }
               >
@@ -327,7 +371,10 @@ export function ReportBuilder({
                       <BadgeRemove
                         label={labelOf(g)}
                         onClick={() =>
-                          setConfig((c) => ({ ...c, groupBy: c.groupBy.filter((x) => x !== g) }))
+                          setConfig((c) => ({
+                            ...c,
+                            groupBy: c.groupBy.filter((x) => x !== g),
+                          }))
                         }
                       />
                     </Badge>
@@ -339,15 +386,22 @@ export function ReportBuilder({
                       v &&
                       setConfig((c) => ({
                         ...c,
-                        groupBy: c.groupBy.includes(v) ? c.groupBy : [...c.groupBy, v],
+                        groupBy: c.groupBy.includes(v)
+                          ? c.groupBy
+                          : [...c.groupBy, v],
                         aggregations:
                           c.aggregations.length === 0
-                            ? [{ field: "id", fn: "count" }, { field: "estimateValue", fn: "sum" }]
+                            ? [
+                                { field: "id", fn: "count" },
+                                { field: "estimateValue", fn: "sum" },
+                              ]
                             : c.aggregations,
                       }))
                     }
                     options={catalog
-                      .filter((c) => ["dropdown", "text", "number"].includes(c.type))
+                      .filter((c) =>
+                        ["dropdown", "text", "number"].includes(c.type)
+                      )
                       .map((c) => ({ value: c.key, label: c.label }))}
                     className="h-7 w-36"
                   />
@@ -363,18 +417,26 @@ export function ReportBuilder({
                 ) : (
                   <>
                     {config.aggregations.map((a, i) => (
-                      <div key={i} className="flex min-h-7 items-center gap-1.5">
+                      <div
+                        key={i}
+                        className="flex min-h-7 items-center gap-1.5"
+                      >
                         <MiniSelect
                           value={a.fn}
                           onChange={(v) =>
                             setConfig((c) => ({
                               ...c,
                               aggregations: c.aggregations.map((x, j) =>
-                                j === i ? { ...x, fn: v as (typeof AGG_FNS)[number] } : x,
+                                j === i
+                                  ? { ...x, fn: v as (typeof AGG_FNS)[number] }
+                                  : x
                               ),
                             }))
                           }
-                          options={AGG_FNS.map((f) => ({ value: f, label: f.toUpperCase() }))}
+                          options={AGG_FNS.map((f) => ({
+                            value: f,
+                            label: f.toUpperCase(),
+                          }))}
                           className="h-7 w-24"
                         />
                         <MiniSelect
@@ -383,13 +445,16 @@ export function ReportBuilder({
                             setConfig((c) => ({
                               ...c,
                               aggregations: c.aggregations.map((x, j) =>
-                                j === i ? { ...x, field: v } : x,
+                                j === i ? { ...x, field: v } : x
                               ),
                             }))
                           }
                           options={[
                             { value: "id", label: "Records" },
-                            ...numericFields.map((f) => ({ value: f.key, label: f.label })),
+                            ...numericFields.map((f) => ({
+                              value: f.key,
+                              label: f.label,
+                            })),
                           ]}
                           className="h-7 w-44"
                         />
@@ -401,7 +466,9 @@ export function ReportBuilder({
                           onClick={() =>
                             setConfig((c) => ({
                               ...c,
-                              aggregations: c.aggregations.filter((_, j) => j !== i),
+                              aggregations: c.aggregations.filter(
+                                (_, j) => j !== i
+                              ),
                             }))
                           }
                         >
@@ -416,7 +483,10 @@ export function ReportBuilder({
                       onClick={() =>
                         setConfig((c) => ({
                           ...c,
-                          aggregations: [...c.aggregations, { field: "estimateValue", fn: "sum" }],
+                          aggregations: [
+                            ...c.aggregations,
+                            { field: "estimateValue", fn: "sum" },
+                          ],
                         }))
                       }
                     >
@@ -435,10 +505,15 @@ export function ReportBuilder({
                       onChange={(v) =>
                         setConfig((c) => ({
                           ...c,
-                          sortBy: c.sortBy.map((x, j) => (j === i ? { ...x, field: v } : x)),
+                          sortBy: c.sortBy.map((x, j) =>
+                            j === i ? { ...x, field: v } : x
+                          ),
                         }))
                       }
-                      options={catalog.map((c) => ({ value: c.key, label: c.label }))}
+                      options={catalog.map((c) => ({
+                        value: c.key,
+                        label: c.label,
+                      }))}
                       className="h-7 w-44"
                     />
                     <MiniSelect
@@ -447,7 +522,7 @@ export function ReportBuilder({
                         setConfig((c) => ({
                           ...c,
                           sortBy: c.sortBy.map((x, j) =>
-                            j === i ? { ...x, dir: v as "asc" | "desc" } : x,
+                            j === i ? { ...x, dir: v as "asc" | "desc" } : x
                           ),
                         }))
                       }
@@ -463,7 +538,10 @@ export function ReportBuilder({
                       className="text-muted-foreground hover:text-destructive"
                       aria-label="Remove sort"
                       onClick={() =>
-                        setConfig((c) => ({ ...c, sortBy: c.sortBy.filter((_, j) => j !== i) }))
+                        setConfig((c) => ({
+                          ...c,
+                          sortBy: c.sortBy.filter((_, j) => j !== i),
+                        }))
                       }
                     >
                       <X />
@@ -477,7 +555,10 @@ export function ReportBuilder({
                   onClick={() =>
                     setConfig((c) => ({
                       ...c,
-                      sortBy: [...c.sortBy, { field: config.fields[0] ?? "region", dir: "asc" }],
+                      sortBy: [
+                        ...c.sortBy,
+                        { field: config.fields[0] ?? "region", dir: "asc" },
+                      ],
                     }))
                   }
                 >
@@ -501,28 +582,53 @@ export function ReportBuilder({
                   disabled={saving || !name.trim()}
                   onClick={persist}
                 >
-                  {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                  {saving ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Save className="size-3.5" />
+                  )}
                   {reportId ? "Update" : "Save"}
                 </Button>
-                {reportId != null && currentReport?.ownerId === currentUserId && (
-                  <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
-                    <Share2 className="size-3.5" /> Share
-                  </Button>
-                )}
+                {reportId != null &&
+                  currentReport?.ownerId === currentUserId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShareOpen(true)}
+                    >
+                      <Share2 className="size-3.5" /> Share
+                    </Button>
+                  )}
               </div>
               <div className="flex items-center gap-1.5">
-                <Button size="sm" variant="outline" nativeButton={false} render={<a href={exportUrl("xlsx")} />}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<a href={exportUrl("xlsx")} />}
+                >
                   <FileSpreadsheet className="size-4" /> Excel
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline" nativeButton={false}
-                  render={<a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />}
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <a
+                      href={exportUrl("pdf")}
+                      target="_blank"
+                      rel="noreferrer"
+                    />
+                  }
                 >
                   <FileText className="size-4" /> PDF
                 </Button>
                 <Button size="sm" onClick={run} disabled={running}>
-                  {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                  {running ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
                   Run Report
                 </Button>
               </div>
@@ -531,102 +637,123 @@ export function ReportBuilder({
         </Card>
       </div>
 
-        {result && (
-          <Card className="min-w-0">
-            <CardHeader className="border-b pb-3">
-              <CardTitle className="text-sm">
-                Results{" "}
-                <span className="font-normal text-muted-foreground">
-                  ({result.rows.length} row{result.rows.length === 1 ? "" : "s"}
-                  {result.isGrouped ? ", grouped" : ""})
-                </span>
-              </CardTitle>
-              {result.rows.length > 0 ? (
-                <CardAction>
-                  <div className="flex items-center gap-1.5">
-                    <Button size="sm" variant="outline" nativeButton={false} render={<a href={exportUrl("xlsx")} />}>
-                      <FileSpreadsheet className="size-3.5" /> Excel
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      nativeButton={false}
-                      render={<a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />}
-                    >
-                      <FileText className="size-3.5" /> PDF
-                    </Button>
-                  </div>
-                </CardAction>
-              ) : null}
-            </CardHeader>
-            <CardContent className="p-0">
-              {result.rows.length === 0 ? (
-                <div className="flex h-36 flex-col items-center justify-center gap-1 px-6 text-center">
-                  <p className="text-sm font-medium">No rows matched</p>
-                  <p className="text-xs text-muted-foreground">
-                    Loosen filters or pick different fields, then run again.
-                  </p>
+      {result && (
+        <Card className="min-w-0">
+          <CardHeader className="border-b pb-3">
+            <CardTitle className="text-sm">
+              Results{" "}
+              <span className="font-normal text-muted-foreground">
+                ({result.rows.length} row{result.rows.length === 1 ? "" : "s"}
+                {result.isGrouped ? ", grouped" : ""})
+              </span>
+            </CardTitle>
+            {result.rows.length > 0 ? (
+              <CardAction>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    nativeButton={false}
+                    render={<a href={exportUrl("xlsx")} />}
+                  >
+                    <FileSpreadsheet className="size-3.5" /> Excel
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    nativeButton={false}
+                    render={
+                      <a
+                        href={exportUrl("pdf")}
+                        target="_blank"
+                        rel="noreferrer"
+                      />
+                    }
+                  >
+                    <FileText className="size-3.5" /> PDF
+                  </Button>
                 </div>
-              ) : (
-                <div className="max-h-[min(70vh,48rem)] overflow-auto">
-                  <table className="w-full table-fixed caption-bottom text-sm">
-                    <colgroup>
-                      {result.columns.map((c) => (
-                        <col
-                          key={c.key}
-                          style={{ width: reportColumnWidth(c.key, result.columns, catalog) }}
-                        />
-                      ))}
-                    </colgroup>
-                    <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
-                      <TableRow>
+              </CardAction>
+            ) : null}
+          </CardHeader>
+          <CardContent className="p-0">
+            {result.rows.length === 0 ? (
+              <div className="flex h-36 flex-col items-center justify-center gap-1 px-6 text-center">
+                <p className="text-sm font-medium">No rows matched</p>
+                <p className="text-xs text-muted-foreground">
+                  Loosen filters or pick different fields, then run again.
+                </p>
+              </div>
+            ) : (
+              <div className="max-h-[min(70vh,48rem)] overflow-auto">
+                <table className="w-full table-fixed caption-bottom text-sm">
+                  <colgroup>
+                    {result.columns.map((c) => (
+                      <col
+                        key={c.key}
+                        style={{
+                          width: reportColumnWidth(
+                            c.key,
+                            result.columns,
+                            catalog
+                          ),
+                        }}
+                      />
+                    ))}
+                  </colgroup>
+                  <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
+                    <TableRow>
+                      {result.columns.map((c) => {
+                        const meta = reportColumnMeta(c.key, catalog);
+                        return (
+                          <TableHead
+                            key={c.key}
+                            className={cn(
+                              "px-3 first:pl-5 last:pr-5",
+                              meta.numeric && "text-right"
+                            )}
+                          >
+                            {c.label}
+                          </TableHead>
+                        );
+                      })}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {result.rows.map((r, i) => (
+                      <TableRow key={i}>
                         {result.columns.map((c) => {
                           const meta = reportColumnMeta(c.key, catalog);
+                          const display = formatReportValue(
+                            c.key,
+                            r[c.key] ?? null,
+                            catalog
+                          );
                           return (
-                            <TableHead
+                            <TableCell
                               key={c.key}
+                              title={display === "—" ? undefined : display}
                               className={cn(
-                                "px-3 first:pl-5 last:pr-5",
-                                meta.numeric && "text-right",
+                                "px-3 text-sm first:pl-5 last:pr-5",
+                                meta.wrap
+                                  ? "whitespace-normal break-words"
+                                  : "truncate",
+                                meta.numeric && "text-right tabular-nums"
                               )}
                             >
-                              {c.label}
-                            </TableHead>
+                              {display}
+                            </TableCell>
                           );
                         })}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {result.rows.map((r, i) => (
-                        <TableRow key={i}>
-                          {result.columns.map((c) => {
-                            const meta = reportColumnMeta(c.key, catalog);
-                            const display = formatReportValue(c.key, r[c.key] ?? null, catalog);
-                            return (
-                              <TableCell
-                                key={c.key}
-                                title={display === "—" ? undefined : display}
-                                className={cn(
-                                  "px-3 text-sm first:pl-5 last:pr-5",
-                                  meta.wrap
-                                    ? "whitespace-normal break-words"
-                                    : "truncate",
-                                  meta.numeric && "text-right tabular-nums",
-                                )}
-                              >
-                                {display}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                    ))}
+                  </TableBody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Share dialog */}
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
@@ -634,8 +761,8 @@ export function ReportBuilder({
           <DialogHeader>
             <DialogTitle>Share &quot;{currentReport?.name}&quot;</DialogTitle>
             <DialogDescription>
-              Saved reports are personal by default. Share with specific people or an
-              entire Region.
+              Saved reports are personal by default. Share with specific people
+              or an entire Region.
             </DialogDescription>
           </DialogHeader>
           {currentReport && (
@@ -666,7 +793,9 @@ function ShareForm({
   users: { id: number; name: string }[];
   onDone: () => void;
 }) {
-  const [selRegions, setSelRegions] = useState<string[]>(report.sharedWithRegions);
+  const [selRegions, setSelRegions] = useState<string[]>(
+    report.sharedWithRegions
+  );
   const [selUsers, setSelUsers] = useState<number[]>(report.sharedWithUserIds);
   const [pending, startTransition] = useTransition();
 
@@ -680,7 +809,9 @@ function ShareForm({
               <Checkbox
                 checked={selRegions.includes(r)}
                 onCheckedChange={(v) =>
-                  setSelRegions((s) => (v ? [...s, r] : s.filter((x) => x !== r)))
+                  setSelRegions((s) =>
+                    v ? [...s, r] : s.filter((x) => x !== r)
+                  )
                 }
               />
               {r}
@@ -696,7 +827,9 @@ function ShareForm({
               <Checkbox
                 checked={selUsers.includes(u.id)}
                 onCheckedChange={(v) =>
-                  setSelUsers((s) => (v ? [...s, u.id] : s.filter((x) => x !== u.id)))
+                  setSelUsers((s) =>
+                    v ? [...s, u.id] : s.filter((x) => x !== u.id)
+                  )
                 }
               />
               {u.name}
@@ -742,10 +875,13 @@ function FieldPicker({
   const matches = needle
     ? catalog.filter(
         (c) =>
-          c.label.toLowerCase().includes(needle) || c.category.toLowerCase().includes(needle),
+          c.label.toLowerCase().includes(needle) ||
+          c.category.toLowerCase().includes(needle)
       )
     : catalog;
-  const visibleCategories = categories.filter((cat) => matches.some((c) => c.category === cat));
+  const visibleCategories = categories.filter((cat) =>
+    matches.some((c) => c.category === cat)
+  );
 
   return (
     <Popover>
@@ -783,7 +919,10 @@ function FieldPicker({
                     className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/30"
                     onClick={() => onToggle(c.key)}
                   >
-                    <Checkbox checked={selected.includes(c.key)} className="pointer-events-none size-3.5" />
+                    <Checkbox
+                      checked={selected.includes(c.key)}
+                      className="pointer-events-none size-3.5"
+                    />
                     {c.label}
                   </button>
                 ))}
@@ -809,7 +948,11 @@ function MiniSelect({
   placeholder?: string;
 }) {
   return (
-    <Select items={options} value={value} onValueChange={(v) => onChange(v ?? "")}>
+    <Select
+      items={options}
+      value={value}
+      onValueChange={(v) => onChange(v ?? "")}
+    >
       <SelectTrigger size="sm" className={cn("h-7 text-xs", className)}>
         <SelectValue placeholder={placeholder ?? "Select…"} />
       </SelectTrigger>

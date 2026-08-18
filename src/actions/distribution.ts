@@ -1,14 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { distributionLists } from "@/db/schema";
 import { distributionListSchema } from "@/domain/contracts";
 import { DomainError } from "@/domain/errors";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { assertPrincipalCanDistribute } from "@/services/mutation-policy";
 import { distributionService } from "@/services/distribution-service";
+import { assertPrincipalCanDistribute } from "@/services/mutation-policy";
 
 export async function upsertDistributionList(raw: unknown) {
   const principal = await getWebPrincipal();
@@ -19,7 +19,12 @@ export async function upsertDistributionList(raw: unknown) {
     const [existing] = await db
       .select()
       .from(distributionLists)
-      .where(and(eq(distributionLists.id, input.id), isNull(distributionLists.deletedAt)));
+      .where(
+        and(
+          eq(distributionLists.id, input.id),
+          isNull(distributionLists.deletedAt)
+        )
+      );
     if (!existing) throw DomainError.notFound("Distribution list not found");
     assertPrincipalCanDistribute(principal, existing.region);
 
@@ -34,7 +39,12 @@ export async function upsertDistributionList(raw: unknown) {
         timezone: input.timezone,
         updatedAt: new Date(),
       })
-      .where(and(eq(distributionLists.id, input.id), isNull(distributionLists.deletedAt)));
+      .where(
+        and(
+          eq(distributionLists.id, input.id),
+          isNull(distributionLists.deletedAt)
+        )
+      );
     revalidatePath("/admin");
     revalidatePath("/reports");
     return input.id;
@@ -62,7 +72,9 @@ export async function deleteDistributionList(id: number) {
   const [list] = await db
     .select()
     .from(distributionLists)
-    .where(and(eq(distributionLists.id, id), isNull(distributionLists.deletedAt)));
+    .where(
+      and(eq(distributionLists.id, id), isNull(distributionLists.deletedAt))
+    );
   if (!list) throw DomainError.notFound("Distribution list not found");
   assertPrincipalCanDistribute(principal, list.region);
   await db

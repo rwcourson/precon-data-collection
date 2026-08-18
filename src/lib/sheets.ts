@@ -1,4 +1,9 @@
-import type { Sheet, SheetColumnType, SheetViewConfig, User } from "@/db/schema";
+import type {
+  Sheet,
+  SheetColumnType,
+  SheetViewConfig,
+  User,
+} from "@/db/schema";
 import type { FlatRow, ReportFieldDef } from "./report-engine";
 
 /**
@@ -52,10 +57,18 @@ export const SHEET_COLUMN_TYPES: { value: SheetColumnType; label: string }[] = [
 ];
 
 /** Rename/move/delete a sheet, and change its columns or saved view. */
-export function canManageSheet(user: User, sheet: Pick<Sheet, "region" | "ownerId">): boolean {
+export function canManageSheet(
+  user: User,
+  sheet: Pick<Sheet, "region" | "ownerId">
+): boolean {
   if (user.role === "corporate_admin") return true;
   if (sheet.ownerId === user.id) return true;
-  if (user.role === "rpd" && sheet.region != null && sheet.region === user.region) return true;
+  if (
+    user.role === "rpd" &&
+    sheet.region != null &&
+    sheet.region === user.region
+  )
+    return true;
   // A Corporate sheet is governed centrally, never by a single Region.
   return false;
 }
@@ -112,7 +125,7 @@ export type LabeledGroup<T> = {
  */
 export function groupRowsByField<T>(
   rows: T[],
-  getKey: (row: T) => string | number | null | undefined,
+  getKey: (row: T) => string | number | null | undefined
 ): LabeledGroup<T>[] {
   const map = new Map<string, T[]>();
   for (const r of rows) {
@@ -129,12 +142,14 @@ export function groupRowsByField<T>(
       label: key === "—" || key === "" ? "(blank)" : key,
       rows: groupRows,
     }))
-    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+    .sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { numeric: true })
+    );
 }
 
 export function matchesFilter(
   row: FlatRow,
-  f: { field: string; op: string; value: string },
+  f: { field: string; op: string; value: string }
 ): boolean {
   const raw = row[f.field];
   const text = String(raw ?? "").toLowerCase();
@@ -172,7 +187,7 @@ export function matchesFilter(
 export function evaluateView(
   allRows: FlatRow[],
   config: SheetViewConfig,
-  catalog: ReportFieldDef[],
+  catalog: ReportFieldDef[]
 ): SheetViewResult {
   const byKey = new Map(catalog.map((c) => [c.key, c]));
   const columns = config.columns
@@ -183,7 +198,8 @@ export function evaluateView(
     });
 
   let rows = allRows;
-  for (const f of config.filters) rows = rows.filter((r) => matchesFilter(r, f));
+  for (const f of config.filters)
+    rows = rows.filter((r) => matchesFilter(r, f));
 
   const sorted = [...rows].sort((a, b) => {
     for (const s of config.sortBy) {
@@ -202,20 +218,21 @@ export function evaluateView(
     .filter((c) => ["number", "dollars", "metric"].includes(c.type))
     .map((c) => c.key);
 
-  const groups: SheetGroup[] = groupRowsByField(sorted, (r) => r[groupField]).map(
-    (g) => ({
-      ...g,
-      totals: Object.fromEntries(
-        numericKeys.map((k) => [
-          k,
-          g.rows.reduce((sum, r) => {
-            const v = r[k];
-            return typeof v === "number" && Number.isFinite(v) ? sum + v : sum;
-          }, 0),
-        ]),
-      ),
-    }),
-  );
+  const groups: SheetGroup[] = groupRowsByField(
+    sorted,
+    (r) => r[groupField]
+  ).map((g) => ({
+    ...g,
+    totals: Object.fromEntries(
+      numericKeys.map((k) => [
+        k,
+        g.rows.reduce((sum, r) => {
+          const v = r[k];
+          return typeof v === "number" && Number.isFinite(v) ? sum + v : sum;
+        }, 0),
+      ])
+    ),
+  }));
 
   return { columns, rows: sorted, groups, total: allRows.length };
 }
@@ -261,7 +278,10 @@ export function groupIntoFolders(sheets: SheetSummary[]): FolderNode[] {
 }
 
 /** Slug used for grid column keys, stable enough to key stored cell values. */
-export function columnKeyFromLabel(label: string, taken: string[] = []): string {
+export function columnKeyFromLabel(
+  label: string,
+  taken: string[] = []
+): string {
   const base =
     label
       .toLowerCase()

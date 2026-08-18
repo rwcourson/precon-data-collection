@@ -1,10 +1,13 @@
-import { afterAll, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { dashboardWidgets, dashboards, users } from "@/db/schema";
 import type { User } from "@/db/schema";
+import { dashboards, dashboardWidgets, users } from "@/db/schema";
+import {
+  listDashboardsForPrincipal,
+  loadDashboardForPrincipal,
+} from "@/lib/authorization/loaders";
 import { createPrincipal } from "@/lib/authorization/principal";
-import { listDashboardsForPrincipal, loadDashboardForPrincipal } from "@/lib/authorization/loaders";
 import { dashboardService } from "@/services/dashboard-service";
 
 function principalFor(user: User, workspaceRegion: string | null) {
@@ -17,7 +20,9 @@ describe("standard dashboards", () => {
 
   afterAll(async () => {
     if (createdDashIds.length) {
-      await db.delete(dashboardWidgets).where(inArray(dashboardWidgets.dashboardId, createdDashIds));
+      await db
+        .delete(dashboardWidgets)
+        .where(inArray(dashboardWidgets.dashboardId, createdDashIds));
       await db.delete(dashboards).where(inArray(dashboards.id, createdDashIds));
     }
     if (createdUserIds.length) {
@@ -26,7 +31,11 @@ describe("standard dashboards", () => {
   });
 
   it("shows corporate + own-region standards, blocks in-place edit, and duplicates to personal", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     const [georgia] = await db
       .insert(users)
       .values({
@@ -47,9 +56,17 @@ describe("standard dashboards", () => {
 
     const centralStandards = centralList.filter((row) => row.isStandard);
     const gaStandards = gaList.filter((row) => row.isStandard);
-    expect(centralStandards.some((row) => row.scope === "corporate")).toBe(true);
-    expect(centralStandards.some((row) => row.scope === "region" && row.region === "Central")).toBe(true);
-    expect(centralStandards.some((row) => row.region === "Georgia")).toBe(false);
+    expect(centralStandards.some((row) => row.scope === "corporate")).toBe(
+      true
+    );
+    expect(
+      centralStandards.some(
+        (row) => row.scope === "region" && row.region === "Central"
+      )
+    ).toBe(true);
+    expect(centralStandards.some((row) => row.region === "Georgia")).toBe(
+      false
+    );
     expect(gaStandards.some((row) => row.scope === "corporate")).toBe(true);
     expect(gaStandards.some((row) => row.region === "Georgia")).toBe(true);
     expect(gaStandards.some((row) => row.region === "Central")).toBe(false);
@@ -59,7 +76,10 @@ describe("standard dashboards", () => {
     const edit = await loadDashboardForPrincipal(central, standard!.id, "edit");
     expect(edit).toBeNull();
 
-    const copy = await dashboardService.duplicateToPersonal(central, standard!.id);
+    const copy = await dashboardService.duplicateToPersonal(
+      central,
+      standard!.id
+    );
     createdDashIds.push(copy.id);
     expect(copy.isStandard).toBe(false);
     expect(copy.scope).toBe("personal");

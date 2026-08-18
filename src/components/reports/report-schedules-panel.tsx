@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, Pause, Play, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   createReportSchedule,
@@ -11,7 +11,13 @@ import {
   resumeReportSchedule,
 } from "@/actions/report-schedules";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
 const WEEKDAYS = [
@@ -59,7 +65,9 @@ export function ReportSchedulesPanel({
         toast.success(ok);
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Schedule update failed");
+        toast.error(
+          error instanceof Error ? error.message : "Schedule update failed"
+        );
       }
     });
   };
@@ -69,24 +77,28 @@ export function ReportSchedulesPanel({
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Email schedules</CardTitle>
         <CardDescription>
-          Mail a saved report Friday or Monday at 8am (or another hour). Delivery is
-          idempotent per period — a second cron fire the same morning sends nothing.
+          Mail a saved report Friday or Monday at 8am (or another hour).
+          Delivery is idempotent per period — a second cron fire the same
+          morning sends nothing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {ownedReports.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Save a report first to schedule it.</p>
+          <p className="text-sm text-muted-foreground">
+            Save a report first to schedule it.
+          </p>
         ) : (
           <form
             className="flex flex-wrap items-end gap-2"
             onSubmit={(event) => {
               event.preventDefault();
-              run(
-                async () => {
-                  await createReportSchedule({ savedReportId: reportId, weekday, hour });
-                },
-                "Schedule created",
-              );
+              run(async () => {
+                await createReportSchedule({
+                  savedReportId: reportId,
+                  weekday,
+                  hour,
+                });
+              }, "Schedule created");
             }}
           >
             <div className="space-y-1">
@@ -146,12 +158,15 @@ export function ReportSchedulesPanel({
         ) : (
           <ul className="divide-y rounded-md border">
             {schedules.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+              >
                 <div>
                   <p className="text-sm font-medium">{row.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {weekdayLabel(row.weekday)} at {String(row.hour ?? 0).padStart(2, "0")}:00{" "}
-                    {row.timezone}
+                    {weekdayLabel(row.weekday)} at{" "}
+                    {String(row.hour ?? 0).padStart(2, "0")}:00 {row.timezone}
                     {row.paused ? " · paused" : ""}
                     {row.lastPeriodKey ? ` · last ${row.lastPeriodKey}` : ""}
                   </p>
@@ -161,18 +176,24 @@ export function ReportSchedulesPanel({
                     type="button"
                     variant="ghost"
                     size="xs"
-                    aria-label={row.paused ? "Resume schedule" : "Pause schedule"}
+                    aria-label={
+                      row.paused ? "Resume schedule" : "Pause schedule"
+                    }
                     onClick={() =>
                       run(
                         () =>
                           row.paused
                             ? resumeReportSchedule({ listId: row.id })
                             : pauseReportSchedule({ listId: row.id }),
-                        row.paused ? "Schedule resumed" : "Schedule paused",
+                        row.paused ? "Schedule resumed" : "Schedule paused"
                       )
                     }
                   >
-                    {row.paused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+                    {row.paused ? (
+                      <Play className="size-3.5" />
+                    ) : (
+                      <Pause className="size-3.5" />
+                    )}
                   </Button>
                   <Button
                     type="button"
@@ -180,7 +201,10 @@ export function ReportSchedulesPanel({
                     size="xs"
                     aria-label="Delete schedule"
                     onClick={() =>
-                      run(() => deleteReportSchedule({ listId: row.id }), "Schedule deleted")
+                      run(
+                        () => deleteReportSchedule({ listId: row.id }),
+                        "Schedule deleted"
+                      )
                     }
                   >
                     <Trash2 className="size-3.5" />

@@ -19,7 +19,10 @@ const demoEnvironment = {
 
 describe("readiness", () => {
   it("returns a healthy, sanitized response after a successful dependency probe", async () => {
-    const result = await checkReadiness(async () => undefined, inspectRuntimeConfig(demoEnvironment));
+    const result = await checkReadiness(
+      async () => undefined,
+      inspectRuntimeConfig(demoEnvironment)
+    );
     expect(result).toMatchObject({
       status: 200,
       body: { ready: true, dependencies: { database: "ready" } },
@@ -33,7 +36,10 @@ describe("readiness", () => {
       async () => {
         probed = true;
       },
-      inspectRuntimeConfig({ APP_ENV: "production", DATABASE_URL: "contains-a-secret" }),
+      inspectRuntimeConfig({
+        APP_ENV: "production",
+        DATABASE_URL: "contains-a-secret",
+      })
     );
     expect(result.status).toBe(503);
     expect(result.body).toMatchObject({
@@ -45,12 +51,9 @@ describe("readiness", () => {
   });
 
   it("returns non-2xx without exposing a database failure", async () => {
-    const result = await checkReadiness(
-      async () => {
-        throw new Error("postgresql://user:password@private-host/app");
-      },
-      inspectRuntimeConfig(demoEnvironment),
-    );
+    const result = await checkReadiness(async () => {
+      throw new Error("postgresql://user:password@private-host/app");
+    }, inspectRuntimeConfig(demoEnvironment));
     expect(result.status).toBe(503);
     expect(result.body.dependencies.database).toBe("unavailable");
     expect(JSON.stringify(result)).not.toContain("private-host");

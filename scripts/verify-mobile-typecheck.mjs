@@ -20,11 +20,13 @@ if (normal.status !== 0) process.exit(normal.status ?? 1);
 const sentinel = spawnSync(
   "pnpm",
   ["exec", "tsc", "--noEmit", "--project", "tsconfig.verifier.json"],
-  { cwd: mobileRoot, encoding: "utf8", stdio: "pipe" },
+  { cwd: mobileRoot, encoding: "utf8", stdio: "pipe" }
 );
 const sentinelOutput = `${sentinel.stdout ?? ""}${sentinel.stderr ?? ""}`;
 if (sentinel.status === 0 || !sentinelOutput.includes("intentional-error.ts")) {
-  process.stderr.write("Mobile typecheck sentinel was not rejected as expected.\n");
+  process.stderr.write(
+    "Mobile typecheck sentinel was not rejected as expected.\n"
+  );
   process.stderr.write(sentinelOutput);
   process.exit(1);
 }

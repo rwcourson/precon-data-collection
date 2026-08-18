@@ -1,14 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { apiTokens, auditLog } from "@/db/schema";
 import { createApiTokenSchema } from "@/domain/contracts";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { generateApiTokenSecret, validateTokenExpiry } from "@/lib/api-tokens";
-import { assertPrincipalAdmin } from "@/services/mutation-policy";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 export async function createApiToken(raw: unknown) {
   const principal = await getWebPrincipal();
@@ -16,7 +16,10 @@ export async function createApiToken(raw: unknown) {
   const user = principal.user;
   const input = createApiTokenSchema.parse(raw);
   const expiresAt = new Date(input.expiresAt);
-  const expiry = validateTokenExpiry(expiresAt, getRuntimeConfig().apiTokenMaxTtlDays);
+  const expiry = validateTokenExpiry(
+    expiresAt,
+    getRuntimeConfig().apiTokenMaxTtlDays
+  );
   if (!expiry.ok) throw new Error(expiry.reason);
   const { plaintext, prefix, hash } = generateApiTokenSecret();
   const [row] = await db

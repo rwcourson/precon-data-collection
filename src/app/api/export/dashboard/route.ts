@@ -1,11 +1,11 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { rollup, scopeRoundsForDashboardExport } from "@/lib/rollup";
 import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
-import { getWorkspace } from "@/lib/workspace-server";
-import { resolveRegionParam } from "@/lib/workspace";
 import type { FlatRow } from "@/lib/report-engine";
+import { rollup, scopeRoundsForDashboardExport } from "@/lib/rollup";
+import { resolveRegionParam } from "@/lib/workspace";
+import { getWorkspace } from "@/lib/workspace-server";
 
 export const dynamic = "force-dynamic";
 // Synchronous xlsx workbook build over the full scoped dataset.
@@ -18,8 +18,14 @@ export async function GET(req: NextRequest) {
   const dept = params.get("dept");
   const year = params.get("year");
 
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
-  const scoped = resolveRegionParam(workspace, level === "corporate" ? null : region);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
+  const scoped = resolveRegionParam(
+    workspace,
+    level === "corporate" ? null : region
+  );
   if ("error" in scoped) return new Response(scoped.error, { status: 403 });
 
   const data = await listRoundsWithJobsForPrincipal(principal);
@@ -33,7 +39,7 @@ export async function GET(req: NextRequest) {
       phase: params.get("phase"),
       status: params.get("status"),
       rounds: params.get("rounds"),
-    },
+    }
   );
 
   const groupFn =
@@ -45,7 +51,11 @@ export async function GET(req: NextRequest) {
 
   const groups = rollup(rounds, groupFn);
   const groupLabel =
-    level === "corporate" ? "Region" : level === "region" ? "Division / Precon Dept" : "Market Sector";
+    level === "corporate"
+      ? "Region"
+      : level === "region"
+        ? "Division / Precon Dept"
+        : "Market Sector";
 
   const columns: ExportColumn[] = [
     { key: "group", label: groupLabel, type: "text" },
@@ -58,15 +68,31 @@ export async function GET(req: NextRequest) {
     { key: "totalFee", label: "Expected Fee $", type: "dollars" },
     { key: "weightedFeePct", label: "Fee % (weighted)", type: "percent" },
     { key: "avgFeePct", label: "Fee % (avg of rounds)", type: "percent" },
-    { key: "weightedContingencyPct", label: "Contingency % (weighted)", type: "percent" },
+    {
+      key: "weightedContingencyPct",
+      label: "Contingency % (weighted)",
+      type: "percent",
+    },
     { key: "weightedGcGrPct", label: "GC+GR % (weighted)", type: "percent" },
     { key: "feePerPmMonth", label: "Fee per PM Month", type: "dollars" },
     { key: "revenuePerPmYear", label: "Revenue per PM Year", type: "dollars" },
     { key: "totalPmMonths", label: "PM Months", type: "number" },
-    { key: "totalSelfPerform", label: "Self-Perform $ Proposed", type: "dollars" },
-    { key: "selfPerformCaptureRate", label: "Self-Perform Capture", type: "percent" },
+    {
+      key: "totalSelfPerform",
+      label: "Self-Perform $ Proposed",
+      type: "dollars",
+    },
+    {
+      key: "selfPerformCaptureRate",
+      label: "Self-Perform Capture",
+      type: "percent",
+    },
     { key: "totalManHours", label: "Craft Labor Man Hours", type: "number" },
-    { key: "laborCostPerManHour", label: "Craft Labor $ per Man Hour", type: "dollars" },
+    {
+      key: "laborCostPerManHour",
+      label: "Craft Labor $ per Man Hour",
+      type: "dollars",
+    },
     { key: "costPerGsf", label: "Estimate $ per GSF", type: "dollars" },
   ];
 

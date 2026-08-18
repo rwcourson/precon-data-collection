@@ -42,18 +42,18 @@ export type SalesforceLinkPlan = {
 export function planSalesforceLink(
   job: LinkableJob,
   sf: SalesforceJobRecord | null | undefined,
-  roundIds: number[],
+  roundIds: number[]
 ): SalesforceLinkPlan {
   if (!sf) {
     throw DomainError.notFound(
       "Salesforce record not found",
-      "The selected Salesforce id is not available from the Connect provider.",
+      "The selected Salesforce id is not available from the Connect provider."
     );
   }
   if (job.isLinked || job.salesforceId) {
     throw DomainError.conflict(
       "Job is already linked",
-      "A Salesforce job number is already associated with this pursuit.",
+      "A Salesforce job number is already associated with this pursuit."
     );
   }
 
@@ -84,12 +84,12 @@ export type PursuitHistoryState = {
 
 export function applySalesforceLinkPlan(
   state: PursuitHistoryState,
-  plan: SalesforceLinkPlan,
+  plan: SalesforceLinkPlan
 ): PursuitHistoryState {
   if (plan.jobId !== state.job.id) {
     throw DomainError.conflict(
       "Link plan targets a different job",
-      "Salesforce linking must update the original job id.",
+      "Salesforce linking must update the original job id."
     );
   }
   const roundIds = state.rounds.map((r) => r.id);
@@ -97,7 +97,7 @@ export function applySalesforceLinkPlan(
     if (!roundIds.includes(id)) {
       throw DomainError.conflict(
         "Link would drop estimate rounds",
-        `Round ${id} is missing from the pursuit history.`,
+        `Round ${id} is missing from the pursuit history.`
       );
     }
   }

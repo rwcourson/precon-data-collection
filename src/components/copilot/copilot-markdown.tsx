@@ -24,7 +24,10 @@ function splitTableRow(line: string): string[] {
 function isTableSeparator(line: string) {
   if (!isTableRow(line)) return false;
   const cells = splitTableRow(line);
-  return cells.length > 0 && cells.every((cell) => /^:?-{2,}:?$/.test(cell.replace(/\s+/g, "")));
+  return (
+    cells.length > 0 &&
+    cells.every((cell) => /^:?-{2,}:?$/.test(cell.replace(/\s+/g, "")))
+  );
 }
 
 function isSeparatorCell(cell: string) {
@@ -34,7 +37,9 @@ function isSeparatorCell(cell: string) {
 /** Streaming often joins table rows onto one line; put each `| ... |` back on its own. */
 export function restoreCollapsedTables(source: string): string {
   if (!source.includes("|")) return source;
-  const tableLines = source.split("\n").filter((line) => line.trim().startsWith("|"));
+  const tableLines = source
+    .split("\n")
+    .filter((line) => line.trim().startsWith("|"));
   if (tableLines.length >= 2) return source;
   const start = source.indexOf("|");
   if (start < 0) return source;
@@ -44,7 +49,10 @@ export function restoreCollapsedTables(source: string): string {
   const headers = cells.slice(0, sepStart).filter((cell) => cell !== "");
   if (headers.length < 2) return source;
   let index = sepStart;
-  while (index < cells.length && (isSeparatorCell(cells[index]) || cells[index] === "")) {
+  while (
+    index < cells.length &&
+    (isSeparatorCell(cells[index]) || cells[index] === "")
+  ) {
     index += 1;
   }
   const rows: string[][] = [];
@@ -59,14 +67,19 @@ export function restoreCollapsedTables(source: string): string {
   const table = [
     `| ${headers.join(" | ")} |`,
     `| ${headers.map(() => "--").join(" | ")} |`,
-    ...rows.map((row) => `| ${headers.map((_, cellIndex) => row[cellIndex] ?? "").join(" | ")} |`),
+    ...rows.map(
+      (row) =>
+        `| ${headers.map((_, cellIndex) => row[cellIndex] ?? "").join(" | ")} |`
+    ),
   ].join("\n");
   const prefix = source.slice(0, start).trimEnd();
   return prefix ? `${prefix}\n${table}` : table;
 }
 
 export function parseCopilotMarkdown(source: string): CopilotBlock[] {
-  const lines = restoreCollapsedTables(source).replace(/\r\n/g, "\n").split("\n");
+  const lines = restoreCollapsedTables(source)
+    .replace(/\r\n/g, "\n")
+    .split("\n");
   const blocks: CopilotBlock[] = [];
   let i = 0;
   while (i < lines.length) {
@@ -77,15 +90,27 @@ export function parseCopilotMarkdown(source: string): CopilotBlock[] {
     }
     const heading = /^(#{1,3})\s+(.+)$/.exec(line);
     if (heading) {
-      blocks.push({ type: "h", level: heading[1].length as 1 | 2 | 3, text: heading[2] });
+      blocks.push({
+        type: "h",
+        level: heading[1].length as 1 | 2 | 3,
+        text: heading[2],
+      });
       i += 1;
       continue;
     }
-    if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+    if (
+      isTableRow(line) &&
+      i + 1 < lines.length &&
+      isTableSeparator(lines[i + 1])
+    ) {
       const headers = splitTableRow(line);
       i += 2;
       const rows: string[][] = [];
-      while (i < lines.length && isTableRow(lines[i]) && !isTableSeparator(lines[i])) {
+      while (
+        i < lines.length &&
+        isTableRow(lines[i]) &&
+        !isTableSeparator(lines[i])
+      ) {
         const cells = splitTableRow(lines[i]);
         rows.push(headers.map((_, index) => cells[index] ?? ""));
         i += 1;
@@ -113,7 +138,12 @@ export function parseCopilotMarkdown(source: string): CopilotBlock[] {
     }
     const parts = [line];
     i += 1;
-    while (i < lines.length && lines[i].trim() && !NEXT_BLOCK.test(lines[i]) && !isTableRow(lines[i])) {
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !NEXT_BLOCK.test(lines[i]) &&
+      !isTableRow(lines[i])
+    ) {
       parts.push(lines[i]);
       i += 1;
     }
@@ -144,7 +174,10 @@ function CopilotInline({ text }: { text: string }) {
     }
     if (chunk.startsWith("`") && chunk.endsWith("`") && chunk.length > 2) {
       return (
-        <code key={index} className="rounded-sm bg-muted px-1 py-0.5 font-mono text-sm">
+        <code
+          key={index}
+          className="rounded-sm bg-muted px-1 py-0.5 font-mono text-sm"
+        >
           {chunk.slice(1, -1)}
         </code>
       );
@@ -172,10 +205,15 @@ export function CopilotMarkdown({
 }) {
   const blocks = parseCopilotMarkdown(text);
   return (
-    <div className={cn("space-y-3 text-sm leading-6 break-words text-pretty", className)}>
+    <div
+      className={cn(
+        "space-y-3 text-sm leading-6 break-words text-pretty",
+        className
+      )}
+    >
       {blocks.map((block, index) => {
         if (block.type === "h") {
-          const Tag = (`h${block.level}` as "h1" | "h2" | "h3");
+          const Tag = `h${block.level}` as "h1" | "h2" | "h3";
           return (
             <Tag key={index} className={headingClass(block.level)}>
               <CopilotInline text={block.text} />
@@ -206,12 +244,18 @@ export function CopilotMarkdown({
         }
         if (block.type === "table") {
           return (
-            <div key={index} className="overflow-x-auto rounded-lg border bg-card">
+            <div
+              key={index}
+              className="overflow-x-auto rounded-lg border bg-card"
+            >
               <table className="w-full min-w-[20rem] text-left text-sm">
                 <thead className="bg-muted/40 text-xs text-muted-foreground">
                   <tr>
                     {block.headers.map((header, headerIndex) => (
-                      <th key={headerIndex} className="px-3 py-2 font-medium whitespace-nowrap">
+                      <th
+                        key={headerIndex}
+                        className="px-3 py-2 font-medium whitespace-nowrap"
+                      >
                         <CopilotInline text={header} />
                       </th>
                     ))}
@@ -221,7 +265,10 @@ export function CopilotMarkdown({
                   {block.rows.map((row, rowIndex) => (
                     <tr key={rowIndex} className="border-t">
                       {row.map((cell, cellIndex) => (
-                        <td key={cellIndex} className="px-3 py-2 align-top leading-snug">
+                        <td
+                          key={cellIndex}
+                          className="px-3 py-2 align-top leading-snug"
+                        >
                           <CopilotInline text={cell} />
                         </td>
                       ))}

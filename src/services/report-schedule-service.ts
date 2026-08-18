@@ -4,12 +4,16 @@ import { db } from "@/db";
 import { distributionLists, savedReports, users } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { loadReportForPrincipal } from "@/lib/authorization/loaders";
-import type { Principal } from "@/lib/authorization/types";
 import { createPrincipal } from "@/lib/authorization/principal";
-import { buildPrintHtml, getFlatDataset, type ExportColumn } from "@/lib/export-helpers";
-import { formatReportValue, runReportEngine } from "@/lib/report-engine";
+import type { Principal } from "@/lib/authorization/types";
 import { deliverQueued, emailProvider, queueEmails } from "@/lib/email";
+import {
+  buildPrintHtml,
+  type ExportColumn,
+  getFlatDataset,
+} from "@/lib/export-helpers";
 import { recordReportArtifact } from "@/lib/recovery";
+import { formatReportValue, runReportEngine } from "@/lib/report-engine";
 import { requireAuthorized } from "@/services/mutation-policy";
 
 export type ReportScheduleInput = {
@@ -35,14 +39,16 @@ async function loadOwnedList(principal: Principal, listId: number) {
   const [list] = await db
     .select()
     .from(distributionLists)
-    .where(and(eq(distributionLists.id, listId), isNull(distributionLists.deletedAt)));
-  if (!list || list.cadence !== "scheduled") {
+    .where(
+      and(eq(distributionLists.id, listId), isNull(distributionLists.deletedAt))
+    );
+  if (list?.cadence !== "scheduled") {
     throw DomainError.notFound("Schedule not found");
   }
   if (list.ownerId !== principal.user.id) {
     throw DomainError.forbidden(
       "Not permitted to manage this schedule",
-      "Only the owner can change a report schedule.",
+      "Only the owner can change a report schedule."
     );
   }
   if (list.savedReportId) {
@@ -50,8 +56,9 @@ async function loadOwnedList(principal: Principal, listId: number) {
     requireAuthorized(
       principal,
       "reports.schedule",
-      loaded?.descriptor ?? reportDescriptor({ id: list.savedReportId, ownerId: list.ownerId }),
-      "Report schedule",
+      loaded?.descriptor ??
+        reportDescriptor({ id: list.savedReportId, ownerId: list.ownerId }),
+      "Report schedule"
     );
   }
   return list;
@@ -67,19 +74,31 @@ export const reportScheduleService = {
         and(
           eq(distributionLists.ownerId, principal.user.id),
           eq(distributionLists.cadence, "scheduled"),
-          isNull(distributionLists.deletedAt),
-        ),
+          isNull(distributionLists.deletedAt)
+        )
       );
   },
 
   async create(principal: Principal, input: ReportScheduleInput) {
     const loaded = await loadReportForPrincipal(principal, input.savedReportId);
     if (!loaded) throw DomainError.notFound("Saved report not found");
-    requireAuthorized(principal, "reports.schedule", loaded.descriptor, "Report schedule");
-    if (input.weekday < 0 || input.weekday > 6 || input.hour < 0 || input.hour > 23) {
+    requireAuthorized(
+      principal,
+      "reports.schedule",
+      loaded.descriptor,
+      "Report schedule"
+    );
+    if (
+      input.weekday < 0 ||
+      input.weekday > 6 ||
+      input.hour < 0 ||
+      input.hour > 23
+    ) {
       throw DomainError.badRequest("Weekday must be 0–6 and hour 0–23");
     }
-    const emails = [principal.user.email, ...(input.extraEmails ?? [])].filter(Boolean);
+    const emails = [principal.user.email, ...(input.extraEmails ?? [])].filter(
+      Boolean
+    );
     const [row] = await db
       .insert(distributionLists)
       .values({
@@ -104,7 +123,12 @@ export const reportScheduleService = {
     const [updated] = await db
       .update(distributionLists)
       .set({ paused, updatedAt: new Date() })
-      .where(and(eq(distributionLists.id, list.id), eq(distributionLists.ownerId, principal.user.id)))
+      .where(
+        and(
+          eq(distributionLists.id, list.id),
+          eq(distributionLists.ownerId, principal.user.id)
+        )
+      )
       .returning();
     return updated;
   },
@@ -114,20 +138,39 @@ export const reportScheduleService = {
     await db
       .update(distributionLists)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(distributionLists.id, list.id), eq(distributionLists.ownerId, principal.user.id)));
+      .where(
+        and(
+          eq(distributionLists.id, list.id),
+          eq(distributionLists.ownerId, principal.user.id)
+        )
+      );
   },
 
   async sendNow(listId: number, now = new Date()) {
     const [list] = await db
       .select()
       .from(distributionLists)
-      .where(and(eq(distributionLists.id, listId), isNull(distributionLists.deletedAt)));
+      .where(
+        and(
+          eq(distributionLists.id, listId),
+          isNull(distributionLists.deletedAt)
+        )
+      );
     if (!list?.savedReportId) throw DomainError.notFound("Schedule not found");
     const [report] = await db
       .select()
       .from(savedReports)
-      .where(and(eq(savedReports.id, list.savedReportId), isNull(savedReports.deletedAt)));
-    const [owner] = await db.select().from(users).where(eq(users.id, list.ownerId)).limit(1);
+      .where(
+        and(
+          eq(savedReports.id, list.savedReportId),
+          isNull(savedReports.deletedAt)
+        )
+      );
+    const [owner] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, list.ownerId))
+      .limit(1);
     if (!report || !owner) throw DomainError.notFound("Saved report not found");
 
     const ownerPrincipal = createPrincipal({
@@ -139,11 +182,17 @@ export const reportScheduleService = {
     const result = runReportEngine(rows, report.config, catalog);
     const columns: ExportColumn[] = result.columns.map((column) => {
       const baseKey =
-        column.key.includes(":") && !column.key.startsWith("metric:") && !column.key.startsWith("custom:")
+        column.key.includes(":") &&
+        !column.key.startsWith("metric:") &&
+        !column.key.startsWith("custom:")
           ? column.key.split(":")[1]
           : column.key;
       const def = catalog.find((item) => item.key === baseKey);
-      return { key: column.key, label: column.label, type: def?.type ?? "text" };
+      return {
+        key: column.key,
+        label: column.label,
+        type: def?.type ?? "text",
+      };
     });
     const html = buildPrintHtml({
       title: report.name,
@@ -158,7 +207,12 @@ export const reportScheduleService = {
       bytes,
       region: list.region,
       ownerId: list.ownerId,
-      parameters: { listId: list.id, weekday: list.weekday, hour: list.hour, firedAt: now.toISOString() },
+      parameters: {
+        listId: list.id,
+        weekday: list.weekday,
+        hour: list.hour,
+        firedAt: now.toISOString(),
+      },
       contentType: "text/html",
     });
 

@@ -1,9 +1,9 @@
 import "server-only";
 import { and, eq, isNull, or, sql } from "drizzle-orm";
-import { db, type AppDb } from "@/db";
+import { type AppDb, db } from "@/db";
 import { emailOutbox } from "@/db/schema";
-import { getRuntimeConfig } from "@/lib/runtime-config";
 import { getArtifactStorage } from "@/lib/artifact-storage";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 /**
  * Email delivery (BRD Sections 4, 18). Messages land in a durable outbox first.
@@ -37,7 +37,7 @@ export function emailProvider(): "resend" | "stub" {
  */
 export async function queueEmails(
   messages: QueuedEmail[],
-  executor: AppDb = db,
+  executor: AppDb = db
 ): Promise<number[]> {
   if (messages.length === 0) return [];
   const rows = await executor
@@ -57,13 +57,15 @@ export async function queueEmails(
         logicalDeliveryKey: m.logicalDeliveryKey ?? null,
         provider: emailProvider(),
         status: "queued",
-      })),
+      }))
     )
     .returning({ id: emailOutbox.id });
   return rows.map((row) => row.id);
 }
 
-export async function deliverQueued(ids: number[]): Promise<{ sent: number; previewed: number; failed: number }> {
+export async function deliverQueued(
+  ids: number[]
+): Promise<{ sent: number; previewed: number; failed: number }> {
   const config = getRuntimeConfig();
   let sent = 0;
   let previewed = 0;
@@ -79,8 +81,8 @@ export async function deliverQueued(ids: number[]): Promise<{ sent: number; prev
       .where(
         and(
           eq(emailOutbox.id, id),
-          or(eq(emailOutbox.status, "queued"), eq(emailOutbox.status, "failed")),
-        ),
+          or(eq(emailOutbox.status, "queued"), eq(emailOutbox.status, "failed"))
+        )
       )
       .returning();
     if (!claimed) continue;
@@ -98,7 +100,9 @@ export async function deliverQueued(ids: number[]): Promise<{ sent: number; prev
     try {
       const attachments: { filename: string; content: string }[] = [];
       if (claimed.attachmentStorageKey && claimed.attachmentName) {
-        const bytes = await getArtifactStorage().get(claimed.attachmentStorageKey);
+        const bytes = await getArtifactStorage().get(
+          claimed.attachmentStorageKey
+        );
         if (bytes) {
           attachments.push({
             filename: claimed.attachmentName,
@@ -112,7 +116,8 @@ export async function deliverQueued(ids: number[]): Promise<{ sent: number; prev
           Authorization: `Bearer ${email.apiKey}`,
           "Content-Type": "application/json",
           "Idempotency-Key":
-            claimed.logicalDeliveryKey ?? `outbox-${claimed.id}-${claimed.attemptCount}`,
+            claimed.logicalDeliveryKey ??
+            `outbox-${claimed.id}-${claimed.attemptCount}`,
         },
         body: JSON.stringify({
           from: email.from,
@@ -163,8 +168,8 @@ export async function claimPendingOutbox(limit = 50): Promise<number[]> {
     .where(
       or(
         eq(emailOutbox.status, "queued"),
-        and(eq(emailOutbox.status, "failed"), isNull(emailOutbox.sentAt)),
-      ),
+        and(eq(emailOutbox.status, "failed"), isNull(emailOutbox.sentAt))
+      )
     )
     .limit(limit);
   return rows.map((row) => row.id);

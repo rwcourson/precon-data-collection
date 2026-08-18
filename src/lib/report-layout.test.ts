@@ -1,12 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { reportColumnMeta, reportColumnWidth } from "@/lib/report-layout";
 import type { ReportFieldDef } from "@/lib/report-engine";
+import { reportColumnMeta, reportColumnWidth } from "@/lib/report-layout";
 
 const catalog: ReportFieldDef[] = [
   { key: "region", label: "Region", type: "dropdown", category: "Identity" },
   { key: "jobName", label: "Job Name", type: "text", category: "Identity" },
-  { key: "estimatePhase", label: "Estimate Phase", type: "dropdown", category: "Identity" },
-  { key: "estimateValue", label: "Bid Amount", type: "dollars", category: "Identity" },
+  {
+    key: "estimatePhase",
+    label: "Estimate Phase",
+    type: "dropdown",
+    category: "Identity",
+  },
+  {
+    key: "estimateValue",
+    label: "Bid Amount",
+    type: "dollars",
+    category: "Identity",
+  },
 ];
 
 const columns = catalog.map((c) => ({ key: c.key }));

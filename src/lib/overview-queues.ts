@@ -2,7 +2,10 @@
  * Overview action queues. Company-wide — flags and filters, never new statuses.
  */
 
-import { EMPTY_HIERARCHY, type HierarchySelection } from "@/lib/bid-schedule-filter";
+import {
+  EMPTY_HIERARCHY,
+  type HierarchySelection,
+} from "@/lib/bid-schedule-filter";
 import { filterNeedsStaffing, needsStaffingHref } from "@/lib/staffing";
 
 export type OverviewQueueId =
@@ -48,7 +51,10 @@ export function calendarDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function preview(rows: OverviewQueueInput[], limit = 4): OverviewQueuePreview[] {
+function preview(
+  rows: OverviewQueueInput[],
+  limit = 4
+): OverviewQueuePreview[] {
   return rows.slice(0, limit).map((r) => ({
     roundId: r.roundId,
     jobId: r.jobId,
@@ -60,16 +66,18 @@ function preview(rows: OverviewQueueInput[], limit = 4): OverviewQueuePreview[] 
 export function buildOverviewQueues(
   rows: OverviewQueueInput[],
   today = new Date(),
-  hierarchy: HierarchySelection = EMPTY_HIERARCHY,
+  hierarchy: HierarchySelection = EMPTY_HIERARCHY
 ): OverviewQueue[] {
   const todayKey = calendarDate(today);
   const needsStaffing = filterNeedsStaffing(rows, hierarchy);
 
   const incomplete = rows.filter(
-    (r) => ["submitted", "post_bid"].includes(r.status) && r.missingRequiredCount > 0,
+    (r) =>
+      ["submitted", "post_bid"].includes(r.status) && r.missingRequiredCount > 0
   );
   const pastDue = rows.filter(
-    (r) => r.status === "active" && r.bidDueDate != null && r.bidDueDate < todayKey,
+    (r) =>
+      r.status === "active" && r.bidDueDate != null && r.bidDueDate < todayKey
   );
   const unlinked = rows.filter((r) => !r.isLinked);
   const awaitingLock = rows.filter((r) => r.status === "post_bid");
@@ -78,7 +86,8 @@ export function buildOverviewQueues(
     {
       id: "needs-staffing",
       title: "Needs staffing",
-      description: "Upcoming rounds in this workspace with no team assigned yet.",
+      description:
+        "Upcoming rounds in this workspace with no team assigned yet.",
       href: needsStaffingHref(hierarchy),
       count: needsStaffing.length,
       preview: preview(needsStaffing),
@@ -102,7 +111,8 @@ export function buildOverviewQueues(
     {
       id: "unlinked",
       title: "Unlinked TBD jobs",
-      description: "Pursuits that have not been matched to Salesforce / Connect.",
+      description:
+        "Pursuits that have not been matched to Salesforce / Connect.",
       href: "/bid-schedule?queue=unlinked",
       count: unlinked.length,
       preview: preview(unlinked),
@@ -110,7 +120,8 @@ export function buildOverviewQueues(
     {
       id: "awaiting-lock",
       title: "Awaiting RPD lock",
-      description: "Post-bid rounds waiting for Regional Precon Director approval.",
+      description:
+        "Post-bid rounds waiting for Regional Precon Director approval.",
       href: "/post-bid?queue=awaiting-lock",
       count: awaitingLock.length,
       preview: preview(awaitingLock),

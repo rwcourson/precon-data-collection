@@ -1,19 +1,19 @@
 import "server-only";
 import { DomainError } from "@/domain/errors";
 import { authorize } from "@/lib/authorization/kernel";
+import { principalAllowsRegion } from "@/lib/authorization/principal";
 import type {
   Capability,
   Principal,
   ResourceDescriptor,
 } from "@/lib/authorization/types";
-import { principalAllowsRegion } from "@/lib/authorization/principal";
 
 /** Throw not-found for unauthorized resource IDs (enumeration-safe). */
 export function requireAuthorized(
   principal: Principal,
   capability: Capability,
   resource: ResourceDescriptor,
-  label = "Resource",
+  label = "Resource"
 ): void {
   const decision = authorize(principal, capability, resource);
   if (!decision.allowed) {
@@ -22,19 +22,26 @@ export function requireAuthorized(
     }
     throw DomainError.forbidden(
       `Not permitted to ${capability} ${label.toLowerCase()}`,
-      `Authorization denied (${decision.reason}).`,
+      `Authorization denied (${decision.reason}).`
     );
   }
 }
 
 /** Create-time region gate used when no row yet exists. */
-export function requireTargetRegion(principal: Principal, region: string | null, label: string): void {
+export function requireTargetRegion(
+  principal: Principal,
+  region: string | null,
+  label: string
+): void {
   if (!principalAllowsRegion(principal, region)) {
     throw DomainError.notFound(`${label} not found`);
   }
 }
 
-export function assertPrincipalCanCreatePursuit(principal: Principal, region: string): void {
+export function assertPrincipalCanCreatePursuit(
+  principal: Principal,
+  region: string
+): void {
   requireTargetRegion(principal, region, "Job");
   requireAuthorized(
     principal,
@@ -47,13 +54,13 @@ export function assertPrincipalCanCreatePursuit(principal: Principal, region: st
       published: true,
       deleted: false,
     },
-    "Job",
+    "Job"
   );
 }
 
 export function assertPrincipalCanDistribute(
   principal: Principal,
-  region: string | null,
+  region: string | null
 ): void {
   requireTargetRegion(principal, region, "Distribution list");
   requireAuthorized(
@@ -68,11 +75,14 @@ export function assertPrincipalCanDistribute(
       deleted: false,
       adminSection: "distribution",
     },
-    "Distribution list",
+    "Distribution list"
   );
 }
 
-export function assertPrincipalCanIntegrate(principal: Principal, region: string | null): void {
+export function assertPrincipalCanIntegrate(
+  principal: Principal,
+  region: string | null
+): void {
   requireTargetRegion(principal, region, "Integration");
   requireAuthorized(
     principal,
@@ -86,7 +96,7 @@ export function assertPrincipalCanIntegrate(principal: Principal, region: string
       deleted: false,
       adminSection: "integrations",
     },
-    "Integration",
+    "Integration"
   );
 }
 
@@ -94,7 +104,7 @@ export function assertPrincipalAdmin(
   principal: Principal,
   section: string,
   capability: Capability = "edit",
-  label = "Admin",
+  label = "Admin"
 ): void {
   requireAuthorized(
     principal,
@@ -108,6 +118,6 @@ export function assertPrincipalAdmin(
       deleted: false,
       adminSection: section,
     },
-    label,
+    label
   );
 }

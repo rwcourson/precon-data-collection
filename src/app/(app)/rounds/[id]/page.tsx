@@ -1,7 +1,14 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { AlertTriangle, ArrowLeft, History, Lock } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { StatusMenu } from "@/components/bid-schedule/status-menu";
+import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
+import { NotesThread } from "@/components/notes/notes-thread";
+import { ApproveLockButton } from "@/components/rounds/approve-lock-button";
+import { EntryForm } from "@/components/rounds/entry-form";
+import { OutcomeSelect } from "@/components/rounds/outcome-select";
+import { RegionCustomTab } from "@/components/rounds/region-custom-tab";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,21 +20,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatusMenu } from "@/components/bid-schedule/status-menu";
-import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
-import { NotesThread } from "@/components/notes/notes-thread";
-import { EntryForm } from "@/components/rounds/entry-form";
-import { RegionCustomTab } from "@/components/rounds/region-custom-tab";
-import { ApproveLockButton } from "@/components/rounds/approve-lock-button";
-import { OutcomeSelect } from "@/components/rounds/outcome-select";
 import { db } from "@/db";
 import { auditLog, statusTransitions } from "@/db/schema";
-import {
-  getCustomValuesForRounds,
-  getMultiValues,
-  getReferenceValues,
-} from "@/lib/queries";
-import { allowedTransitions } from "@/lib/authorization/lifecycle";
 import {
   principalCanApproveLock,
   principalCanAssignJobUser,
@@ -35,28 +29,35 @@ import {
   principalCanEnterPostBid,
   principalCanMarkStaffing,
 } from "@/lib/authorization/decisions";
-import { STATUS_LABELS } from "@/lib/labels";
+import { allowedTransitions } from "@/lib/authorization/lifecycle";
 import {
   FIELD_DEFS,
   MULTI_FIELD_KEYS,
   REQUIRED_FIELD_KEYS,
   ROUND_COLUMN_KEYS,
 } from "@/lib/fields";
+import { STATUS_LABELS } from "@/lib/labels";
+import {
+  getCustomValuesForRounds,
+  getMultiValues,
+  getReferenceValues,
+} from "@/lib/queries";
 
 const FIELD_LABELS: Record<string, string> = Object.fromEntries(
-  FIELD_DEFS.map((f) => [f.key, f.label]),
+  FIELD_DEFS.map((f) => [f.key, f.label])
 );
-import { METRIC_DEFS, METRIC_GROUPS, formatMetricValue } from "@/lib/metrics";
-import { missingRequiredFields } from "@/lib/validation";
-import { fmtDateTime } from "@/lib/format";
-import { loadRoundForPrincipal } from "@/lib/authorization/loaders";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
+
 import {
   listCustomColumnsForPrincipal,
   listDirectoryUsersForPrincipal,
+  loadRoundForPrincipal,
 } from "@/lib/authorization/loaders";
-import { notesService } from "@/services/notes-service";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { fmtDateTime } from "@/lib/format";
+import { formatMetricValue, METRIC_DEFS, METRIC_GROUPS } from "@/lib/metrics";
 import { regionCustomTabForRound } from "@/lib/region-custom-columns";
+import { missingRequiredFields } from "@/lib/validation";
+import { notesService } from "@/services/notes-service";
 
 export default async function RoundPage({
   params,
@@ -72,27 +73,34 @@ export default async function RoundPage({
   if (!loaded) notFound();
   const { round, job, estimateLeadName } = loaded.value;
 
-  const [multi, lists, allUsers, customColsAll, transitions, audits, threadNotes] =
-    await Promise.all([
-      getMultiValues(round.id),
-      getReferenceValues(),
-      listDirectoryUsersForPrincipal(principal),
-      listCustomColumnsForPrincipal(principal),
-      db
-        .select()
-        .from(statusTransitions)
-        .where(eq(statusTransitions.roundId, round.id))
-        .orderBy(desc(statusTransitions.createdAt)),
-      db
-        .select()
-        .from(auditLog)
-        .where(eq(auditLog.roundId, round.id))
-        .orderBy(desc(auditLog.createdAt)),
-      notesService.list(principal, round.id),
-    ]);
+  const [
+    multi,
+    lists,
+    allUsers,
+    customColsAll,
+    transitions,
+    audits,
+    threadNotes,
+  ] = await Promise.all([
+    getMultiValues(round.id),
+    getReferenceValues(),
+    listDirectoryUsersForPrincipal(principal),
+    listCustomColumnsForPrincipal(principal),
+    db
+      .select()
+      .from(statusTransitions)
+      .where(eq(statusTransitions.roundId, round.id))
+      .orderBy(desc(statusTransitions.createdAt)),
+    db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.roundId, round.id))
+      .orderBy(desc(auditLog.createdAt)),
+    notesService.list(principal, round.id),
+  ]);
 
   const customCols = customColsAll.filter(
-    (c) => c.scope === "company" || c.region === round.region,
+    (c) => c.scope === "company" || c.region === round.region
   );
   const regionTab = regionCustomTabForRound(customCols, round);
   const customValues =
@@ -104,7 +112,7 @@ export default async function RoundPage({
     estimateLeadName,
   });
   const missingKeys = REQUIRED_FIELD_KEYS.filter((k) =>
-    missing.includes(FIELD_LABELS[k]),
+    missing.includes(FIELD_LABELS[k])
   );
 
   const locked = round.status === "locked";
@@ -145,7 +153,9 @@ export default async function RoundPage({
         render={
           <Link
             href={
-              locked || round.status === "post_bid" || round.status === "submitted"
+              locked ||
+              round.status === "post_bid" ||
+              round.status === "submitted"
                 ? "/post-bid"
                 : "/bid-schedule"
             }
@@ -166,8 +176,9 @@ export default async function RoundPage({
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            Job #{job.jobNumber} · Round {round.roundNumber} — {round.estimatePhase} ·
-            Bid Year {round.bidYear} · {round.region} / {round.preconDepartment}
+            Job #{job.jobNumber} · Round {round.roundNumber} —{" "}
+            {round.estimatePhase} · Bid Year {round.bidYear} · {round.region} /{" "}
+            {round.preconDepartment}
           </p>
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:items-end">
@@ -177,9 +188,10 @@ export default async function RoundPage({
               outcome={round.outcome}
               disabled={locked && !principalCanEditAfterLock(principal, round)}
             />
-            {round.status === "post_bid" && principalCanApproveLock(principal, round) && (
-              <ApproveLockButton roundId={round.id} />
-            )}
+            {round.status === "post_bid" &&
+              principalCanApproveLock(principal, round) && (
+                <ApproveLockButton roundId={round.id} />
+              )}
             {principalCanMarkStaffing(principal, round) && (
               <TeamAssignedButton
                 roundId={round.id}
@@ -218,40 +230,49 @@ export default async function RoundPage({
             {round.lockedAt ? `— ${fmtDateTime(round.lockedAt)}` : ""}
           </AlertTitle>
           <AlertDescription>
-            Estimate Leads and Admins can no longer edit this record. The RPD/SPD can
-            still correct the outcome and other fields; every post-lock change is
-            captured in the audit log below.
+            Estimate Leads and Admins can no longer edit this record. The
+            RPD/SPD can still correct the outcome and other fields; every
+            post-lock change is captured in the audit log below.
           </AlertDescription>
         </Alert>
       )}
 
-      {!locked && missing.length > 0 && ["submitted", "post_bid"].includes(round.status) && (
-        <Alert variant="warning">
-          <AlertTriangle className="size-4" />
-          <AlertTitle>
-            {missing.length} required field{missing.length === 1 ? "" : "s"} remaining
-          </AlertTitle>
-          <AlertDescription>
-            $0 or N/A are acceptable — blanks are not. The record cannot reach RPD /
-            SPD Approved / Locked until every required field is filled:{" "}
-            {missing.slice(0, 6).join(", ")}
-            {missing.length > 6 ? ` and ${missing.length - 6} more` : ""}.
-          </AlertDescription>
-        </Alert>
-      )}
+      {!locked &&
+        missing.length > 0 &&
+        ["submitted", "post_bid"].includes(round.status) && (
+          <Alert variant="warning">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>
+              {missing.length} required field{missing.length === 1 ? "" : "s"}{" "}
+              remaining
+            </AlertTitle>
+            <AlertDescription>
+              $0 or N/A are acceptable — blanks are not. The record cannot reach
+              RPD / SPD Approved / Locked until every required field is filled:{" "}
+              {missing.slice(0, 6).join(", ")}
+              {missing.length > 6 ? ` and ${missing.length - 6} more` : ""}.
+            </AlertDescription>
+          </Alert>
+        )}
 
       <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5">
         {headlineMetrics.map((m) => (
           <div key={m.label} className="bg-card px-3 py-2.5">
             <p className="text-2xs text-muted-foreground">{m.label}</p>
-            <p className="font-mono text-base font-medium tabular-nums">{m.value}</p>
+            <p className="font-mono text-base font-medium tabular-nums">
+              {m.value}
+            </p>
           </div>
         ))}
       </div>
 
       <Tabs
         defaultValue={
-          query.tab === "notes" ? "notes" : query.tab === "region" && regionTab ? "region" : "data"
+          query.tab === "notes"
+            ? "notes"
+            : query.tab === "region" && regionTab
+              ? "region"
+              : "data"
         }
       >
         <TabsList>
@@ -289,7 +310,11 @@ export default async function RoundPage({
             initialMulti={initialMulti}
             initialCustom={customValues as Record<number, string>}
             estimateLeadId={round.estimateLeadId}
-            users={allUsers.map((u) => ({ id: u.id, name: u.name, role: u.role }))}
+            users={allUsers.map((u) => ({
+              id: u.id,
+              name: u.name,
+              role: u.role,
+            }))}
             lists={lists}
             customCols={customCols}
             canEdit={canEdit}
@@ -315,11 +340,14 @@ export default async function RoundPage({
         <TabsContent value="metrics" className="pt-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Server-side calculated metrics</CardTitle>
+              <CardTitle className="text-base">
+                Server-side calculated metrics
+              </CardTitle>
               <CardDescription>
-                The Project Estimate Summary formula set — always derived from the
-                underlying fields, never entered separately, so they reconcile with
-                source values. Blank inputs yield “—” rather than a misleading zero.
+                The Project Estimate Summary formula set — always derived from
+                the underlying fields, never entered separately, so they
+                reconcile with source values. Blank inputs yield “—” rather than
+                a misleading zero.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -331,9 +359,17 @@ export default async function RoundPage({
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {g.metrics.map((m) => (
                       <div key={m.label} className="rounded-lg border p-3">
-                        <p className="text-xs text-muted-foreground">{m.label}</p>
-                        <p className="mt-0.5 text-lg font-semibold tabular-nums">{m.value}</p>
-                        {m.note && <p className="text-2xs text-muted-foreground">{m.note}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          {m.label}
+                        </p>
+                        <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                          {m.value}
+                        </p>
+                        {m.note && (
+                          <p className="text-2xs text-muted-foreground">
+                            {m.note}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -348,8 +384,8 @@ export default async function RoundPage({
             <CardHeader>
               <CardTitle className="text-base">Effort notes</CardTitle>
               <CardDescription>
-                Chat-shaped history on this pricing effort — visible to anyone who can
-                see the round. Not private, not project-level.
+                Chat-shaped history on this pricing effort — visible to anyone
+                who can see the round. Not private, not project-level.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -357,7 +393,7 @@ export default async function RoundPage({
                 roundId={round.id}
                 currentUserId={principal.user.id}
                 canModerate={["corporate_admin", "rpd", "admin_jsa"].includes(
-                  principal.user.role,
+                  principal.user.role
                 )}
                 initialNotes={threadNotes}
                 directory={allUsers.map((user) => ({
@@ -391,13 +427,17 @@ export default async function RoundPage({
               </CardHeader>
               <CardContent className="space-y-2">
                 {audits.map((a) => (
-                  <div key={a.id} className="rounded-md border bg-muted/30 p-3 text-sm">
+                  <div
+                    key={a.id}
+                    className="rounded-md border bg-muted/30 p-3 text-sm"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-medium">
                         {FIELD_LABELS[a.field ?? ""] ?? a.field}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {userMap.get(a.userId ?? -1) ?? "System"} · {fmtDateTime(a.createdAt)}
+                        {userMap.get(a.userId ?? -1) ?? "System"} ·{" "}
+                        {fmtDateTime(a.createdAt)}
                       </span>
                     </div>
                     <p className="mt-1 text-xs">
@@ -421,7 +461,8 @@ export default async function RoundPage({
                 <History className="size-4" /> Status lifecycle history
               </CardTitle>
               <CardDescription>
-                Every transition is validated against the state machine and logged.
+                Every transition is validated against the state machine and
+                logged.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -430,26 +471,35 @@ export default async function RoundPage({
                   <div key={t.id} className="flex gap-3">
                     <div className="flex flex-col items-center">
                       <span className="mt-1.5 size-2 rounded-full bg-primary" />
-                      {i < transitions.length - 1 && <span className="w-px flex-1 bg-border" />}
+                      {i < transitions.length - 1 && (
+                        <span className="w-px flex-1 bg-border" />
+                      )}
                     </div>
                     <div className="pb-4">
                       <p className="text-sm">
                         {t.fromStatus ? (
                           <>
                             <span className="text-muted-foreground">
-                              {STATUS_LABELS[t.fromStatus as keyof typeof STATUS_LABELS] ?? t.fromStatus}
+                              {STATUS_LABELS[
+                                t.fromStatus as keyof typeof STATUS_LABELS
+                              ] ?? t.fromStatus}
                             </span>{" "}
                             →{" "}
                           </>
                         ) : (
-                          <span className="text-muted-foreground">Created as </span>
+                          <span className="text-muted-foreground">
+                            Created as{" "}
+                          </span>
                         )}
                         <span className="font-medium">
-                          {STATUS_LABELS[t.toStatus as keyof typeof STATUS_LABELS] ?? t.toStatus}
+                          {STATUS_LABELS[
+                            t.toStatus as keyof typeof STATUS_LABELS
+                          ] ?? t.toStatus}
                         </span>
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {userMap.get(t.userId ?? -1) ?? "System"} · {fmtDateTime(t.createdAt)}
+                        {userMap.get(t.userId ?? -1) ?? "System"} ·{" "}
+                        {fmtDateTime(t.createdAt)}
                       </p>
                     </div>
                   </div>

@@ -93,22 +93,26 @@ export async function analyzeLogicalDuplicates(): Promise<{
 }
 
 /** Apply preflight resolution: drop duplicate rows, keeping the oldest id. */
-export async function resolveLogicalDuplicates(groups: DuplicateGroup[]): Promise<number> {
+export async function resolveLogicalDuplicates(
+  groups: DuplicateGroup[]
+): Promise<number> {
   let dropped = 0;
   for (const group of groups) {
     if (group.dropIds.length === 0) continue;
     await db.execute(
       sql`delete from ${sql.raw(group.table)} where id in (${sql.join(
         group.dropIds.map((id) => sql`${id}`),
-        sql`, `,
-      )})`,
+        sql`, `
+      )})`
     );
     dropped += group.dropIds.length;
   }
   return dropped;
 }
 
-async function queryGroups(query: ReturnType<typeof sql>): Promise<Record<string, unknown>[]> {
+async function queryGroups(
+  query: ReturnType<typeof sql>
+): Promise<Record<string, unknown>[]> {
   const result = await db.execute(query);
   if (Array.isArray(result)) return result as Record<string, unknown>[];
   if (result && typeof result === "object" && "rows" in result) {

@@ -1,15 +1,15 @@
 "use client";
 
-import { useTransition } from "react";
-import Link from "next/link";
 import { Bell } from "lucide-react";
+import Link from "next/link";
+import { useTransition } from "react";
+import { markAllNotificationsRead } from "@/actions/user";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { markAllNotificationsRead } from "@/actions/user";
 
 type Item = {
   id: number;
@@ -49,7 +49,10 @@ export function NotificationsBell({ items }: { items: Item[] }) {
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(24rem,calc(100vw-1.5rem))] p-0">
+      <PopoverContent
+        align="end"
+        className="w-[min(24rem,calc(100vw-1.5rem))] p-0"
+      >
         <div className="flex items-center justify-between border-b px-4 py-2.5">
           <span className="text-sm font-semibold">Notifications</span>
           {unread > 0 && (

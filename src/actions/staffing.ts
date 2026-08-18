@@ -11,7 +11,10 @@ function revalidateStaffing(roundId: number) {
   revalidatePath(`/rounds/${roundId}`);
 }
 
-export async function setTeamAssigned(input: { roundId: number; assigned: boolean }) {
+export async function setTeamAssigned(input: {
+  roundId: number;
+  assigned: boolean;
+}) {
   const parsed = markTeamAssignedSchema.parse(input);
   const principal = await getWebPrincipal();
   const round = parsed.assigned

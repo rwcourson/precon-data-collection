@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -35,7 +35,9 @@ export function AdminTabs({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const tabs = TABS.filter((t) => !("auditOnly" in t && t.auditOnly) || showAudit);
+  const tabs = TABS.filter(
+    (t) => !("auditOnly" in t && t.auditOnly) || showAudit
+  );
 
   return (
     <Tabs
@@ -44,7 +46,11 @@ export function AdminTabs({
     >
       <TabsList className="h-auto w-full flex-nowrap justify-start overflow-x-auto rounded bg-muted p-0.5">
         {tabs.map((t) => (
-          <TabsTrigger key={t.value} value={t.value} className="shrink-0 rounded">
+          <TabsTrigger
+            key={t.value}
+            value={t.value}
+            className="shrink-0 rounded"
+          >
             {t.label}
             {t.value === "review" && reviewCount > 0 && (
               <Badge variant="secondary" size="sm" className="ml-1.5">

@@ -1,9 +1,22 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { ArrowLeft, CheckCircle2, Unlink } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getSalesforceCandidates } from "@/actions/pursuits";
+import { getJobVisibility } from "@/actions/visibility";
+import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
+import { LinkSalesforceCard } from "@/components/jobs/link-salesforce-card";
+import { RegionsEditor } from "@/components/jobs/regions-editor";
+import { OutcomeBadge, StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -12,15 +25,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge, OutcomeBadge } from "@/components/status-badge";
-import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
-import { LinkSalesforceCard } from "@/components/jobs/link-salesforce-card";
-import { RegionsEditor } from "@/components/jobs/regions-editor";
 import { db } from "@/db";
 import { estimateRounds } from "@/db/schema";
-import { getSalesforceCandidates } from "@/actions/pursuits";
-import { getJobVisibility } from "@/actions/visibility";
 import { principalCanCreatePursuit } from "@/lib/authorization/decisions";
 import {
   loadAdminSectionForPrincipal,
@@ -41,7 +47,7 @@ export default async function JobPage({
   if (!loaded) notFound();
   const job = loaded.value;
   const canReadSalesforce = Boolean(
-    await loadAdminSectionForPrincipal(principal, "salesforce"),
+    await loadAdminSectionForPrincipal(principal, "salesforce")
   );
 
   const [rounds, lists, candidates, visibility] = await Promise.all([
@@ -51,7 +57,9 @@ export default async function JobPage({
       .where(eq(estimateRounds.jobId, job.id))
       .orderBy(asc(estimateRounds.roundNumber)),
     getReferenceValues(),
-    job.isLinked || !canReadSalesforce ? Promise.resolve([]) : getSalesforceCandidates(job.id),
+    job.isLinked || !canReadSalesforce
+      ? Promise.resolve([])
+      : getSalesforceCandidates(job.id),
     getJobVisibility(job.id),
   ]);
 
@@ -106,8 +114,8 @@ export default async function JobPage({
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Access</CardTitle>
           <CardDescription>
-            Home region is {job.region}. Turn on a region so everyone there can see
-            this job, then add anyone from outside those regions.
+            Home region is {job.region}. Turn on a region so everyone there can
+            see this job, then add anyone from outside those regions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -121,8 +129,9 @@ export default async function JobPage({
             Estimate Rounds ({rounds.length})
           </CardTitle>
           <CardDescription>
-            Every pricing effort is its own record with its own lifecycle. Combined
-            pursuit volume across rounds: {fmtDollars(totalVolume, true)}.
+            Every pricing effort is its own record with its own lifecycle.
+            Combined pursuit volume across rounds:{" "}
+            {fmtDollars(totalVolume, true)}.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0 pb-0">
@@ -146,8 +155,12 @@ export default async function JobPage({
                     {r.roundNumber}
                   </TableCell>
                   <TableCell className="text-sm">{r.estimatePhase}</TableCell>
-                  <TableCell className="text-sm tabular-nums">{r.bidYear}</TableCell>
-                  <TableCell className="text-sm">{fmtDate(r.bidDueDate)}</TableCell>
+                  <TableCell className="text-sm tabular-nums">
+                    {r.bidYear}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {fmtDate(r.bidDueDate)}
+                  </TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
                     {fmtDollars(r.estimateValue, true)}
                   </TableCell>
@@ -161,7 +174,8 @@ export default async function JobPage({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="px-2" nativeButton={false}
+                      className="px-2"
+                      nativeButton={false}
                       render={<Link href={`/rounds/${r.id}`} />}
                     >
                       Open

@@ -3,14 +3,37 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEveAgent } from "eve/react";
-import { ArrowUp, BarChart3, ClipboardList, History, Loader2, Plus, Trash2, UserRound, Users } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  ArrowUp,
+  BarChart3,
+  ClipboardList,
+  History,
+  Loader2,
+  Plus,
+  Trash2,
+  UserRound,
+  Users,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { toast } from "sonner";
 import { CopilotMarkdown } from "@/components/copilot/copilot-markdown";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  columnDisplayLabel,
+  formatColumnValue,
+  tableColumnKeys,
+} from "@/lib/column-labels";
+import {
+  type CopilotConversation,
   EMPTY_COPILOT_HISTORY,
   emptyConversation,
   loadCopilotHistory,
@@ -18,13 +41,7 @@ import {
   saveCopilotHistory,
   subscribeCopilotHistory,
   upsertConversation,
-  type CopilotConversation,
 } from "@/lib/copilot-history";
-import {
-  columnDisplayLabel,
-  formatColumnValue,
-  tableColumnKeys,
-} from "@/lib/column-labels";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
 import type { WidgetResolved } from "@/lib/dashboard-query";
 import { cn } from "@/lib/utils";
@@ -79,7 +96,8 @@ function toolName(part: Record<string, unknown>): string {
 
 function toolOutput(part: Record<string, unknown>): unknown {
   const state = String(part.state ?? "");
-  if (state && !["output-available", "result", "done"].includes(state)) return null;
+  if (state && !["output-available", "result", "done"].includes(state))
+    return null;
   return part.output ?? part.result ?? null;
 }
 
@@ -108,7 +126,9 @@ const TOOL_LABELS: Record<string, string> = {
   get_portfolio_brief: "Gathering the brief",
 };
 
-function extractActivity(messages: ChatMessage[]): { label: string; done: boolean }[] {
+function extractActivity(
+  messages: ChatMessage[]
+): { label: string; done: boolean }[] {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (message.role !== "assistant") continue;
@@ -117,9 +137,14 @@ function extractActivity(messages: ChatMessage[]): { label: string; done: boolea
       const name = toolName(part);
       if (!name) continue;
       const label = TOOL_LABELS[name] ?? name.replaceAll("_", " ");
-      const done = ["output-available", "result", "done"].includes(String(part.state ?? ""));
+      const done = ["output-available", "result", "done"].includes(
+        String(part.state ?? "")
+      );
       const previous = steps.get(label);
-      steps.set(label, { label, done: previous ? previous.done && done : done });
+      steps.set(label, {
+        label,
+        done: previous ? previous.done && done : done,
+      });
     }
     return [...steps.values()];
   }
@@ -127,7 +152,9 @@ function extractActivity(messages: ChatMessage[]): { label: string; done: boolea
 }
 
 function pendingHint(messages: ChatMessage[]): string {
-  const lastUser = [...messages].reverse().find((message) => message.role === "user");
+  const lastUser = [...messages]
+    .reverse()
+    .find((message) => message.role === "user");
   const text = lastUser ? extractText(lastUser).toLowerCase() : "";
   if (/scorecard|dashboard/.test(text)) return "Laying out the scorecard";
   if (/chart|graph/.test(text)) return "Building the chart";
@@ -169,7 +196,9 @@ function CopilotStreamingStage({
   );
 }
 
-function extractTableRows(messages: ChatMessage[]): { title: string; rows: Record<string, unknown>[] } | null {
+function extractTableRows(
+  messages: ChatMessage[]
+): { title: string; rows: Record<string, unknown>[] } | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (message.role !== "assistant") continue;
@@ -179,13 +208,17 @@ function extractTableRows(messages: ChatMessage[]): { title: string; rows: Recor
       if (!output) continue;
       if (name === "query_needs_staffing" || name === "query_efforts") {
         const rows = Array.isArray(output) ? output : [];
-        return { title: name === "query_needs_staffing" ? "Needs staffing" : "Efforts", rows };
+        return {
+          title: name === "query_needs_staffing" ? "Needs staffing" : "Efforts",
+          rows,
+        };
       }
       if (name === "search_notes" && Array.isArray(output)) {
         return { title: "Notes", rows: output as Record<string, unknown>[] };
       }
       if (name === "person_history" && output && typeof output === "object") {
-        const efforts = (output as { efforts?: Record<string, unknown>[] }).efforts ?? [];
+        const efforts =
+          (output as { efforts?: Record<string, unknown>[] }).efforts ?? [];
         return { title: "Person history", rows: efforts };
       }
     }
@@ -222,7 +255,7 @@ function CopilotResultTable({
                   key={key}
                   className={cn(
                     "px-3 py-2.5 align-top text-sm leading-snug break-words",
-                    key === "jobName" ? "min-w-48" : "min-w-28",
+                    key === "jobName" ? "min-w-48" : "min-w-28"
                   )}
                   title={formatColumnValue(key, row[key])}
                 >
@@ -238,10 +271,16 @@ function CopilotResultTable({
 }
 
 function adaptEveMessages(
-  messages: ReadonlyArray<{ id: string; role: string; parts: readonly unknown[] }>,
+  messages: ReadonlyArray<{
+    id: string;
+    role: string;
+    parts: readonly unknown[];
+  }>
 ): ChatMessage[] {
   return messages
-    .filter((message) => message.role === "user" || message.role === "assistant")
+    .filter(
+      (message) => message.role === "user" || message.role === "assistant"
+    )
     .map((message) => ({
       id: message.id,
       role: message.role as "user" | "assistant",
@@ -282,7 +321,8 @@ function CopilotShell({
   const table = useMemo(() => extractTableRows(messages), [messages]);
   const activity = useMemo(() => extractActivity(messages), [messages]);
   const lastIsUser = messages[messages.length - 1]?.role === "user";
-  const showStreaming = pending && (lastIsUser || (!chart && !(table && table.rows.length > 0)));
+  const showStreaming =
+    pending && (lastIsUser || (!chart && !(table && table.rows.length > 0)));
 
   useEffect(() => {
     if (lastIsUser) pinnedToBottomRef.current = true;
@@ -292,7 +332,7 @@ function CopilotShell({
     const el = threadRef.current;
     if (!open || !el || !pinnedToBottomRef.current) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages, pending, open]);
+  }, [open]);
 
   const run = (text: string) => {
     const trimmed = text.trim();
@@ -311,7 +351,7 @@ function CopilotShell({
       <section
         className={cn(
           "mx-auto flex h-full min-h-0 w-full flex-col transition-[max-width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-          open ? "max-w-none overflow-hidden" : "max-w-xl justify-center",
+          open ? "max-w-none overflow-hidden" : "max-w-xl justify-center"
         )}
       >
         {!open ? (
@@ -319,11 +359,18 @@ function CopilotShell({
             Copilot
           </p>
         ) : null}
-        <div className={cn("flex items-center gap-2", open ? "mb-2" : "justify-center")}>
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            open ? "mb-2" : "justify-center"
+          )}
+        >
           <h1
             className={cn(
               "copilot-title font-heading font-semibold tracking-tight text-foreground",
-              open ? "text-left text-sm" : "text-center text-[1.75rem] leading-tight",
+              open
+                ? "text-left text-sm"
+                : "text-center text-[1.75rem] leading-tight"
             )}
           >
             Ask precon
@@ -369,7 +416,7 @@ function CopilotShell({
                     "min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-xs",
                     row.id === activeId
                       ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+                      : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
                   )}
                 >
                   {row.title}
@@ -391,7 +438,8 @@ function CopilotShell({
         <div className="copilot-hero" aria-hidden={open} inert={open}>
           <div className="copilot-hero-inner">
             <p className="mx-auto mt-2 max-w-md text-center text-sm leading-relaxed text-muted-foreground text-pretty">
-              Efforts, notes, staffing, and people history — scoped to what you can see.
+              Efforts, notes, staffing, and people history — scoped to what you
+              can see.
             </p>
             <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {SUGGESTIONS.map((suggestion) => {
@@ -448,7 +496,7 @@ function CopilotShell({
           }}
           className={cn(
             "copilot-thread min-h-0 space-y-3 overflow-y-auto overscroll-contain pr-1",
-            open ? "mb-3 flex-1" : "hidden",
+            open ? "mb-3 flex-1" : "hidden"
           )}
         >
           {messages.map((message) => {
@@ -487,7 +535,7 @@ function CopilotShell({
               aria-label="Ask precon"
               className={cn(
                 "resize-none border-0 bg-transparent shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent",
-                open ? "min-h-16" : "min-h-[5.5rem]",
+                open ? "min-h-16" : "min-h-[5.5rem]"
               )}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
@@ -519,9 +567,15 @@ function CopilotShell({
         aria-hidden={!open}
       >
         {showStreaming ? (
-          <CopilotStreamingStage hint={pendingHint(messages)} steps={activity} />
+          <CopilotStreamingStage
+            hint={pendingHint(messages)}
+            steps={activity}
+          />
         ) : chart ? (
-          <div className="copilot-result-enter space-y-3" data-testid="copilot-chart">
+          <div
+            className="copilot-result-enter space-y-3"
+            data-testid="copilot-chart"
+          >
             {pending ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CopilotDots />
@@ -529,16 +583,25 @@ function CopilotShell({
               </p>
             ) : null}
             <div>
-              <h2 className="font-heading text-lg font-semibold tracking-tight">{chart.plan.name}</h2>
-              <p className="text-sm text-muted-foreground">{chart.plan.description}</p>
+              <h2 className="font-heading text-lg font-semibold tracking-tight">
+                {chart.plan.name}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {chart.plan.description}
+              </p>
             </div>
-            <WidgetCanvas widgets={chart.widgets} loading={pending && !chart.widgets.length} />
+            <WidgetCanvas
+              widgets={chart.widgets}
+              loading={pending && !chart.widgets.length}
+            />
           </div>
         ) : table && table.rows.length > 0 ? (
           <CopilotResultTable title={table.title} rows={table.rows} />
         ) : (
           <div className="flex h-full min-h-[16rem] items-center justify-center rounded-lg border border-dashed bg-muted/25 px-6 text-sm text-muted-foreground">
-            {table ? "No matching rows in your scope." : "Answers, tables, and charts land here."}
+            {table
+              ? "No matching rows in your scope."
+              : "Answers, tables, and charts land here."}
           </div>
         )}
       </section>
@@ -560,7 +623,8 @@ function EveCopilot({
   onDeleteChat: (id: string) => void;
 }) {
   const agent = useEveAgent({
-    onError: (error) => toast.error(error.message || "Copilot could not respond"),
+    onError: (error) =>
+      toast.error(error.message || "Copilot could not respond"),
   });
   const live = adaptEveMessages(agent.data.messages);
   const messages = live.length > 0 ? live : conversation.messages;
@@ -622,7 +686,7 @@ export function CopilotCanvas({ userId }: { userId: number }) {
   const store = useSyncExternalStore(
     (onChange) => subscribeCopilotHistory(userId, onChange),
     () => loadCopilotHistory(userId),
-    () => EMPTY_COPILOT_HISTORY,
+    () => EMPTY_COPILOT_HISTORY
   );
 
   useEffect(() => {
@@ -643,7 +707,7 @@ export function CopilotCanvas({ userId }: { userId: number }) {
     (next: { activeId: string; conversations: CopilotConversation[] }) => {
       saveCopilotHistory(userId, next);
     },
-    [userId],
+    [userId]
   );
 
   const conversation =
@@ -656,12 +720,17 @@ export function CopilotCanvas({ userId }: { userId: number }) {
         store.conversations.find((row) => row.id === store.activeId) ??
         emptyConversation(store.activeId || newConversationId());
       if (messages.length === 0 && existing.messages.length === 0) return;
-      const next = upsertConversation(store, { ...existing, id: existing.id, messages });
+      const next = upsertConversation(store, {
+        ...existing,
+        id: existing.id,
+        messages,
+      });
       if (
         next.activeId === store.activeId &&
         next.conversations.length === store.conversations.length &&
         next.conversations[0]?.messages.length === existing.messages.length &&
-        next.conversations[0]?.messages.at(-1)?.id === existing.messages.at(-1)?.id &&
+        next.conversations[0]?.messages.at(-1)?.id ===
+          existing.messages.at(-1)?.id &&
         JSON.stringify(next.conversations[0]?.messages.at(-1)?.parts) ===
           JSON.stringify(existing.messages.at(-1)?.parts)
       ) {
@@ -669,29 +738,35 @@ export function CopilotCanvas({ userId }: { userId: number }) {
       }
       persist(next);
     },
-    [persist, store],
+    [persist, store]
   );
 
   const onNewChat = useCallback(() => {
-    persist({ activeId: emptyConversation().id, conversations: store.conversations });
+    persist({
+      activeId: emptyConversation().id,
+      conversations: store.conversations,
+    });
   }, [persist, store.conversations]);
 
   const onSelectChat = useCallback(
     (id: string) => {
       persist({ activeId: id, conversations: store.conversations });
     },
-    [persist, store.conversations],
+    [persist, store.conversations]
   );
 
   const onDeleteChat = useCallback(
     (id: string) => {
       const remaining = store.conversations.filter((row) => row.id !== id);
       persist({
-        activeId: id === store.activeId ? (remaining[0]?.id ?? newConversationId()) : store.activeId,
+        activeId:
+          id === store.activeId
+            ? (remaining[0]?.id ?? newConversationId())
+            : store.activeId,
         conversations: remaining,
       });
     },
-    [persist, store],
+    [persist, store]
   );
 
   if (mode === "pending" || !store.activeId) {

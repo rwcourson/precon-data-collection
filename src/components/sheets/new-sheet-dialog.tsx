@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Grid3x3, Loader2, Plus, Table2, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { createSheet, createSheetFromUpload } from "@/actions/sheets";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createSheet, createSheetFromUpload } from "@/actions/sheets";
 import { cn } from "@/lib/utils";
 
 type Kind = "view" | "grid" | "import";
@@ -70,11 +70,13 @@ export function NewSheetDialog({
             `Imported ${result.rows.toLocaleString()} rows across ${result.columns} columns` +
               (result.skipped > 0
                 ? ` — ${result.skipped.toLocaleString()} rows past the import limit were left out.`
-                : "."),
+                : ".")
           );
           router.push(`/sheets/${result.id}`);
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Could not import that file");
+          toast.error(
+            e instanceof Error ? e.message : "Could not import that file"
+          );
         }
       });
       return;
@@ -90,7 +92,9 @@ export function NewSheetDialog({
         reset();
         router.push(`/sheets/${id}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not create the sheet");
+        toast.error(
+          e instanceof Error ? e.message : "Could not create the sheet"
+        );
       }
     });
   }
@@ -144,7 +148,8 @@ export function NewSheetDialog({
                 onChange={(e) => {
                   const picked = e.target.files?.[0] ?? null;
                   setFile(picked);
-                  if (picked && !name.trim()) setName(picked.name.replace(/\.[^.]+$/, ""));
+                  if (picked && !name.trim())
+                    setName(picked.name.replace(/\.[^.]+$/, ""));
                 }}
               />
               <p className="text-2xs text-muted-foreground">
@@ -219,14 +224,16 @@ function KindCard({
       aria-pressed={active}
       className={cn(
         "rounded-lg border p-3 text-left transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40",
-        active ? "border-primary bg-primary/5" : "hover:border-primary/40",
+        active ? "border-primary bg-primary/5" : "hover:border-primary/40"
       )}
     >
       <span className="flex items-center gap-2 text-sm font-medium">
         {icon}
         {title}
       </span>
-      <span className="mt-1 block text-2xs leading-relaxed text-muted-foreground">{body}</span>
+      <span className="mt-1 block text-2xs leading-relaxed text-muted-foreground">
+        {body}
+      </span>
     </button>
   );
 }

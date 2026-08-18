@@ -3,7 +3,6 @@
  * Free of Next request objects so vitest can drive it.
  */
 import PptxGenJS from "pptxgenjs";
-import type { WidgetResolved } from "@/lib/dashboard-query";
 import {
   formatTableCell,
   humanizeCategory,
@@ -22,6 +21,7 @@ import {
   tableHeaderCell,
 } from "@/lib/brand/pptx-theme";
 import { BRAND, CHART_COLORS, FONT } from "@/lib/brand/tokens";
+import type { WidgetResolved } from "@/lib/dashboard-query";
 
 export type CanvasPptxInput = {
   planName: string;
@@ -73,7 +73,7 @@ function partitionWidgets(widgets: WidgetResolved[]) {
       (w) =>
         !w.empty &&
         (w.config.kind === "table" || w.config.kind === "reconciliation") &&
-        w.table,
+        w.table
     ),
   };
 }
@@ -122,7 +122,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
       pages,
     });
     const cols = Math.min(4, kpis.length);
-    const cardW = (SLIDE_INNER_W) / cols;
+    const cardW = SLIDE_INNER_W / cols;
     kpis.slice(0, 8).forEach((w, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
@@ -200,7 +200,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
       cols.map((c) => {
         const cell = formatTableCell(c, row[c] ?? null);
         return cell == null ? "—" : String(cell);
-      }),
+      })
     );
     slide.addTable(
       [
@@ -222,7 +222,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
         fontSize: 11,
         color: BRAND.ink,
         valign: "middle",
-      },
+      }
     );
   }
 
@@ -241,7 +241,7 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
         fontFace: FONT.body,
         fontSize: 16,
         color: BRAND.gray3,
-      },
+      }
     );
     page = 2;
   }
@@ -256,7 +256,11 @@ export async function buildCanvasPptx(input: CanvasPptxInput): Promise<{
 
 const SLIDE_INNER_W = 13.333 - MARGIN * 2;
 
-function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<InstanceType<typeof PptxGenJS>["addSlide"]>, w: WidgetResolved) {
+function paintChart(
+  pptx: InstanceType<typeof PptxGenJS>,
+  slide: ReturnType<InstanceType<typeof PptxGenJS>["addSlide"]>,
+  w: WidgetResolved
+) {
   const kind = w.config.kind;
   const metricKey = w.config.metricKey;
 
@@ -271,12 +275,15 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
         barGrouping: "clustered",
         valAxisTitle: scaled.unitLabel || undefined,
         showValAxisTitle: Boolean(scaled.unitLabel),
-      }),
+      })
     );
     return;
   }
 
-  if ((kind === "line" || kind === "area" || kind === "projection") && w.trend?.length) {
+  if (
+    (kind === "line" || kind === "area" || kind === "projection") &&
+    w.trend?.length
+  ) {
     const labels = w.trend.map((t) => String(t.year ?? t.name ?? ""));
     const values = w.trend.map((t) => Number(t.value ?? 0));
     const scaled = scaleForMetric(values, metricScaleKind(metricKey));
@@ -287,13 +294,15 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
         chartColors: [BRAND.blue4],
         valAxisTitle: scaled.unitLabel || undefined,
         showValAxisTitle: Boolean(scaled.unitLabel),
-      }),
+      })
     );
     return;
   }
 
   if ((kind === "pie" || kind === "donut") && w.series?.length) {
-    const { labels, values } = numericSeries(w.series.filter((s) => s.value > 0));
+    const { labels, values } = numericSeries(
+      w.series.filter((s) => s.value > 0)
+    );
     slide.addChart(
       kind === "donut" ? pptx.ChartType.doughnut : pptx.ChartType.pie,
       [{ name: w.config.title, labels, values }],
@@ -305,7 +314,7 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
         showLegend: true,
         showPercent: true,
         holeSize: kind === "donut" ? 58 : undefined,
-      }),
+      })
     );
     return;
   }
@@ -313,7 +322,9 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
   if (kind === "stacked_bar" && w.stacked?.rows.length) {
     const labels = w.stacked.rows.map((r) => String(r.year ?? r.name ?? ""));
     const rawSeries = w.stacked.series.slice(0, 6);
-    const firstValues = w.stacked.rows.map((r) => Number(r[rawSeries[0] ?? ""] ?? 0));
+    const firstValues = w.stacked.rows.map((r) =>
+      Number(r[rawSeries[0] ?? ""] ?? 0)
+    );
     const scaled = scaleForMetric(firstValues, metricScaleKind(metricKey));
     const series = rawSeries.map((s) => ({
       name: humanizeCategory(s),
@@ -329,13 +340,15 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
         chartColors: [...CHART_COLORS],
         valAxisTitle: scaled.unitLabel || undefined,
         showValAxisTitle: Boolean(scaled.unitLabel),
-      }),
+      })
     );
     return;
   }
 
   if (kind === "combo" && w.combo?.rows.length) {
-    const labels = w.combo.rows.map((r) => String(r[w.combo!.categoryKey] ?? ""));
+    const labels = w.combo.rows.map((r) =>
+      String(r[w.combo!.categoryKey] ?? "")
+    );
     const barKey = w.combo.barKeys[0] ?? "volume";
     const lineKey = w.combo.lineKeys[0] ?? "winRate";
     const barRaw = w.combo.rows.map((r) => Number(r[barKey] ?? 0));
@@ -384,7 +397,7 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
           },
         },
       ],
-      comboOpts as unknown as [],
+      comboOpts as unknown as []
     );
     return;
   }
@@ -392,7 +405,7 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
   if (kind === "waterfall" && w.waterfall?.points.length) {
     const labels = w.waterfall.points.map((p) => humanizeCategory(p.name));
     const values = w.waterfall.points.map((p) =>
-      p.type === "decrease" ? -Math.abs(p.value) : p.value,
+      p.type === "decrease" ? -Math.abs(p.value) : p.value
     );
     const scaled = scaleForMetric(values.map(Math.abs), "currency");
     slide.addChart(
@@ -408,7 +421,7 @@ function paintChart(pptx: InstanceType<typeof PptxGenJS>, slide: ReturnType<Inst
         chartColors: [BRAND.blue4],
         valAxisTitle: scaled.unitLabel || undefined,
         showValAxisTitle: Boolean(scaled.unitLabel),
-      }),
+      })
     );
     return;
   }

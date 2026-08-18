@@ -5,8 +5,8 @@ import { db } from "@/db";
 import {
   customColumns,
   dataQualityFlags,
-  referenceListValues,
   referenceLists,
+  referenceListValues,
   savedReports,
   users,
 } from "@/db/schema";
@@ -18,12 +18,16 @@ import { databricksConfig } from "./integrations/databricks/client";
 import { METRIC_DEFS, METRIC_GROUPS } from "./metrics";
 import {
   buildMigrationReport,
+  type ChecklistItem,
   cutoverChecklist,
   getImportSource,
-  type ChecklistItem,
   type MigrationReport,
 } from "./migration";
-import { describeSheet, sourceYears, type ImportSource } from "./migration-source";
+import {
+  describeSheet,
+  type ImportSource,
+  sourceYears,
+} from "./migration-source";
 import type { Workspace } from "./workspace";
 
 /**
@@ -70,22 +74,29 @@ export type StatusReport = {
   questions: OpenQuestion[];
 };
 
-export async function buildStatusReport(workspace: Workspace): Promise<StatusReport> {
-  const [migration, source, lists, values, cols, reports, people, resolved] = await Promise.all([
-    buildMigrationReport(workspace),
-    getImportSource(),
-    db.select({ n: count() }).from(referenceLists),
-    db.select({ n: count() }).from(referenceListValues),
-    db.select({ n: count() }).from(customColumns),
-    db.select({ n: count() }).from(savedReports),
-    db.select({ n: count() }).from(users),
-    db
-      .select({ n: count() })
-      .from(dataQualityFlags)
-      .where(eq(dataQualityFlags.kind, "missing_required")),
-  ]);
+export async function buildStatusReport(
+  workspace: Workspace
+): Promise<StatusReport> {
+  const [migration, source, lists, values, cols, reports, people, resolved] =
+    await Promise.all([
+      buildMigrationReport(workspace),
+      getImportSource(),
+      db.select({ n: count() }).from(referenceLists),
+      db.select({ n: count() }).from(referenceListValues),
+      db.select({ n: count() }).from(customColumns),
+      db.select({ n: count() }).from(savedReports),
+      db.select({ n: count() }).from(users),
+      db
+        .select({ n: count() })
+        .from(dataQualityFlags)
+        .where(eq(dataQualityFlags.kind, "missing_required")),
+    ]);
 
-  const mode = { auth: authMode(), connect: connectMode(), email: emailProvider() };
+  const mode = {
+    auth: authMode(),
+    connect: connectMode(),
+    email: emailProvider(),
+  };
   const warehouse = Boolean(databricksConfig());
 
   const checklist = cutoverChecklist(migration, {
@@ -149,22 +160,22 @@ const DECISIONS: { question: string; answer: string }[] = [
 const OPEN_QUESTIONS: OpenQuestion[] = [
   {
     question: "Notification channel and reminder cadence",
-    why:
-      "Submitted-round alerts and overdue post-bid reminders are built and running, but they currently write to an in-app inbox and an email outbox rather than sending mail.",
+    why: "Submitted-round alerts and overdue post-bid reminders are built and running, but they currently write to an in-app inbox and an email outbox rather than sending mail.",
     fallback:
       "Launch with in-app notifications only and turn on email by setting a provider key once IT approves the sender domain.",
   },
   {
     question: "Access to B&G CORP 2026 Estimate Metrics Capture",
-    why:
-      "The calculated columns were rebuilt from the Destini markup and the process deck. The Smartsheet metrics sheet is the only complete list of the formulas leadership sees today.",
+    why: "The calculated columns were rebuilt from the Destini markup and the process deck. The Smartsheet metrics sheet is the only complete list of the formulas leadership sees today.",
     fallback:
       "Ship the current calculated set and reconcile against the sheet in a follow-up pass; the Migration tab already reports which columns reproduce from migrated data.",
   },
   {
-    question: "Definitions for Business Strategy Values and Project Planning Precon Engagement",
+    question:
+      "Definitions for Business Strategy Values and Project Planning Precon Engagement",
     why: "Both appear in the Destini markup without a value list or format, so neither can be validated.",
-    fallback: "Collect them as free text until a list is defined, then convert to a managed list.",
+    fallback:
+      "Collect them as free text until a list is defined, then convert to a managed list.",
   },
 ];
 
@@ -226,7 +237,8 @@ function capabilities(ctx: {
     },
     {
       area: "Custom report builder",
-      evidence: "Column, filter, grouping and sort control, saved and shared per person or Region.",
+      evidence:
+        "Column, filter, grouping and sort control, saved and shared per person or Region.",
       state: "live",
     },
     {
@@ -283,7 +295,10 @@ function capabilities(ctx: {
 // ---- HTML rendering (feeds the PDF engine and the on-screen preview) ----
 
 const esc = (s: unknown) =>
-  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
 const STATE_LABEL: Record<CapabilityRow["state"], string> = {
   live: "Built",
@@ -292,22 +307,44 @@ const STATE_LABEL: Record<CapabilityRow["state"], string> = {
 };
 
 export function renderStatusReportHtml(r: StatusReport): string {
-  const years = [...new Set(r.migration.years.map((y) => y.bidYear))].sort((a, b) => b - a);
+  const years = [...new Set(r.migration.years.map((y) => y.bidYear))].sort(
+    (a, b) => b - a
+  );
   const blocked = r.checklist.filter((c) => c.blocker && !c.done);
   const extractYears = r.source ? sourceYears(r.source.filesUsed) : [];
   // Bid years that arrived on undated sheets, so the reader does not read the
   // metrics-sheet gap and the year table as contradicting each other.
-  const strayYears = years.filter((y) => !extractYears.includes(y)).sort((a, b) => a - b);
+  const strayYears = years
+    .filter((y) => !extractYears.includes(y))
+    .sort((a, b) => a - b);
 
   const kpis = [
-    { label: "Estimate rounds migrated", value: r.migration.totalRounds.toLocaleString() },
+    {
+      label: "Estimate rounds migrated",
+      value: r.migration.totalRounds.toLocaleString(),
+    },
     { label: "Jobs", value: r.migration.totalJobs.toLocaleString() },
-    { label: "Bid years present", value: years.length ? years.join(", ") : "—" },
+    {
+      label: "Bid years present",
+      value: years.length ? years.join(", ") : "—",
+    },
     { label: "Calculated columns", value: String(r.counts.metrics) },
-    { label: "Collected fields", value: `${r.counts.requiredFields} req · ${r.counts.optionalFields} opt` },
-    { label: "Managed list values", value: r.counts.referenceValues.toLocaleString() },
-    { label: "Values awaiting review", value: r.migration.openFlags.toLocaleString() },
-    { label: "Launch gates open", value: `${blocked.length} of ${r.checklist.length}` },
+    {
+      label: "Collected fields",
+      value: `${r.counts.requiredFields} req · ${r.counts.optionalFields} opt`,
+    },
+    {
+      label: "Managed list values",
+      value: r.counts.referenceValues.toLocaleString(),
+    },
+    {
+      label: "Values awaiting review",
+      value: r.migration.openFlags.toLocaleString(),
+    },
+    {
+      label: "Launch gates open",
+      value: `${blocked.length} of ${r.checklist.length}`,
+    },
   ];
 
   const capabilityRows = r.capabilities
@@ -316,7 +353,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
       <td class="strong">${esc(c.area)}</td>
       <td><span class="pill ${c.state}">${esc(STATE_LABEL[c.state])}</span></td>
       <td>${esc(c.evidence)}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -329,7 +366,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
       <td class="num">${Math.round(y.completeness * 100)}%</td>
       <td class="num">${Math.round(y.estimateValueCoverage * 100)}%</td>
       <td class="num">${y.openFlags.toLocaleString()}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -339,7 +376,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
       <td class="mark ${c.done ? "yes" : c.blocker ? "gate" : "todo"}">${c.done ? "Done" : c.blocker ? "Gate" : "Open"}</td>
       <td class="strong">${esc(c.label)}</td>
       <td>${esc(c.detail)}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -348,7 +385,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
       (d) => `<div class="callout">
       <p class="callout-q">${esc(d.question)}</p>
       <p class="callout-a">${esc(d.answer)}</p>
-    </div>`,
+    </div>`
     )
     .join("");
 
@@ -358,7 +395,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
       <td class="strong">${esc(q.question)}</td>
       <td>${esc(q.why)}</td>
       <td>${esc(q.fallback)}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -402,7 +439,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
       <td class="strong">${esc(p.phase)}</td>
       <td class="strong">${esc(p.title)}</td>
       <td>${esc(p.body)}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -474,7 +511,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
         (k) => `<div class="kpi">
       <div class="label">${esc(k.label)}</div>
       <div class="value">${esc(k.value)}</div>
-    </div>`,
+    </div>`
       )
       .join("")}
   </div>

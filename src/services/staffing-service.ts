@@ -8,9 +8,16 @@ import type { Principal } from "@/lib/authorization/types";
 import { requireAuthorized } from "@/services/mutation-policy";
 
 async function loadMarkableRound(principal: Principal, roundId: number) {
-  const readable = await loadRoundForPrincipal(principal, roundId, { capability: "read" });
+  const readable = await loadRoundForPrincipal(principal, roundId, {
+    capability: "read",
+  });
   if (!readable) throw DomainError.notFound("Round not found");
-  requireAuthorized(principal, "staffing.mark", readable.descriptor, "Staffing");
+  requireAuthorized(
+    principal,
+    "staffing.mark",
+    readable.descriptor,
+    "Staffing"
+  );
   return readable;
 }
 

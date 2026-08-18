@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { authorizeCron } from "@/lib/cron-auth";
 import { proxy } from "@/proxy";
 
@@ -17,14 +17,20 @@ describe("runtime configuration request gate", () => {
 
   it("leaves health endpoints reachable for diagnosis", () => {
     vi.stubEnv("AUTH_MODE", "");
-    const response = proxy(new NextRequest("http://127.0.0.1/api/health/ready"));
+    const response = proxy(
+      new NextRequest("http://127.0.0.1/api/health/ready")
+    );
     expect(response.status).toBe(200);
   });
 
   it("never allows a scheduler route when its secret is absent", async () => {
     vi.stubEnv("CRON_SECRET", "");
-    const response = authorizeCron(new Request("http://127.0.0.1/api/jobs/reminders"));
+    const response = authorizeCron(
+      new Request("http://127.0.0.1/api/jobs/reminders")
+    );
     expect(response?.status).toBe(503);
-    expect(await response?.json()).toEqual({ error: "Scheduler authentication is unavailable." });
+    expect(await response?.json()).toEqual({
+      error: "Scheduler authentication is unavailable.",
+    });
   });
 });

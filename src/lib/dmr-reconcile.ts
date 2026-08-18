@@ -31,8 +31,11 @@ export type ReconcileRow = {
 
 export function reconcileDmr(
   dmr: DmrLineInput[],
-  precon: PreconLineInput[],
-): { rows: ReconcileRow[]; totals: { dmr: number; precon: number; delta: number } } {
+  precon: PreconLineInput[]
+): {
+  rows: ReconcileRow[];
+  totals: { dmr: number; precon: number; delta: number };
+} {
   const dmrByJob = new Map<string, DmrLineInput>();
   for (const row of dmr) {
     const key = row.jobNumber.trim();

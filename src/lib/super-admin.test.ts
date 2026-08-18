@@ -13,7 +13,7 @@ describe("super-admin", () => {
       isSuperAdmin({
         email: "rcourson@brasfieldgorrie.com",
         role: "pcm",
-      }),
+      })
     ).toBe(true);
   });
 
@@ -22,19 +22,19 @@ describe("super-admin", () => {
       isCorporateAdmin({
         email: "rcourson@brasfieldgorrie.com",
         role: "pcm",
-      }),
+      })
     ).toBe(true);
     expect(
       isCorporateAdmin({
         email: "other@brasfieldgorrie.com",
         role: "corporate_admin",
-      }),
+      })
     ).toBe(true);
     expect(
       isCorporateAdmin({
         email: "other@brasfieldgorrie.com",
         role: "pcm",
-      }),
+      })
     ).toBe(false);
   });
 });

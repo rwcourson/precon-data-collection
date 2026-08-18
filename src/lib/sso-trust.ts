@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { RuntimeConfig } from "@/lib/runtime-config";
 import type { SsoIdentity } from "@/lib/access-map";
+import type { RuntimeConfig } from "@/lib/runtime-config";
 
 export const SSO_TRUST_HEADER = "x-precon-sso-trust";
 
@@ -22,12 +22,15 @@ function equalSecret(actual: string, expected: string): boolean {
 
 export function readForwardedSsoIdentity(
   headers: Headers,
-  env: HeaderEnvironment = process.env,
+  env: HeaderEnvironment = process.env
 ): SsoIdentity | null {
   const names = ssoHeaderNames(env);
   const email = headers.get(names.email)?.trim().toLowerCase();
   if (!email || email.length > 320) return null;
-  const name = (headers.get(names.name)?.trim() || email.split("@")[0]).slice(0, 160);
+  const name = (headers.get(names.name)?.trim() || email.split("@")[0]).slice(
+    0,
+    160
+  );
   const groups = (headers.get(names.groups) ?? "")
     .split(/[,;]/)
     .map((group) => group.trim())
@@ -40,14 +43,18 @@ export type SsoTrustResult =
   | { ok: true; identity: SsoIdentity }
   | {
       ok: false;
-      reason: "trust-unavailable" | "untrusted-hop" | "missing-identity" | "unapproved-domain";
+      reason:
+        | "trust-unavailable"
+        | "untrusted-hop"
+        | "missing-identity"
+        | "unapproved-domain";
     };
 
 /** Validates the authenticated proxy hop before any forwarded field is trusted. */
 export function verifySsoRequest(
   headers: Headers,
   config: Pick<RuntimeConfig, "ssoTrustSecret" | "ssoAllowedDomains">,
-  env: HeaderEnvironment = process.env,
+  env: HeaderEnvironment = process.env
 ): SsoTrustResult {
   if (!config.ssoTrustSecret) return { ok: false, reason: "trust-unavailable" };
   const presented = headers.get(SSO_TRUST_HEADER) ?? "";

@@ -7,7 +7,9 @@ export const DEFAULT_DEMO_RPD = {
   region: "Central",
 };
 
-export function pickDefaultDemoUser<T extends { name: string; role: string }>(roster: T[]): T {
+export function pickDefaultDemoUser<T extends { name: string; role: string }>(
+  roster: T[]
+): T {
   if (roster.length === 0) {
     throw new Error("No users seeded — run `npm run db:seed` first.");
   }

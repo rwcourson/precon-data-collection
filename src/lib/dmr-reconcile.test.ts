@@ -30,7 +30,7 @@ describe("dmr reconcile", () => {
           preconValue: 20,
           roundId: 1,
         },
-      ],
+      ]
     );
     expect(rows.find((r) => r.jobNumber === "A")?.status).toBe("dmr_only");
     expect(rows.find((r) => r.jobNumber === "B")?.status).toBe("precon_only");

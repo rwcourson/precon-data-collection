@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { runDatabricksFeed } from "@/lib/integrations/databricks/feed";
+import { type NextRequest, NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron-auth";
+import { runDatabricksFeed } from "@/lib/integrations/databricks/feed";
 
 export const dynamic = "force-dynamic";
 
@@ -15,19 +15,23 @@ export async function POST(req: NextRequest) {
   const previewOnly = req.nextUrl.searchParams.get("preview") !== "0";
   const result = await runDatabricksFeed({ previewOnly });
   // Never include raw business rows in scheduler responses.
-  const { status, ...metrics } = result as { status: string } & Record<string, unknown>;
+  const { status, ...metrics } = result as { status: string } & Record<
+    string,
+    unknown
+  >;
   const safe = {
     status,
     metrics: {
       rows: typeof metrics.rows === "number" ? metrics.rows : undefined,
-      checksum: typeof metrics.checksum === "string" ? metrics.checksum : undefined,
+      checksum:
+        typeof metrics.checksum === "string" ? metrics.checksum : undefined,
       stage: typeof metrics.stage === "string" ? metrics.stage : undefined,
       error: typeof metrics.error === "string" ? metrics.error : undefined,
     },
   };
   return NextResponse.json(
     { ranAt: new Date().toISOString(), ...safe },
-    { status: status === "failed" ? 502 : 200 },
+    { status: status === "failed" ? 502 : 200 }
   );
 }
 
@@ -36,7 +40,10 @@ export async function GET(req: NextRequest) {
   const denied = authorizeCron(req);
   if (denied) return denied;
   const result = await runDatabricksFeed({ previewOnly: true });
-  const { status, ...metrics } = result as { status: string } & Record<string, unknown>;
+  const { status, ...metrics } = result as { status: string } & Record<
+    string,
+    unknown
+  >;
   return NextResponse.json({
     ranAt: new Date().toISOString(),
     status,

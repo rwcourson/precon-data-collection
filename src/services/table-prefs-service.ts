@@ -17,13 +17,19 @@ export type TablePrefsPatch = {
   defaultViewId?: number | null;
 };
 
-function mergePrefs(current: UserTablePrefsConfig, patch: TablePrefsPatch): UserTablePrefsConfig {
+function mergePrefs(
+  current: UserTablePrefsConfig,
+  patch: TablePrefsPatch
+): UserTablePrefsConfig {
   return {
     version: 1,
     columns: patch.columns ?? current.columns,
     density: patch.density ?? current.density,
     columnWidths: patch.columnWidths ?? current.columnWidths,
-    defaultViewId: patch.defaultViewId !== undefined ? patch.defaultViewId : current.defaultViewId,
+    defaultViewId:
+      patch.defaultViewId !== undefined
+        ? patch.defaultViewId
+        : current.defaultViewId,
   };
 }
 
@@ -31,14 +37,22 @@ async function loadRow(principal: Principal, surface: string) {
   const [row] = await db
     .select()
     .from(userTablePrefs)
-    .where(and(eq(userTablePrefs.userId, principal.user.id), eq(userTablePrefs.surface, surface)))
+    .where(
+      and(
+        eq(userTablePrefs.userId, principal.user.id),
+        eq(userTablePrefs.surface, surface)
+      )
+    )
     .limit(1);
   return row ?? null;
 }
 
 /** Per-user table chrome. Identity is the explicit Principal — never ambient cookies. */
 export const tablePrefsService = {
-  async load(principal: Principal, surface: string): Promise<UserTablePrefsConfig> {
+  async load(
+    principal: Principal,
+    surface: string
+  ): Promise<UserTablePrefsConfig> {
     const row = await loadRow(principal, surface);
     return parseUserTablePrefsConfig(row?.config ?? {});
   },
@@ -46,7 +60,7 @@ export const tablePrefsService = {
   async save(
     principal: Principal,
     surface: string,
-    patch: TablePrefsPatch,
+    patch: TablePrefsPatch
   ): Promise<UserTablePrefsConfig> {
     const current = await this.load(principal, surface);
     const next = mergePrefs(current, patch);
@@ -69,12 +83,17 @@ export const tablePrefsService = {
   async reset(principal: Principal, surface: string): Promise<void> {
     await db
       .delete(userTablePrefs)
-      .where(and(eq(userTablePrefs.userId, principal.user.id), eq(userTablePrefs.surface, surface)));
+      .where(
+        and(
+          eq(userTablePrefs.userId, principal.user.id),
+          eq(userTablePrefs.surface, surface)
+        )
+      );
   },
 
   async setDefaultView(
     principal: Principal,
-    viewId: number | null,
+    viewId: number | null
   ): Promise<UserTablePrefsConfig> {
     if (viewId != null) {
       const [view] = await db
@@ -85,19 +104,24 @@ export const tablePrefsService = {
             eq(bidScheduleViews.id, viewId),
             or(
               eq(bidScheduleViews.ownerId, principal.user.id),
-              eq(bidScheduleViews.shared, true),
-            ),
-          ),
+              eq(bidScheduleViews.shared, true)
+            )
+          )
         )
         .limit(1);
       if (!view) {
         throw DomainError.notFound("Saved view not found");
       }
     }
-    return this.save(principal, BID_SCHEDULE_SURFACE, { defaultViewId: viewId });
+    return this.save(principal, BID_SCHEDULE_SURFACE, {
+      defaultViewId: viewId,
+    });
   },
 
-  async clearDefaultViewIf(principal: Principal, viewId: number): Promise<void> {
+  async clearDefaultViewIf(
+    principal: Principal,
+    viewId: number
+  ): Promise<void> {
     const current = await this.load(principal, BID_SCHEDULE_SURFACE);
     if (current.defaultViewId !== viewId) return;
     await this.save(principal, BID_SCHEDULE_SURFACE, { defaultViewId: null });

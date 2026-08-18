@@ -15,7 +15,7 @@ export default async function SignInPage({
   if (authMode() === "sso") {
     const session = await auth.api.getSession({ headers: await headers() });
     if (session?.user) {
-      const next = params.next && params.next.startsWith("/") ? params.next : "/";
+      const next = params.next?.startsWith("/") ? params.next : "/";
       redirect(next);
     }
   }

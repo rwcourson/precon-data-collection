@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       }
       if (body.action === "save" && body.plan) {
         const id = await saveCopilotDashboard(
-          body.plan as Parameters<typeof saveCopilotDashboard>[0],
+          body.plan as Parameters<typeof saveCopilotDashboard>[0]
         );
         return jsonOk({ id });
       }

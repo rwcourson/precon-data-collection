@@ -1,27 +1,36 @@
 import { getDmrReconciliation, importDmrUpload } from "@/actions/dmr";
-import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { loadAdminSectionForPrincipal } from "@/lib/authorization/loaders";
+import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 
 export async function GET(req: Request) {
-  return withMobileAuth(req, { scopes: ["read:dashboards", "read:admin"] }, async (principal) => {
-    if (!(await loadAdminSectionForPrincipal(principal.authorization, "integrations"))) {
-      return jsonError("Not found", 404);
+  return withMobileAuth(
+    req,
+    { scopes: ["read:dashboards", "read:admin"] },
+    async (principal) => {
+      if (
+        !(await loadAdminSectionForPrincipal(
+          principal.authorization,
+          "integrations"
+        ))
+      ) {
+        return jsonError("Not found", 404);
+      }
+      const id = Number(new URL(req.url).searchParams.get("importId") ?? 0);
+      if (!id) {
+        return jsonOk({
+          data: null,
+          status: "idle",
+          message: "Upload DMR lines or pass importId",
+        });
+      }
+      try {
+        const data = await getDmrReconciliation(id);
+        return jsonOk({ data, status: "ok" });
+      } catch (err) {
+        return mapError(err);
+      }
     }
-    const id = Number(new URL(req.url).searchParams.get("importId") ?? 0);
-    if (!id) {
-      return jsonOk({
-        data: null,
-        status: "idle",
-        message: "Upload DMR lines or pass importId",
-      });
-    }
-    try {
-      const data = await getDmrReconciliation(id);
-      return jsonOk({ data, status: "ok" });
-    } catch (err) {
-      return mapError(err);
-    }
-  });
+  );
 }
 
 export async function POST(req: Request) {
@@ -29,7 +38,12 @@ export async function POST(req: Request) {
     let body: {
       name?: string;
       periodKey?: string;
-      lines?: { jobNumber: string; jobName?: string; region?: string; dmrValue: number }[];
+      lines?: {
+        jobNumber: string;
+        jobName?: string;
+        region?: string;
+        dmrValue: number;
+      }[];
       text?: string;
       filename?: string;
     };
@@ -48,7 +62,9 @@ export async function POST(req: Request) {
           .filter(Boolean)
           .filter((l) => !/^job/i.test(l))
           .map((line) => {
-            const [jobNumber, dmrValue, jobName, region] = line.split(",").map((s) => s.trim());
+            const [jobNumber, dmrValue, jobName, region] = line
+              .split(",")
+              .map((s) => s.trim());
             return {
               jobNumber: jobNumber ?? "",
               dmrValue: Number(dmrValue) || 0,

@@ -27,7 +27,9 @@ export function databricksConfig(): DatabricksConfig | null {
     host: host.replace(/\/$/, ""),
     token,
     warehouseId,
-    table: process.env.DATABRICKS_TABLE ?? "domain.preconstruction.precon_data_rounds",
+    table:
+      process.env.DATABRICKS_TABLE ??
+      "domain.preconstruction.precon_data_rounds",
   };
 }
 
@@ -41,7 +43,7 @@ type StatementResponse = {
 export async function runStatement(
   cfg: DatabricksConfig,
   statement: string,
-  parameters?: { name: string; value: string | null; type?: string }[],
+  parameters?: { name: string; value: string | null; type?: string }[]
 ): Promise<StatementResponse> {
   const res = await fetch(`${cfg.host}/api/2.0/sql/statements`, {
     method: "POST",
@@ -64,7 +66,9 @@ export async function runStatement(
   }
   const body = (await res.json()) as StatementResponse;
   if (body.status?.state === "FAILED" || body.status?.error) {
-    throw new Error(body.status?.error?.message ?? "Databricks statement failed");
+    throw new Error(
+      body.status?.error?.message ?? "Databricks statement failed"
+    );
   }
   return body;
 }

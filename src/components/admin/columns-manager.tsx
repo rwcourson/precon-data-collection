@@ -1,9 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { ArrowUpRight, Loader2, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  type AddColumnInput,
+  addCustomColumn,
+  deleteCustomColumn,
+} from "@/actions/admin";
+import { proposeFieldPromotion } from "@/actions/governance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,8 +45,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { addCustomColumn, deleteCustomColumn, type AddColumnInput } from "@/actions/admin";
-import { proposeFieldPromotion } from "@/actions/governance";
 import { FIELD_DEFS } from "@/lib/fields";
 
 type Col = {
@@ -101,7 +105,7 @@ export function ColumnsManager({
         toast.success(
           res.conflictSummary
             ? `Promotion proposed — ${res.conflictSummary}`
-            : `Promotion proposed for "${col.label}"`,
+            : `Promotion proposed for "${col.label}"`
         );
         router.refresh();
       } catch (e) {
@@ -120,9 +124,10 @@ export function ColumnsManager({
                 <ShieldCheck className="size-4" /> Company-wide columns
               </CardTitle>
               <CardDescription>
-                The standard field set every Region reports on — {FIELD_DEFS.length}{" "}
-                standard fields plus any Corporate additions. Only the Corporate
-                Precon Admin can change this scope.
+                The standard field set every Region reports on —{" "}
+                {FIELD_DEFS.length} standard fields plus any Corporate
+                additions. Only the Corporate Precon Admin can change this
+                scope.
               </CardDescription>
             </div>
             {canCompany && (
@@ -139,12 +144,16 @@ export function ColumnsManager({
         <CardContent className="space-y-2">
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
             {FIELD_DEFS.filter((f) => f.tier === "required").length} required +{" "}
-            {FIELD_DEFS.filter((f) => f.tier === "optional").length} optional standard
-            fields are defined in the governed field dictionary (Sections 8–9 of the
-            requirements) and are not deletable here.
+            {FIELD_DEFS.filter((f) => f.tier === "optional").length} optional
+            standard fields are defined in the governed field dictionary
+            (Sections 8–9 of the requirements) and are not deletable here.
           </div>
           {companyCols.length > 0 && (
-            <ColumnTable cols={companyCols} onDelete={canCompany ? remove : undefined} pending={pending} />
+            <ColumnTable
+              cols={companyCols}
+              onDelete={canCompany ? remove : undefined}
+              pending={pending}
+            />
           )}
         </CardContent>
       </Card>
@@ -153,7 +162,9 @@ export function ColumnsManager({
         <CardHeader className="pb-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-sm">Region / Precon Dept-specific columns</CardTitle>
+              <CardTitle className="text-sm">
+                Region / Precon Dept-specific columns
+              </CardTitle>
               <CardDescription>
                 RPDs add locally relevant data points for their own Region — no
                 Corporate approval needed. These surface everywhere company-wide
@@ -229,7 +240,9 @@ function ColumnTable({
             <TableCell className="font-medium">
               {c.label}
               {c.options && (
-                <p className="text-xs text-muted-foreground">{c.options.join(" · ")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {c.options.join(" · ")}
+                </p>
               )}
             </TableCell>
             <TableCell className="text-sm capitalize">{c.type}</TableCell>
@@ -250,18 +263,18 @@ function ColumnTable({
                   onPropose &&
                   c.scope === "region" &&
                   (proposeFn ? proposeFn(c) : true) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1 text-xs"
-                    disabled={pending}
-                    onClick={() => onPropose(c)}
-                    title="Propose promote to company standard"
-                  >
-                    <ArrowUpRight className="size-3.5" />
-                    Propose promote
-                  </Button>
-                )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 text-xs"
+                      disabled={pending}
+                      onClick={() => onPropose(c)}
+                      title="Propose promote to company standard"
+                    >
+                      <ArrowUpRight className="size-3.5" />
+                      Propose promote
+                    </Button>
+                  )}
                 {onDelete && (deletableFn ? deletableFn(c) : true) && (
                   <Button
                     variant="ghost"
@@ -312,12 +325,20 @@ function AddColumnDialog({
         await addCustomColumn({
           label,
           type,
-          options: type === "dropdown" ? options.split("\n").map((s) => s.trim()).filter(Boolean) : undefined,
+          options:
+            type === "dropdown"
+              ? options
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : undefined,
           scope,
           region: scope === "region" ? region : undefined,
           preconDepartment: scope === "region" && dept ? dept : undefined,
         });
-        toast.success(`Column "${label}" added — it now appears in exports and the report builder`);
+        toast.success(
+          `Column "${label}" added — it now appears in exports and the report builder`
+        );
         setOpen(false);
         setLabel("");
         setOptions("");
@@ -330,13 +351,23 @@ function AddColumnDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant={scope === "company" ? "default" : "outline"} className="gap-1" />}>
+      <DialogTrigger
+        render={
+          <Button
+            size="sm"
+            variant={scope === "company" ? "default" : "outline"}
+            className="gap-1"
+          />
+        }
+      >
         <Plus className="size-3.5" /> Add Column
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {scope === "company" ? "Add company-wide column" : "Add Region-specific column"}
+            {scope === "company"
+              ? "Add company-wide column"
+              : "Add Region-specific column"}
           </DialogTitle>
           <DialogDescription>
             {scope === "company"
@@ -364,7 +395,9 @@ function AddColumnDialog({
                 { value: "dropdown", label: "Dropdown" },
               ]}
               value={type}
-              onValueChange={(v) => setType((v ?? "text") as AddColumnInput["type"])}
+              onValueChange={(v) =>
+                setType((v ?? "text") as AddColumnInput["type"])
+              }
             >
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -393,7 +426,11 @@ function AddColumnDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Region</Label>
-                <Select value={region} onValueChange={(v) => setRegion(v ?? "")} disabled={regionLocked}>
+                <Select
+                  value={region}
+                  onValueChange={(v) => setRegion(v ?? "")}
+                  disabled={regionLocked}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -424,7 +461,11 @@ function AddColumnDialog({
             </div>
           )}
         </div>
-        <Button onClick={submit} disabled={pending || !label.trim()} className="w-full">
+        <Button
+          onClick={submit}
+          disabled={pending || !label.trim()}
+          className="w-full"
+        >
           {pending && <Loader2 className="size-4 animate-spin" />}
           Add Column
         </Button>

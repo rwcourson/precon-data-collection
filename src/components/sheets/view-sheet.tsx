@@ -1,9 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
   Check,
   Columns3,
@@ -17,6 +13,23 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { updateRoundCell } from "@/actions/post-bid";
+import {
+  loadSheetRows,
+  type SheetGridColumn,
+  saveSheetView,
+} from "@/actions/sheets";
+import {
+  type ColumnFilters,
+  DataGrid,
+  type GridColumn,
+  type GridRow,
+  type SortState,
+} from "@/components/sheets/data-grid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,18 +47,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DataGrid,
-  type ColumnFilters,
-  type GridColumn,
-  type GridRow,
-  type SortState,
-} from "@/components/sheets/data-grid";
-import { loadSheetRows, saveSheetView, type SheetGridColumn } from "@/actions/sheets";
-import { updateRoundCell } from "@/actions/post-bid";
-import { FILTER_OPS } from "@/lib/sheets";
 import type { SheetFilter, SheetViewConfig } from "@/db/schema";
 import type { ReportFieldDef } from "@/lib/report-engine";
+import { FILTER_OPS } from "@/lib/sheets";
 
 /**
  * A pursuit view: the Smartsheet grid experience over live records. Columns,
@@ -79,13 +83,17 @@ export function ViewSheet({
 
   const [columnKeys, setColumnKeys] = useState<string[]>(initialConfig.columns);
   const [filters, setFilters] = useState<SheetFilter[]>(initialConfig.filters);
-  const [groupBy, setGroupBy] = useState<string>(initialConfig.groupBy[0] ?? "");
+  const [groupBy, setGroupBy] = useState<string>(
+    initialConfig.groupBy[0] ?? ""
+  );
   const [sort, setSort] = useState<SortState>(
     initialConfig.sortBy[0]
       ? { key: initialConfig.sortBy[0].field, dir: initialConfig.sortBy[0].dir }
-      : null,
+      : null
   );
-  const [widths, setWidths] = useState<Record<string, number>>(initialConfig.widths ?? {});
+  const [widths, setWidths] = useState<Record<string, number>>(
+    initialConfig.widths ?? {}
+  );
   const [gridFilters, setGridFilters] = useState<ColumnFilters>({});
 
   const [columns, setColumns] = useState(initialColumns);
@@ -108,7 +116,9 @@ export function ViewSheet({
         setColumns(data.columns);
         setRows(data.rows);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not refresh the sheet");
+        toast.error(
+          e instanceof Error ? e.message : "Could not refresh the sheet"
+        );
       }
     });
   }, [nextKey, sheetId, columnKeys, filters]);
@@ -133,7 +143,7 @@ export function ViewSheet({
                 )
               : undefined,
       })),
-    [columns, widths],
+    [columns, widths]
   );
 
   const gridRows: GridRow[] = useMemo(
@@ -144,14 +154,16 @@ export function ViewSheet({
         locked: r.locked,
         lockReason: r.lockReason,
       })),
-    [rows],
+    [rows]
   );
 
   async function editCell(rowId: number, key: string, value: string) {
     try {
       await updateRoundCell(rowId, key, value);
       setRows((prev) =>
-        prev.map((r) => (r.id === rowId ? { ...r, cells: { ...r.cells, [key]: value } } : r)),
+        prev.map((r) =>
+          r.id === rowId ? { ...r, cells: { ...r.cells, [key]: value } } : r
+        )
       );
       toast.success("Saved");
       router.refresh();
@@ -176,7 +188,9 @@ export function ViewSheet({
         toast.success("Layout saved — everyone opening this sheet sees it.");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not save the layout");
+        toast.error(
+          e instanceof Error ? e.message : "Could not save the layout"
+        );
       } finally {
         setSaving(false);
       }
@@ -185,7 +199,7 @@ export function ViewSheet({
 
   const exportUrl = (format: "xlsx" | "pdf") =>
     `/api/export/sheet?id=${sheetId}&format=${format}&columns=${encodeURIComponent(
-      columnKeys.join(","),
+      columnKeys.join(",")
     )}&filters=${encodeURIComponent(JSON.stringify(filters))}`;
 
   const markDirty = () => setDirty(true);
@@ -215,7 +229,9 @@ export function ViewSheet({
             items={[
               { value: "", label: "No grouping" },
               ...columns
-                .filter((c) => !["metric", "dollars", "number"].includes(c.type))
+                .filter(
+                  (c) => !["metric", "dollars", "number"].includes(c.type)
+                )
                 .map((c) => ({ value: c.key, label: c.label })),
             ]}
             value={groupBy}
@@ -230,7 +246,9 @@ export function ViewSheet({
             <SelectContent>
               <SelectItem value="">No grouping</SelectItem>
               {columns
-                .filter((c) => !["metric", "dollars", "number"].includes(c.type))
+                .filter(
+                  (c) => !["metric", "dollars", "number"].includes(c.type)
+                )
                 .map((c) => (
                   <SelectItem key={c.key} value={c.key}>
                     {c.label}
@@ -241,7 +259,9 @@ export function ViewSheet({
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
-          {pending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+          {pending && (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -254,13 +274,24 @@ export function ViewSheet({
             size="sm"
             variant="outline"
             nativeButton={false}
-            render={<a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />}
+            render={
+              <a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />
+            }
           >
             <FileText className="size-4" /> PDF
           </Button>
           {canManage && (
-            <Button size="sm" onClick={saveLayout} disabled={saving || !dirty} className="gap-1.5">
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            <Button
+              size="sm"
+              onClick={saveLayout}
+              disabled={saving || !dirty}
+              className="gap-1.5"
+            >
+              {saving ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Save className="size-4" />
+              )}
               {dirty ? "Save layout" : "Layout saved"}
             </Button>
           )}
@@ -326,7 +357,11 @@ function ColumnPicker({
     const q = query.trim().toLowerCase();
     const map = new Map<string, ReportFieldDef[]>();
     for (const f of catalog) {
-      if (q && !f.label.toLowerCase().includes(q) && !f.category.toLowerCase().includes(q))
+      if (
+        q &&
+        !f.label.toLowerCase().includes(q) &&
+        !f.category.toLowerCase().includes(q)
+      )
         continue;
       const bucket = map.get(f.category);
       if (bucket) bucket.push(f);
@@ -371,7 +406,9 @@ function ColumnPicker({
                       checked={checked}
                       onCheckedChange={(v) =>
                         onChange(
-                          v ? [...selected, f.key] : selected.filter((k) => k !== f.key),
+                          v
+                            ? [...selected, f.key]
+                            : selected.filter((k) => k !== f.key)
                         )
                       }
                     />
@@ -382,7 +419,9 @@ function ColumnPicker({
             </div>
           ))}
           {grouped.length === 0 && (
-            <p className="py-6 text-center text-xs text-muted-foreground">No column matches.</p>
+            <p className="py-6 text-center text-xs text-muted-foreground">
+              No column matches.
+            </p>
           )}
         </div>
       </PopoverContent>
@@ -399,7 +438,11 @@ function FilterBuilder({
   filters: SheetFilter[];
   onChange: (next: SheetFilter[]) => void;
 }) {
-  const [draft, setDraft] = useState<SheetFilter>({ field: "", op: "eq", value: "" });
+  const [draft, setDraft] = useState<SheetFilter>({
+    field: "",
+    op: "eq",
+    value: "",
+  });
 
   return (
     <Popover>
@@ -415,8 +458,8 @@ function FilterBuilder({
       <PopoverContent align="start" className="w-96 gap-3 p-3">
         <p className="text-xs font-medium">Sheet filters</p>
         <p className="text-2xs text-muted-foreground">
-          These are saved with the sheet — they define which records belong to it.
-          Column filters in the header stay local to you.
+          These are saved with the sheet — they define which records belong to
+          it. Column filters in the header stay local to you.
         </p>
 
         {filters.length > 0 && (
@@ -439,7 +482,9 @@ function FilterBuilder({
                   variant="ghost"
                   size="icon-xs"
                   className="text-muted-foreground hover:text-destructive"
-                  onClick={() => onChange(filters.filter((_, idx) => idx !== i))}
+                  onClick={() =>
+                    onChange(filters.filter((_, idx) => idx !== i))
+                  }
                   aria-label="Remove filter"
                 >
                   <Trash2 />

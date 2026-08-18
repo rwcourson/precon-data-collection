@@ -26,10 +26,14 @@ export function encodeCursor(cursor: PageCursor): string {
   return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
 }
 
-export function decodeCursor(raw: string | null | undefined): PageCursor | null {
+export function decodeCursor(
+  raw: string | null | undefined
+): PageCursor | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as PageCursor;
+    const parsed = JSON.parse(
+      Buffer.from(raw, "base64url").toString("utf8")
+    ) as PageCursor;
     if (typeof parsed.id !== "number") return null;
     return parsed;
   } catch {
@@ -46,7 +50,7 @@ export type OffsetPage = { limit: number; offset: number };
  */
 export function parsePagination(
   searchParams: URLSearchParams,
-  defaults: { limit?: number } = {},
+  defaults: { limit?: number } = {}
 ): OffsetPage {
   const fallback = Math.min(MAX_PAGE_SIZE, defaults.limit ?? DEFAULT_PAGE_SIZE);
   const rawLimit = Number(searchParams.get("limit"));
@@ -55,14 +59,15 @@ export function parsePagination(
       ? Math.min(MAX_PAGE_SIZE, Math.floor(rawLimit))
       : fallback;
   const rawOffset = Number(searchParams.get("offset"));
-  const offset = Number.isFinite(rawOffset) && rawOffset >= 1 ? Math.floor(rawOffset) : 0;
+  const offset =
+    Number.isFinite(rawOffset) && rawOffset >= 1 ? Math.floor(rawOffset) : 0;
   return { limit, offset };
 }
 
 export function pageFromRows<T extends { id: number }>(
   rows: T[],
   pageSize: number,
-  sortValueOf: (row: T) => string | number | null,
+  sortValueOf: (row: T) => string | number | null
 ): PageResult<T> {
   const size = clampPageSize(pageSize);
   const slice = rows.slice(0, size + 1);

@@ -4,15 +4,17 @@ import {
   allDepartments,
   assertRegionDepartmentExhaustiveness,
   departmentsForRegion,
+  REGION_DEPARTMENTS,
   regionDepartmentTree,
   regionForDepartment,
-  REGION_DEPARTMENTS,
 } from "@/lib/region-departments";
 
 describe("region → department tree", () => {
   it("is exhaustive against the Destini preconDepartment reference list", () => {
     expect(() => assertRegionDepartmentExhaustiveness()).not.toThrow();
-    expect(allDepartments().sort()).toEqual([...REFERENCE_LISTS.preconDepartment.values].sort());
+    expect(allDepartments().sort()).toEqual(
+      [...REFERENCE_LISTS.preconDepartment.values].sort()
+    );
   });
 
   it("maps Georgia to exactly its three markets", () => {
@@ -44,6 +46,8 @@ describe("region → department tree", () => {
   });
 
   it("limits the tree to allowed regions", () => {
-    expect(regionDepartmentTree(["Georgia"]).map((n) => n.region)).toEqual(["Georgia"]);
+    expect(regionDepartmentTree(["Georgia"]).map((n) => n.region)).toEqual([
+      "Georgia",
+    ]);
   });
 });

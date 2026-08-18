@@ -51,7 +51,11 @@ export class DomainError extends Error {
     });
   }
 
-  static badRequest(what: string, why?: string, solution?: string): DomainError {
+  static badRequest(
+    what: string,
+    why?: string,
+    solution?: string
+  ): DomainError {
     return new DomainError({
       code: "BAD_REQUEST",
       what,
@@ -114,7 +118,7 @@ export function getDomainErrorHttpStatus(error: DomainError): number {
 }
 
 export function findDomainError(
-  error: unknown,
+  error: unknown
 ): ReturnType<DomainError["toJSON"]> | null {
   if (error instanceof DomainError) return error.toJSON();
   if (error instanceof Error && "cause" in error && error.cause) {

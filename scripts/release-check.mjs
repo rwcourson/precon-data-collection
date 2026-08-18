@@ -4,7 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(root, "package.json"), "utf8")
+);
 const required = [
   "verify:web",
   "verify:expo",
@@ -21,7 +23,9 @@ const required = [
 ];
 const missing = required.filter((s) => !pkg.scripts?.[s]);
 if (missing.length) {
-  process.stderr.write(`release:check missing scripts: ${missing.join(", ")}\n`);
+  process.stderr.write(
+    `release:check missing scripts: ${missing.join(", ")}\n`
+  );
   process.exit(1);
 }
 const docs = ["docs/security/sso-proxy-trust.md", "ROADMAP.md", "README.md"];
@@ -31,4 +35,6 @@ for (const d of docs) {
     process.exit(1);
   }
 }
-process.stdout.write(`release:check passed (${required.length} scripts, ${docs.length} docs)\n`);
+process.stdout.write(
+  `release:check passed (${required.length} scripts, ${docs.length} docs)\n`
+);

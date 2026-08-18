@@ -1,9 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Link2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { linkJobToSalesforce } from "@/actions/pursuits";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { linkJobToSalesforce } from "@/actions/pursuits";
 
 type Candidate = {
   sfId: string;
@@ -43,10 +43,10 @@ export function LinkSalesforceCard({
           Unlinked job — candidate Salesforce matches found
         </CardTitle>
         <CardDescription>
-          This pursuit was created before a Salesforce Job Number existed. The system
-          matched candidates by job name, Region, and similar criteria. Confirming a
-          link keeps the full Estimate Round history and associates it with the new
-          Job Number. Confirmations are audit-logged.
+          This pursuit was created before a Salesforce Job Number existed. The
+          system matched candidates by job name, Region, and similar criteria.
+          Confirming a link keeps the full Estimate Round history and associates
+          it with the new Job Number. Confirmations are audit-logged.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -85,7 +85,11 @@ export function LinkSalesforceCard({
                 })
               }
             >
-              {pending ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+              {pending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Link2 className="size-4" />
+              )}
               Confirm Link
             </Button>
           </div>

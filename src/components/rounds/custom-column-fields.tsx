@@ -2,8 +2,8 @@
 
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Select,
   SelectContent,

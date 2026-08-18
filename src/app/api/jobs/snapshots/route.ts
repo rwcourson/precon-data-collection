@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createDataSnapshot } from "@/lib/recovery";
 import { authorizeCron } from "@/lib/cron-auth";
+import { createDataSnapshot } from "@/lib/recovery";
 
 export async function GET(req: Request) {
   return POST(req);

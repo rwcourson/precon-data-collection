@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { ChevronDown, Loader2, Upload } from "lucide-react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   confirmDestiniImport,
-  previewDestiniCsvText,
-  previewDestiniFile,
   type DestiniPreviewResult,
   type DestiniPreviewRow,
+  previewDestiniCsvText,
+  previewDestiniFile,
 } from "@/actions/destini";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,21 +28,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { FIELD_MAP } from "@/lib/fields";
 import { cn } from "@/lib/utils";
 
 function fmt(v: number | string | null) {
   if (v == null || v === "") return "—";
   if (typeof v === "number") {
-    return Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return Number.isInteger(v)
+      ? v.toLocaleString()
+      : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
   }
   return String(v);
 }
@@ -164,7 +166,9 @@ function PreviewBlock({
                   key={d.key}
                   className={cn(d.changed && "bg-info-soft/40")}
                 >
-                  <TableCell className="text-xs font-medium">{d.label}</TableCell>
+                  <TableCell className="text-xs font-medium">
+                    {d.label}
+                  </TableCell>
                   <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
                     {fmt(d.current)}
                   </TableCell>
@@ -180,7 +184,8 @@ function PreviewBlock({
 
       {row.unmappedHeaders.length > 0 && (
         <p className="text-2xs text-muted-foreground">
-          Ignored (not Destini-sourced): {row.unmappedHeaders.slice(0, 8).join(", ")}
+          Ignored (not Destini-sourced):{" "}
+          {row.unmappedHeaders.slice(0, 8).join(", ")}
           {row.unmappedHeaders.length > 8 ? "…" : ""}
         </p>
       )}
@@ -216,7 +221,7 @@ export function DestiniImport() {
           toast.message("File parsed, but no data rows were found.");
         } else {
           toast.success(
-            `Parsed ${result.format} sheet “${result.sheetName}” — review before confirming.`,
+            `Parsed ${result.format} sheet “${result.sheetName}” — review before confirming.`
           );
         }
       } catch (err) {
@@ -239,14 +244,16 @@ export function DestiniImport() {
           roundId,
           values: row.values as Record<string, number | string | null>,
         });
-        toast.success(`Imported ${result.fields} fields onto round #${result.roundId}.`);
+        toast.success(
+          `Imported ${result.fields} fields onto round #${result.roundId}.`
+        );
         setPreview((prev) =>
           prev
             ? {
                 ...prev,
                 rows: prev.rows.filter((r) => r.index !== row.index),
               }
-            : null,
+            : null
         );
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Import failed", {
@@ -259,9 +266,9 @@ export function DestiniImport() {
   return (
     <div className="space-y-5">
       <p className="text-xs text-muted-foreground">
-        Imports Destini-sourced dollars and staffing only (estimate value, back-page fee,
-        labor, GC/GR Owner SOV, PM months, GSF, etc.). Judgmental fields like Fee Expected,
-        contingency, and self-perform stay manual.
+        Imports Destini-sourced dollars and staffing only (estimate value,
+        back-page fee, labor, GC/GR Owner SOV, PM months, GSF, etc.). Judgmental
+        fields like Fee Expected, contingency, and self-perform stay manual.
       </p>
 
       <div className="space-y-2">
@@ -275,7 +282,9 @@ export function DestiniImport() {
             disabled={pending}
             onChange={(e) => onFile(e.target.files?.[0] ?? null)}
           />
-          {pending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+          {pending && (
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          )}
         </div>
       </div>
 
@@ -286,7 +295,10 @@ export function DestiniImport() {
           onClick={() => setShowCsv((v) => !v)}
         >
           <ChevronDown
-            className={cn("size-3.5 transition-transform", showCsv && "rotate-180")}
+            className={cn(
+              "size-3.5 transition-transform",
+              showCsv && "rotate-180"
+            )}
           />
           Or paste CSV
         </button>
@@ -303,9 +315,13 @@ export function DestiniImport() {
                 try {
                   const result = await previewDestiniCsvText(csv);
                   applyPreview(result);
-                  toast.success("CSV preview ready — review before confirming.");
+                  toast.success(
+                    "CSV preview ready — review before confirming."
+                  );
                 } catch (err) {
-                  toast.error(err instanceof Error ? err.message : "Preview failed");
+                  toast.error(
+                    err instanceof Error ? err.message : "Preview failed"
+                  );
                 }
               });
             }}
@@ -319,7 +335,12 @@ export function DestiniImport() {
               rows={8}
               className="font-mono text-xs"
             />
-            <Button type="submit" size="sm" className="gap-1.5" disabled={pending}>
+            <Button
+              type="submit"
+              size="sm"
+              className="gap-1.5"
+              disabled={pending}
+            >
               {pending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -343,8 +364,8 @@ export function DestiniImport() {
           </div>
           {preview.rows.length === 0 ? (
             <p className="rounded-md border border-dashed px-3 py-8 text-center text-sm text-muted-foreground">
-              Nothing to import — file had no mapped values (empty Input column is fine for
-              markup templates).
+              Nothing to import — file had no mapped values (empty Input column
+              is fine for markup templates).
             </p>
           ) : (
             preview.rows.map((row) => (

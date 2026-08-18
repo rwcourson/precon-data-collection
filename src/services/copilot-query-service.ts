@@ -1,21 +1,24 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { estimateRounds, roundNotes, users } from "@/db/schema";
 import type { User } from "@/db/schema";
+import { estimateRounds, roundNotes, users } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import {
+  type CopilotToolName,
+  isCopilotToolName,
+} from "@/lib/ai/copilot-bridge";
+import {
+  type AuthorizedRound,
   listDirectoryUsersForPrincipal,
   listRoundsWithJobsForPrincipal,
-  type AuthorizedRound,
 } from "@/lib/authorization/loaders";
 import { createPrincipal } from "@/lib/authorization/principal";
 import type { Principal } from "@/lib/authorization/types";
 import {
-  isCopilotToolName,
-  type CopilotToolName,
-} from "@/lib/ai/copilot-bridge";
-import { EMPTY_HIERARCHY, type HierarchySelection } from "@/lib/bid-schedule-filter";
+  EMPTY_HIERARCHY,
+  type HierarchySelection,
+} from "@/lib/bid-schedule-filter";
 import { planDashboardFromPrompt } from "@/lib/dashboard-copilot";
 import { resolveWidgets } from "@/lib/dashboard-query";
 import { filterNeedsStaffing } from "@/lib/staffing";
@@ -77,13 +80,21 @@ function yearOf(value: Date | string | null | undefined): number | null {
 
 /** Principal-scoped copilot reads. Identity is the explicit Principal — never ambient. */
 export const copilotQueryService = {
-  async principalForUserId(userId: number, workspaceRegion?: string | null): Promise<Principal> {
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  async principalForUserId(
+    userId: number,
+    workspaceRegion?: string | null
+  ): Promise<Principal> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
     if (!user) throw DomainError.notFound("User not found");
     return createPrincipal({
       user,
       authSource: "service",
-      workspaceRegion: workspaceRegion === undefined ? user.region : workspaceRegion,
+      workspaceRegion:
+        workspaceRegion === undefined ? user.region : workspaceRegion,
     });
   },
 
@@ -94,27 +105,37 @@ export const copilotQueryService = {
       homeRegion?: string;
       department?: string;
       bidYear?: number;
-    } = {},
+    } = {}
   ): Promise<CopilotEffortRow[]> {
     const listed = await listRoundsWithJobsForPrincipal(principal);
     return listed
       .map(toEffort)
       .filter((row) => (filters.status ? row.status === filters.status : true))
-      .filter((row) => (filters.homeRegion ? row.homeRegion === filters.homeRegion : true))
-      .filter((row) => (filters.department ? row.preconDepartment === filters.department : true))
-      .filter((row) => (filters.bidYear != null ? row.bidYear === filters.bidYear : true));
+      .filter((row) =>
+        filters.homeRegion ? row.homeRegion === filters.homeRegion : true
+      )
+      .filter((row) =>
+        filters.department ? row.preconDepartment === filters.department : true
+      )
+      .filter((row) =>
+        filters.bidYear != null ? row.bidYear === filters.bidYear : true
+      );
   },
 
   async queryNeedsStaffing(
     principal: Principal,
-    hierarchy: HierarchySelection = EMPTY_HIERARCHY,
+    hierarchy: HierarchySelection = EMPTY_HIERARCHY
   ): Promise<CopilotEffortRow[]> {
     const listed = await listRoundsWithJobsForPrincipal(principal);
     const rows = listed.map(toEffort);
     return filterNeedsStaffing(rows, hierarchy);
   },
 
-  async searchNotes(principal: Principal, query: string, limit = 20): Promise<CopilotNoteHit[]> {
+  async searchNotes(
+    principal: Principal,
+    query: string,
+    limit = 20
+  ): Promise<CopilotNoteHit[]> {
     const listed = await listRoundsWithJobsForPrincipal(principal);
     const byRound = new Map(listed.map((row) => [row.round.id, row]));
     const roundIds = [...byRound.keys()];
@@ -122,7 +143,11 @@ export const copilotQueryService = {
 
     // Strip LIKE wildcards so user input can't broaden the pattern
     // (same sanitation as src/app/api/search/route.ts).
-    const trimmed = query.trim().replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
+    const trimmed = query
+      .trim()
+      .replace(/[%_\\]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     const rows = await db
       .select({
         noteId: roundNotes.id,
@@ -139,8 +164,8 @@ export const copilotQueryService = {
           inArray(roundNotes.roundId, roundIds),
           isNull(roundNotes.deletedAt),
           isNull(estimateRounds.deletedAt),
-          trimmed ? ilike(roundNotes.body, `%${trimmed}%`) : undefined,
-        ),
+          trimmed ? ilike(roundNotes.body, `%${trimmed}%`) : undefined
+        )
       )
       .orderBy(desc(roundNotes.createdAt))
       .limit(limit);
@@ -166,22 +191,23 @@ export const copilotQueryService = {
 
   async personHistory(
     principal: Principal,
-    input: { userId?: number; name?: string; year: number },
-  ): Promise<{ person: { id: number; name: string } | null; efforts: CopilotEffortRow[] }> {
+    input: { userId?: number; name?: string; year: number }
+  ): Promise<{
+    person: { id: number; name: string } | null;
+    efforts: CopilotEffortRow[];
+  }> {
     const directory = await listDirectoryUsersForPrincipal(principal);
     const listed = await listRoundsWithJobsForPrincipal(principal);
     const person = matchDirectoryUser(directory, input);
     if (!person) return { person: null, efforts: [] };
 
-    const efforts = listed
-      .map(toEffort)
-      .filter((row) => {
-        const lead = row.estimateLeadId === person.id;
-        const staffed = row.teamAssignedById === person.id;
-        if (!lead && !staffed) return false;
-        const assignedYear = yearOf(row.teamAssignedAt);
-        return row.bidYear === input.year || assignedYear === input.year;
-      });
+    const efforts = listed.map(toEffort).filter((row) => {
+      const lead = row.estimateLeadId === person.id;
+      const staffed = row.teamAssignedById === person.id;
+      if (!lead && !staffed) return false;
+      const assignedYear = yearOf(row.teamAssignedAt);
+      return row.bidYear === input.year || assignedYear === input.year;
+    });
     return { person: { id: person.id, name: person.name }, efforts };
   },
 
@@ -201,7 +227,7 @@ export const copilotQueryService = {
   async execute(
     principal: Principal,
     tool: string,
-    input: Record<string, unknown>,
+    input: Record<string, unknown>
   ) {
     if (!isCopilotToolName(tool)) {
       throw DomainError.badRequest(`Unknown copilot tool: ${tool}`);
@@ -212,7 +238,7 @@ export const copilotQueryService = {
 
 function matchDirectoryUser(
   directory: User[],
-  input: { userId?: number; name?: string },
+  input: { userId?: number; name?: string }
 ): User | undefined {
   if (input.userId != null) {
     return directory.find((user) => user.id === input.userId);
@@ -228,25 +254,29 @@ function matchDirectoryUser(
 async function dispatchTool(
   principal: Principal,
   tool: CopilotToolName,
-  input: Record<string, unknown>,
+  input: Record<string, unknown>
 ) {
   switch (tool) {
     case "query_efforts":
       return copilotQueryService.queryEfforts(principal, {
         status: typeof input.status === "string" ? input.status : undefined,
-        homeRegion: typeof input.homeRegion === "string" ? input.homeRegion : undefined,
-        department: typeof input.department === "string" ? input.department : undefined,
+        homeRegion:
+          typeof input.homeRegion === "string" ? input.homeRegion : undefined,
+        department:
+          typeof input.department === "string" ? input.department : undefined,
         bidYear: typeof input.bidYear === "number" ? input.bidYear : undefined,
       });
     case "query_needs_staffing":
       return copilotQueryService.queryNeedsStaffing(principal, {
         regions: Array.isArray(input.regions) ? input.regions.map(String) : [],
-        departments: Array.isArray(input.departments) ? input.departments.map(String) : [],
+        departments: Array.isArray(input.departments)
+          ? input.departments.map(String)
+          : [],
       });
     case "search_notes":
       return copilotQueryService.searchNotes(
         principal,
-        typeof input.query === "string" ? input.query : "",
+        typeof input.query === "string" ? input.query : ""
       );
     case "person_history":
       return copilotQueryService.personHistory(principal, {
@@ -257,7 +287,7 @@ async function dispatchTool(
     case "plan_chart":
       return copilotQueryService.planChart(
         principal,
-        typeof input.intent === "string" ? input.intent : "region scorecard",
+        typeof input.intent === "string" ? input.intent : "region scorecard"
       );
   }
 }

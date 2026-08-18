@@ -5,11 +5,21 @@ describe("moveColumnKey", () => {
   const keys = ["a", "b", "c", "d"];
 
   it("moves a column before another", () => {
-    expect(moveColumnKey(keys, "d", "b", "before")).toEqual(["a", "d", "b", "c"]);
+    expect(moveColumnKey(keys, "d", "b", "before")).toEqual([
+      "a",
+      "d",
+      "b",
+      "c",
+    ]);
   });
 
   it("moves a column after another", () => {
-    expect(moveColumnKey(keys, "a", "c", "after")).toEqual(["b", "c", "a", "d"]);
+    expect(moveColumnKey(keys, "a", "c", "after")).toEqual([
+      "b",
+      "c",
+      "a",
+      "d",
+    ]);
   });
 
   it("is a no-op when the keys match or are missing", () => {

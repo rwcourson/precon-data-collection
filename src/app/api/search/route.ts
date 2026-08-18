@@ -11,39 +11,79 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 const PAGES = [
   { href: "/", label: "Overview", keywords: ["home", "overview", "start"] },
-  { href: "/bid-schedule", label: "Bid Schedule", keywords: ["bid", "schedule", "pursuit", "pursuits"] },
-  { href: "/bid-schedule?section=active", label: "Bid Schedule · Active", keywords: ["active"] },
-  { href: "/bid-schedule?section=upcoming", label: "Bid Schedule · Upcoming", keywords: ["upcoming"] },
+  {
+    href: "/bid-schedule",
+    label: "Bid Schedule",
+    keywords: ["bid", "schedule", "pursuit", "pursuits"],
+  },
+  {
+    href: "/bid-schedule?section=active",
+    label: "Bid Schedule · Active",
+    keywords: ["active"],
+  },
+  {
+    href: "/bid-schedule?section=upcoming",
+    label: "Bid Schedule · Upcoming",
+    keywords: ["upcoming"],
+  },
   {
     href: "/bid-schedule?section=outstanding",
     label: "Bid Schedule · Outstanding",
     keywords: ["outstanding"],
   },
-  { href: "/post-bid", label: "Post-Bid Entry", keywords: ["post", "post-bid", "entry", "data"] },
+  {
+    href: "/post-bid",
+    label: "Post-Bid Entry",
+    keywords: ["post", "post-bid", "entry", "data"],
+  },
   {
     href: "/sheets",
     label: "Sheets",
-    keywords: ["sheet", "sheets", "workspace", "folder", "grid", "smartsheet", "view"],
+    keywords: [
+      "sheet",
+      "sheets",
+      "workspace",
+      "folder",
+      "grid",
+      "smartsheet",
+      "view",
+    ],
   },
-  { href: "/dashboards", label: "Dashboards", keywords: ["dashboard", "charts", "kpi", "metrics"] },
+  {
+    href: "/dashboards",
+    label: "Dashboards",
+    keywords: ["dashboard", "charts", "kpi", "metrics"],
+  },
   {
     href: "/dashboards?level=corporate",
     label: "Dashboards · Corporate",
     keywords: ["corporate"],
   },
-  { href: "/dashboards?level=region", label: "Dashboards · Region", keywords: ["region"] },
+  {
+    href: "/dashboards?level=region",
+    label: "Dashboards · Region",
+    keywords: ["region"],
+  },
   {
     href: "/dashboards?level=division",
     label: "Dashboards · Division",
     keywords: ["division"],
   },
-  { href: "/reports", label: "Report Builder", keywords: ["report", "reports", "export"] },
+  {
+    href: "/reports",
+    label: "Report Builder",
+    keywords: ["report", "reports", "export"],
+  },
   {
     href: "/reports/annual",
     label: "Annual Regional Report",
     keywords: ["annual", "yearbook", "leadership", "yearly", "trend"],
   },
-  { href: "/admin", label: "Admin", keywords: ["admin", "settings", "governance"] },
+  {
+    href: "/admin",
+    label: "Admin",
+    keywords: ["admin", "settings", "governance"],
+  },
   {
     href: "/admin?tab=columns",
     label: "Admin · Data Columns",
@@ -54,7 +94,11 @@ const PAGES = [
     label: "Admin · Reference Lists",
     keywords: ["lists", "reference"],
   },
-  { href: "/admin?tab=audit", label: "Admin · Audit Log", keywords: ["audit", "log"] },
+  {
+    href: "/admin?tab=audit",
+    label: "Admin · Audit Log",
+    keywords: ["audit", "log"],
+  },
   {
     href: "/admin?tab=integrations",
     label: "Admin · Integrations",
@@ -64,7 +108,11 @@ const PAGES = [
 
 /** Strip LIKE wildcards so user input can't broaden the pattern. */
 function sanitizeQuery(raw: string) {
-  return raw.trim().replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim();
+  return raw
+    .trim()
+    .replace(/[%_\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export async function GET(request: Request) {
@@ -80,11 +128,13 @@ export async function GET(request: Request) {
   const adminSections = await listAdminSectionsForPrincipal(principal);
 
   const pages = PAGES.filter(
-    (page) => !page.href.startsWith("/admin") || adminSections.length > 0,
-  ).filter((p) => {
-    if (p.label.toLowerCase().includes(qLower)) return true;
-    return p.keywords.some((k) => k.includes(qLower) || qLower.includes(k));
-  }).map(({ href, label }) => ({ href, label }));
+    (page) => !page.href.startsWith("/admin") || adminSections.length > 0
+  )
+    .filter((p) => {
+      if (p.label.toLowerCase().includes(qLower)) return true;
+      return p.keywords.some((k) => k.includes(qLower) || qLower.includes(k));
+    })
+    .map(({ href, label }) => ({ href, label }));
 
   // Short queries: pages only until 2+ chars (avoid flooding with every job)
   if (q.length < 2) {
@@ -109,9 +159,9 @@ export async function GET(request: Request) {
             ilike(jobs.jobNumber, pattern),
             ilike(jobs.jobName, pattern),
             ilike(jobs.region, pattern),
-            ilike(jobs.preconDepartment, pattern),
-          ),
-        ),
+            ilike(jobs.preconDepartment, pattern)
+          )
+        )
       )
       .orderBy(jobs.jobNumber)
       .limit(10),
@@ -148,9 +198,9 @@ export async function GET(request: Request) {
             ilike(estimateRounds.preconDepartment, pattern),
             sql`cast(${estimateRounds.status} as text) ilike ${pattern}`,
             ilike(users.name, pattern),
-            sql`cast(${estimateRounds.id} as text) = ${q}`,
-          ),
-        ),
+            sql`cast(${estimateRounds.id} as text) = ${q}`
+          )
+        )
       )
       .orderBy(jobs.jobNumber)
       .limit(12),
@@ -159,14 +209,17 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     pages,
-    sheets: sheetHits
-      .map((s) => ({
-        href: `/sheets/${s.id}`,
-        label: s.name,
-        hint: [s.region ?? "Corporate", s.folder, s.kind === "view" ? "pursuit view" : "standalone"]
-          .filter(Boolean)
-          .join(" · "),
-      })),
+    sheets: sheetHits.map((s) => ({
+      href: `/sheets/${s.id}`,
+      label: s.name,
+      hint: [
+        s.region ?? "Corporate",
+        s.folder,
+        s.kind === "view" ? "pursuit view" : "standalone",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    })),
     jobs: jobHits.map((j) => ({
       href: `/jobs/${j.id}`,
       label: `${j.jobNumber} · ${j.jobName}`,

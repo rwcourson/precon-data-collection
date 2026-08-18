@@ -1,11 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import { approveAndLock } from "@/actions/post-bid";
+import { Button } from "@/components/ui/button";
 
 export function ApproveLockButton({ roundId }: { roundId: number }) {
   const [pending, startTransition] = useTransition();
@@ -25,7 +25,7 @@ export function ApproveLockButton({ roundId }: { roundId: number }) {
               return;
             }
             toast.success(
-              "Approved and locked by RPD/SPD. The record now rolls into the Estimate Summary.",
+              "Approved and locked by RPD/SPD. The record now rolls into the Estimate Summary."
             );
             router.refresh();
           } catch (e) {
@@ -36,7 +36,11 @@ export function ApproveLockButton({ roundId }: { roundId: number }) {
         })
       }
     >
-      {pending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+      {pending ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <ShieldCheck className="size-4" />
+      )}
       Approve &amp; Lock (RPD / SPD)
     </Button>
   );

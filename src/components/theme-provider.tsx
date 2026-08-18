@@ -29,7 +29,8 @@ const notify = () => {
 function readStored(): Theme {
   try {
     const value = localStorage.getItem(THEME_STORAGE_KEY);
-    if (value === "light" || value === "dark" || value === "system") return value;
+    if (value === "light" || value === "dark" || value === "system")
+      return value;
   } catch {
     /* Storage is unavailable in private mode; fall through to the default. */
   }
@@ -72,7 +73,9 @@ function subscribe(listener: () => void) {
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0) {
-      window.matchMedia(DARK_QUERY).removeEventListener("change", onSystemChange);
+      window
+        .matchMedia(DARK_QUERY)
+        .removeEventListener("change", onSystemChange);
       window.removeEventListener("storage", onStorageChange);
     }
   };
@@ -91,7 +94,7 @@ export function useTheme() {
   const resolvedTheme = useSyncExternalStore(
     subscribe,
     resolvedSnapshot,
-    serverResolved,
+    serverResolved
   );
 
   const setTheme = useCallback((next: Theme) => {

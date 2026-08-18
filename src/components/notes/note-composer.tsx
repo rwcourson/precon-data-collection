@@ -1,6 +1,11 @@
 "use client";
 
-import { useLayoutEffect, useRef, type KeyboardEvent, type RefObject } from "react";
+import {
+  type KeyboardEvent,
+  type RefObject,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import {
   formatMentionToken,
   mentionChipClassName,
@@ -12,7 +17,7 @@ import { cn } from "@/lib/utils";
 function serializeComposer(
   root: HTMLElement,
   caretNode: Node | null,
-  caretOffset: number,
+  caretOffset: number
 ): { body: string; caret: number } {
   const onlyBreak =
     root.childNodes.length === 1 &&
@@ -46,7 +51,11 @@ function serializeComposer(
         body += "\n";
         return;
       }
-      if ((el.tagName === "DIV" || el.tagName === "P") && body.length > 0 && !body.endsWith("\n")) {
+      if (
+        (el.tagName === "DIV" || el.tagName === "P") &&
+        body.length > 0 &&
+        !body.endsWith("\n")
+      ) {
         body += "\n";
       }
       el.childNodes.forEach(walk);
@@ -64,7 +73,11 @@ function serializeComposer(
   return { body, caret };
 }
 
-function paintComposer(root: HTMLElement, body: string, names: Record<number, string>) {
+function paintComposer(
+  root: HTMLElement,
+  body: string,
+  names: Record<number, string>
+) {
   const frag = document.createDocumentFragment();
   for (const token of splitNoteBodyTokens(body)) {
     if (token.type === "mention") {
@@ -180,7 +193,11 @@ export function NoteComposer({
     const el = nodeRef.current;
     if (!el) return;
     const selection = window.getSelection();
-    const next = serializeComposer(el, selection?.focusNode ?? null, selection?.focusOffset ?? 0);
+    const next = serializeComposer(
+      el,
+      selection?.focusNode ?? null,
+      selection?.focusOffset ?? 0
+    );
     onValueChange(next.body, next.caret);
   };
 
@@ -195,19 +212,23 @@ export function NoteComposer({
       <div
         ref={nodeRef}
         role="textbox"
+        tabIndex={0}
         aria-multiline="true"
         aria-label={placeholder}
         contentEditable
         suppressContentEditableWarning
         data-testid={testId}
         className={cn(
-          "min-h-16 w-full rounded-md border border-input/80 bg-transparent px-2.5 py-2 text-sm whitespace-pre-wrap break-words outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
+          "min-h-16 w-full rounded-md border border-input/80 bg-transparent px-2.5 py-2 text-sm whitespace-pre-wrap break-words outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
         )}
         onInput={emit}
         onKeyUp={emit}
         onClick={emit}
         onKeyDown={(event) => {
-          if ((event.metaKey || event.ctrlKey) && ["b", "i", "u"].includes(event.key)) {
+          if (
+            (event.metaKey || event.ctrlKey) &&
+            ["b", "i", "u"].includes(event.key)
+          ) {
             event.preventDefault();
           }
           onKeyDown?.(event);

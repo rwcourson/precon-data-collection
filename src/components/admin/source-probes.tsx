@@ -1,8 +1,12 @@
 "use client";
 
+import { Database, FileSpreadsheet, Loader2, RefreshCw } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Database, FileSpreadsheet, Loader2, RefreshCw } from "lucide-react";
+import {
+  probeSmartsheetRead,
+  probeWarehouseRead,
+} from "@/actions/integrations";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { probeSmartsheetRead, probeWarehouseRead } from "@/actions/integrations";
 
 export function SourceProbes({
   databricksConfigured,
@@ -43,9 +46,9 @@ export function SourceProbes({
           res.tables
             .map(
               (t) =>
-                `${t.ok ? "✓" : "✗"} ${t.table}${t.rowCount != null ? ` — ${t.rowCount.toLocaleString()} rows` : ""}${t.error ? ` (${t.error})` : ""}`,
+                `${t.ok ? "✓" : "✗"} ${t.table}${t.rowCount != null ? ` — ${t.rowCount.toLocaleString()} rows` : ""}${t.error ? ` (${t.error})` : ""}`
             )
-            .join("\n"),
+            .join("\n")
         );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Probe failed");
@@ -72,7 +75,7 @@ export function SourceProbes({
             res.sheets.length > 40 ? `… +${res.sheets.length - 40} more` : null,
           ]
             .filter(Boolean)
-            .join("\n"),
+            .join("\n")
         );
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Probe failed");
@@ -85,10 +88,12 @@ export function SourceProbes({
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
-              <CardTitle className="text-sm">Databricks (read / pull)</CardTitle>
+              <CardTitle className="text-sm">
+                Databricks (read / pull)
+              </CardTitle>
               <CardDescription>
-                SELECT probes against Destini, Build, and BuildingConnected tables.
-                Warehouse writes stay disabled unless{" "}
+                SELECT probes against Destini, Build, and BuildingConnected
+                tables. Warehouse writes stay disabled unless{" "}
                 <code className="rounded bg-muted px-1 py-0.5 text-2xs">
                   DATABRICKS_ALLOW_WRITE=true
                 </code>
@@ -133,10 +138,12 @@ export function SourceProbes({
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
-              <CardTitle className="text-sm">Smartsheet (read / pull)</CardTitle>
+              <CardTitle className="text-sm">
+                Smartsheet (read / pull)
+              </CardTitle>
               <CardDescription>
-                Lists precon sheets visible to the API token. Refresh exports locally
-                with{" "}
+                Lists precon sheets visible to the API token. Refresh exports
+                locally with{" "}
                 <code className="rounded bg-muted px-1 py-0.5 text-2xs">
                   npm run smartsheet:pull
                 </code>{" "}

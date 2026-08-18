@@ -13,7 +13,11 @@ describe("pickDefaultDemoUser", () => {
   });
 
   it("falls back to the first RPD, then the first roster row", () => {
-    expect(pickDefaultDemoUser([{ name: "Other", role: "rpd" }]).name).toBe("Other");
-    expect(pickDefaultDemoUser([{ name: "Sarah Chen", role: "pcm" }]).name).toBe("Sarah Chen");
+    expect(pickDefaultDemoUser([{ name: "Other", role: "rpd" }]).name).toBe(
+      "Other"
+    );
+    expect(
+      pickDefaultDemoUser([{ name: "Sarah Chen", role: "pcm" }]).name
+    ).toBe("Sarah Chen");
   });
 });

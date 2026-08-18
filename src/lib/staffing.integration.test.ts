@@ -1,10 +1,10 @@
-import { afterAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { auditLog, estimateRounds, jobs, users } from "@/db/schema";
 import type { User } from "@/db/schema";
-import { createPrincipal } from "@/lib/authorization/principal";
+import { auditLog, estimateRounds, jobs, users } from "@/db/schema";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { createPrincipal } from "@/lib/authorization/principal";
 import { parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
 import { buildOverviewQueues } from "@/lib/overview-queues";
 import { filterNeedsStaffing } from "@/lib/staffing";
@@ -23,18 +23,28 @@ describe("staffing mark and needs-staffing queue", () => {
       .update(estimateRounds)
       .set({ teamAssignedAt: null, teamAssignedById: null })
       .where(inArray(estimateRounds.id, touchedRoundIds));
-    await db.delete(auditLog).where(
-      and(eq(auditLog.entity, "round"), inArray(auditLog.roundId, touchedRoundIds), eq(auditLog.field, "teamAssignedAt")),
-    );
+    await db
+      .delete(auditLog)
+      .where(
+        and(
+          eq(auditLog.entity, "round"),
+          inArray(auditLog.roundId, touchedRoundIds),
+          eq(auditLog.field, "teamAssignedAt")
+        )
+      );
   });
 
   it("overview queue count equals the preset-filtered schedule row count", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     const principal = principalFor(pcm, "Central");
     const listed = await listRoundsWithJobsForPrincipal(principal);
     const hierarchy = parseHierarchyFromSearchParams(
       {},
-      { workspaceRegion: "Central", allowedRegions: ["Central"] },
+      { workspaceRegion: "Central", allowedRegions: ["Central"] }
     );
     const inputs = listed.map(({ round, job }) => ({
       roundId: round.id,
@@ -55,13 +65,19 @@ describe("staffing mark and needs-staffing queue", () => {
         teamAssignedAt: round.teamAssignedAt,
         preconDepartment: round.preconDepartment,
       })),
-      hierarchy,
+      hierarchy
     );
-    expect(queues.find((q) => q.id === "needs-staffing")?.count).toBe(schedule.length);
+    expect(queues.find((q) => q.id === "needs-staffing")?.count).toBe(
+      schedule.length
+    );
   });
 
   it("mark and undo persist who/when and write audit entries", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     const [round] = await db
       .select({ id: estimateRounds.id })
       .from(estimateRounds)
@@ -71,8 +87,8 @@ describe("staffing mark and needs-staffing queue", () => {
           eq(estimateRounds.status, "upcoming"),
           eq(jobs.region, "Central"),
           isNull(estimateRounds.deletedAt),
-          isNull(estimateRounds.teamAssignedAt),
-        ),
+          isNull(estimateRounds.teamAssignedAt)
+        )
       )
       .limit(1);
     touchedRoundIds.push(round.id);
@@ -85,10 +101,17 @@ describe("staffing mark and needs-staffing queue", () => {
     const markAudits = await db
       .select()
       .from(auditLog)
-      .where(and(eq(auditLog.roundId, round.id), eq(auditLog.action, "staffing.mark")));
+      .where(
+        and(
+          eq(auditLog.roundId, round.id),
+          eq(auditLog.action, "staffing.mark")
+        )
+      );
     expect(markAudits.length).toBeGreaterThanOrEqual(1);
     expect(markAudits.at(-1)?.userId).toBe(pcm.id);
-    expect(markAudits.at(-1)?.newValue).toBe(marked.teamAssignedAt?.toISOString());
+    expect(markAudits.at(-1)?.newValue).toBe(
+      marked.teamAssignedAt?.toISOString()
+    );
 
     const unmarked = await staffingService.unmark(actor, round.id);
     expect(unmarked.teamAssignedAt).toBeNull();
@@ -97,14 +120,25 @@ describe("staffing mark and needs-staffing queue", () => {
     const undoAudits = await db
       .select()
       .from(auditLog)
-      .where(and(eq(auditLog.roundId, round.id), eq(auditLog.action, "staffing.unmark")));
+      .where(
+        and(
+          eq(auditLog.roundId, round.id),
+          eq(auditLog.action, "staffing.unmark")
+        )
+      );
     expect(undoAudits.length).toBeGreaterThanOrEqual(1);
-    expect(undoAudits.at(-1)?.oldValue).toBe(marked.teamAssignedAt?.toISOString());
+    expect(undoAudits.at(-1)?.oldValue).toBe(
+      marked.teamAssignedAt?.toISOString()
+    );
     expect(undoAudits.at(-1)?.newValue).toBeNull();
   });
 
   it("denies staffing.mark for a role the kernel does not allow", async () => {
-    const [leadership] = await db.select().from(users).where(eq(users.role, "leadership")).limit(1);
+    const [leadership] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "leadership"))
+      .limit(1);
     const [round] = await db
       .select({ id: estimateRounds.id })
       .from(estimateRounds)

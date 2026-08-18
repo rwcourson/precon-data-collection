@@ -16,7 +16,7 @@ export function PageHeader({
     <div
       className={cn(
         "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
-        className,
+        className
       )}
     >
       <div className="min-w-0 space-y-0.5">
@@ -30,7 +30,9 @@ export function PageHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
       ) : null}
     </div>
   );

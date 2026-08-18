@@ -38,17 +38,28 @@ export type Workspace = {
 
 /** Leadership and Corporate Precon Admin see across Regions; everyone else does not. */
 export function canViewCorporate(user: User): boolean {
-  return user.role === "corporate_admin" || user.role === "leadership" || user.region == null;
+  return (
+    user.role === "corporate_admin" ||
+    user.role === "leadership" ||
+    user.region == null
+  );
 }
 
 export function accentFor(region: string | null): string {
-  return region == null ? CORPORATE_ACCENT : (REGION_ACCENTS[region] ?? CORPORATE_ACCENT);
+  return region == null
+    ? CORPORATE_ACCENT
+    : (REGION_ACCENTS[region] ?? CORPORATE_ACCENT);
 }
 
-export function resolveWorkspace(user: User, cookieValue: string | undefined): Workspace {
+export function resolveWorkspace(
+  user: User,
+  cookieValue: string | undefined
+): Workspace {
   const allRegions = REFERENCE_LISTS.region.values;
   const corporate = canViewCorporate(user);
-  const available = corporate ? allRegions : allRegions.filter((r) => r === user.region);
+  const available = corporate
+    ? allRegions
+    : allRegions.filter((r) => r === user.region);
 
   let region: string | null;
   if (cookieValue === CORPORATE) {
@@ -76,7 +87,7 @@ export function resolveWorkspace(user: User, cookieValue: string | undefined): W
  */
 export function resolveRegionParam(
   workspace: Workspace,
-  requested: string | null,
+  requested: string | null
 ): { region: string | null } | { error: string } {
   const asked = requested && requested !== "all" ? requested : null;
   if (workspace.region == null) return { region: asked };
@@ -88,7 +99,7 @@ export function resolveRegionParam(
 /** Narrows any region-bearing collection to the active workspace. */
 export function scopeToWorkspace<T extends { region: string }>(
   rows: T[],
-  workspace: Workspace,
+  workspace: Workspace
 ): T[] {
   if (workspace.region == null) return rows;
   return rows.filter((r) => r.region === workspace.region);

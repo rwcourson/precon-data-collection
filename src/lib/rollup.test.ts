@@ -11,7 +11,13 @@ function round(partial: {
   jobId: number;
   roundNumber: number;
   estimatePhase: string;
-  status: "upcoming" | "active" | "outstanding" | "submitted" | "post_bid" | "locked";
+  status:
+    | "upcoming"
+    | "active"
+    | "outstanding"
+    | "submitted"
+    | "post_bid"
+    | "locked";
   estimateValue?: number | null;
 }) {
   return {
@@ -65,16 +71,36 @@ describe("latestRoundsPerJob", () => {
     const latest = latestRoundsPerJob([rom, gmp, other]);
     expect(latest).toHaveLength(2);
     expect(latest.find((r) => r.jobId === 1)?.estimatePhase).toBe("GMP");
-    expect(latest.find((r) => r.jobId === 2)?.estimatePhase).toBe("Budget - SD");
+    expect(latest.find((r) => r.jobId === 2)?.estimatePhase).toBe(
+      "Budget - SD"
+    );
   });
 
   it("defaults leadership scope to one row per job so volume is not doubled", () => {
     const rows = [
-      round({ jobId: 9, roundNumber: 1, estimatePhase: "Budget - SD", status: "locked", estimateValue: 10_000_000 }),
-      round({ jobId: 9, roundNumber: 2, estimatePhase: "GMP", status: "locked", estimateValue: 12_000_000 }),
+      round({
+        jobId: 9,
+        roundNumber: 1,
+        estimatePhase: "Budget - SD",
+        status: "locked",
+        estimateValue: 10_000_000,
+      }),
+      round({
+        jobId: 9,
+        roundNumber: 2,
+        estimatePhase: "GMP",
+        status: "locked",
+        estimateValue: 12_000_000,
+      }),
     ];
-    const latestStats = computeStats("all", applyLeadershipRoundScope(rows, "latest") as never);
-    const allStats = computeStats("all", applyLeadershipRoundScope(rows, "all") as never);
+    const latestStats = computeStats(
+      "all",
+      applyLeadershipRoundScope(rows, "latest") as never
+    );
+    const allStats = computeStats(
+      "all",
+      applyLeadershipRoundScope(rows, "all") as never
+    );
     expect(latestStats.rounds).toBe(1);
     expect(latestStats.volume).toBe(12_000_000);
     expect(allStats.rounds).toBe(2);
@@ -91,8 +117,20 @@ describe("latestRoundsPerJob", () => {
 describe("scopeRoundsForDashboardExport (Excel + page)", () => {
   it("defaults the export path to one latest round per job", () => {
     const rows = [
-      round({ jobId: 3, roundNumber: 1, estimatePhase: "Budget - SD", status: "locked", estimateValue: 10_000_000 }),
-      round({ jobId: 3, roundNumber: 2, estimatePhase: "GMP", status: "locked", estimateValue: 12_000_000 }),
+      round({
+        jobId: 3,
+        roundNumber: 1,
+        estimatePhase: "Budget - SD",
+        status: "locked",
+        estimateValue: 10_000_000,
+      }),
+      round({
+        jobId: 3,
+        roundNumber: 2,
+        estimatePhase: "GMP",
+        status: "locked",
+        estimateValue: 12_000_000,
+      }),
     ];
     const latest = scopeRoundsForDashboardExport(rows, {});
     const all = scopeRoundsForDashboardExport(rows, { rounds: "all" });
@@ -105,11 +143,23 @@ describe("scopeRoundsForDashboardExport (Excel + page)", () => {
   it("applies sector/phase/status the same way the page and Excel query string do", () => {
     const rows = [
       {
-        ...round({ jobId: 1, roundNumber: 1, estimatePhase: "GMP", status: "locked", estimateValue: 10_000_000 }),
+        ...round({
+          jobId: 1,
+          roundNumber: 1,
+          estimatePhase: "GMP",
+          status: "locked",
+          estimateValue: 10_000_000,
+        }),
         marketSector: "Healthcare – Hospital",
       },
       {
-        ...round({ jobId: 2, roundNumber: 1, estimatePhase: "Budget - SD", status: "active", estimateValue: 4_000_000 }),
+        ...round({
+          jobId: 2,
+          roundNumber: 1,
+          estimatePhase: "Budget - SD",
+          status: "active",
+          estimateValue: 4_000_000,
+        }),
         marketSector: "Commercial – Office",
       },
     ];

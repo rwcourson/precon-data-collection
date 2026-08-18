@@ -4,8 +4,8 @@ import {
   buildSheetGridMatrix,
   canShowSheetArchive,
   cellDisplay,
-  dueDateBand,
   dueBandLabel,
+  dueDateBand,
   filterSheetsByQuery,
   formatCompactDollars,
   formatDueDateHuman,
@@ -74,7 +74,7 @@ describe("mobile-data-display (shipped helpers)", () => {
         { id: 3, bidDueDate: "2026-08-09" },
         { id: 4, bidDueDate: null },
       ],
-      now,
+      now
     );
     expect(groups.map((g) => g.band)).toEqual([
       "overdue",
@@ -101,7 +101,7 @@ describe("mobile-data-display (shipped helpers)", () => {
           id: 11,
           values: { jobName: null, region: "  " },
         },
-      ],
+      ]
     );
     expect(matrix.headers).toEqual(["Job Name", "Region"]);
     expect(matrix.keys).toEqual(["jobName", "region"]);
@@ -111,7 +111,9 @@ describe("mobile-data-display (shipped helpers)", () => {
     expect(matrix.widths).toHaveLength(2);
     // Multi-column contract: every row cell count matches headers (not vertical stack of labels)
     expect(assertGridAligned(matrix)).toBe(true);
-    expect(matrix.body.every((r) => r.cells.length === matrix.headers.length)).toBe(true);
+    expect(
+      matrix.body.every((r) => r.cells.length === matrix.headers.length)
+    ).toBe(true);
   });
 
   it("assertGridAligned rejects mis-sized rows", () => {
@@ -119,7 +121,7 @@ describe("mobile-data-display (shipped helpers)", () => {
       assertGridAligned({
         headers: ["A", "B"],
         body: [{ cells: ["1"] }],
-      }),
+      })
     ).toBe(false);
   });
 
@@ -129,7 +131,7 @@ describe("mobile-data-display (shipped helpers)", () => {
     expect(sheetDisplayName("pcn_sub_rates")).toBe("Subcontractor Rates");
     expect(sheetDisplayName("labor_rate_history")).toBe("Labor Rate History");
     expect(sheetDisplayName("Weekly Region Bid Schedule")).toBe(
-      "Weekly Region Bid Schedule",
+      "Weekly Region Bid Schedule"
     );
     expect(sheetDisplayName("")).toBe("Untitled sheet");
   });
@@ -143,7 +145,7 @@ describe("mobile-data-display (shipped helpers)", () => {
     ]);
     expect(sorted.map((s) => s.id)).toEqual([3, 2, 4, 1]);
     expect(sheetSortRank("pcn_bid_schedule")).toBeLessThan(
-      sheetSortRank("pcn_labor_rates"),
+      sheetSortRank("pcn_labor_rates")
     );
   });
 
@@ -169,7 +171,12 @@ describe("mobile-data-display (shipped helpers)", () => {
 
   it("sheetListSubtitle is scannable without raw dashes alone", () => {
     expect(
-      sheetListSubtitle({ folder: null, kind: "grid", rowCount: 12, pinned: true }),
+      sheetListSubtitle({
+        folder: null,
+        kind: "grid",
+        rowCount: 12,
+        pinned: true,
+      })
     ).toBe("General · Grid · 12 rows · Pinned");
   });
 

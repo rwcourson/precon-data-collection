@@ -1,17 +1,17 @@
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db";
+import type { CustomColumn, EstimateRound, Job } from "@/db/schema";
 import {
-  customColumnValues,
   customColumns,
+  customColumnValues,
   estimateRounds,
   jobRegionVisibility,
   jobs,
   roundMultiValues,
   users,
 } from "@/db/schema";
-import type { CustomColumn, EstimateRound, Job } from "@/db/schema";
 import type { Workspace } from "./workspace";
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 export type RoundRow = {
   round: EstimateRound;
@@ -24,7 +24,9 @@ export type RoundRow = {
  * workspace is active the filter is applied in SQL against job visibility
  * rows (not the denormalized round.region grouping column).
  */
-export async function getRoundsWithJobs(workspace?: Workspace): Promise<RoundRow[]> {
+export async function getRoundsWithJobs(
+  workspace?: Workspace
+): Promise<RoundRow[]> {
   const filters = [
     isNull(estimateRounds.deletedAt),
     isNull(jobs.deletedAt),
@@ -51,7 +53,9 @@ export async function getRoundsWithJobs(workspace?: Workspace): Promise<RoundRow
   return rows;
 }
 
-export async function getRoundWithJob(roundId: number): Promise<RoundRow | null> {
+export async function getRoundWithJob(
+  roundId: number
+): Promise<RoundRow | null> {
   const rows = await db
     .select({ round: estimateRounds, job: jobs, estimateLeadName: users.name })
     .from(estimateRounds)
@@ -62,21 +66,25 @@ export async function getRoundWithJob(roundId: number): Promise<RoundRow | null>
 }
 
 /** Multi-value field entries for a round, grouped by field key. */
-export async function getMultiValues(roundId: number): Promise<Record<string, string[]>> {
+export async function getMultiValues(
+  roundId: number
+): Promise<Record<string, string[]>> {
   const rows = await db
     .select()
     .from(roundMultiValues)
     .where(eq(roundMultiValues.roundId, roundId));
   const out: Record<string, string[]> = {};
   for (const r of rows) {
-    (out[r.field] ??= []).push(r.value);
+    const values = out[r.field] ?? [];
+    values.push(r.value);
+    out[r.field] = values;
   }
   return out;
 }
 
 /** Multi-values for many rounds at once: roundId -> field -> values. */
 export async function getMultiValuesForRounds(
-  roundIds: number[],
+  roundIds: number[]
 ): Promise<Map<number, Record<string, string[]>>> {
   const out = new Map<number, Record<string, string[]>>();
   if (roundIds.length === 0) return out;
@@ -86,7 +94,9 @@ export async function getMultiValuesForRounds(
     .where(inArray(roundMultiValues.roundId, roundIds));
   for (const r of rows) {
     const rec = out.get(r.roundId) ?? {};
-    (rec[r.field] ??= []).push(r.value);
+    const values = rec[r.field] ?? [];
+    values.push(r.value);
+    rec[r.field] = values;
     out.set(r.roundId, rec);
   }
   return out;
@@ -99,7 +109,7 @@ export const getAllCustomColumns = cache(async (): Promise<CustomColumn[]> => {
 
 /** Custom column values for many rounds: roundId -> columnId -> value. */
 export async function getCustomValuesForRounds(
-  roundIds: number[],
+  roundIds: number[]
 ): Promise<Map<number, Record<number, string | null>>> {
   const out = new Map<number, Record<number, string | null>>();
   if (roundIds.length === 0) return out;
@@ -120,13 +130,19 @@ export async function getCustomValuesForRounds(
  * so the full-table scan runs once per request no matter how many components
  * ask for it (this is called on nearly every page).
  */
-export const getReferenceValues = cache(async (): Promise<Record<string, string[]>> => {
-  const rows = await db.query.referenceListValues.findMany({
-    orderBy: (v, { asc: a }) => [a(v.sortOrder)],
-  });
-  const out: Record<string, string[]> = {};
-  for (const r of rows) {
-    if (!r.retired) (out[r.listKey] ??= []).push(r.value);
+export const getReferenceValues = cache(
+  async (): Promise<Record<string, string[]>> => {
+    const rows = await db.query.referenceListValues.findMany({
+      orderBy: (v, { asc: a }) => [a(v.sortOrder)],
+    });
+    const out: Record<string, string[]> = {};
+    for (const r of rows) {
+      if (!r.retired) {
+        const values = out[r.listKey] ?? [];
+        values.push(r.value);
+        out[r.listKey] = values;
+      }
+    }
+    return out;
   }
-  return out;
-});
+);

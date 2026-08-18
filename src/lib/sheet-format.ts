@@ -12,7 +12,10 @@ export function isNumericType(type: string): boolean {
   return ["number", "dollars", "metric"].includes(type);
 }
 
-export function formatCell(type: string, value: string | number | null): string {
+export function formatCell(
+  type: string,
+  value: string | number | null
+): string {
   if (value == null || value === "") return "—";
   switch (type) {
     case "dollars":
@@ -22,7 +25,9 @@ export function formatCell(type: string, value: string | number | null): string 
     case "date":
       return fmtDate(String(value));
     case "number":
-      return Number(value).toLocaleString("en-US", { maximumFractionDigits: 2 });
+      return Number(value).toLocaleString("en-US", {
+        maximumFractionDigits: 2,
+      });
     case "checkbox":
       return String(value) === "true" ? "Yes" : "";
     default:

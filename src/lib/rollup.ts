@@ -15,8 +15,8 @@ const PHASE_RANK: Record<string, number> = {
   "budget – early release": 50,
   "early release": 55,
   "value engineering": 60,
-  "reconciliation": 70,
-  "gmp": 80,
+  reconciliation: 70,
+  gmp: 80,
   "hard bid/firm fixed": 90,
   "rates only": 25,
   "qualifications only": 15,
@@ -41,8 +41,12 @@ export type LeadershipRound = Pick<
 >;
 
 /** Higher is more “final” for leadership volume (one row per job). */
-export function compareLeadershipRounds(a: LeadershipRound, b: LeadershipRound): number {
-  const phase = estimatePhaseRank(a.estimatePhase) - estimatePhaseRank(b.estimatePhase);
+export function compareLeadershipRounds(
+  a: LeadershipRound,
+  b: LeadershipRound
+): number {
+  const phase =
+    estimatePhaseRank(a.estimatePhase) - estimatePhaseRank(b.estimatePhase);
   if (phase !== 0) return phase;
   const status = (STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0);
   if (status !== 0) return status;
@@ -50,7 +54,9 @@ export function compareLeadershipRounds(a: LeadershipRound, b: LeadershipRound):
 }
 
 /** One latest/final estimate round per job. Does not mutate the input. */
-export function latestRoundsPerJob<T extends LeadershipRound>(rounds: T[]): T[] {
+export function latestRoundsPerJob<T extends LeadershipRound>(
+  rounds: T[]
+): T[] {
   const byJob = new Map<number, T>();
   for (const r of rounds) {
     const prev = byJob.get(r.jobId);
@@ -61,12 +67,14 @@ export function latestRoundsPerJob<T extends LeadershipRound>(rounds: T[]): T[] 
 
 export function applyLeadershipRoundScope<T extends LeadershipRound>(
   rounds: T[],
-  mode: LeadershipRoundMode,
+  mode: LeadershipRoundMode
 ): T[] {
   return mode === "all" ? rounds : latestRoundsPerJob(rounds);
 }
 
-export function parseLeadershipRoundMode(raw: string | null | undefined): LeadershipRoundMode {
+export function parseLeadershipRoundMode(
+  raw: string | null | undefined
+): LeadershipRoundMode {
   return raw === "all" ? "all" : "latest";
 }
 
@@ -91,7 +99,7 @@ export function scopeRoundsForDashboardExport<T extends DashboardScopeRound>(
     phase?: string | null;
     status?: string | null;
     rounds?: string | null;
-  },
+  }
 ): T[] {
   let scoped = rounds;
   if (params.region) scoped = scoped.filter((r) => r.region === params.region);
@@ -110,7 +118,10 @@ export function scopeRoundsForDashboardExport<T extends DashboardScopeRound>(
   if (params.status && params.status !== "all") {
     scoped = scoped.filter((r) => r.status === params.status);
   }
-  return applyLeadershipRoundScope(scoped, parseLeadershipRoundMode(params.rounds));
+  return applyLeadershipRoundScope(
+    scoped,
+    parseLeadershipRoundMode(params.rounds)
+  );
 }
 
 /**
@@ -153,7 +164,10 @@ export type RollupStats = {
   totalGsf: number;
 };
 
-export function rollup(rounds: EstimateRound[], keyFn: (r: EstimateRound) => string): RollupStats[] {
+export function rollup(
+  rounds: EstimateRound[],
+  keyFn: (r: EstimateRound) => string
+): RollupStats[] {
   const groups = new Map<string, EstimateRound[]>();
   for (const r of rounds) {
     const k = keyFn(r);
@@ -166,7 +180,9 @@ export function rollup(rounds: EstimateRound[], keyFn: (r: EstimateRound) => str
 
 export function computeStats(key: string, rs: EstimateRound[]): RollupStats {
   const volume = sum(rs.map((r) => r.estimateValue));
-  const submitted = rs.filter((r) => ["submitted", "post_bid", "locked"].includes(r.status));
+  const submitted = rs.filter((r) =>
+    ["submitted", "post_bid", "locked"].includes(r.status)
+  );
   const decidedRounds = rs.filter((r) => r.outcome !== "pending");
   const wonRounds = rs.filter((r) => r.outcome === "successful");
 
@@ -180,11 +196,14 @@ export function computeStats(key: string, rs: EstimateRound[]): RollupStats {
   const totalFee = sum(rs.map((r) => r.feeExpected));
   const totalPmMonths = sum(rs.map((r) => r.pmMonths));
   const totalContingency = sum(rs.map((r) => r.contingencyTotal));
-  const totalGcGr = sum(rs.map((r) => r.gcBgSort)) + sum(rs.map((r) => r.grBgSort));
+  const totalGcGr =
+    sum(rs.map((r) => r.gcBgSort)) + sum(rs.map((r) => r.grBgSort));
   const totalSelfPerformPriced = sum(rs.map((r) => r.selfPerformPriced));
   const totalSelfPerformProposed = sum(rs.map((r) => r.selfPerformProposed));
   const totalManHours = sum(rs.map((r) => r.craftLaborManHours));
-  const totalLaborCost = sum(rs.map((r) => r.craftLaborBase)) + sum(rs.map((r) => r.craftLaborBurden));
+  const totalLaborCost =
+    sum(rs.map((r) => r.craftLaborBase)) +
+    sum(rs.map((r) => r.craftLaborBurden));
 
   // $/GSF only reconciles across rounds that actually report GSF.
   const gsfRounds = rs.filter((r) => r.gsf != null && r.gsf > 0);
@@ -202,7 +221,8 @@ export function computeStats(key: string, rs: EstimateRound[]): RollupStats {
     avgEstimateValue: rs.length > 0 ? volume / rs.length : null,
     wins: wonRounds.length,
     decided: decidedRounds.length,
-    winRate: decidedRounds.length > 0 ? wonRounds.length / decidedRounds.length : null,
+    winRate:
+      decidedRounds.length > 0 ? wonRounds.length / decidedRounds.length : null,
     wonVolume,
     decidedVolume,
     winRateByValue: decidedVolume > 0 ? wonVolume / decidedVolume : null,
@@ -216,7 +236,10 @@ export function computeStats(key: string, rs: EstimateRound[]): RollupStats {
     revenuePerPmYear: ratio(volume, totalPmMonths / 12),
     totalPmMonths,
     totalSelfPerform: totalSelfPerformProposed,
-    selfPerformCaptureRate: ratio(totalSelfPerformProposed, totalSelfPerformPriced),
+    selfPerformCaptureRate: ratio(
+      totalSelfPerformProposed,
+      totalSelfPerformPriced
+    ),
     totalManHours,
     laborCostPerManHour: ratio(totalLaborCost, totalManHours),
     costPerGsf: ratio(gsfRoundsVolume, totalGsf),
@@ -224,6 +247,8 @@ export function computeStats(key: string, rs: EstimateRound[]): RollupStats {
   };
 }
 
-const sum = (xs: (number | null)[]) => xs.reduce<number>((s, x) => s + (x ?? 0), 0);
-const avg = (xs: number[]) => (xs.length > 0 ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
+const sum = (xs: (number | null)[]) =>
+  xs.reduce<number>((s, x) => s + (x ?? 0), 0);
+const avg = (xs: number[]) =>
+  xs.length > 0 ? xs.reduce((s, x) => s + x, 0) / xs.length : null;
 const ratio = (a: number, b: number) => (b > 0 ? a / b : null);

@@ -1,8 +1,17 @@
 import { generateObject } from "ai";
 import { z } from "zod";
 import type { DashboardWidgetConfig } from "@/db/schema";
-import { AI_MODEL_ID, AI_MODEL_LABEL, gatewayZdrOptions, getZdrModel, isAiConfigured } from "@/lib/ai/gateway";
-import { dashboardCreateSchema, widgetConfigSchema } from "@/lib/dashboard-domain";
+import {
+  AI_MODEL_ID,
+  AI_MODEL_LABEL,
+  gatewayZdrOptions,
+  getZdrModel,
+  isAiConfigured,
+} from "@/lib/ai/gateway";
+import {
+  dashboardCreateSchema,
+  widgetConfigSchema,
+} from "@/lib/dashboard-domain";
 import { MAGNUS_DATA_CONTRACT, sanitizePlan } from "@/lib/dashboard-sanitize";
 
 export type CopilotPlan = {
@@ -27,7 +36,8 @@ const REGION_WORDS = [
 ];
 
 function detectGroupBy(prompt: string): string {
-  if (/department|division|precon dept/i.test(prompt)) return "preconDepartment";
+  if (/department|division|precon dept/i.test(prompt))
+    return "preconDepartment";
   if (/sector|market/i.test(prompt)) return "marketSector";
   if (/phase/i.test(prompt)) return "estimatePhase";
   if (/year|trend|over time|timeline|history/i.test(prompt)) return "bidYear";
@@ -46,7 +56,9 @@ function detectMetric(prompt: string): string {
   return "estimateValue";
 }
 
-function detectRegionFilter(prompt: string): DashboardWidgetConfig["filters"] | undefined {
+function detectRegionFilter(
+  prompt: string
+): DashboardWidgetConfig["filters"] | undefined {
   for (const r of REGION_WORDS) {
     if (prompt.toLowerCase().includes(r)) {
       const label =
@@ -62,7 +74,9 @@ function detectRegionFilter(prompt: string): DashboardWidgetConfig["filters"] | 
                   ? "Texas"
                   : r;
       // Only apply when it looks like a real region name we store.
-      if (["Central", "Carolinas", "Florida", "Georgia", "Texas"].includes(label)) {
+      if (
+        ["Central", "Carolinas", "Florida", "Georgia", "Texas"].includes(label)
+      ) {
         return [{ field: "region", op: "eq", value: label }];
       }
     }
@@ -101,7 +115,7 @@ function titleCaseGroup(groupBy: string): string {
 function humanWidgetTitle(
   kind: string,
   metric: string,
-  groupBy?: string,
+  groupBy?: string
 ): string {
   const m = titleCaseMetric(metric);
   const g = groupBy ? titleCaseGroup(groupBy) : null;
@@ -212,8 +226,10 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
     : detectGroupBy(trimmed);
   const metric = detectMetric(trimmed);
   const filters = detectRegionFilter(trimmed);
-  const wantsMix = /mix|share|composition|breakdown|pie|donut|distribution/i.test(trimmed);
-  const wantsTrend = /trend|over time|timeline|history|year|forecast|project/i.test(trimmed);
+  const wantsMix =
+    /mix|share|composition|breakdown|pie|donut|distribution/i.test(trimmed);
+  const wantsTrend =
+    /trend|over time|timeline|history|year|forecast|project/i.test(trimmed);
   const wantsTable = /table|grid|list|detail/i.test(trimmed);
   // Short prompts default to exec scorecard, unless the user asked for a focused
   // composition/pipeline view (avoid overloading "pipeline mix by status").
@@ -268,7 +284,9 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
       filters,
       layout: { w: 4, h: 4, x: 0, y: 2 },
     });
-    rationale.push(`Composition chart (${wantsMix ? "requested" : "default"}) by ${groupBy}.`);
+    rationale.push(
+      `Composition chart (${wantsMix ? "requested" : "default"}) by ${groupBy}.`
+    );
   }
 
   {
@@ -279,9 +297,16 @@ export function planDashboardFromPrompt(prompt: string): CopilotPlan {
       metricKey: metric,
       groupBy,
       filters,
-      layout: { w: wantsMix || wantsExec ? 8 : 12, h: 4, x: wantsMix || wantsExec ? 4 : 0, y: 2 },
+      layout: {
+        w: wantsMix || wantsExec ? 8 : 12,
+        h: 4,
+        x: wantsMix || wantsExec ? 4 : 0,
+        y: 2,
+      },
     });
-    rationale.push(`Ranked ${groupBy === "bidYear" ? "vertical" : "horizontal"} bars for comparison.`);
+    rationale.push(
+      `Ranked ${groupBy === "bidYear" ? "vertical" : "horizontal"} bars for comparison.`
+    );
   }
 
   if (wantsTrend || wantsExec) {
@@ -388,7 +413,9 @@ const llmPlanSchema = z.object({
  * Falls back to the deterministic rules planner only if the gateway key is missing
  * or the model call fails — never routes to OpenAI or non-ZDR models.
  */
-export async function planDashboardWithOptionalLlm(prompt: string): Promise<CopilotPlan> {
+export async function planDashboardWithOptionalLlm(
+  prompt: string
+): Promise<CopilotPlan> {
   const base = planDashboardFromPrompt(prompt);
   if (!isAiConfigured()) return base;
 

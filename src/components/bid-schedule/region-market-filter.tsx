@@ -1,22 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ChevronDown, Minus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { RegionDepartmentNode } from "@/lib/region-departments";
 import {
   expandHierarchy,
+  type HierarchySelection,
   hierarchySummary,
   serializeHierarchy,
   toggleDepartment,
   toggleRegion,
-  type HierarchySelection,
 } from "@/lib/bid-schedule-filter";
+import type { RegionDepartmentNode } from "@/lib/region-departments";
 import { cn } from "@/lib/utils";
 
 export function RegionMarketFilter({
@@ -37,7 +37,13 @@ export function RegionMarketFilter({
     const encoded = serializeHierarchy(next);
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(currentParams)) {
-      if (key === "region" || key === "regions" || key === "departments" || !value) continue;
+      if (
+        key === "region" ||
+        key === "regions" ||
+        key === "departments" ||
+        !value
+      )
+        continue;
       params.set(key, value);
     }
     if (encoded.regions) params.set("regions", encoded.regions);
@@ -57,14 +63,20 @@ export function RegionMarketFilter({
         <span className="truncate">{hierarchySummary(selection)}</span>
         <ChevronDown className="size-3.5 opacity-60" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-2" data-testid="region-market-filter-tree">
+      <PopoverContent
+        align="start"
+        className="w-80 p-2"
+        data-testid="region-market-filter-tree"
+      >
         <p className="px-1 pb-1.5 text-xs text-muted-foreground">
           Regions expand into markets. Georgia is one click or three.
         </p>
         <ul className="max-h-80 space-y-1 overflow-y-auto">
           {tree.map((node) => {
             const childCount = node.departments.length;
-            const selectedCount = node.departments.filter((d) => expanded.has(d)).length;
+            const selectedCount = node.departments.filter((d) =>
+              expanded.has(d)
+            ).length;
             const all = childCount > 0 && selectedCount === childCount;
             const some = selectedCount > 0 && !all;
             return (
@@ -73,7 +85,9 @@ export function RegionMarketFilter({
                   <span className="relative inline-flex">
                     <Checkbox
                       checked={all}
-                      onCheckedChange={() => push(toggleRegion(selection, node.region))}
+                      onCheckedChange={() =>
+                        push(toggleRegion(selection, node.region))
+                      }
                       aria-label={node.region}
                     />
                     {some && (
@@ -94,10 +108,19 @@ export function RegionMarketFilter({
                         <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/60">
                           <Checkbox
                             checked={expanded.has(dept)}
-                            onCheckedChange={() => push(toggleDepartment(selection, dept))}
+                            onCheckedChange={() =>
+                              push(toggleDepartment(selection, dept))
+                            }
                             aria-label={dept}
                           />
-                          <span className={cn("text-[13px]", expanded.has(dept) ? "text-foreground" : "text-muted-foreground")}>
+                          <span
+                            className={cn(
+                              "text-[13px]",
+                              expanded.has(dept)
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                            )}
+                          >
                             {dept.replace(`${node.region} – `, "")}
                           </span>
                         </label>

@@ -3,12 +3,14 @@ import {
   groupVolumeChartTitle,
   groupVolumeForLevel,
   parseDashboardLevel,
+  type ScopeableRound,
   scopeRoundsForLevel,
   statusSeriesFromRounds,
-  type ScopeableRound,
 } from "@/lib/mobile-dashboard-scope";
 
-function r(partial: Partial<ScopeableRound> & { region: string }): ScopeableRound {
+function r(
+  partial: Partial<ScopeableRound> & { region: string }
+): ScopeableRound {
   return {
     status: "active",
     preconDepartment: "Central Building Group",
@@ -20,10 +22,31 @@ function r(partial: Partial<ScopeableRound> & { region: string }): ScopeableRoun
 
 describe("mobile-dashboard-scope (shipped, web-aligned)", () => {
   const rows: ScopeableRound[] = [
-    r({ region: "Central", preconDepartment: "CBG", marketSector: "Health", estimateValue: 10 }),
-    r({ region: "Central", preconDepartment: "Heavy", marketSector: "Industrial", estimateValue: 20 }),
-    r({ region: "Florida", preconDepartment: "FL Precon", marketSector: "Health", estimateValue: 30 }),
-    r({ region: "Florida", preconDepartment: "FL Precon", marketSector: "Office", estimateValue: 5, status: "locked" }),
+    r({
+      region: "Central",
+      preconDepartment: "CBG",
+      marketSector: "Health",
+      estimateValue: 10,
+    }),
+    r({
+      region: "Central",
+      preconDepartment: "Heavy",
+      marketSector: "Industrial",
+      estimateValue: 20,
+    }),
+    r({
+      region: "Florida",
+      preconDepartment: "FL Precon",
+      marketSector: "Health",
+      estimateValue: 30,
+    }),
+    r({
+      region: "Florida",
+      preconDepartment: "FL Precon",
+      marketSector: "Office",
+      estimateValue: 5,
+      status: "locked",
+    }),
   ];
 
   it("parseDashboardLevel defaults safely", () => {
@@ -46,13 +69,13 @@ describe("mobile-dashboard-scope (shipped, web-aligned)", () => {
 
     const reg = groupVolumeForLevel(
       scopeRoundsForLevel(rows, "region", "Central"),
-      "region",
+      "region"
     );
     expect(reg.map((g) => g.label).sort()).toEqual(["CBG", "Heavy"]);
 
     const div = groupVolumeForLevel(
       scopeRoundsForLevel(rows, "division", "Florida"),
-      "division",
+      "division"
     );
     expect(div.some((g) => g.label === "Health")).toBe(true);
     expect(div.some((g) => g.label === "Office")).toBe(true);

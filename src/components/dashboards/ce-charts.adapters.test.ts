@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { createElement, isValidElement } from "react";
+import { describe, expect, it } from "vitest";
 import {
   ChartEmptyState,
   ComboMetricChart,
@@ -42,8 +42,8 @@ describe("chart adapters smoke", () => {
       isValidElement(
         createElement(VerticalBarChart, {
           data: [{ name: "2025", value: 2e8 }],
-        }),
-      ),
+        })
+      )
     ).toBe(true);
   });
 
@@ -56,8 +56,8 @@ describe("chart adapters smoke", () => {
             { name: "locked", value: 5 },
           ],
           donut: true,
-        }),
-      ),
+        })
+      )
     ).toBe(true);
     expect(
       isValidElement(
@@ -66,8 +66,8 @@ describe("chart adapters smoke", () => {
             { year: "2025", volume: 1e9, winRate: 55 },
             { year: "2026", volume: 1.2e9, winRate: 48 },
           ],
-        }),
-      ),
+        })
+      )
     ).toBe(true);
     expect(
       isValidElement(
@@ -77,11 +77,11 @@ describe("chart adapters smoke", () => {
             { name: "Lost", value: 40, type: "decrease" },
             { name: "Total", value: 60, type: "total" },
           ],
-        }),
-      ),
+        })
+      )
     ).toBe(true);
-    expect(isValidElement(createElement(WaterfallMetricChart, { points: [] }))).toBe(
-      true,
-    );
+    expect(
+      isValidElement(createElement(WaterfallMetricChart, { points: [] }))
+    ).toBe(true);
   });
 });

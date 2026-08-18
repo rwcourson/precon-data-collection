@@ -12,7 +12,11 @@ export type StoredArtifact = {
 };
 
 export interface ArtifactStorage {
-  put(key: string, bytes: Uint8Array, contentType: string): Promise<StoredArtifact>;
+  put(
+    key: string,
+    bytes: Uint8Array,
+    contentType: string
+  ): Promise<StoredArtifact>;
   get(key: string): Promise<Uint8Array | null>;
   mode(): "local" | "vercel-blob" | "memory";
 }
@@ -37,7 +41,9 @@ export function createMemoryStorage(): ArtifactStorage {
   };
 }
 
-function createLocalStorage(root = path.join(process.cwd(), ".data", "artifacts")): ArtifactStorage {
+function createLocalStorage(
+  root = path.join(process.cwd(), ".data", "artifacts")
+): ArtifactStorage {
   return {
     mode: () => "local",
     async put(key, bytes, contentType) {
@@ -66,7 +72,9 @@ export function getArtifactStorage(): ArtifactStorage {
   if (config.storage.mode === "vercel-blob") {
     // Production adapter: private blob put/get. Without a live token, refuse local fallback.
     if (!("token" in config.storage) || !config.storage.token) {
-      throw new Error("PRIVATE_STORAGE_MODE=vercel-blob requires BLOB_READ_WRITE_TOKEN.");
+      throw new Error(
+        "PRIVATE_STORAGE_MODE=vercel-blob requires BLOB_READ_WRITE_TOKEN."
+      );
     }
     const token = config.storage.token;
     return {
@@ -78,7 +86,7 @@ export function getArtifactStorage(): ArtifactStorage {
           put: (
             pathname: string,
             body: Buffer,
-            opts: Record<string, unknown>,
+            opts: Record<string, unknown>
           ) => Promise<{ pathname?: string; url?: string }>;
         };
         try {
@@ -86,7 +94,7 @@ export function getArtifactStorage(): ArtifactStorage {
           mod = require(packageName);
         } catch {
           throw new Error(
-            "vercel-blob storage requires @vercel/blob and a valid private blob token; refusing local fallback.",
+            "vercel-blob storage requires @vercel/blob and a valid private blob token; refusing local fallback."
           );
         }
         const result = await mod.put(key, Buffer.from(bytes), {

@@ -7,7 +7,10 @@ function enDash(values: string[]): string[] {
   return values.map((v) => v.replace(/ - /g, " – "));
 }
 
-export const REFERENCE_LISTS: Record<string, { label: string; values: string[] }> = {
+export const REFERENCE_LISTS: Record<
+  string,
+  { label: string; values: string[] }
+> = {
   region: {
     label: "Region",
     values: DESTINI_VALIDATION_LISTS.region!,

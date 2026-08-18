@@ -1,18 +1,21 @@
 "use client";
 
 import {
+  type CSSProperties,
+  type RefObject,
   useCallback,
   useLayoutEffect,
   useState,
-  type CSSProperties,
-  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import type { NotesDirectoryUser } from "@/actions/notes";
 import { formatMentionToken } from "@/lib/note-body";
 import { cn } from "@/lib/utils";
 
-export function mentionTrigger(text: string, caret: number): { start: number; query: string } | null {
+export function mentionTrigger(
+  text: string,
+  caret: number
+): { start: number; query: string } | null {
   const before = text.slice(0, caret);
   if (before.endsWith("@[") || /@\[\d*$/.test(before)) return null;
   const match = before.match(/@([^\s@[]*)$/);
@@ -42,12 +45,19 @@ export function filterMentionUsers(users: NotesDirectoryUser[], query: string) {
       if (name.startsWith(q)) score = 300;
       else if (words.some((word) => word.startsWith(q))) score = 200;
       else if (q.length >= 2 && name.includes(q)) score = 100;
-      else if (q.length >= 2 && title.split(/\s+/).some((word) => word.startsWith(q))) score = 40;
+      else if (
+        q.length >= 2 &&
+        title.split(/\s+/).some((word) => word.startsWith(q))
+      )
+        score = 40;
       else if (q.length >= 2 && region.startsWith(q)) score = 20;
       else return null;
       return { user, score, name };
     })
-    .filter((row): row is { user: NotesDirectoryUser; score: number; name: string } => row != null)
+    .filter(
+      (row): row is { user: NotesDirectoryUser; score: number; name: string } =>
+        row != null
+    )
     .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
     .slice(0, 6)
     .map((row) => row.user);
@@ -68,7 +78,7 @@ export function MentionPicker({
         data-testid="mention-picker"
         className={cn(
           "w-full rounded-md border bg-popover px-2 py-1.5 text-xs text-muted-foreground shadow-md",
-          className,
+          className
         )}
       >
         No matching people
@@ -77,20 +87,21 @@ export function MentionPicker({
   }
   return (
     <ul
-      role="listbox"
       data-testid="mention-picker"
       className={cn(
         "max-h-44 w-full overflow-y-auto overscroll-contain rounded-md border bg-popover p-1 shadow-md",
-        className,
+        className
       )}
     >
       {filtered.map((user, index) => (
-        <li key={user.id} role="option" aria-selected={index === activeIndex}>
+        <li key={user.id}>
           <button
             type="button"
             aria-label={`Mention ${user.name}`}
             className={`flex w-full flex-col items-start rounded-md px-1.5 py-1 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 ${
-              index === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/70"
+              index === activeIndex
+                ? "bg-accent text-accent-foreground"
+                : "hover:bg-accent/70"
             }`}
             onMouseDown={(event) => {
               event.preventDefault();
@@ -124,11 +135,18 @@ export function AnchoredMentionPicker({
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
     const spaceAbove = Math.max(0, rect.top - PICKER_GAP);
-    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - PICKER_GAP);
+    const spaceBelow = Math.max(
+      0,
+      window.innerHeight - rect.bottom - PICKER_GAP
+    );
     // Stay above the composer so the list never covers the note you are typing.
-    const openAbove = spaceAbove >= PICKER_MIN_HEIGHT || spaceAbove >= spaceBelow;
+    const openAbove =
+      spaceAbove >= PICKER_MIN_HEIGHT || spaceAbove >= spaceBelow;
     const available = openAbove ? spaceAbove : spaceBelow;
-    const maxHeight = Math.min(PICKER_MAX_HEIGHT, Math.max(PICKER_MIN_HEIGHT, available));
+    const maxHeight = Math.min(
+      PICKER_MAX_HEIGHT,
+      Math.max(PICKER_MIN_HEIGHT, available)
+    );
     const width = Math.min(PICKER_WIDTH, Math.max(220, rect.width));
     setStyle({
       position: "fixed",
@@ -150,7 +168,7 @@ export function AnchoredMentionPicker({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [pickerProps.query, pickerProps.users, update]);
+  }, [update]);
 
   if (!style || typeof document === "undefined") return null;
 
@@ -158,7 +176,7 @@ export function AnchoredMentionPicker({
     <div style={style}>
       <MentionPicker {...pickerProps} className="max-h-full" />
     </div>,
-    document.body,
+    document.body
   );
 }
 
@@ -166,7 +184,7 @@ export function insertMention(
   body: string,
   caret: number,
   start: number,
-  user: NotesDirectoryUser,
+  user: NotesDirectoryUser
 ): { body: string; caret: number } {
   const token = `${formatMentionToken(user.id)} `;
   const next = `${body.slice(0, start)}${token}${body.slice(caret)}`;

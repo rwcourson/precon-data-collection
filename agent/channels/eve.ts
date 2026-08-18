@@ -1,13 +1,16 @@
+import { type AuthFn, vercelOidc } from "eve/channels/auth";
 import { eveChannel } from "eve/channels/eve";
-import { vercelOidc, type AuthFn } from "eve/channels/auth";
 
 function appOrigin(request: Request): string {
-  const fromEnv = process.env.APP_ORIGIN?.trim() || process.env.EVE_APP_ORIGIN?.trim();
+  const fromEnv =
+    process.env.APP_ORIGIN?.trim() || process.env.EVE_APP_ORIGIN?.trim();
   if (fromEnv) return fromEnv.replace(/\/$/, "");
-  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
   const proto = request.headers.get("x-forwarded-proto") || "http";
   if (host) return `${proto}://${host}`;
-  if (process.env.VERCEL_URL?.trim()) return `https://${process.env.VERCEL_URL.trim()}`;
+  if (process.env.VERCEL_URL?.trim())
+    return `https://${process.env.VERCEL_URL.trim()}`;
   return "http://127.0.0.1:3000";
 }
 
@@ -23,9 +26,12 @@ function appSession(): AuthFn<Request> {
         attributes: {} as Record<string, string>,
       };
     }
-    const response = await fetch(`${appOrigin(request)}/api/v1/copilot/identity`, {
-      headers: cookie ? { cookie } : {},
-    });
+    const response = await fetch(
+      `${appOrigin(request)}/api/v1/copilot/identity`,
+      {
+        headers: cookie ? { cookie } : {},
+      }
+    );
     if (!response.ok) return null;
     const user = (await response.json()) as {
       id?: number;

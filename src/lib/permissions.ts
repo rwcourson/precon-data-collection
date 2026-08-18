@@ -3,9 +3,6 @@
  * call `authorize()` / `src/lib/authorization/decisions.ts` instead.
  */
 import type { EstimateRound, User } from "@/db/schema";
-import { isCorporateAdmin, isSuperAdmin } from "@/lib/super-admin";
-import { createPrincipal } from "@/lib/authorization/principal";
-import { allowedTransitionsForUser } from "@/lib/authorization/lifecycle";
 import {
   principalCanApproveLock,
   principalCanCreatePursuit,
@@ -18,6 +15,9 @@ import {
   principalCanManageRegionColumns,
   principalCanViewAudit,
 } from "@/lib/authorization/decisions";
+import { allowedTransitionsForUser } from "@/lib/authorization/lifecycle";
+import { createPrincipal } from "@/lib/authorization/principal";
+import { isCorporateAdmin, isSuperAdmin } from "@/lib/super-admin";
 
 export { ROLE_LABELS, STATUS_LABELS, STATUS_ORDER } from "@/lib/labels";
 export { isCorporateAdmin, isSuperAdmin };
@@ -40,7 +40,7 @@ export function canEditBidSchedule(user: User): boolean {
 
 export function canEnterPostBid(
   user: User,
-  round: Pick<EstimateRound, "status"> & { id?: number; region?: string | null },
+  round: Pick<EstimateRound, "status"> & { id?: number; region?: string | null }
 ): boolean {
   return principalCanEnterPostBid(asPrincipal(user), {
     id: round.id ?? 0,
@@ -51,7 +51,7 @@ export function canEnterPostBid(
 
 export function canApproveLock(
   user: User,
-  round: Pick<EstimateRound, "region"> & { id?: number },
+  round: Pick<EstimateRound, "region"> & { id?: number }
 ): boolean {
   return principalCanApproveLock(asPrincipal(user), {
     id: round.id ?? 0,
@@ -62,7 +62,7 @@ export function canApproveLock(
 
 export function canEditAfterLock(
   user: User,
-  round: Pick<EstimateRound, "region"> & { id?: number },
+  round: Pick<EstimateRound, "region"> & { id?: number }
 ): boolean {
   return principalCanEditAfterLock(asPrincipal(user), {
     id: round.id ?? 0,
@@ -91,7 +91,9 @@ export function canManagePeople(user: User): boolean {
   return principalCanManagePeople(asPrincipal(user));
 }
 
-export function allowedTransitions(user: User, round: Pick<EstimateRound, "status">) {
+export function allowedTransitions(
+  user: User,
+  round: Pick<EstimateRound, "status">
+) {
   return allowedTransitionsForUser(user, round);
 }
-

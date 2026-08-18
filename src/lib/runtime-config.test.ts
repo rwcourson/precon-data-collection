@@ -3,8 +3,8 @@ import {
   assertDemoSeedAllowed,
   getRuntimeConfig,
   inspectRuntimeConfig,
-  runtimeDiagnostics,
   RuntimeConfigError,
+  runtimeDiagnostics,
 } from "@/lib/runtime-config";
 
 const demoEnv = {
@@ -27,7 +27,8 @@ const productionEnv = {
   AUTH_MODE: "sso",
   DATABASE_MODE: "postgres",
   DATABASE_URL: "postgresql://app:secret@db.example.com/app?sslmode=require",
-  DATABASE_URL_UNPOOLED: "postgresql://migrator:secret@db.example.com/app?sslmode=require",
+  DATABASE_URL_UNPOOLED:
+    "postgresql://migrator:secret@db.example.com/app?sslmode=require",
   APP_ORIGIN: "https://precon.example.com",
   ALLOWED_ORIGINS: "https://precon.example.com",
   CRON_SECRET: "c".repeat(32),
@@ -85,7 +86,7 @@ describe("runtime-config environment matrix", () => {
           "SSO_ALLOWED_DOMAINS",
           "PRIVATE_STORAGE_MODE",
           "APP_ORIGIN",
-        ]),
+        ])
       );
     }
   });
@@ -98,7 +99,10 @@ describe("runtime-config environment matrix", () => {
       VERCEL_ENV: "production",
     });
     expect(status.ok).toBe(false);
-    if (!status.ok) expect(status.issues.some((issue) => issue.key === "DATABASE_MODE")).toBe(true);
+    if (!status.ok)
+      expect(status.issues.some((issue) => issue.key === "DATABASE_MODE")).toBe(
+        true
+      );
   });
 
   it("treats preview as explicit configuration rather than inferring from NODE_ENV", () => {
@@ -114,14 +118,24 @@ describe("runtime-config environment matrix", () => {
 
   it("forbids demo auth on hosted production deployments regardless of APP_ENV", () => {
     // VERCEL_ENV=production, and VERCEL set without VERCEL_ENV (fail closed).
-    for (const hostedEnv of [{ VERCEL: "1", VERCEL_ENV: "production" }, { VERCEL: "1" }]) {
-      const status = inspectRuntimeConfig({ ...demoEnv, APP_ENV: "local", ...hostedEnv });
+    for (const hostedEnv of [
+      { VERCEL: "1", VERCEL_ENV: "production" },
+      { VERCEL: "1" },
+    ]) {
+      const status = inspectRuntimeConfig({
+        ...demoEnv,
+        APP_ENV: "local",
+        ...hostedEnv,
+      });
       expect(status.ok).toBe(false);
       if (!status.ok) {
         expect(status.issues).toEqual(
           expect.arrayContaining([
-            { key: "AUTH_MODE", reason: "must be sso on hosted production deployments" },
-          ]),
+            {
+              key: "AUTH_MODE",
+              reason: "must be sso on hosted production deployments",
+            },
+          ])
         );
       }
     }
@@ -132,7 +146,8 @@ describe("runtime-config environment matrix", () => {
       ...demoEnv,
       DATABASE_MODE: "postgres",
       DATABASE_URL: "postgresql://app:secret@db.example.com/app",
-      DATABASE_URL_UNPOOLED: "postgresql://app:secret@db-direct.example.com/app",
+      DATABASE_URL_UNPOOLED:
+        "postgresql://app:secret@db-direct.example.com/app",
       PGLITE_DATA_DIR: undefined,
       VERCEL: "1",
       VERCEL_ENV: "preview",
@@ -159,13 +174,14 @@ describe("runtime-config environment matrix", () => {
       API_TOKEN_MAX_TTL_DAYS: "90",
       VERCEL: "1",
       VERCEL_ENV: "preview",
-      VERCEL_BRANCH_URL: "precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
+      VERCEL_BRANCH_URL:
+        "precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
       VERCEL_URL: "precon-data-abc123.magnus.brasfieldgorrie.app",
     });
     expect(status.ok).toBe(true);
     if (status.ok) {
       expect(status.config.appOrigin).toBe(
-        "https://precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
+        "https://precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app"
       );
       expect(status.config.allowedOrigins).toEqual([
         "https://precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
@@ -185,12 +201,16 @@ describe("runtime-config environment matrix", () => {
     });
     expect(status.ok).toBe(false);
     if (!status.ok) {
-      expect(status.issues.some((issue) => issue.key === "APP_ORIGIN")).toBe(true);
+      expect(status.issues.some((issue) => issue.key === "APP_ORIGIN")).toBe(
+        true
+      );
     }
   });
 
   it("returns redacted diagnostics without URLs or secrets", () => {
-    const diagnostics = JSON.stringify(runtimeDiagnostics(inspectRuntimeConfig(productionEnv)));
+    const diagnostics = JSON.stringify(
+      runtimeDiagnostics(inspectRuntimeConfig(productionEnv))
+    );
     expect(diagnostics).not.toContain("secret");
     expect(diagnostics).not.toContain("db.example.com");
     expect(diagnostics).not.toContain(productionEnv.CRON_SECRET);
@@ -203,12 +223,14 @@ describe("runtime-config demo seed gate", () => {
   });
 
   it("refuses production and hosted Postgres targets", () => {
-    expect(() => assertDemoSeedAllowed(productionEnv)).toThrow(RuntimeConfigError);
+    expect(() => assertDemoSeedAllowed(productionEnv)).toThrow(
+      RuntimeConfigError
+    );
     expect(() =>
       assertDemoSeedAllowed({
         ...demoEnv,
         DATABASE_URL: "postgresql://user:password@hosted.example.com/prod",
-      }),
+      })
     ).toThrow(RuntimeConfigError);
   });
 });

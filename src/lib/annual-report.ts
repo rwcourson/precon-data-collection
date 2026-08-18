@@ -1,7 +1,7 @@
 import type { EstimateRound } from "@/db/schema";
-import type { RoundRow } from "./queries";
-import { computeStats, rollup, type RollupStats } from "./rollup";
 import { fmtDollars, fmtPercent } from "./format";
+import type { RoundRow } from "./queries";
+import { computeStats, type RollupStats, rollup } from "./rollup";
 
 /**
  * Annual Regional Report — the leadership "yearbook" from PPT slides 18-20:
@@ -54,12 +54,18 @@ export function buildAnnualReport({
       (r) =>
         (region == null || r.region === region) &&
         r.bidYear >= fromYear &&
-        r.bidYear <= toYear,
+        r.bidYear <= toYear
     );
 
   const years: { year: number; stats: RollupStats }[] = [];
   for (let y = fromYear; y <= toYear; y++) {
-    years.push({ year: y, stats: computeStats(String(y), inScope.filter((r) => r.bidYear === y)) });
+    years.push({
+      year: y,
+      stats: computeStats(
+        String(y),
+        inScope.filter((r) => r.bidYear === y)
+      ),
+    });
   }
 
   const focusYear = toYear;
@@ -80,7 +86,10 @@ export function buildAnnualReport({
     overall: computeStats("all", inScope),
     focusYear,
     focus: computeStats(String(focusYear), focusRounds),
-    priorYear: priorRounds.length > 0 ? computeStats(String(focusYear - 1), priorRounds) : null,
+    priorYear:
+      priorRounds.length > 0
+        ? computeStats(String(focusYear - 1), priorRounds)
+        : null,
     bySector: rollup(focusRounds, (r) => r.marketSector ?? "Unclassified"),
     byDepartment: rollup(focusRounds, (r) => r.preconDepartment),
     wins,
@@ -109,9 +118,15 @@ function toHighlight(rows: RoundRow[]) {
 // ---- HTML rendering (feeds the PDF engine and the on-screen preview) ----
 
 const esc = (s: unknown) =>
-  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 
-const delta = (current: number | null, prior: number | null | undefined): string => {
+const delta = (
+  current: number | null,
+  prior: number | null | undefined
+): string => {
   if (current == null || prior == null || prior === 0) return "";
   const change = (current - prior) / Math.abs(prior);
   const up = change >= 0;
@@ -128,18 +143,66 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
   const { focus, priorYear } = report;
 
   const scorecard = [
-    { label: "Pursuit Volume", value: fmtDollars(focus.volume, true), delta: delta(focus.volume, priorYear?.volume) },
-    { label: "Estimate Rounds", value: String(focus.rounds), delta: delta(focus.rounds, priorYear?.rounds) },
-    { label: "Win Rate (count)", value: fmtPercent(focus.winRate), delta: delta(focus.winRate, priorYear?.winRate) },
-    { label: "Win Rate (value)", value: fmtPercent(focus.winRateByValue), delta: delta(focus.winRateByValue, priorYear?.winRateByValue) },
-    { label: "Won Volume", value: fmtDollars(focus.wonVolume, true), delta: delta(focus.wonVolume, priorYear?.wonVolume) },
-    { label: "Expected Fee", value: fmtDollars(focus.totalFee, true), delta: delta(focus.totalFee, priorYear?.totalFee) },
-    { label: "Fee % of Volume", value: fmtPercent(focus.weightedFeePct), delta: delta(focus.weightedFeePct, priorYear?.weightedFeePct) },
-    { label: "Contingency % of Volume", value: fmtPercent(focus.weightedContingencyPct), delta: "" },
-    { label: "GC+GR % of Volume", value: fmtPercent(focus.weightedGcGrPct), delta: "" },
-    { label: "Revenue per PM Year", value: fmtDollars(focus.revenuePerPmYear, true), delta: delta(focus.revenuePerPmYear, priorYear?.revenuePerPmYear) },
-    { label: "Self-Perform Capture", value: fmtPercent(focus.selfPerformCaptureRate), delta: "" },
-    { label: "Craft Labor $ / Man Hour", value: fmtDollars(focus.laborCostPerManHour), delta: "" },
+    {
+      label: "Pursuit Volume",
+      value: fmtDollars(focus.volume, true),
+      delta: delta(focus.volume, priorYear?.volume),
+    },
+    {
+      label: "Estimate Rounds",
+      value: String(focus.rounds),
+      delta: delta(focus.rounds, priorYear?.rounds),
+    },
+    {
+      label: "Win Rate (count)",
+      value: fmtPercent(focus.winRate),
+      delta: delta(focus.winRate, priorYear?.winRate),
+    },
+    {
+      label: "Win Rate (value)",
+      value: fmtPercent(focus.winRateByValue),
+      delta: delta(focus.winRateByValue, priorYear?.winRateByValue),
+    },
+    {
+      label: "Won Volume",
+      value: fmtDollars(focus.wonVolume, true),
+      delta: delta(focus.wonVolume, priorYear?.wonVolume),
+    },
+    {
+      label: "Expected Fee",
+      value: fmtDollars(focus.totalFee, true),
+      delta: delta(focus.totalFee, priorYear?.totalFee),
+    },
+    {
+      label: "Fee % of Volume",
+      value: fmtPercent(focus.weightedFeePct),
+      delta: delta(focus.weightedFeePct, priorYear?.weightedFeePct),
+    },
+    {
+      label: "Contingency % of Volume",
+      value: fmtPercent(focus.weightedContingencyPct),
+      delta: "",
+    },
+    {
+      label: "GC+GR % of Volume",
+      value: fmtPercent(focus.weightedGcGrPct),
+      delta: "",
+    },
+    {
+      label: "Revenue per PM Year",
+      value: fmtDollars(focus.revenuePerPmYear, true),
+      delta: delta(focus.revenuePerPmYear, priorYear?.revenuePerPmYear),
+    },
+    {
+      label: "Self-Perform Capture",
+      value: fmtPercent(focus.selfPerformCaptureRate),
+      delta: "",
+    },
+    {
+      label: "Craft Labor $ / Man Hour",
+      value: fmtDollars(focus.laborCostPerManHour),
+      delta: "",
+    },
   ];
 
   const trendRows = report.years
@@ -153,7 +216,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
       <td class="num">${fmtPercent(stats.weightedFeePct)}</td>
       <td class="num">${fmtPercent(stats.weightedContingencyPct)}</td>
       <td class="num">${fmtDollars(stats.feePerPmMonth, true)}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -166,7 +229,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
       rounds: number,
       volume: number,
       winRate: number | null,
-      feePct: number | null,
+      feePct: number | null
     ) => `<tr>
       <td>${esc(key)}</td>
       <td class="num">${rounds}</td>
@@ -189,7 +252,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
         rounds,
         volume,
         decidedVolume > 0 ? wonVolume / decidedVolume : null,
-        volume > 0 ? fee / volume : null,
+        volume > 0 ? fee / volume : null
       );
     }
     return html;
@@ -203,7 +266,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
       <td>${esc(w.preconDepartment)}</td>
       <td>${esc(w.estimatePhase)}</td>
       <td class="num">${fmtDollars(w.estimateValue, true)}</td>
-    </tr>`,
+    </tr>`
     )
     .join("");
 
@@ -266,7 +329,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
     <h1>${esc(report.scope)} — Annual Preconstruction Report</h1>
     <p class="meta">Bid Years ${report.fromYear}–${report.toYear} · ${report.overall.rounds} estimate rounds · Generated ${new Date().toLocaleDateString(
       "en-US",
-      { dateStyle: "long" },
+      { dateStyle: "long" }
     )}</p>
   </header>
 
@@ -282,7 +345,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
       <div class="label">${esc(k.label)}</div>
       <div class="value">${k.value}</div>
       ${k.delta}
-    </div>`,
+    </div>`
       )
       .join("")}
   </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { sanitizePlan, sanitizeWidgetConfig } from "./dashboard-sanitize";
 import type { CopilotPlan } from "./dashboard-copilot";
+import { sanitizePlan, sanitizeWidgetConfig } from "./dashboard-sanitize";
 
 const layout = { w: 3, h: 2, x: 0, y: 0 };
 
@@ -19,7 +19,9 @@ describe("dashboard sanitize allowlists", () => {
     });
     expect(cleaned.metricKey).toBe("estimateValue");
     expect(cleaned.groupBy).toBe("region");
-    expect(cleaned.filters).toEqual([{ field: "region", op: "eq", value: "Florida" }]);
+    expect(cleaned.filters).toEqual([
+      { field: "region", op: "eq", value: "Florida" },
+    ]);
   });
 
   it("keeps an on-list plan intact", () => {

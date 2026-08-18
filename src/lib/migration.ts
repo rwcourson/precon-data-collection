@@ -2,8 +2,8 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { appSettings, dataQualityFlags } from "@/db/schema";
-import { IMPORT_SOURCE_KEY, type ImportSource } from "./migration-source";
 import { METRIC_DEFS } from "./metrics";
+import { IMPORT_SOURCE_KEY, type ImportSource } from "./migration-source";
 import { getMultiValuesForRounds, getRoundsWithJobs } from "./queries";
 import { requiredCompletion } from "./validation";
 import type { Workspace } from "./workspace";
@@ -48,11 +48,16 @@ export type MigrationReport = {
 };
 
 export async function getImportSource(): Promise<ImportSource | null> {
-  const [row] = await db.select().from(appSettings).where(eq(appSettings.key, IMPORT_SOURCE_KEY));
+  const [row] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, IMPORT_SOURCE_KEY));
   return row ? (row.value as ImportSource) : null;
 }
 
-export async function buildMigrationReport(workspace: Workspace): Promise<MigrationReport> {
+export async function buildMigrationReport(
+  workspace: Workspace
+): Promise<MigrationReport> {
   const rows = await getRoundsWithJobs(workspace);
   const multiMap = await getMultiValuesForRounds(rows.map((r) => r.round.id));
   const flags = await db.select().from(dataQualityFlags);
@@ -67,27 +72,29 @@ export async function buildMigrationReport(workspace: Workspace): Promise<Migrat
   const buckets = new Map<string, YearRow>();
   for (const { round, job } of rows) {
     const key = `${round.bidYear}\u241F${round.region}`;
-    const b =
-      buckets.get(key) ??
-      {
-        bidYear: round.bidYear,
-        region: round.region,
-        rounds: 0,
-        linkedJobs: 0,
-        lockedRounds: 0,
-        completeness: 0,
-        openFlags: 0,
-        estimateValueCoverage: 0,
-      };
+    const b = buckets.get(key) ?? {
+      bidYear: round.bidYear,
+      region: round.region,
+      rounds: 0,
+      linkedJobs: 0,
+      lockedRounds: 0,
+      completeness: 0,
+      openFlags: 0,
+      estimateValueCoverage: 0,
+    };
     b.rounds++;
     if (job.isLinked) b.linkedJobs++;
     if (round.status === "locked") b.lockedRounds++;
     if (round.estimateValue != null) b.estimateValueCoverage++;
-    const { done, total } = requiredCompletion(round, multiMap.get(round.id) ?? {}, {
-      jobNumber: job.jobNumber,
-      jobName: job.jobName,
-      estimateLeadName: round.estimateLeadId ? "assigned" : null,
-    });
+    const { done, total } = requiredCompletion(
+      round,
+      multiMap.get(round.id) ?? {},
+      {
+        jobNumber: job.jobNumber,
+        jobName: job.jobName,
+        estimateLeadName: round.estimateLeadId ? "assigned" : null,
+      }
+    );
     b.completeness += total ? done / total : 0;
     b.openFlags += openByRound.get(round.id) ?? 0;
     buckets.set(key, b);
@@ -102,7 +109,9 @@ export async function buildMigrationReport(workspace: Workspace): Promise<Migrat
     .sort((a, b) => b.bidYear - a.bidYear || a.region.localeCompare(b.region));
 
   // Metric reproducibility is only meaningful once a round has post-bid data.
-  const postBid = rows.filter((r) => ["submitted", "post_bid", "locked"].includes(r.round.status));
+  const postBid = rows.filter((r) =>
+    ["submitted", "post_bid", "locked"].includes(r.round.status)
+  );
   const metrics: MetricCoverage[] = METRIC_DEFS.map((def) => {
     const computable = postBid.filter((r) => {
       const v = def.calc(r.round);
@@ -121,7 +130,9 @@ export async function buildMigrationReport(workspace: Workspace): Promise<Migrat
     .map((m) => ({ key: m.key, label: m.label }));
 
   const jobIds = new Set(rows.map((r) => r.job.id));
-  const linked = new Set(rows.filter((r) => r.job.isLinked).map((r) => r.job.id));
+  const linked = new Set(
+    rows.filter((r) => r.job.isLinked).map((r) => r.job.id)
+  );
 
   return {
     scope: workspace.region ?? "Corporate (all Regions)",
@@ -145,11 +156,17 @@ export type ChecklistItem = {
 /** Cutover gates, evaluated against live state rather than kept in a doc. */
 export function cutoverChecklist(
   report: MigrationReport,
-  ctx: { authMode: string; connectMode: string; warehouseConfigured: boolean; emailProvider: string },
+  ctx: {
+    authMode: string;
+    connectMode: string;
+    warehouseConfigured: boolean;
+    emailProvider: string;
+  }
 ): ChecklistItem[] {
   const worstYear = report.years.reduce<YearRow | null>(
-    (worst, y) => (worst == null || y.completeness < worst.completeness ? y : worst),
-    null,
+    (worst, y) =>
+      worst == null || y.completeness < worst.completeness ? y : worst,
+    null
   );
 
   return [

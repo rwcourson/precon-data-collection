@@ -24,7 +24,9 @@ export function parseUserTablePrefsConfig(raw: unknown): UserTablePrefsConfig {
   const viewish = parseBidScheduleViewConfig(raw);
   const extras = prefsExtrasSchema.safeParse(raw);
   const columnWidths = extras.success ? extras.data.columnWidths : undefined;
-  const defaultViewId = extras.success ? (extras.data.defaultViewId ?? null) : null;
+  const defaultViewId = extras.success
+    ? (extras.data.defaultViewId ?? null)
+    : null;
   return {
     version: 1,
     columns: viewish.columns,
@@ -62,7 +64,10 @@ export function resolveBidScheduleTableState(input: {
   skipDefaultView?: boolean;
   urlDensity?: "summary" | "detail";
   prefs: UserTablePrefsConfig;
-  views: { id: number; config: { columns?: string[]; density?: "summary" | "detail" } }[];
+  views: {
+    id: number;
+    config: { columns?: string[]; density?: "summary" | "detail" };
+  }[];
 }): ResolvedBidScheduleTableState {
   const viewsById = new Map(input.views.map((view) => [view.id, view]));
   const defaultViewId =

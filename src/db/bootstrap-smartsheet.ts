@@ -13,7 +13,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { DEMO_RUNTIME_DEFAULTS } from "./demo-env";
 
-const FULL_DIR = process.env.PGLITE_FULL_DATA_DIR?.trim() || ".pglite/data-full";
+const FULL_DIR =
+  process.env.PGLITE_FULL_DATA_DIR?.trim() || ".pglite/data-full";
 
 function applyEnv(): void {
   for (const [key, value] of Object.entries(DEMO_RUNTIME_DEFAULTS)) {
@@ -48,9 +49,11 @@ async function main(): Promise<void> {
   if (!fs.existsSync(jsonDir)) {
     throw new Error(`Missing Smartsheet export at ${jsonDir}`);
   }
-  const count = fs.readdirSync(jsonDir).filter((f) => f.endsWith(".json")).length;
+  const count = fs
+    .readdirSync(jsonDir)
+    .filter((f) => f.endsWith(".json")).length;
   process.stdout.write(
-    `Full Smartsheet bootstrap (${count} JSON files) → PGlite ${FULL_DIR}\n`,
+    `Full Smartsheet bootstrap (${count} JSON files) → PGlite ${FULL_DIR}\n`
   );
   wipe(FULL_DIR);
 
@@ -69,7 +72,7 @@ async function main(): Promise<void> {
         cwd: process.cwd(),
         env: { ...process.env },
         stdio: "inherit",
-      },
+      }
     );
     if (result.status !== 0) {
       throw new Error(`seed-from-smartsheet exited ${result.status ?? 1}`);
@@ -84,13 +87,13 @@ async function main(): Promise<void> {
   process.stdout.write("    DATABASE_MODE=pglite\n");
   process.stdout.write(`    PGLITE_DATA_DIR=${FULL_DIR}\n`);
   process.stdout.write(
-    "  Recommended: keep DATABASE_MODE=postgres to use Neon (already fully loaded).\n",
+    "  Recommended: keep DATABASE_MODE=postgres to use Neon (already fully loaded).\n"
   );
 }
 
 main().catch((error) => {
   process.stderr.write(
-    `${error instanceof Error ? error.message : "Smartsheet bootstrap failed."}\n`,
+    `${error instanceof Error ? error.message : "Smartsheet bootstrap failed."}\n`
   );
   process.exitCode = 1;
 });

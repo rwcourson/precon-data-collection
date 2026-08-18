@@ -1,10 +1,10 @@
-import * as React from "react"
-import { mergeProps } from "@base-ui/react/merge-props"
-import { useRender } from "@base-ui/react/use-render"
-import { cva, type VariantProps } from "class-variance-authority"
-import { XIcon } from "lucide-react"
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
+import { cva, type VariantProps } from "class-variance-authority";
+import { XIcon } from "lucide-react";
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
   "group/badge inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border border-transparent font-medium whitespace-nowrap transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&>svg]:pointer-events-none",
@@ -38,7 +38,7 @@ const badgeVariants = cva(
       size: "default",
     },
   }
-)
+);
 
 function Badge({
   className,
@@ -61,7 +61,7 @@ function Badge({
       variant,
       size,
     },
-  })
+  });
 }
 
 function BadgeRemove({
@@ -82,7 +82,7 @@ function BadgeRemove({
     >
       <XIcon />
     </button>
-  )
+  );
 }
 
-export { Badge, BadgeRemove, badgeVariants }
+export { Badge, BadgeRemove, badgeVariants };

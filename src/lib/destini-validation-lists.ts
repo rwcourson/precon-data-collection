@@ -127,7 +127,13 @@ export const DESTINI_VALIDATION_LISTS: Record<string, string[]> = {
     "Water - Wastewater",
     "Water - Water Treatment",
   ],
-  procurement: ["RFP/RFQ", "Bid - Closed", "Bid - Open", "Bid - Best Value", "Negotiated"],
+  procurement: [
+    "RFP/RFQ",
+    "Bid - Closed",
+    "Bid - Open",
+    "Bid - Best Value",
+    "Negotiated",
+  ],
   designContract: ["Bid-Build", "Design Build", "Hybrid DB"],
   selfPerformWorkType: [
     "Erosion Control",
@@ -211,11 +217,7 @@ const LIST_KEY_MAP: Record<string, string> = {
 };
 
 function canon(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .replace(/[–—]/g, "-")
-    .replace(/\s+/g, " ");
+  return s.trim().toLowerCase().replace(/[–—]/g, "-").replace(/\s+/g, " ");
 }
 
 export type DestiniListGap = {
@@ -227,11 +229,13 @@ export type DestiniListGap = {
 
 /** Compare Destini Data Validation lists to seeded reference lists (dash-insensitive). */
 export function compareDestiniLists(
-  seeded: Record<string, { label: string; values: string[] }>,
+  seeded: Record<string, { label: string; values: string[] }>
 ): DestiniListGap[] {
   const gaps: DestiniListGap[] = [];
 
-  for (const [destiniKey, destiniValues] of Object.entries(DESTINI_VALIDATION_LISTS)) {
+  for (const [destiniKey, destiniValues] of Object.entries(
+    DESTINI_VALIDATION_LISTS
+  )) {
     const appKey = LIST_KEY_MAP[destiniKey] ?? destiniKey;
     const app = seeded[appKey];
     if (!app) {

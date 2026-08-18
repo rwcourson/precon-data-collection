@@ -39,7 +39,9 @@ const DEFAULTS: BidScheduleViewConfigV2 = {
 };
 
 /** Parse saved-view JSONB. Unknown/legacy shapes fall back to v2 defaults without throwing. */
-export function parseBidScheduleViewConfig(raw: unknown): BidScheduleViewConfigV2 {
+export function parseBidScheduleViewConfig(
+  raw: unknown
+): BidScheduleViewConfigV2 {
   const parsed = bidScheduleViewConfigV2Schema.safeParse(raw);
   const base = parsed.success ? parsed.data : {};
   const v1 = bidScheduleViewConfigV1Schema.safeParse(raw);
@@ -57,13 +59,17 @@ export function parseBidScheduleViewConfig(raw: unknown): BidScheduleViewConfigV
     queue: base.queue ?? legacy.queue,
     columns: base.columns ?? legacy.columns,
     density: base.density ?? legacy.density,
-    regions: regions.length ? regions : region && region !== "all" ? [region] : [],
+    regions: regions.length
+      ? regions
+      : region && region !== "all"
+        ? [region]
+        : [],
     departments,
   };
 }
 
 export function toBidScheduleViewConfigV2(
-  config: Partial<BidScheduleViewConfigV2> & { region?: string },
+  config: Partial<BidScheduleViewConfigV2> & { region?: string }
 ): BidScheduleViewConfigV2 {
   return parseBidScheduleViewConfig({ version: 2, ...config });
 }

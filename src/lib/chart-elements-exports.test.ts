@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { CHART_COLORS } from "@rwcourson/chart-elements";
+import { describe, expect, it } from "vitest";
 
 const ENTRY_POINTS = [
   "@rwcourson/chart-elements/charts",
@@ -32,7 +32,7 @@ describe("chart-elements published kit", () => {
       ENTRY_POINTS.map(async (specifier) => {
         const mod = await import(specifier);
         return { specifier, keys: Object.keys(mod) };
-      }),
+      })
     );
     for (const entry of loaded) {
       expect(entry.keys.length, entry.specifier).toBeGreaterThan(0);

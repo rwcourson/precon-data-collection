@@ -1,17 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Select as SelectPrimitive } from "@base-ui/react/select"
-
-import { cn } from "@/lib/utils"
-import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import type * as React from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Pass `items={[{ value, label }]}` whenever the stored value is an id or key
  * that differs from the visible label. Without it, the trigger shows the raw
  * value (e.g. user id "9" instead of a name).
  */
-const Select = SelectPrimitive.Root
+const Select = SelectPrimitive.Root;
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -20,7 +19,7 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
       className={cn("scroll-my-1 p-1", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
@@ -30,7 +29,7 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
       className={cn("flex flex-1 text-left", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectTrigger({
@@ -39,7 +38,7 @@ function SelectTrigger({
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
-  size?: "sm" | "default"
+  size?: "sm" | "default";
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -58,7 +57,7 @@ function SelectTrigger({
         }
       />
     </SelectPrimitive.Trigger>
-  )
+  );
 }
 
 function SelectContent({
@@ -92,7 +91,7 @@ function SelectContent({
           data-slot="select-content"
           className={cn(
             "relative isolate z-50 max-h-[min(24rem,var(--available-height,24rem))] min-w-(--anchor-width) w-max max-w-[min(28rem,calc(100vw-1rem))] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-md border border-border/80 bg-popover p-1 text-popover-foreground shadow-lg ring-0 duration-100 data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            className,
+            className
           )}
           {...props}
         >
@@ -100,7 +99,7 @@ function SelectContent({
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>
     </SelectPrimitive.Portal>
-  )
+  );
 }
 
 function SelectLabel({
@@ -113,7 +112,7 @@ function SelectLabel({
       className={cn("px-1.5 py-1 text-xs text-muted-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectItem({
@@ -141,7 +140,7 @@ function SelectItem({
         <CheckIcon className="pointer-events-none size-3.5" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
-  )
+  );
 }
 
 function SelectSeparator({
@@ -154,7 +153,7 @@ function SelectSeparator({
       className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectScrollUpButton({
@@ -170,10 +169,9 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <ChevronUpIcon
-      />
+      <ChevronUpIcon />
     </SelectPrimitive.ScrollUpArrow>
-  )
+  );
 }
 
 function SelectScrollDownButton({
@@ -189,10 +187,9 @@ function SelectScrollDownButton({
       )}
       {...props}
     >
-      <ChevronDownIcon
-      />
+      <ChevronDownIcon />
     </SelectPrimitive.ScrollDownArrow>
-  )
+  );
 }
 
 export {
@@ -206,4 +203,4 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-}
+};

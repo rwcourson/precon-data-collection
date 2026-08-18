@@ -1,7 +1,7 @@
 import {
   inspectRuntimeConfig,
-  runtimeDiagnostics,
   type RuntimeConfigStatus,
+  runtimeDiagnostics,
 } from "@/lib/runtime-config";
 
 export type ReadinessResult = {
@@ -16,7 +16,7 @@ export type ReadinessResult = {
 /** Builds a sanitized readiness result; dependency errors never cross the boundary. */
 export async function checkReadiness(
   probeDatabase: () => Promise<void>,
-  status: RuntimeConfigStatus = inspectRuntimeConfig(),
+  status: RuntimeConfigStatus = inspectRuntimeConfig()
 ): Promise<ReadinessResult> {
   if (!status.ok) {
     return {

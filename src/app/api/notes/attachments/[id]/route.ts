@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { DomainError } from "@/domain/errors";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { attachmentContentDisposition } from "@/lib/note-storage";
@@ -26,12 +26,14 @@ const SAFE_CONTENT_TYPES = new Set([
 
 function safeContentType(stored: string): string {
   const normalized = stored.split(";")[0]?.trim().toLowerCase() ?? "";
-  return SAFE_CONTENT_TYPES.has(normalized) ? normalized : "application/octet-stream";
+  return SAFE_CONTENT_TYPES.has(normalized)
+    ? normalized
+    : "application/octet-stream";
 }
 
 export async function GET(
   _req: NextRequest,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await ctx.params;
@@ -51,7 +53,12 @@ export async function GET(
     });
   } catch (error) {
     if (error instanceof DomainError) {
-      const status = error.code === "NOT_FOUND" ? 404 : error.code === "FORBIDDEN" ? 403 : 400;
+      const status =
+        error.code === "NOT_FOUND"
+          ? 404
+          : error.code === "FORBIDDEN"
+            ? 403
+            : 400;
       return new Response(error.what, { status });
     }
     return new Response("Not found", { status: 404 });

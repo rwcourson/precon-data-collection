@@ -1,7 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { eq } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, ensureDbReady } from "@/db";
 import {
   apiTokens,
@@ -14,20 +14,26 @@ import {
 } from "@/db/schema";
 
 async function deleteRoundTree(roundId: number, jobId: number) {
-  await db.delete(statusTransitions).where(eq(statusTransitions.roundId, roundId));
+  await db
+    .delete(statusTransitions)
+    .where(eq(statusTransitions.roundId, roundId));
   await db.delete(estimateRounds).where(eq(estimateRounds.id, roundId));
   await db.delete(jobs).where(eq(jobs.id, jobId));
 }
+
+import { POST as pursuitsPost } from "@/app/api/v1/mobile/pursuits/route";
+import { POST as transitionPost } from "@/app/api/v1/mobile/rounds/[id]/transition/route";
 import { DomainError } from "@/domain/errors";
 import { createPrincipal } from "@/lib/authorization/principal";
 import { issueDemoSession } from "@/lib/mobile-auth";
-import { POST as transitionPost } from "@/app/api/v1/mobile/rounds/[id]/transition/route";
-import { POST as pursuitsPost } from "@/app/api/v1/mobile/pursuits/route";
-import { pursuitService, requireCreatedPursuit } from "@/services/pursuit-service";
 import {
-  assertPrincipalCanDistribute,
   assertPrincipalCanCreatePursuit,
+  assertPrincipalCanDistribute,
 } from "@/services/mutation-policy";
+import {
+  pursuitService,
+  requireCreatedPursuit,
+} from "@/services/pursuit-service";
 
 let pcm: typeof users.$inferSelect;
 let leadership: typeof users.$inferSelect;
@@ -57,7 +63,11 @@ function request(url: string, token: string, body?: unknown) {
 beforeAll(async () => {
   await ensureDbReady();
   [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
-  [leadership] = await db.select().from(users).where(eq(users.role, "leadership")).limit(1);
+  [leadership] = await db
+    .select()
+    .from(users)
+    .where(eq(users.role, "leadership"))
+    .limit(1);
   [corporateAdmin] = await db
     .select()
     .from(users)
@@ -72,7 +82,9 @@ beforeAll(async () => {
 afterAll(async () => {
   const { hashToken } = await import("@/lib/api-tokens");
   for (const plaintext of issued) {
-    await db.delete(apiTokens).where(eq(apiTokens.tokenHash, hashToken(plaintext)));
+    await db
+      .delete(apiTokens)
+      .where(eq(apiTokens.tokenHash, hashToken(plaintext)));
   }
 });
 
@@ -114,8 +126,10 @@ describe("mutation policy negative matrix", () => {
           values: { city: "Forbiddenville" },
           multiValues: {},
           customValues: {},
-        }),
-      ).rejects.toMatchObject({ code: "FORBIDDEN" satisfies DomainError["code"] });
+        })
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN" satisfies DomainError["code"],
+      });
 
       const pcmPrincipal = createPrincipal({
         user: pcm,
@@ -129,7 +143,7 @@ describe("mutation policy negative matrix", () => {
           values: { city: "AllowedCity" },
           multiValues: {},
           customValues: {},
-        }),
+        })
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
     } finally {
       await deleteRoundTree(round.id, job.id);
@@ -149,30 +163,42 @@ describe("mutation policy negative matrix", () => {
       workspaceRegion: pcm.region,
     });
 
-    expect(() => assertPrincipalCanCreatePursuit(leadershipPrincipal, pcm.region!)).toThrow(
-      DomainError,
-    );
-    expect(() => assertPrincipalCanCreatePursuit(pcmPrincipal, otherRegion)).toThrow(DomainError);
+    expect(() =>
+      assertPrincipalCanCreatePursuit(leadershipPrincipal, pcm.region!)
+    ).toThrow(DomainError);
+    expect(() =>
+      assertPrincipalCanCreatePursuit(pcmPrincipal, otherRegion)
+    ).toThrow(DomainError);
 
     const created = requireCreatedPursuit(
       await pursuitService.createPursuit(pcmPrincipal, {
-      mode: "manual",
-      jobName: `Phase 6 create ${Date.now()}`,
-      region: pcm.region!,
-      preconDepartment: "Test",
-      estimatePhase: "ROM",
-      bidYear: 2026,
-      initialStatus: "active",
-      confirmDuplicate: true,
-    }),
+        mode: "manual",
+        jobName: `Phase 6 create ${Date.now()}`,
+        region: pcm.region!,
+        preconDepartment: "Test",
+        estimatePhase: "ROM",
+        bidYear: 2026,
+        initialStatus: "active",
+        confirmDuplicate: true,
+      })
     );
 
     try {
       await expect(
-        pursuitService.transitionStatus(leadershipPrincipal, created.roundId, "submitted"),
-      ).rejects.toMatchObject({ code: expect.stringMatching(/FORBIDDEN|NOT_FOUND/) });
+        pursuitService.transitionStatus(
+          leadershipPrincipal,
+          created.roundId,
+          "submitted"
+        )
+      ).rejects.toMatchObject({
+        code: expect.stringMatching(/FORBIDDEN|NOT_FOUND/),
+      });
 
-      await pursuitService.transitionStatus(pcmPrincipal, created.roundId, "upcoming");
+      await pursuitService.transitionStatus(
+        pcmPrincipal,
+        created.roundId,
+        "upcoming"
+      );
       const [after] = await db
         .select()
         .from(estimateRounds)
@@ -180,7 +206,11 @@ describe("mutation policy negative matrix", () => {
       expect(after?.status).toBe("upcoming");
 
       await expect(
-        pursuitService.setOutcome(leadershipPrincipal, created.roundId, "successful"),
+        pursuitService.setOutcome(
+          leadershipPrincipal,
+          created.roundId,
+          "successful"
+        )
       ).rejects.toBeInstanceOf(DomainError);
     } finally {
       await deleteRoundTree(created.roundId, created.jobId);
@@ -208,17 +238,37 @@ describe("mutation policy negative matrix", () => {
         authSource: "demo_session",
         workspaceRegion: pcm.region,
       });
-      const { loadSheetForPrincipal } = await import("@/lib/authorization/loaders");
-      expect(await loadSheetForPrincipal(principal, sheet.id, "edit")).toBeNull();
-      expect(await loadSheetForPrincipal(principal, sheet.id, "manage")).toBeNull();
-      expect(await loadSheetForPrincipal(principal, sheet.id, "read")).not.toBeNull();
+      const { loadSheetForPrincipal } = await import(
+        "@/lib/authorization/loaders"
+      );
+      expect(
+        await loadSheetForPrincipal(principal, sheet.id, "edit")
+      ).toBeNull();
+      expect(
+        await loadSheetForPrincipal(principal, sheet.id, "manage")
+      ).toBeNull();
+      expect(
+        await loadSheetForPrincipal(principal, sheet.id, "read")
+      ).not.toBeNull();
 
-      await db.update(sheetAcls).set({ acl: "editor" }).where(eq(sheetAcls.id, acl.id));
-      expect(await loadSheetForPrincipal(principal, sheet.id, "edit")).not.toBeNull();
-      expect(await loadSheetForPrincipal(principal, sheet.id, "manage")).toBeNull();
+      await db
+        .update(sheetAcls)
+        .set({ acl: "editor" })
+        .where(eq(sheetAcls.id, acl.id));
+      expect(
+        await loadSheetForPrincipal(principal, sheet.id, "edit")
+      ).not.toBeNull();
+      expect(
+        await loadSheetForPrincipal(principal, sheet.id, "manage")
+      ).toBeNull();
 
-      await db.update(sheetAcls).set({ acl: "manager" }).where(eq(sheetAcls.id, acl.id));
-      expect(await loadSheetForPrincipal(principal, sheet.id, "manage")).not.toBeNull();
+      await db
+        .update(sheetAcls)
+        .set({ acl: "manager" })
+        .where(eq(sheetAcls.id, acl.id));
+      expect(
+        await loadSheetForPrincipal(principal, sheet.id, "manage")
+      ).not.toBeNull();
     } finally {
       await db.delete(sheets).where(eq(sheets.id, sheet.id));
     }
@@ -235,8 +285,12 @@ describe("mutation policy negative matrix", () => {
       authSource: "demo_session",
       workspaceRegion: rpd.region ?? pcm.region,
     });
-    expect(() => assertPrincipalCanDistribute(pcmPrincipal, pcm.region!)).toThrow(DomainError);
-    expect(() => assertPrincipalCanDistribute(rpdPrincipal, rpd.region ?? pcm.region!)).not.toThrow();
+    expect(() =>
+      assertPrincipalCanDistribute(pcmPrincipal, pcm.region!)
+    ).toThrow(DomainError);
+    expect(() =>
+      assertPrincipalCanDistribute(rpdPrincipal, rpd.region ?? pcm.region!)
+    ).not.toThrow();
   });
 
   it("rejects unauthorized mobile write routes without UI affordances", async () => {
@@ -250,7 +304,7 @@ describe("mutation policy negative matrix", () => {
         estimatePhase: "ROM",
         bidYear: 2026,
         initialStatus: "active",
-      }),
+      })
     );
     expect([403, 404]).toContain(create.status);
 
@@ -279,10 +333,14 @@ describe("mutation policy negative matrix", () => {
       .returning();
     try {
       const transition = await transitionPost(
-        request(`http://localhost/api/v1/mobile/rounds/${round.id}/transition`, token, {
-          to: "submitted",
-        }),
-        { params: Promise.resolve({ id: String(round.id) }) },
+        request(
+          `http://localhost/api/v1/mobile/rounds/${round.id}/transition`,
+          token,
+          {
+            to: "submitted",
+          }
+        ),
+        { params: Promise.resolve({ id: String(round.id) }) }
       );
       expect([403, 404]).toContain(transition.status);
     } finally {
@@ -298,17 +356,23 @@ describe("mutation service boundary inventory", () => {
   it("routes write entrypoints through principal-aware services", () => {
     expect(source("src/actions/pursuits.ts")).toContain("pursuitService");
     expect(source("src/actions/post-bid.ts")).toContain("pursuitService");
-    expect(source("src/actions/destini.ts")).toContain("pursuitService.savePostBidData");
-    expect(source("src/actions/distribution.ts")).toContain("assertPrincipalCanDistribute");
-    expect(source("src/app/api/v1/mobile/pursuits/route.ts")).toContain("principal.authorization");
-    expect(source("src/app/api/v1/mobile/rounds/[id]/transition/route.ts")).toContain(
-      "principal.authorization",
+    expect(source("src/actions/destini.ts")).toContain(
+      "pursuitService.savePostBidData"
     );
+    expect(source("src/actions/distribution.ts")).toContain(
+      "assertPrincipalCanDistribute"
+    );
+    expect(source("src/app/api/v1/mobile/pursuits/route.ts")).toContain(
+      "principal.authorization"
+    );
+    expect(
+      source("src/app/api/v1/mobile/rounds/[id]/transition/route.ts")
+    ).toContain("principal.authorization");
     expect(source("src/services/pursuit-service.ts")).not.toMatch(
-      /getCurrentUser|getMobileContext|runWithMobileContext/,
+      /getCurrentUser|getMobileContext|runWithMobileContext/
     );
     expect(source("src/services/mutation-policy.ts")).not.toMatch(
-      /getCurrentUser|getMobileContext|runWithMobileContext/,
+      /getCurrentUser|getMobileContext|runWithMobileContext/
     );
   });
 });

@@ -1,32 +1,31 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, asc, eq, max, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   auditLog,
+  type SheetColumnType,
+  type SheetViewConfig,
   sheetColumns,
   sheetPins,
   sheetRows,
   sheets,
-  type SheetColumnType,
-  type SheetViewConfig,
 } from "@/db/schema";
-import { getFlatDataset } from "@/lib/export-helpers";
+import { DomainError } from "@/domain/errors";
 import {
   listSheetsForPrincipal,
   loadSheetForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { DomainError } from "@/domain/errors";
+import { getFlatDataset } from "@/lib/export-helpers";
 import { FIELD_MAP, ROUND_COLUMN_KEYS } from "@/lib/fields";
-import { getReferenceValues } from "@/lib/queries";
-import { isRealCalendarDate } from "@/lib/validation";
 import { STATUS_LABELS } from "@/lib/labels";
+import { getReferenceValues } from "@/lib/queries";
 import {
   buildImportedSheet,
-  parseDelimited,
   type ImportTable,
+  parseDelimited,
 } from "@/lib/sheet-import";
 import {
   BLANK_VIEW_CONFIG,
@@ -34,7 +33,11 @@ import {
   duplicateName,
   matchesFilter,
 } from "@/lib/sheets";
-import { requireAuthorized, requireTargetRegion } from "@/services/mutation-policy";
+import { isRealCalendarDate } from "@/lib/validation";
+import {
+  requireAuthorized,
+  requireTargetRegion,
+} from "@/services/mutation-policy";
 
 /**
  * Sheet management. Every mutation re-checks who owns the sheet's workspace,
@@ -75,7 +78,8 @@ export type CreateSheetInput = {
 export async function createSheet(input: CreateSheetInput): Promise<number> {
   const principal = await getWebPrincipal();
   const user = principal.user;
-  const region = input.region !== undefined ? input.region : principal.workspace.region;
+  const region =
+    input.region !== undefined ? input.region : principal.workspace.region;
 
   requireTargetRegion(principal, region, "Sheet");
   requireAuthorized(
@@ -90,16 +94,19 @@ export async function createSheet(input: CreateSheetInput): Promise<number> {
       deleted: false,
       sheetAcls: [],
     },
-    "Sheet",
+    "Sheet"
   );
   if (principal.user.role === "leadership") {
-    throw DomainError.forbidden("Your role cannot create sheets in this workspace.");
+    throw DomainError.forbidden(
+      "Your role cannot create sheets in this workspace."
+    );
   }
   const name = input.name.trim();
   if (!name) throw new Error("Give the sheet a name.");
   const folder = input.folder.trim() || "General";
 
-  let config: SheetViewConfig | null = input.kind === "view" ? BLANK_VIEW_CONFIG : null;
+  let config: SheetViewConfig | null =
+    input.kind === "view" ? BLANK_VIEW_CONFIG : null;
   if (input.copyFromId) {
     const loaded = await loadSheetForPrincipal(principal, input.copyFromId);
     if (!loaded) throw new Error("Sheet not found");
@@ -159,7 +166,9 @@ export type ImportSheetResult = {
  * without it a Region would have to retype a roster or a year of cost tracking
  * to get it across.
  */
-export async function createSheetFromUpload(form: FormData): Promise<ImportSheetResult> {
+export async function createSheetFromUpload(
+  form: FormData
+): Promise<ImportSheetResult> {
   const principal = await getWebPrincipal();
   const user = principal.user;
   const region = principal.workspace.region;
@@ -176,16 +185,19 @@ export async function createSheetFromUpload(form: FormData): Promise<ImportSheet
       deleted: false,
       sheetAcls: [],
     },
-    "Sheet",
+    "Sheet"
   );
   if (principal.user.role === "leadership") {
-    throw DomainError.forbidden("Your role cannot create sheets in this workspace.");
+    throw DomainError.forbidden(
+      "Your role cannot create sheets in this workspace."
+    );
   }
 
   const file = form.get("file");
   if (!(file instanceof File) || file.size === 0)
     throw new Error("Choose a .csv, .tsv or .xlsx file to import.");
-  if (file.size > 15_000_000) throw new Error("That file is larger than 15 MB.");
+  if (file.size > 15_000_000)
+    throw new Error("That file is larger than 15 MB.");
 
   const table = /\.xlsx?$/i.test(file.name)
     ? await readWorkbookTable(await file.arrayBuffer())
@@ -195,7 +207,8 @@ export async function createSheetFromUpload(form: FormData): Promise<ImportSheet
   if (imported.columns.length === 0 || imported.rows.length === 0)
     throw new Error("That file has no rows this sheet could read.");
 
-  const name = String(form.get("name") ?? "").trim() || file.name.replace(/\.[^.]+$/, "");
+  const name =
+    String(form.get("name") ?? "").trim() || file.name.replace(/\.[^.]+$/, "");
   const folder = String(form.get("folder") ?? "").trim() || "General";
   const description = String(form.get("description") ?? "").trim();
 
@@ -220,7 +233,7 @@ export async function createSheetFromUpload(form: FormData): Promise<ImportSheet
       options: column.options,
       width: column.width,
       sortOrder: index,
-    })),
+    }))
   );
 
   for (let i = 0; i < imported.rows.length; i += 500) {
@@ -232,7 +245,7 @@ export async function createSheetFromUpload(form: FormData): Promise<ImportSheet
         values,
         sortOrder: i + index,
         updatedById: user.id,
-      })),
+      }))
     );
   }
 
@@ -278,8 +291,13 @@ function cellToText(value: unknown): string {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (typeof value === "object") {
-    const cell = value as { text?: string; result?: unknown; richText?: { text: string }[] };
-    if (Array.isArray(cell.richText)) return cell.richText.map((r) => r.text).join("");
+    const cell = value as {
+      text?: string;
+      result?: unknown;
+      richText?: { text: string }[];
+    };
+    if (Array.isArray(cell.richText))
+      return cell.richText.map((r) => r.text).join("");
     if (cell.text != null) return String(cell.text);
     if (cell.result != null) return String(cell.result);
     return "";
@@ -289,7 +307,7 @@ function cellToText(value: unknown): string {
 
 export async function updateSheetMeta(
   id: number,
-  patch: { name?: string; description?: string | null; folder?: string },
+  patch: { name?: string; description?: string | null; folder?: string }
 ) {
   const { user, sheet } = await loadManageable(id);
   const next: Record<string, unknown> = { updatedAt: new Date() };
@@ -298,8 +316,10 @@ export async function updateSheetMeta(
     if (!name) throw new Error("Give the sheet a name.");
     next.name = name;
   }
-  if (patch.description !== undefined) next.description = patch.description?.trim() || null;
-  if (patch.folder !== undefined) next.folder = patch.folder.trim() || "General";
+  if (patch.description !== undefined)
+    next.description = patch.description?.trim() || null;
+  if (patch.folder !== undefined)
+    next.folder = patch.folder.trim() || "General";
 
   await db.update(sheets).set(next).where(eq(sheets.id, id));
   await db.insert(auditLog).values({
@@ -316,8 +336,12 @@ export async function updateSheetMeta(
 
 export async function saveSheetView(id: number, config: SheetViewConfig) {
   const { sheet } = await loadManageable(id);
-  if (sheet.kind !== "view") throw new Error("Only pursuit views have a saved layout.");
-  await db.update(sheets).set({ config, updatedAt: new Date() }).where(eq(sheets.id, id));
+  if (sheet.kind !== "view")
+    throw new Error("Only pursuit views have a saved layout.");
+  await db
+    .update(sheets)
+    .set({ config, updatedAt: new Date() })
+    .where(eq(sheets.id, id));
   touch(id);
 }
 
@@ -344,10 +368,12 @@ export async function duplicateSheet(id: number): Promise<number> {
       deleted: false,
       sheetAcls: [],
     },
-    "Sheet",
+    "Sheet"
   );
   if (principal.user.role === "leadership") {
-    throw DomainError.forbidden("Your role cannot create sheets in this workspace.");
+    throw DomainError.forbidden(
+      "Your role cannot create sheets in this workspace."
+    );
   }
 
   const existing = await db.select({ name: sheets.name }).from(sheets);
@@ -355,7 +381,10 @@ export async function duplicateSheet(id: number): Promise<number> {
     .insert(sheets)
     .values({
       kind: sheet.kind,
-      name: duplicateName(sheet.name, existing.map((s) => s.name)),
+      name: duplicateName(
+        sheet.name,
+        existing.map((s) => s.name)
+      ),
       description: sheet.description,
       region,
       folder: sheet.folder,
@@ -365,7 +394,10 @@ export async function duplicateSheet(id: number): Promise<number> {
     .returning({ id: sheets.id });
 
   if (sheet.kind === "grid") {
-    const cols = await db.select().from(sheetColumns).where(eq(sheetColumns.sheetId, id));
+    const cols = await db
+      .select()
+      .from(sheetColumns)
+      .where(eq(sheetColumns.sheetId, id));
     if (cols.length > 0) {
       await db.insert(sheetColumns).values(
         cols.map((c) => ({
@@ -376,10 +408,13 @@ export async function duplicateSheet(id: number): Promise<number> {
           options: c.options,
           width: c.width,
           sortOrder: c.sortOrder,
-        })),
+        }))
       );
     }
-    const rows = await db.select().from(sheetRows).where(eq(sheetRows.sheetId, id));
+    const rows = await db
+      .select()
+      .from(sheetRows)
+      .where(eq(sheetRows.sheetId, id));
     for (let i = 0; i < rows.length; i += 500) {
       const chunk = rows.slice(i, i + 500);
       if (chunk.length === 0) continue;
@@ -389,7 +424,7 @@ export async function duplicateSheet(id: number): Promise<number> {
           values: r.values,
           sortOrder: r.sortOrder,
           updatedById: user.id,
-        })),
+        }))
       );
     }
   }
@@ -410,7 +445,10 @@ export async function duplicateSheet(id: number): Promise<number> {
 /** Archive rather than destroy: a Region can undo, and history survives. */
 export async function archiveSheet(id: number) {
   const { user, sheet } = await loadManageable(id);
-  await db.update(sheets).set({ archivedAt: new Date() }).where(eq(sheets.id, id));
+  await db
+    .update(sheets)
+    .set({ archivedAt: new Date() })
+    .where(eq(sheets.id, id));
   await db.insert(auditLog).values({
     entity: "sheet",
     entityId: id,
@@ -457,14 +495,18 @@ export async function toggleSheetPin(id: number): Promise<boolean> {
 
 export async function addSheetColumn(
   sheetId: number,
-  input: { label: string; type: SheetColumnType; options?: string[] },
+  input: { label: string; type: SheetColumnType; options?: string[] }
 ) {
   const { sheet } = await loadManageable(sheetId);
-  if (sheet.kind !== "grid") throw new Error("Pursuit views take columns from the field catalog.");
+  if (sheet.kind !== "grid")
+    throw new Error("Pursuit views take columns from the field catalog.");
   const label = input.label.trim();
   if (!label) throw new Error("Give the column a name.");
 
-  const existing = await db.select().from(sheetColumns).where(eq(sheetColumns.sheetId, sheetId));
+  const existing = await db
+    .select()
+    .from(sheetColumns)
+    .where(eq(sheetColumns.sheetId, sheetId));
   const [{ value: highest } = { value: null }] = await db
     .select({ value: max(sheetColumns.sortOrder) })
     .from(sheetColumns)
@@ -472,7 +514,10 @@ export async function addSheetColumn(
 
   await db.insert(sheetColumns).values({
     sheetId,
-    key: columnKeyFromLabel(label, existing.map((c) => c.key)),
+    key: columnKeyFromLabel(
+      label,
+      existing.map((c) => c.key)
+    ),
     label,
     type: input.type,
     options: input.type === "dropdown" ? (input.options ?? []) : null,
@@ -483,9 +528,12 @@ export async function addSheetColumn(
 
 export async function updateSheetColumn(
   columnId: number,
-  patch: { label?: string; options?: string[]; width?: number },
+  patch: { label?: string; options?: string[]; width?: number }
 ) {
-  const [col] = await db.select().from(sheetColumns).where(eq(sheetColumns.id, columnId));
+  const [col] = await db
+    .select()
+    .from(sheetColumns)
+    .where(eq(sheetColumns.id, columnId));
   if (!col) throw new Error("Column not found");
   await loadManageable(col.sheetId);
 
@@ -496,16 +544,23 @@ export async function updateSheetColumn(
     next.label = label;
   }
   if (patch.options !== undefined) next.options = patch.options;
-  if (patch.width !== undefined) next.width = Math.max(60, Math.round(patch.width));
+  if (patch.width !== undefined)
+    next.width = Math.max(60, Math.round(patch.width));
 
   if (Object.keys(next).length > 0) {
-    await db.update(sheetColumns).set(next).where(eq(sheetColumns.id, columnId));
+    await db
+      .update(sheetColumns)
+      .set(next)
+      .where(eq(sheetColumns.id, columnId));
   }
   touch(col.sheetId);
 }
 
 export async function deleteSheetColumn(columnId: number) {
-  const [col] = await db.select().from(sheetColumns).where(eq(sheetColumns.id, columnId));
+  const [col] = await db
+    .select()
+    .from(sheetColumns)
+    .where(eq(sheetColumns.id, columnId));
   if (!col) throw new Error("Column not found");
   await loadManageable(col.sheetId);
 
@@ -513,7 +568,8 @@ export async function deleteSheetColumn(columnId: number) {
     .select()
     .from(sheetColumns)
     .where(eq(sheetColumns.sheetId, col.sheetId));
-  if (remaining.length <= 1) throw new Error("A sheet needs at least one column.");
+  if (remaining.length <= 1)
+    throw new Error("A sheet needs at least one column.");
 
   await db.delete(sheetColumns).where(eq(sheetColumns.id, columnId));
   touch(col.sheetId);
@@ -523,25 +579,41 @@ export async function deleteSheetColumn(columnId: number) {
 
 export async function addSheetRow(sheetId: number): Promise<number> {
   const { user, sheet } = await loadEditable(sheetId);
-  if (sheet.kind !== "grid") throw new Error("Pursuit views add records through New Pursuit.");
+  if (sheet.kind !== "grid")
+    throw new Error("Pursuit views add records through New Pursuit.");
   const [{ value: highest } = { value: null }] = await db
     .select({ value: max(sheetRows.sortOrder) })
     .from(sheetRows)
     .where(eq(sheetRows.sheetId, sheetId));
   const [row] = await db
     .insert(sheetRows)
-    .values({ sheetId, values: {}, sortOrder: (highest ?? 0) + 1, updatedById: user.id })
+    .values({
+      sheetId,
+      values: {},
+      sortOrder: (highest ?? 0) + 1,
+      updatedById: user.id,
+    })
     .returning({ id: sheetRows.id });
   touch(sheetId);
   return row.id;
 }
 
-export async function updateSheetCell(rowId: number, key: string, value: string) {
-  const [row] = await db.select().from(sheetRows).where(eq(sheetRows.id, rowId));
+export async function updateSheetCell(
+  rowId: number,
+  key: string,
+  value: string
+) {
+  const [row] = await db
+    .select()
+    .from(sheetRows)
+    .where(eq(sheetRows.id, rowId));
   if (!row) throw new Error("Row not found");
   const { user } = await loadEditable(row.sheetId);
 
-  const cols = await db.select().from(sheetColumns).where(eq(sheetColumns.sheetId, row.sheetId));
+  const cols = await db
+    .select()
+    .from(sheetColumns)
+    .where(eq(sheetColumns.sheetId, row.sheetId));
   const col = cols.find((c) => c.key === key);
   if (!col) throw new Error("Unknown column");
 
@@ -565,7 +637,10 @@ export async function updateSheetCell(rowId: number, key: string, value: string)
 }
 
 export async function deleteSheetRow(rowId: number) {
-  const [row] = await db.select().from(sheetRows).where(eq(sheetRows.id, rowId));
+  const [row] = await db
+    .select()
+    .from(sheetRows)
+    .where(eq(sheetRows.id, rowId));
   if (!row) throw new Error("Row not found");
   const principal = await getWebPrincipal();
   // Soft delete via the shared recovery path so the row lands in trash and can
@@ -577,7 +652,11 @@ export async function deleteSheetRow(rowId: number) {
 }
 
 /** Same validation the pursuit forms apply, scaled down to one free-form cell. */
-function coerceCell(type: SheetColumnType, raw: string, options: string[]): string | null {
+function coerceCell(
+  type: SheetColumnType,
+  raw: string,
+  options: string[]
+): string | null {
   const value = raw.trim();
   if (value === "") return null;
   switch (type) {
@@ -594,7 +673,9 @@ function coerceCell(type: SheetColumnType, raw: string, options: string[]): stri
       return value;
     }
     case "checkbox":
-      return ["true", "1", "yes", "y"].includes(value.toLowerCase()) ? "true" : null;
+      return ["true", "1", "yes", "y"].includes(value.toLowerCase())
+        ? "true"
+        : null;
     case "dropdown": {
       if (options.length > 0 && !options.includes(value))
         throw new Error(`"${value}" is not one of the allowed values.`);
@@ -637,7 +718,7 @@ export type SheetRowsPayload = {
 export async function loadSheetRows(
   sheetId: number,
   columns: string[],
-  filters: { field: string; op: string; value: string }[],
+  filters: { field: string; op: string; value: string }[]
 ): Promise<SheetRowsPayload> {
   const principal = await getWebPrincipal();
   const loaded = await loadSheetForPrincipal(principal, sheetId);
@@ -649,7 +730,7 @@ export async function loadSheetRows(
 async function projectRows(
   principal: Awaited<ReturnType<typeof getWebPrincipal>>,
   columnKeys: string[],
-  filters: { field: string; op: string; value: string }[],
+  filters: { field: string; op: string; value: string }[]
 ): Promise<SheetRowsPayload> {
   const [{ rows: flat, catalog }, lists] = await Promise.all([
     getFlatDataset(principal),
@@ -675,7 +756,9 @@ async function projectRows(
       };
     });
 
-  const matching = flat.filter((r) => filters.every((f) => matchesFilter(r, f)));
+  const matching = flat.filter((r) =>
+    filters.every((f) => matchesFilter(r, f))
+  );
   const canEdit = principal.user.role !== "leadership";
 
   return {
@@ -692,7 +775,9 @@ async function projectRows(
         status: String(r.status ?? ""),
         locked:
           !canEdit ||
-          (locked && principal.user.role !== "rpd" && principal.user.role !== "corporate_admin"),
+          (locked &&
+            principal.user.role !== "rpd" &&
+            principal.user.role !== "corporate_admin"),
         lockReason: !canEdit
           ? "Your role has read-only access."
           : locked
@@ -705,7 +790,8 @@ async function projectRows(
 
 function defaultWidth(type: string, label: string): number {
   const base = Math.min(260, Math.max(90, label.length * 8 + 34));
-  if (type === "dollars" || type === "metric" || type === "number") return Math.max(base, 110);
+  if (type === "dollars" || type === "metric" || type === "number")
+    return Math.max(base, 110);
   if (type === "date") return 112;
   return base;
 }
@@ -716,25 +802,36 @@ export async function renameFolder(from: string, to: string) {
   const target = to.trim();
   if (!target) throw new Error("Give the folder a name.");
 
-  const all = (await listSheetsForPrincipal(principal)).filter((sheet) => sheet.folder === from);
+  const all = (await listSheetsForPrincipal(principal)).filter(
+    (sheet) => sheet.folder === from
+  );
   const mine = (
     await Promise.all(
       all.map(async (sheet) =>
-        (await loadSheetForPrincipal(principal, sheet.id, "manage")) ? sheet : null,
-      ),
+        (await loadSheetForPrincipal(principal, sheet.id, "manage"))
+          ? sheet
+          : null
+      )
     )
   ).filter((sheet): sheet is NonNullable<typeof sheet> => sheet != null);
-  if (mine.length === 0) throw new Error("No sheets in that folder are yours to move.");
+  if (mine.length === 0)
+    throw new Error("No sheets in that folder are yours to move.");
 
   for (const s of mine) {
-    await db.update(sheets).set({ folder: target, updatedAt: new Date() }).where(eq(sheets.id, s.id));
+    await db
+      .update(sheets)
+      .set({ folder: target, updatedAt: new Date() })
+      .where(eq(sheets.id, s.id));
   }
   revalidatePath("/sheets");
   return { moved: mine.length };
 }
 
 /** Column reordering for grid sheets, driven by the header drag handles. */
-export async function reorderSheetColumns(sheetId: number, orderedIds: number[]) {
+export async function reorderSheetColumns(
+  sheetId: number,
+  orderedIds: number[]
+) {
   await loadManageable(sheetId);
   const cols = await db
     .select()
@@ -745,7 +842,10 @@ export async function reorderSheetColumns(sheetId: number, orderedIds: number[])
   let order = 0;
   for (const id of orderedIds) {
     if (!known.has(id)) continue;
-    await db.update(sheetColumns).set({ sortOrder: order++ }).where(eq(sheetColumns.id, id));
+    await db
+      .update(sheetColumns)
+      .set({ sortOrder: order++ })
+      .where(eq(sheetColumns.id, id));
   }
   touch(sheetId);
 }

@@ -29,19 +29,24 @@ export async function POST(req: Request) {
     }
     try {
       if (body.action === "restore" && body.entityType && body.entityId) {
-        await restoreTrashItem(body.entityType, body.entityId, principal.authorization);
+        await restoreTrashItem(
+          body.entityType,
+          body.entityId,
+          principal.authorization
+        );
         return jsonOk({ ok: true, restored: true });
       }
       if (body.action === "permanent" && body.entityType && body.entityId) {
         const scope = requireScopes(principal.token, "write:destructive");
         if (!scope.ok) return jsonError(scope.error, scope.status);
 
-        const challenge = req.headers.get(DESTRUCTIVE_CHALLENGE_HEADER)?.trim() ?? "";
+        const challenge =
+          req.headers.get(DESTRUCTIVE_CHALLENGE_HEADER)?.trim() ?? "";
         if (!challenge) {
           return jsonError(
             "X-Destructive-Challenge is required for permanent delete",
             400,
-            { code: "BAD_REQUEST" },
+            { code: "BAD_REQUEST" }
           );
         }
 
@@ -51,7 +56,7 @@ export async function POST(req: Request) {
           body.confirmation ?? "",
           principal.authorization,
           { token: principal.token, challenge },
-          { requireApiChallenge: true },
+          { requireApiChallenge: true }
         );
         return jsonOk({ ok: true, deleted: true });
       }

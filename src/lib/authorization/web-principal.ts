@@ -1,8 +1,8 @@
 import "server-only";
 import { authMode } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/current-user";
-import { getWorkspace } from "@/lib/workspace-server";
 import { getMobileContext } from "@/lib/mobile-context";
+import { getWorkspace } from "@/lib/workspace-server";
 import { createPrincipal } from "./principal";
 
 /** Transport adapter only; application services receive its explicit result. */

@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.BASE_URL;
-assert.match(baseUrl ?? "", /^http:\/\/127\.0\.0\.1:\d+$/, "BASE_URL must target the isolated local server");
+assert.match(
+  baseUrl ?? "",
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+  "BASE_URL must target the isolated local server"
+);
 
 const errors = [];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.on("pageerror", (error) => errors.push(`${page.url()} pageerror: ${error.message}`));
+page.on("pageerror", (error) =>
+  errors.push(`${page.url()} pageerror: ${error.message}`)
+);
 page.on("console", (message) => {
   const text = message.text();
   if (message.type() !== "error") return;
@@ -32,26 +38,31 @@ try {
   await page.goto(`${baseUrl}/post-bid`);
   await page.waitForLoadState("networkidle");
 
-  const rows = await page.locator("table").first().locator("tbody tr").evaluateAll((elements) =>
-    elements
-      .map((row) => {
-        const link = row.querySelector("td a");
-        const text = row.textContent ?? "";
-        return link
-          ? {
-              href: link.getAttribute("href"),
-              progress: row.querySelector("td:nth-child(6)")?.textContent ?? "",
-              text,
-            }
-          : null;
-      })
-      .filter(Boolean),
-  );
+  const rows = await page
+    .locator("table")
+    .first()
+    .locator("tbody tr")
+    .evaluateAll((elements) =>
+      elements
+        .map((row) => {
+          const link = row.querySelector("td a");
+          const text = row.textContent ?? "";
+          return link
+            ? {
+                href: link.getAttribute("href"),
+                progress:
+                  row.querySelector("td:nth-child(6)")?.textContent ?? "",
+                text,
+              }
+            : null;
+        })
+        .filter(Boolean)
+    );
   const postBidRows = rows.filter(
     (row) =>
       row.text.includes("Post-Bid") ||
       row.text.includes("Ready to lock") ||
-      row.text.includes("Awaiting required"),
+      row.text.includes("Awaiting required")
   );
   const incomplete = postBidRows.find((row) => {
     const progress = row.progress.match(/(\d+)\/(\d+)/);
@@ -61,8 +72,14 @@ try {
     const progress = row.progress.match(/(\d+)\/(\d+)/);
     return progress && Number(progress[1]) === Number(progress[2]);
   });
-  assert.ok(incomplete?.href, "Seeded post-bid queue must include an incomplete round");
-  assert.ok(complete?.href, "Seeded post-bid queue must include a complete round");
+  assert.ok(
+    incomplete?.href,
+    "Seeded post-bid queue must include an incomplete round"
+  );
+  assert.ok(
+    complete?.href,
+    "Seeded post-bid queue must include a complete round"
+  );
 
   await page.goto(`${baseUrl}${incomplete.href}`);
   await page.waitForLoadState("networkidle");
@@ -75,7 +92,10 @@ try {
   await page.goto(`${baseUrl}${complete.href}`);
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Approve/ }).click();
-  await page.getByText(/RPD \/ SPD Approved \/ Locked/).first().waitFor({ state: "visible" });
+  await page
+    .getByText(/RPD \/ SPD Approved \/ Locked/)
+    .first()
+    .waitFor({ state: "visible" });
   report("complete approval locks the round");
 
   const estimateValue = page
@@ -85,7 +105,10 @@ try {
   const current = await estimateValue.inputValue();
   await estimateValue.fill(String(Number(current || "1000000") + 5000));
   await page.getByRole("button", { name: /Save Correction/ }).click();
-  await page.locator("[data-sonner-toast]").last().waitFor({ state: "visible" });
+  await page
+    .locator("[data-sonner-toast]")
+    .last()
+    .waitFor({ state: "visible" });
   await page.getByRole("tab", { name: /History/ }).click();
   await page.getByText("Post-lock audit log").waitFor({ state: "visible" });
   report("post-lock correction creates visible audit history");
@@ -96,7 +119,11 @@ try {
   assert.equal(await page.getByRole("button", { name: /Save/ }).count(), 0);
   report("estimate lead cannot edit the locked round");
 
-  assert.deepEqual(errors, [], `Browser errors detected:\n${errors.join("\n")}`);
+  assert.deepEqual(
+    errors,
+    [],
+    `Browser errors detected:\n${errors.join("\n")}`
+  );
 } finally {
   await browser.close();
 }

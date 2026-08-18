@@ -3,6 +3,7 @@ import {
   boolean,
   date,
   doublePrecision,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -11,7 +12,6 @@ import {
   text,
   timestamp,
   uniqueIndex,
-  index,
 } from "drizzle-orm/pg-core";
 
 export const roundStatusEnum = pgEnum("round_status", [
@@ -62,7 +62,7 @@ export const users = pgTable(
   (table) => [
     // Mirrors drizzle/0014 — SSO resolves identity via lower(email).
     index("users_email_lower_idx").on(sql`lower(${table.email})`),
-  ],
+  ]
 );
 
 /** Mock B&G Connect / Salesforce jobs used for lookup + match-and-merge. */
@@ -95,7 +95,7 @@ export const jobs = pgTable(
     deletedById: integer("deleted_by_id").references(() => users.id),
     deletionBatchId: integer("deletion_batch_id"),
   },
-  (table) => [index("jobs_region_active_idx").on(table.region)],
+  (table) => [index("jobs_region_active_idx").on(table.region)]
 );
 
 /**
@@ -110,13 +110,18 @@ export const jobRegionVisibility = pgTable(
       .notNull()
       .references(() => jobs.id, { onDelete: "cascade" }),
     region: text("region").notNull(),
-    addedById: integer("added_by_id").references(() => users.id, { onDelete: "set null" }),
+    addedById: integer("added_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     addedAt: timestamp("added_at").notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("job_region_visibility_job_region_unique").on(table.jobId, table.region),
+    uniqueIndex("job_region_visibility_job_region_unique").on(
+      table.jobId,
+      table.region
+    ),
     index("job_region_visibility_region_idx").on(table.region),
-  ],
+  ]
 );
 
 /** Per-person pins: the job is visible to this user even outside their region. */
@@ -130,108 +135,116 @@ export const jobUserVisibility = pgTable(
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    addedById: integer("added_by_id").references(() => users.id, { onDelete: "set null" }),
+    addedById: integer("added_by_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     addedAt: timestamp("added_at").notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("job_user_visibility_job_user_unique").on(table.jobId, table.userId),
+    uniqueIndex("job_user_visibility_job_user_unique").on(
+      table.jobId,
+      table.userId
+    ),
     index("job_user_visibility_user_idx").on(table.userId),
-  ],
+  ]
 );
 
 export const estimateRounds = pgTable(
   "estimate_rounds",
   {
-  id: serial("id").primaryKey(),
-  jobId: integer("job_id")
-    .notNull()
-    .references(() => jobs.id),
-  roundNumber: integer("round_number").notNull(),
-  status: roundStatusEnum("status").notNull().default("upcoming"),
-  outcome: outcomeEnum("outcome").notNull().default("pending"),
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id")
+      .notNull()
+      .references(() => jobs.id),
+    roundNumber: integer("round_number").notNull(),
+    status: roundStatusEnum("status").notNull().default("upcoming"),
+    outcome: outcomeEnum("outcome").notNull().default("pending"),
 
-  // ---- Core Bid Schedule fields (16 Destini core + operational date trio) ----
-  region: text("region").notNull(),
-  preconDepartment: text("precon_department").notNull(),
-  estimatePhase: text("estimate_phase").notNull(),
-  bidYear: integer("bid_year").notNull(),
-  bidDueDate: date("bid_due_date"),
-  drawingsDueDate: date("drawings_due_date"),
-  bidReviewDate: date("bid_review_date"),
-  projectStartDate: date("project_start_date"),
-  /** Project owner from the bid schedule (not the Salesforce PK). */
-  owner: text("owner"),
-  city: text("city"),
-  state: text("state"),
-  estimateLeadId: integer("estimate_lead_id").references(() => users.id),
-  /** Explicit progress mark — not inferred from estimateLeadId. */
-  teamAssignedAt: timestamp("team_assigned_at"),
-  teamAssignedById: integer("team_assigned_by_id").references(() => users.id),
-  mlt: text("mlt"),
-  marketSector: text("market_sector"),
-  contractType: text("contract_type"),
-  procurement: text("procurement"),
-  designContract: text("design_contract"),
-  statusAtPricing: text("status_at_pricing"),
+    // ---- Core Bid Schedule fields (16 Destini core + operational date trio) ----
+    region: text("region").notNull(),
+    preconDepartment: text("precon_department").notNull(),
+    estimatePhase: text("estimate_phase").notNull(),
+    bidYear: integer("bid_year").notNull(),
+    bidDueDate: date("bid_due_date"),
+    drawingsDueDate: date("drawings_due_date"),
+    bidReviewDate: date("bid_review_date"),
+    projectStartDate: date("project_start_date"),
+    /** Project owner from the bid schedule (not the Salesforce PK). */
+    owner: text("owner"),
+    city: text("city"),
+    state: text("state"),
+    estimateLeadId: integer("estimate_lead_id").references(() => users.id),
+    /** Explicit progress mark — not inferred from estimateLeadId. */
+    teamAssignedAt: timestamp("team_assigned_at"),
+    teamAssignedById: integer("team_assigned_by_id").references(() => users.id),
+    mlt: text("mlt"),
+    marketSector: text("market_sector"),
+    contractType: text("contract_type"),
+    procurement: text("procurement"),
+    designContract: text("design_contract"),
+    statusAtPricing: text("status_at_pricing"),
 
-  // ---- Required post-bid fields ("Data Base Bid") ----
-  internalJointVenture: text("internal_joint_venture"),
-  awardability: text("awardability"),
-  businessStrategyValues: text("business_strategy_values"),
-  estimateValue: doublePrecision("estimate_value"),
-  feeBackPage: doublePrecision("fee_back_page"),
-  feeExpected: doublePrecision("fee_expected"),
-  contingencyTotal: doublePrecision("contingency_total"),
-  craftLaborBase: doublePrecision("craft_labor_base"),
-  craftLaborBurden: doublePrecision("craft_labor_burden"),
-  craftLaborManHours: doublePrecision("craft_labor_man_hours"),
-  gcBgSort: doublePrecision("gc_bg_sort"),
-  grBgSort: doublePrecision("gr_bg_sort"),
-  gcProposedOwnerSov: doublePrecision("gc_proposed_owner_sov"),
-  grProposedOwnerSov: doublePrecision("gr_proposed_owner_sov"),
-  pmMonths: doublePrecision("pm_months"),
-  fieldSupervisionMonths: doublePrecision("field_supervision_months"),
-  preconCost: doublePrecision("precon_cost"),
-  designCost: doublePrecision("design_cost"),
-  selfPerformPriced: doublePrecision("self_perform_priced"),
-  selfPerformProposed: doublePrecision("self_perform_proposed"),
-  projectScheduleDuration: doublePrecision("project_schedule_duration"),
-  projectPlanningPreconEngagement: text("project_planning_precon_engagement"),
+    // ---- Required post-bid fields ("Data Base Bid") ----
+    internalJointVenture: text("internal_joint_venture"),
+    awardability: text("awardability"),
+    businessStrategyValues: text("business_strategy_values"),
+    estimateValue: doublePrecision("estimate_value"),
+    feeBackPage: doublePrecision("fee_back_page"),
+    feeExpected: doublePrecision("fee_expected"),
+    contingencyTotal: doublePrecision("contingency_total"),
+    craftLaborBase: doublePrecision("craft_labor_base"),
+    craftLaborBurden: doublePrecision("craft_labor_burden"),
+    craftLaborManHours: doublePrecision("craft_labor_man_hours"),
+    gcBgSort: doublePrecision("gc_bg_sort"),
+    grBgSort: doublePrecision("gr_bg_sort"),
+    gcProposedOwnerSov: doublePrecision("gc_proposed_owner_sov"),
+    grProposedOwnerSov: doublePrecision("gr_proposed_owner_sov"),
+    pmMonths: doublePrecision("pm_months"),
+    fieldSupervisionMonths: doublePrecision("field_supervision_months"),
+    preconCost: doublePrecision("precon_cost"),
+    designCost: doublePrecision("design_cost"),
+    selfPerformPriced: doublePrecision("self_perform_priced"),
+    selfPerformProposed: doublePrecision("self_perform_proposed"),
+    projectScheduleDuration: doublePrecision("project_schedule_duration"),
+    projectPlanningPreconEngagement: text("project_planning_precon_engagement"),
 
-  // ---- Optional / Data Alternate fields ----
-  gsf: doublePrecision("gsf"),
-  hotelKeysUnits: doublePrecision("hotel_keys_units"),
-  materials: doublePrecision("materials"),
-  supplies: doublePrecision("supplies"),
-  equipment: doublePrecision("equipment"),
-  equipmentOperation: doublePrecision("equipment_operation"),
-  subcontracted: doublePrecision("subcontracted"),
-  marketOrStrategicRates: text("market_or_strategic_rates"),
-  subQuotesReceived: doublePrecision("sub_quotes_received"),
-  mwdbeSubQuotesReceived: doublePrecision("mwdbe_sub_quotes_received"),
-  mwdbeSubsPlugged: doublePrecision("mwdbe_subs_plugged"),
-  costOfWorkBasis: doublePrecision("cost_of_work_basis"),
-  afmMonths: doublePrecision("afm_months"),
-  peakManpowerHeadcount: doublePrecision("peak_manpower_headcount"),
+    // ---- Optional / Data Alternate fields ----
+    gsf: doublePrecision("gsf"),
+    hotelKeysUnits: doublePrecision("hotel_keys_units"),
+    materials: doublePrecision("materials"),
+    supplies: doublePrecision("supplies"),
+    equipment: doublePrecision("equipment"),
+    equipmentOperation: doublePrecision("equipment_operation"),
+    subcontracted: doublePrecision("subcontracted"),
+    marketOrStrategicRates: text("market_or_strategic_rates"),
+    subQuotesReceived: doublePrecision("sub_quotes_received"),
+    mwdbeSubQuotesReceived: doublePrecision("mwdbe_sub_quotes_received"),
+    mwdbeSubsPlugged: doublePrecision("mwdbe_subs_plugged"),
+    costOfWorkBasis: doublePrecision("cost_of_work_basis"),
+    afmMonths: doublePrecision("afm_months"),
+    peakManpowerHeadcount: doublePrecision("peak_manpower_headcount"),
 
-  submittedAt: timestamp("submitted_at"),
-  lockedAt: timestamp("locked_at"),
-  createdById: integer("created_by_id").references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  deletedAt: timestamp("deleted_at"),
-  deletedById: integer("deleted_by_id").references(() => users.id),
-  deletionBatchId: integer("deletion_batch_id"),
+    submittedAt: timestamp("submitted_at"),
+    lockedAt: timestamp("locked_at"),
+    createdById: integer("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at"),
+    deletedById: integer("deleted_by_id").references(() => users.id),
+    deletionBatchId: integer("deletion_batch_id"),
   },
   (table) => [
-    uniqueIndex("estimate_rounds_job_round_number_unique").on(table.jobId, table.roundNumber),
+    uniqueIndex("estimate_rounds_job_round_number_unique").on(
+      table.jobId,
+      table.roundNumber
+    ),
     index("estimate_rounds_status_region_idx")
       .on(table.status, table.region)
       .where(sql`${table.deletedAt} is null`),
     index("estimate_rounds_job_id_idx")
       .on(table.jobId)
       .where(sql`${table.deletedAt} is null`),
-  ],
+  ]
 );
 
 /** Chat-shaped notes on a pricing effort. Never project-level; never private. */
@@ -252,7 +265,9 @@ export const roundNotes = pgTable(
     deletedById: integer("deleted_by_id").references(() => users.id),
     deletionBatchId: integer("deletion_batch_id"),
   },
-  (table) => [index("round_notes_round_created_idx").on(table.roundId, table.createdAt)],
+  (table) => [
+    index("round_notes_round_created_idx").on(table.roundId, table.createdAt),
+  ]
 );
 
 export const roundNoteAttachments = pgTable("round_note_attachments", {
@@ -280,7 +295,12 @@ export const roundNoteMentions = pgTable(
       .references(() => users.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("round_note_mentions_note_user_unique").on(table.noteId, table.mentionedUserId)],
+  (table) => [
+    uniqueIndex("round_note_mentions_note_user_unique").on(
+      table.noteId,
+      table.mentionedUserId
+    ),
+  ]
 );
 
 /** Repeatable one-to-many fields (Self-Perform Work Type, Utilized Support Services). */
@@ -294,7 +314,9 @@ export const roundMultiValues = pgTable(
     field: text("field").notNull(), // "selfPerformWorkType" | "utilizedSupportServices"
     value: text("value").notNull(),
   },
-  (table) => [index("round_multi_values_round_field_idx").on(table.roundId, table.field)],
+  (table) => [
+    index("round_multi_values_round_field_idx").on(table.roundId, table.field),
+  ]
 );
 
 export const referenceLists = pgTable("reference_lists", {
@@ -339,9 +361,12 @@ export const customColumnValues = pgTable(
     value: text("value"),
   },
   (table) => [
-    uniqueIndex("custom_column_values_column_round_unique").on(table.columnId, table.roundId),
+    uniqueIndex("custom_column_values_column_round_unique").on(
+      table.columnId,
+      table.roundId
+    ),
     index("custom_column_values_round_idx").on(table.roundId),
-  ],
+  ]
 );
 
 export const statusTransitions = pgTable("status_transitions", {
@@ -371,8 +396,12 @@ export const auditLog = pgTable(
   },
   (table) => [
     index("audit_log_round_created_idx").on(table.roundId, table.createdAt),
-    index("audit_log_entity_created_idx").on(table.entity, table.entityId, table.createdAt),
-  ],
+    index("audit_log_entity_created_idx").on(
+      table.entity,
+      table.entityId,
+      table.createdAt
+    ),
+  ]
 );
 
 export const notifications = pgTable(
@@ -385,11 +414,15 @@ export const notifications = pgTable(
     title: text("title").notNull(),
     body: text("body"),
     roundId: integer("round_id"),
-    noteId: integer("note_id").references(() => roundNotes.id, { onDelete: "set null" }),
+    noteId: integer("note_id").references(() => roundNotes.id, {
+      onDelete: "set null",
+    }),
     readAt: timestamp("read_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("notifications_user_created_idx").on(table.userId, table.createdAt)],
+  (table) => [
+    index("notifications_user_created_idx").on(table.userId, table.createdAt),
+  ]
 );
 
 /**
@@ -430,31 +463,33 @@ export const appSettings = pgTable("app_settings", {
 export const emailOutbox = pgTable(
   "email_outbox",
   {
-  id: serial("id").primaryKey(),
-  toEmail: text("to_email").notNull(),
-  toUserId: integer("to_user_id").references(() => users.id),
-  subject: text("subject").notNull(),
-  body: text("body").notNull(),
-  /** "submitted" | "reminder" | "report_pdf" | "report_schedule" */
-  kind: text("kind").notNull(),
-  roundId: integer("round_id"),
-  distributionListId: integer("distribution_list_id"),
-  reportKey: text("report_key"),
-  /** Base64 or storage key for PDF attachment (stub stores inline). */
-  attachmentName: text("attachment_name"),
-  attachmentStorageKey: text("attachment_storage_key"),
-  /** "queued" | "claimed" | "previewed" | "sent" | "failed" */
-  status: text("status").notNull().default("queued"),
-  provider: text("provider").notNull().default("stub"),
-  error: text("error"),
-  attemptCount: integer("attempt_count").notNull().default(0),
-  logicalDeliveryKey: text("logical_delivery_key"),
-  providerMessageId: text("provider_message_id"),
-  nextAttemptAt: timestamp("next_attempt_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  sentAt: timestamp("sent_at"),
+    id: serial("id").primaryKey(),
+    toEmail: text("to_email").notNull(),
+    toUserId: integer("to_user_id").references(() => users.id),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    /** "submitted" | "reminder" | "report_pdf" | "report_schedule" */
+    kind: text("kind").notNull(),
+    roundId: integer("round_id"),
+    distributionListId: integer("distribution_list_id"),
+    reportKey: text("report_key"),
+    /** Base64 or storage key for PDF attachment (stub stores inline). */
+    attachmentName: text("attachment_name"),
+    attachmentStorageKey: text("attachment_storage_key"),
+    /** "queued" | "claimed" | "previewed" | "sent" | "failed" */
+    status: text("status").notNull().default("queued"),
+    provider: text("provider").notNull().default("stub"),
+    error: text("error"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    logicalDeliveryKey: text("logical_delivery_key"),
+    providerMessageId: text("provider_message_id"),
+    nextAttemptAt: timestamp("next_attempt_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    sentAt: timestamp("sent_at"),
   },
-  (table) => [index("email_outbox_kind_created_idx").on(table.kind, table.createdAt)],
+  (table) => [
+    index("email_outbox_kind_created_idx").on(table.kind, table.createdAt),
+  ]
 );
 
 export const deletionBatches = pgTable("deletion_batches", {
@@ -473,7 +508,10 @@ export const reportArtifacts = pgTable("report_artifacts", {
   storageKey: text("storage_key").notNull(),
   region: text("region"),
   ownerId: integer("owner_id").references(() => users.id),
-  parameters: jsonb("parameters").$type<Record<string, unknown>>().notNull().default({}),
+  parameters: jsonb("parameters")
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -544,14 +582,22 @@ export const userTablePrefs = pgTable(
     config: jsonb("config").$type<UserTablePrefsConfig>().notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("user_table_prefs_user_surface_unique").on(table.userId, table.surface)],
+  (table) => [
+    uniqueIndex("user_table_prefs_user_surface_unique").on(
+      table.userId,
+      table.surface
+    ),
+  ]
 );
 
 export type SavedReportConfig = {
   fields: string[]; // field keys, metric keys (metric:*), custom columns (custom:*)
   filters: { field: string; op: string; value: string }[];
   groupBy: string[];
-  aggregations: { field: string; fn: "sum" | "avg" | "count" | "min" | "max" }[];
+  aggregations: {
+    field: string;
+    fn: "sum" | "avg" | "count" | "min" | "max";
+  }[];
   sortBy: { field: string; dir: "asc" | "desc" }[];
 };
 
@@ -562,7 +608,9 @@ export const savedReports = pgTable("saved_reports", {
     .notNull()
     .references(() => users.id),
   config: jsonb("config").$type<SavedReportConfig>().notNull(),
-  sharedWithUserIds: jsonb("shared_with_user_ids").$type<number[]>().default([]),
+  sharedWithUserIds: jsonb("shared_with_user_ids")
+    .$type<number[]>()
+    .default([]),
   sharedWithRegions: jsonb("shared_with_regions").$type<string[]>().default([]),
   /** Stable key for presets (e.g. consolidated_regional_bid_schedule). */
   presetKey: text("preset_key"),
@@ -646,7 +694,9 @@ export const sheetPins = pgTable(
       .references(() => users.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("sheet_pins_sheet_user_unique").on(table.sheetId, table.userId)],
+  (table) => [
+    uniqueIndex("sheet_pins_sheet_user_unique").on(table.sheetId, table.userId),
+  ]
 );
 
 /** Columns of a `grid` sheet. View sheets draw columns from the field catalog. */
@@ -671,7 +721,10 @@ export const sheetRows = pgTable(
     sheetId: integer("sheet_id")
       .notNull()
       .references(() => sheets.id, { onDelete: "cascade" }),
-    values: jsonb("values").$type<Record<string, string | null>>().notNull().default({}),
+    values: jsonb("values")
+      .$type<Record<string, string | null>>()
+      .notNull()
+      .default({}),
     sortOrder: integer("sort_order").notNull().default(0),
     updatedById: integer("updated_by_id").references(() => users.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -684,7 +737,7 @@ export const sheetRows = pgTable(
     index("sheet_rows_sheet_sort_idx")
       .on(table.sheetId, table.sortOrder)
       .where(sql`${table.deletedAt} is null`),
-  ],
+  ]
 );
 
 // ---------------------------------------------------------------------------
@@ -714,7 +767,9 @@ export const fieldPromotions = pgTable("field_promotions", {
   reviewedById: integer("reviewed_by_id").references(() => users.id),
   reviewedAt: timestamp("reviewed_at"),
   reviewNote: text("review_note"),
-  promotedColumnId: integer("promoted_column_id").references(() => customColumns.id),
+  promotedColumnId: integer("promoted_column_id").references(
+    () => customColumns.id
+  ),
 });
 
 export const sheetAclRoleEnum = pgEnum("sheet_acl_role", [
@@ -746,7 +801,10 @@ export const fieldWritePolicies = pgTable("field_write_policies", {
   fieldKey: text("field_key").notNull(),
   role: roleEnum("role").notNull(),
   /** Round statuses where write is allowed; empty = never. */
-  allowedStatuses: jsonb("allowed_statuses").$type<string[]>().notNull().default([]),
+  allowedStatuses: jsonb("allowed_statuses")
+    .$type<string[]>()
+    .notNull()
+    .default([]),
   regionScoped: boolean("region_scoped").notNull().default(true),
 });
 
@@ -790,9 +848,9 @@ export const distributionRuns = pgTable(
   (table) => [
     uniqueIndex("distribution_runs_list_period_unique").on(
       table.distributionListId,
-      table.periodKey,
+      table.periodKey
     ),
-  ],
+  ]
 );
 
 export const salesforceSyncRuns = pgTable("salesforce_sync_runs", {
@@ -826,7 +884,10 @@ export const salesforceMatchCandidates = pgTable(
     proposedJobName: text("proposed_job_name").notNull(),
     proposedRegion: text("proposed_region"),
     score: doublePrecision("score").notNull().default(0),
-    signals: jsonb("signals").$type<Record<string, number | boolean | string>>().notNull().default({}),
+    signals: jsonb("signals")
+      .$type<Record<string, number | boolean | string>>()
+      .notNull()
+      .default({}),
     discrepancy: text("discrepancy"),
     status: salesforceMatchStatusEnum("status").notNull().default("pending"),
     decidedById: integer("decided_by_id").references(() => users.id),
@@ -838,7 +899,7 @@ export const salesforceMatchCandidates = pgTable(
     uniqueIndex("salesforce_match_candidates_job_sf_version_unique")
       .on(table.jobId, table.sfId, table.sourceVersion)
       .where(sql`${table.jobId} is not null`),
-  ],
+  ]
 );
 
 export const salesforceMatchSuppressions = pgTable(
@@ -856,7 +917,7 @@ export const salesforceMatchSuppressions = pgTable(
     uniqueIndex("salesforce_match_suppressions_job_sf_version_unique")
       .on(table.jobId, table.sfId, table.sourceVersion)
       .where(sql`${table.jobId} is not null`),
-  ],
+  ]
 );
 
 export const entityVersions = pgTable(
@@ -874,9 +935,9 @@ export const entityVersions = pgTable(
     uniqueIndex("entity_versions_entity_version_unique").on(
       table.entityType,
       table.entityId,
-      table.version,
+      table.version
     ),
-  ],
+  ]
 );
 
 export const dataSnapshots = pgTable("data_snapshots", {
@@ -885,56 +946,85 @@ export const dataSnapshots = pgTable("data_snapshots", {
   storageKey: text("storage_key").notNull(),
   checksum: text("checksum").notNull(),
   byteSize: integer("byte_size").notNull().default(0),
-  manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull().default({}),
+  manifest: jsonb("manifest")
+    .$type<Record<string, unknown>>()
+    .notNull()
+    .default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const apiTokens = pgTable("api_tokens", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  /** sha256 hex of the secret; plaintext shown once at creation. */
-  tokenHash: text("token_hash").notNull(),
-  tokenPrefix: text("token_prefix").notNull(),
-  scopes: jsonb("scopes").$type<string[]>().notNull().default([]),
-  regionAllowlist: jsonb("region_allowlist").$type<string[]>().notNull().default([]),
-  createdById: integer("created_by_id")
-    .notNull()
-    .references(() => users.id),
-  expiresAt: timestamp("expires_at"),
-  revokedAt: timestamp("revoked_at"),
-  lastUsedAt: timestamp("last_used_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-}, (table) => [uniqueIndex("api_tokens_token_hash_unique").on(table.tokenHash)]);
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    /** sha256 hex of the secret; plaintext shown once at creation. */
+    tokenHash: text("token_hash").notNull(),
+    tokenPrefix: text("token_prefix").notNull(),
+    scopes: jsonb("scopes").$type<string[]>().notNull().default([]),
+    regionAllowlist: jsonb("region_allowlist")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    createdById: integer("created_by_id")
+      .notNull()
+      .references(() => users.id),
+    expiresAt: timestamp("expires_at"),
+    revokedAt: timestamp("revoked_at"),
+    lastUsedAt: timestamp("last_used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("api_tokens_token_hash_unique").on(table.tokenHash)]
+);
 
-export const apiIdempotencyKeys = pgTable("api_idempotency_keys", {
-  id: serial("id").primaryKey(),
-  tokenId: integer("token_id")
-    .notNull()
-    .references(() => apiTokens.id),
-  key: text("key").notNull(),
-  operation: text("operation").notNull(),
-  payloadHash: text("payload_hash").notNull(),
-  responseStatus: integer("response_status").notNull(),
-  responseBody: jsonb("response_body").$type<Record<string, unknown>>().notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-}, (table) => [uniqueIndex("api_idempotency_token_key_unique").on(table.tokenId, table.key)]);
+export const apiIdempotencyKeys = pgTable(
+  "api_idempotency_keys",
+  {
+    id: serial("id").primaryKey(),
+    tokenId: integer("token_id")
+      .notNull()
+      .references(() => apiTokens.id),
+    key: text("key").notNull(),
+    operation: text("operation").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    responseStatus: integer("response_status").notNull(),
+    responseBody: jsonb("response_body")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("api_idempotency_token_key_unique").on(
+      table.tokenId,
+      table.key
+    ),
+  ]
+);
 
-export const apiDestructiveChallenges = pgTable("api_destructive_challenges", {
-  id: serial("id").primaryKey(),
-  tokenId: integer("token_id")
-    .notNull()
-    .references(() => apiTokens.id),
-  actorId: integer("actor_id")
-    .notNull()
-    .references(() => users.id),
-  challengeHash: text("challenge_hash").notNull(),
-  operation: text("operation").notNull(),
-  target: text("target").notNull(),
-  payloadHash: text("payload_hash").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  usedAt: timestamp("used_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-}, (table) => [uniqueIndex("api_destructive_challenge_hash_unique").on(table.challengeHash)]);
+export const apiDestructiveChallenges = pgTable(
+  "api_destructive_challenges",
+  {
+    id: serial("id").primaryKey(),
+    tokenId: integer("token_id")
+      .notNull()
+      .references(() => apiTokens.id),
+    actorId: integer("actor_id")
+      .notNull()
+      .references(() => users.id),
+    challengeHash: text("challenge_hash").notNull(),
+    operation: text("operation").notNull(),
+    target: text("target").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("api_destructive_challenge_hash_unique").on(
+      table.challengeHash
+    ),
+  ]
+);
 
 export const dashboardScopeEnum = pgEnum("dashboard_scope", [
   "personal",
@@ -983,7 +1073,9 @@ export const dashboards = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     deletedAt: timestamp("deleted_at"),
   },
-  (table) => [index("dashboards_owner_published_idx").on(table.ownerId, table.published)],
+  (table) => [
+    index("dashboards_owner_published_idx").on(table.ownerId, table.published),
+  ]
 );
 
 export const dashboardWidgets = pgTable("dashboard_widgets", {
@@ -1036,7 +1128,8 @@ export type RoundStatus = EstimateRound["status"];
 export type Role = User["role"];
 export type FieldPromotion = typeof fieldPromotions.$inferSelect;
 export type DistributionList = typeof distributionLists.$inferSelect;
-export type SalesforceMatchCandidate = typeof salesforceMatchCandidates.$inferSelect;
+export type SalesforceMatchCandidate =
+  typeof salesforceMatchCandidates.$inferSelect;
 export type ApiToken = typeof apiTokens.$inferSelect;
 export type Dashboard = typeof dashboards.$inferSelect;
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
@@ -1047,8 +1140,8 @@ export type UserTablePrefs = typeof userTablePrefs.$inferSelect;
 
 /** Better Auth OAuth tables (string IDs) — do not confuse with app `users`. */
 export {
-  user as authUser,
-  session as authSession,
   account as authAccount,
+  session as authSession,
+  user as authUser,
   verification as authVerification,
 } from "./auth-schema";

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, isSameDay, isSameMonth, isToday } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   calendarMonthDays,
@@ -75,9 +75,14 @@ export function Calendar({
               className={cn(
                 "flex size-9 items-center justify-center rounded-md p-0 text-sm leading-none tabular-nums outline-none transition-colors",
                 "hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30",
-                !inMonth && "text-muted-foreground/45 hover:text-muted-foreground",
-                inMonth && !active && isToday(day) && "bg-accent/70 text-foreground",
-                active && "bg-primary text-primary-foreground hover:bg-accent-hover hover:text-primary-foreground",
+                !inMonth &&
+                  "text-muted-foreground/45 hover:text-muted-foreground",
+                inMonth &&
+                  !active &&
+                  isToday(day) &&
+                  "bg-accent/70 text-foreground",
+                active &&
+                  "bg-primary text-primary-foreground hover:bg-accent-hover hover:text-primary-foreground"
               )}
             >
               {format(day, "d")}

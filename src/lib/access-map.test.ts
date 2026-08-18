@@ -10,7 +10,7 @@ describe("SSO group → role mapping", () => {
         name: "SPD User",
         groups: ["BG-Precon-SPD", "BG-Region-Central"],
       },
-      DEFAULT_ACCESS,
+      DEFAULT_ACCESS
     );
     expect(mapped.role).toBe("rpd");
     expect(mapped.region).toBe("Central");

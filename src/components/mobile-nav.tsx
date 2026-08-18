@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronDown, Menu, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, Menu, Sparkles, X } from "lucide-react";
+import { useState } from "react";
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -13,7 +14,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { BrandMark } from "@/components/brand-mark";
 
 type SubItem = {
   href: string;
@@ -42,10 +42,26 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/bid-schedule",
         label: "Bid Schedule",
         children: [
-          { href: "/bid-schedule?section=all", label: "All", match: (s) => !s.includes("section=") || s.includes("section=all") },
-          { href: "/bid-schedule?section=active", label: "Active", match: (s) => s.includes("section=active") },
-          { href: "/bid-schedule?section=upcoming", label: "Upcoming", match: (s) => s.includes("section=upcoming") },
-          { href: "/bid-schedule?section=outstanding", label: "Outstanding", match: (s) => s.includes("section=outstanding") },
+          {
+            href: "/bid-schedule?section=all",
+            label: "All",
+            match: (s) => !s.includes("section=") || s.includes("section=all"),
+          },
+          {
+            href: "/bid-schedule?section=active",
+            label: "Active",
+            match: (s) => s.includes("section=active"),
+          },
+          {
+            href: "/bid-schedule?section=upcoming",
+            label: "Upcoming",
+            match: (s) => s.includes("section=upcoming"),
+          },
+          {
+            href: "/bid-schedule?section=outstanding",
+            label: "Outstanding",
+            match: (s) => s.includes("section=outstanding"),
+          },
         ],
       },
       { href: "/post-bid", label: "Post-Bid Entry" },
@@ -58,16 +74,35 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/dashboards",
         label: "Dashboards",
         children: [
-          { href: "/dashboards?level=corporate", label: "Corporate", match: (s, p) => p === "/dashboards" && (!s.includes("level=") || s.includes("level=corporate")) },
-          { href: "/dashboards?level=region", label: "Region", match: (s, p) => p === "/dashboards" && s.includes("level=region") },
-          { href: "/dashboards?level=division", label: "Division", match: (s, p) => p === "/dashboards" && s.includes("level=division") },
+          {
+            href: "/dashboards?level=corporate",
+            label: "Corporate",
+            match: (s, p) =>
+              p === "/dashboards" &&
+              (!s.includes("level=") || s.includes("level=corporate")),
+          },
+          {
+            href: "/dashboards?level=region",
+            label: "Region",
+            match: (s, p) => p === "/dashboards" && s.includes("level=region"),
+          },
+          {
+            href: "/dashboards?level=division",
+            label: "Division",
+            match: (s, p) =>
+              p === "/dashboards" && s.includes("level=division"),
+          },
         ],
       },
       {
         href: "/reports",
         label: "Reports",
         children: [
-          { href: "/reports", label: "Report Builder", match: (_, p) => p === "/reports" },
+          {
+            href: "/reports",
+            label: "Report Builder",
+            match: (_, p) => p === "/reports",
+          },
           {
             href: "/reports/annual",
             label: "Annual Regional Report",
@@ -79,14 +114,46 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin",
         label: "Admin",
         children: [
-          { href: "/admin?tab=columns", label: "Data Columns", match: (s) => !s.includes("tab=") || s.includes("tab=columns") },
-          { href: "/admin?tab=lists", label: "Reference Lists", match: (s) => s.includes("tab=lists") },
-          { href: "/admin?tab=audit", label: "Audit Log", match: (s) => s.includes("tab=audit") },
-          { href: "/admin?tab=integrations", label: "Integrations", match: (s) => s.includes("tab=integrations") },
-          { href: "/admin?tab=salesforce", label: "Salesforce Inbox", match: (s) => s.includes("tab=salesforce") },
-          { href: "/admin?tab=distribution", label: "Distribution", match: (s) => s.includes("tab=distribution") },
-          { href: "/admin/destini", label: "Destini import", match: (_, p) => p.startsWith("/admin/destini") },
-          { href: "/trash", label: "Trash", match: (_, p) => p.startsWith("/trash") },
+          {
+            href: "/admin?tab=columns",
+            label: "Data Columns",
+            match: (s) => !s.includes("tab=") || s.includes("tab=columns"),
+          },
+          {
+            href: "/admin?tab=lists",
+            label: "Reference Lists",
+            match: (s) => s.includes("tab=lists"),
+          },
+          {
+            href: "/admin?tab=audit",
+            label: "Audit Log",
+            match: (s) => s.includes("tab=audit"),
+          },
+          {
+            href: "/admin?tab=integrations",
+            label: "Integrations",
+            match: (s) => s.includes("tab=integrations"),
+          },
+          {
+            href: "/admin?tab=salesforce",
+            label: "Salesforce Inbox",
+            match: (s) => s.includes("tab=salesforce"),
+          },
+          {
+            href: "/admin?tab=distribution",
+            label: "Distribution",
+            match: (s) => s.includes("tab=distribution"),
+          },
+          {
+            href: "/admin/destini",
+            label: "Destini import",
+            match: (_, p) => p.startsWith("/admin/destini"),
+          },
+          {
+            href: "/trash",
+            label: "Trash",
+            match: (_, p) => p.startsWith("/trash"),
+          },
         ],
       },
     ],
@@ -143,7 +210,12 @@ export function MobileNav() {
           </div>
           <SheetClose
             render={
-              <Button variant="ghost" size="icon" className="size-10" aria-label="Close navigation" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-10"
+                aria-label="Close navigation"
+              />
             }
           >
             <X className="size-4" />
@@ -160,7 +232,8 @@ export function MobileNav() {
                   ? pathname === item.href
                   : item.href === "/"
                     ? pathname === "/"
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    : pathname === item.href ||
+                      pathname.startsWith(`${item.href}/`);
                 const expanded = Boolean(active && item.children?.length);
                 const isCopilot = item.href === "/copilot";
 
@@ -173,7 +246,8 @@ export function MobileNav() {
                       }}
                       className={cn(
                         "flex min-h-10 items-center gap-2 rounded-r-md border-l-2 border-transparent px-2.5 py-2 text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                        active && "border-l-primary bg-info-soft font-medium text-primary",
+                        active &&
+                          "border-l-primary bg-info-soft font-medium text-primary"
                       )}
                     >
                       {isCopilot && (
@@ -184,7 +258,7 @@ export function MobileNav() {
                         <ChevronDown
                           className={cn(
                             "size-3.5 shrink-0 transition-transform duration-300",
-                            expanded ? "rotate-0" : "-rotate-90 opacity-40",
+                            expanded ? "rotate-0" : "-rotate-90 opacity-40"
                           )}
                         />
                       )}
@@ -193,14 +267,17 @@ export function MobileNav() {
                       <div
                         className={cn(
                           "grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                         )}
                       >
                         <div className="overflow-hidden">
                           <div className="ml-2 space-y-0.5 border-l border-border/70 py-0.5 pl-2">
                             {item.children.map((sub) => {
                               const subActive =
-                                active && (sub.match ? sub.match(search, pathname) : false);
+                                active &&
+                                (sub.match
+                                  ? sub.match(search, pathname)
+                                  : false);
                               return (
                                 <Link
                                   key={sub.href}
@@ -208,7 +285,8 @@ export function MobileNav() {
                                   onClick={close}
                                   className={cn(
                                     "flex min-h-9 items-center rounded px-2 py-1.5 text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                                    subActive && "bg-info-soft font-medium text-primary",
+                                    subActive &&
+                                      "bg-info-soft font-medium text-primary"
                                   )}
                                 >
                                   {sub.label}

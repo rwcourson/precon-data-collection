@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_FORECAST_ASSUMPTIONS,
   buildForecastSeries,
-  resolveForecastTimingDate,
+  DEFAULT_FORECAST_ASSUMPTIONS,
   type ForecastRoundInput,
+  resolveForecastTimingDate,
 } from "./forecast";
 
-const base = (over: Partial<ForecastRoundInput> & Pick<ForecastRoundInput, "id">): ForecastRoundInput => ({
+const base = (
+  over: Partial<ForecastRoundInput> & Pick<ForecastRoundInput, "id">
+): ForecastRoundInput => ({
   jobId: 1,
   jobNumber: "TBD-1",
   jobName: "Test",
@@ -23,16 +25,19 @@ describe("resolveForecastTimingDate", () => {
       resolveForecastTimingDate({
         projectStartDate: "2027-01-01",
         bidDueDate: "2026-06-01",
-      }),
+      })
     ).toBe("2027-01-01");
   });
 
   it("falls back to bid due and never invents a date", () => {
     expect(
-      resolveForecastTimingDate({ projectStartDate: null, bidDueDate: "2026-06-01" }),
+      resolveForecastTimingDate({
+        projectStartDate: null,
+        bidDueDate: "2026-06-01",
+      })
     ).toBe("2026-06-01");
     expect(
-      resolveForecastTimingDate({ projectStartDate: null, bidDueDate: null }),
+      resolveForecastTimingDate({ projectStartDate: null, bidDueDate: null })
     ).toBeNull();
   });
 });
@@ -43,7 +48,9 @@ describe("buildForecastSeries", () => {
       pendingWinProbability: 0.5,
       scheduleSlipMonths: 2,
     });
-    expect(series.months.find((m) => m.month === "2026-06")?.objective).toBe(10_000_000);
+    expect(series.months.find((m) => m.month === "2026-06")?.objective).toBe(
+      10_000_000
+    );
     expect(series.totals.objective).toBe(10_000_000);
   });
 
@@ -53,7 +60,9 @@ describe("buildForecastSeries", () => {
       scheduleSlipMonths: 2,
     });
     expect(series.months.find((m) => m.month === "2026-06")?.adjusted).toBe(0);
-    expect(series.months.find((m) => m.month === "2026-08")?.adjusted).toBe(5_000_000);
+    expect(series.months.find((m) => m.month === "2026-08")?.adjusted).toBe(
+      5_000_000
+    );
     expect(series.totals.adjusted).toBe(5_000_000);
   });
 
@@ -63,7 +72,7 @@ describe("buildForecastSeries", () => {
         base({ id: 1, outcome: "successful", estimateValue: 8_000_000 }),
         base({ id: 2, outcome: "unsuccessful", estimateValue: 4_000_000 }),
       ],
-      DEFAULT_FORECAST_ASSUMPTIONS,
+      DEFAULT_FORECAST_ASSUMPTIONS
     );
     expect(series.totals.objective).toBe(12_000_000);
     expect(series.totals.adjusted).toBe(8_000_000);
@@ -86,8 +95,8 @@ describe("buildForecastSeries", () => {
       base({ id: 10, estimateValue: 1_000_000 }),
       base({ id: 11, estimateValue: 2_000_000, timingDate: "2026-06-01" }),
     ]);
-    expect(series.months.find((m) => m.month === "2026-06")?.contributingRoundIds).toEqual([
-      10, 11,
-    ]);
+    expect(
+      series.months.find((m) => m.month === "2026-06")?.contributingRoundIds
+    ).toEqual([10, 11]);
   });
 });

@@ -6,12 +6,18 @@ import {
   editRoundNoteSchema,
   roundNoteIdSchema,
 } from "@/domain/contracts";
-import { principalCanAssignJobUser } from "@/lib/authorization/decisions";
-import { listDirectoryUsersForPrincipal, loadRoundForPrincipal } from "@/lib/authorization/loaders";
 import { DomainError, findDomainError } from "@/domain/errors";
+import { principalCanAssignJobUser } from "@/lib/authorization/decisions";
+import {
+  listDirectoryUsersForPrincipal,
+  loadRoundForPrincipal,
+} from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { createNoteFromUploadedForm, revalidateRoundNotes } from "@/lib/note-create";
 import { extractMentionUserIds } from "@/lib/note-body";
+import {
+  createNoteFromUploadedForm,
+  revalidateRoundNotes,
+} from "@/lib/note-create";
 import { notesService } from "@/services/notes-service";
 
 export type NotesDirectoryUser = {
@@ -43,7 +49,11 @@ export async function getRoundNotes(roundId: number) {
 
 export async function previewRoundNoteMentions(roundId: number, body: string) {
   const principal = await getWebPrincipal();
-  return notesService.previewMentions(principal, roundId, extractMentionUserIds(body));
+  return notesService.previewMentions(
+    principal,
+    roundId,
+    extractMentionUserIds(body)
+  );
 }
 
 export async function createRoundNote(input: {
@@ -51,14 +61,22 @@ export async function createRoundNote(input: {
   body: string;
   files?: { filename: string; contentType: string; bytes: number[] }[];
 }) {
-  const parsed = createRoundNoteSchema.parse({ roundId: input.roundId, body: input.body });
+  const parsed = createRoundNoteSchema.parse({
+    roundId: input.roundId,
+    body: input.body,
+  });
   const principal = await getWebPrincipal();
   const files = (input.files ?? []).map((file) => ({
     filename: file.filename,
     contentType: file.contentType,
     bytes: Uint8Array.from(file.bytes),
   }));
-  const note = await notesService.create(principal, parsed.roundId, parsed.body, files);
+  const note = await notesService.create(
+    principal,
+    parsed.roundId,
+    parsed.body,
+    files
+  );
   revalidateRoundNotes(parsed.roundId);
   return note;
 }
@@ -67,7 +85,11 @@ function noteActionError(error: unknown, fallback: string) {
   const domain = findDomainError(error);
   if (domain) return domain.what;
   if (error instanceof DomainError) return error.what;
-  if (error instanceof Error && error.message && !/Minified React error #\d+/.test(error.message)) {
+  if (
+    error instanceof Error &&
+    error.message &&
+    !/Minified React error #\d+/.test(error.message)
+  ) {
     return error.message;
   }
   return fallback;
@@ -75,9 +97,15 @@ function noteActionError(error: unknown, fallback: string) {
 
 export async function createRoundNoteFromForm(formData: FormData) {
   try {
-    return { ok: true as const, note: await createNoteFromUploadedForm(formData) };
+    return {
+      ok: true as const,
+      note: await createNoteFromUploadedForm(formData),
+    };
   } catch (error) {
-    return { ok: false as const, error: noteActionError(error, "Could not post the note") };
+    return {
+      ok: false as const,
+      error: noteActionError(error, "Could not post the note"),
+    };
   }
 }
 

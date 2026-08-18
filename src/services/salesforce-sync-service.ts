@@ -7,11 +7,11 @@ import {
   salesforceMatchSuppressions,
   salesforceSyncRuns,
 } from "@/db/schema";
-import type { Principal } from "@/lib/authorization/types";
 import { DomainError } from "@/domain/errors";
+import { authorize } from "@/lib/authorization/kernel";
+import type { Principal } from "@/lib/authorization/types";
 import { connectProvider } from "@/lib/integrations/connect";
 import { proposeMatches } from "@/lib/salesforce-match";
-import { authorize } from "@/lib/authorization/kernel";
 
 export type SalesforcePage = {
   items: Awaited<ReturnType<ReturnType<typeof connectProvider>["list"]>>;
@@ -22,7 +22,7 @@ export type SalesforcePage = {
 export const salesforceSyncService = {
   async runIncremental(
     principal: Principal,
-    input: { cursor?: string | null; pageSize?: number } = {},
+    input: { cursor?: string | null; pageSize?: number } = {}
   ) {
     const allowed = authorize(principal, "integrate", {
       type: "admin",
@@ -39,7 +39,10 @@ export const salesforceSyncService = {
 
     const [run] = await db
       .insert(salesforceSyncRuns)
-      .values({ status: "running", cursor: input.cursor ?? new Date().toISOString() })
+      .values({
+        status: "running",
+        cursor: input.cursor ?? new Date().toISOString(),
+      })
       .returning();
 
     try {
@@ -49,9 +52,13 @@ export const salesforceSyncService = {
       const pageSize = input.pageSize ?? all.length;
       const start = input.cursor ? Number(input.cursor) || 0 : 0;
       const page = all.slice(start, start + pageSize);
-      const nextCursor = start + pageSize < all.length ? String(start + pageSize) : null;
+      const nextCursor =
+        start + pageSize < all.length ? String(start + pageSize) : null;
 
-      const allJobs = await db.select().from(jobs).where(isNull(jobs.deletedAt));
+      const allJobs = await db
+        .select()
+        .from(jobs)
+        .where(isNull(jobs.deletedAt));
       const suppressions = await db.select().from(salesforceMatchSuppressions);
       const candidates = proposeMatches(
         allJobs.map((j) => ({
@@ -73,7 +80,7 @@ export const salesforceSyncService = {
           jobId: s.jobId,
           sfId: s.sfId,
           sourceVersion: s.sourceVersion,
-        })),
+        }))
       );
 
       let created = 0;
@@ -85,8 +92,11 @@ export const salesforceSyncService = {
             and(
               eq(salesforceMatchCandidates.jobId, candidate.jobId),
               eq(salesforceMatchCandidates.sfId, candidate.sfId),
-              eq(salesforceMatchCandidates.sourceVersion, candidate.sourceVersion),
-            ),
+              eq(
+                salesforceMatchCandidates.sourceVersion,
+                candidate.sourceVersion
+              )
+            )
           )
           .limit(1);
         if (existing[0]) continue;

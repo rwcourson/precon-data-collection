@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
 import { withEve } from "eve/next";
+import type { NextConfig } from "next";
 
 // Inline scripts stay allowed: the root layout injects the theme script via
 // dangerouslySetInnerHTML and Next.js emits its own inline bootstrap scripts.
@@ -21,8 +21,14 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Browsers ignore HSTS on insecure origins, so this is harmless in local dev.
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains",
+  },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
 ];
 
@@ -43,7 +49,11 @@ const nextConfig: NextConfig = {
   },
   // PGlite loads WASM assets from disk at runtime; keep it out of the bundle.
   // Chromium (PDF export) ships a compressed binary that must stay on disk too.
-  serverExternalPackages: ["@electric-sql/pglite", "@sparticuz/chromium", "playwright-core"],
+  serverExternalPackages: [
+    "@electric-sql/pglite",
+    "@sparticuz/chromium",
+    "playwright-core",
+  ],
   // Local file: vendor package — ensure Next transpiles ESM chart-elements.
   transpilePackages: ["@rwcourson/chart-elements"],
   // Keep build tracing and Turbopack discovery inside this repository even

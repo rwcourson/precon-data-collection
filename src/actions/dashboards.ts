@@ -1,18 +1,18 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { dashboardWidgets, dashboards } from "@/db/schema";
+import { dashboards, dashboardWidgets } from "@/db/schema";
 import { loadDashboardForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { dashboardService } from "@/services/dashboard-service";
 import {
   assertWidgetQueryBounds,
   canPublishDashboard,
   dashboardCreateSchema,
   widgetConfigSchema,
 } from "@/lib/dashboard-domain";
+import { dashboardService } from "@/services/dashboard-service";
 
 export async function createDashboard(raw: unknown) {
   const principal = await getWebPrincipal();
@@ -41,7 +41,7 @@ export async function createDashboard(raw: unknown) {
         dashboardId: dash.id,
         sortOrder: i,
         config,
-      })),
+      }))
     );
   }
   revalidatePath("/dashboards");
@@ -56,9 +56,16 @@ export async function cloneDashboard(id: number) {
   return copy.id;
 }
 
-export async function reorderWidgets(dashboardId: number, orderedIds: number[]) {
+export async function reorderWidgets(
+  dashboardId: number,
+  orderedIds: number[]
+) {
   const principal = await getWebPrincipal();
-  const loaded = await loadDashboardForPrincipal(principal, dashboardId, "edit");
+  const loaded = await loadDashboardForPrincipal(
+    principal,
+    dashboardId,
+    "edit"
+  );
   if (!loaded) throw new Error("Permission denied.");
   for (let i = 0; i < orderedIds.length; i++) {
     await db
@@ -73,7 +80,11 @@ export async function addWidget(dashboardId: number, rawConfig: unknown) {
   const principal = await getWebPrincipal();
   const config = widgetConfigSchema.parse(rawConfig);
   assertWidgetQueryBounds(config);
-  const loaded = await loadDashboardForPrincipal(principal, dashboardId, "edit");
+  const loaded = await loadDashboardForPrincipal(
+    principal,
+    dashboardId,
+    "edit"
+  );
   if (!loaded) throw new Error("Permission denied.");
   const existing = await db
     .select()
@@ -91,6 +102,9 @@ export async function deleteDashboard(id: number) {
   const principal = await getWebPrincipal();
   const loaded = await loadDashboardForPrincipal(principal, id, "edit");
   if (!loaded) return;
-  await db.update(dashboards).set({ deletedAt: new Date() }).where(eq(dashboards.id, id));
+  await db
+    .update(dashboards)
+    .set({ deletedAt: new Date() })
+    .where(eq(dashboards.id, id));
   revalidatePath("/dashboards/studio");
 }

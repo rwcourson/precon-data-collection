@@ -41,10 +41,7 @@ export type ChartSeriesInput = {
   value: number | null | undefined;
 };
 
-export function seriesColorAt(
-  index: number,
-  dark = false,
-): string {
+export function seriesColorAt(index: number, dark = false): string {
   const palette = dark ? BG_SERIES_DARK : BG_SERIES_LIGHT;
   const n = palette.length;
   return palette[((Math.trunc(index) % n) + n) % n]!;
@@ -58,12 +55,16 @@ export function toPlotValue(v: number | null | undefined): number {
 
 export function isEmptySeries(points: ChartPoint[]): boolean {
   if (!points.length) return true;
-  return points.every((p) => toPlotValue(p.value) === 0 && toPlotValue(p.value2) === 0);
+  return points.every(
+    (p) => toPlotValue(p.value) === 0 && toPlotValue(p.value2) === 0
+  );
 }
 
 /** Shorten axis labels for mobile density. */
 export function shortLabel(label: string, max = 8): string {
-  const t = String(label ?? "").replace(/_/g, " ").trim();
+  const t = String(label ?? "")
+    .replace(/_/g, " ")
+    .trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max - 1)}…`;
 }
@@ -74,13 +75,16 @@ export function shortLabel(label: string, max = 8): string {
  */
 export function normalizeStatusSeries(
   series: ChartSeriesInput[] | null | undefined,
-  opts?: { dark?: boolean; max?: number },
+  opts?: { dark?: boolean; max?: number }
 ): ChartPoint[] {
   const max = opts?.max ?? 8;
   const dark = opts?.dark ?? false;
   if (!series?.length) return [];
   return series
-    .filter((s) => s != null && Number.isFinite(Number(s.value)) && Number(s.value) > 0)
+    .filter(
+      (s) =>
+        s != null && Number.isFinite(Number(s.value)) && Number(s.value) > 0
+    )
     .slice(0, max)
     .map((s, i) => ({
       label: shortLabel(s.label, 10),
@@ -98,7 +102,7 @@ export function normalizeForecastMonths(
     | { month: string; objective: number; adjusted: number }[]
     | null
     | undefined,
-  opts?: { max?: number },
+  opts?: { max?: number }
 ): ChartPoint[] {
   const max = opts?.max ?? 12;
   if (!months?.length) return [];
@@ -119,12 +123,12 @@ export function normalizeForecastMonths(
 /** Overview byStatus map → chart points. */
 export function normalizeByStatusMap(
   byStatus: Record<string, number> | null | undefined,
-  opts?: { dark?: boolean },
+  opts?: { dark?: boolean }
 ): ChartPoint[] {
   if (!byStatus) return [];
   return normalizeStatusSeries(
     Object.entries(byStatus).map(([label, value]) => ({ label, value })),
-    { dark: opts?.dark, max: 8 },
+    { dark: opts?.dark, max: 8 }
   );
 }
 
@@ -133,7 +137,7 @@ export function normalizeByStatusMap(
  */
 export function normalizeRegionVolume(
   series: { label: string; value: number }[] | null | undefined,
-  opts?: { dark?: boolean; max?: number },
+  opts?: { dark?: boolean; max?: number }
 ): ChartPoint[] {
   return normalizeStatusSeries(series ?? [], {
     dark: opts?.dark,
@@ -156,7 +160,7 @@ export function chartMaxValue(points: ChartPoint[], useValue2 = false): number {
  */
 export function formatAxisTick(
   label: string,
-  mode: "dollars" | "number" | "auto" = "auto",
+  mode: "dollars" | "number" | "auto" = "auto"
 ): string {
   const n = Number(String(label).replace(/,/g, ""));
   if (!Number.isFinite(n)) return label;
@@ -165,7 +169,8 @@ export function formatAxisTick(
   if (useDollars) {
     const abs = Math.abs(n);
     const sign = n < 0 ? "-" : "";
-    if (abs >= 1_000_000_000) return `${sign}$${(abs / 1_000_000_000).toFixed(1)}B`;
+    if (abs >= 1_000_000_000)
+      return `${sign}$${(abs / 1_000_000_000).toFixed(1)}B`;
     if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
     if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(0)}K`;
     return `${sign}$${Math.round(abs)}`;

@@ -1,13 +1,19 @@
-import { describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
 import { db } from "@/db";
 
 async function explain(query: string): Promise<string> {
   await db.execute(sql.raw("SET enable_seqscan = off"));
   const result = await db.execute(sql.raw(`EXPLAIN ${query}`));
-  const rows = Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? [result]);
+  const rows = Array.isArray(result)
+    ? result
+    : ((result as { rows?: unknown[] }).rows ?? [result]);
   return rows
-    .map((row) => (row && typeof row === "object" ? Object.values(row).join(" ") : String(row)))
+    .map((row) =>
+      row && typeof row === "object"
+        ? Object.values(row).join(" ")
+        : String(row)
+    )
     .join("\n");
 }
 

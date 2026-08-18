@@ -19,14 +19,17 @@ async function main(): Promise<void> {
   try {
     await client`select pg_advisory_lock(${MIGRATION_LOCK_ID})`;
     locked = true;
-    await migrate(drizzle(client), { migrationsFolder: path.join(process.cwd(), "drizzle") });
+    await migrate(drizzle(client), {
+      migrationsFolder: path.join(process.cwd(), "drizzle"),
+    });
     const rows = await client<{ hash: string; created_at: number }[]>`
       select hash, created_at
       from drizzle.__drizzle_migrations
       order by created_at asc
     `;
     process.stdout.write(`Applied migration count: ${rows.length}\n`);
-    for (const row of rows) process.stdout.write(`- ${row.hash} (${row.created_at})\n`);
+    for (const row of rows)
+      process.stdout.write(`- ${row.hash} (${row.created_at})\n`);
   } finally {
     if (locked) await client`select pg_advisory_unlock(${MIGRATION_LOCK_ID})`;
     await client.end({ timeout: 5 });
@@ -34,6 +37,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error instanceof Error ? error.message : "Migration failed."}\n`);
+  process.stderr.write(
+    `${error instanceof Error ? error.message : "Migration failed."}\n`
+  );
   process.exitCode = 1;
 });

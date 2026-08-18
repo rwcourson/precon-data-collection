@@ -1,8 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Building2, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { switchWorkspace } from "@/actions/user";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { switchWorkspace } from "@/actions/user";
 import { CORPORATE, type Workspace } from "@/lib/workspace";
 
 export function WorkspaceSwitcher({
@@ -32,7 +32,8 @@ export function WorkspaceSwitcher({
       router.refresh();
     });
 
-  const onlyOne = workspace.available.length <= 1 && !workspace.canViewCorporate;
+  const onlyOne =
+    workspace.available.length <= 1 && !workspace.canViewCorporate;
 
   return (
     <DropdownMenu>
@@ -54,20 +55,28 @@ export function WorkspaceSwitcher({
         {pending ? (
           <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
         ) : (
-          !onlyOne && <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+          !onlyOne && (
+            <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+          )
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <div className="px-2 py-1.5 text-xs text-muted-foreground">
-          Region workspace — scopes Bid Schedule, Post-Bid, Dashboards, and Reports
+          Region workspace — scopes Bid Schedule, Post-Bid, Dashboards, and
+          Reports
         </div>
         <DropdownMenuSeparator />
         {workspace.canViewCorporate && (
           <>
             <DropdownMenuItem onClick={() => select(CORPORATE)}>
-              <Building2 className="size-3.5" style={{ color: corporateAccent }} />
+              <Building2
+                className="size-3.5"
+                style={{ color: corporateAccent }}
+              />
               <span className="text-sm">Corporate — all Regions</span>
-              {workspace.region == null && <Check className="ml-auto size-3.5" />}
+              {workspace.region == null && (
+                <Check className="ml-auto size-3.5" />
+              )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>

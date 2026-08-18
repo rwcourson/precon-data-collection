@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2, Mail, Play, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import {
+  runRemindersNow,
+  saveNotificationSettings,
+} from "@/actions/notifications-settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,10 +35,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  runRemindersNow,
-  saveNotificationSettings,
-} from "@/actions/notifications-settings";
 import type { NotificationSettings } from "@/lib/reminders";
 
 export type OutboxRow = {
@@ -75,11 +75,13 @@ export function NotificationSettingsPanel({
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Submitted &amp; incomplete reminders</CardTitle>
+          <CardTitle className="text-sm">
+            Submitted &amp; incomplete reminders
+          </CardTitle>
           <CardDescription>
             When a round reaches Submitted with required fields still blank, the
-            Estimate Lead is nudged on this cadence, and the Region&apos;s RPD is
-            copied once the round is badly overdue. A scheduler calls{" "}
+            Estimate Lead is nudged on this cadence, and the Region&apos;s RPD
+            is copied once the round is badly overdue. A scheduler calls{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-2xs">
               POST /api/jobs/reminders
             </code>{" "}
@@ -97,7 +99,11 @@ export function NotificationSettingsPanel({
                   { value: "weekly", label: "Weekly" },
                 ]}
                 value={draft.cadence}
-                onValueChange={(v) => patch({ cadence: (v ?? "weekly") as NotificationSettings["cadence"] })}
+                onValueChange={(v) =>
+                  patch({
+                    cadence: (v ?? "weekly") as NotificationSettings["cadence"],
+                  })
+                }
                 disabled={!canEdit}
               >
                 <SelectTrigger className="w-full">
@@ -125,13 +131,17 @@ export function NotificationSettingsPanel({
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Escalate to RPD after (days)</Label>
+              <Label className="text-xs font-medium">
+                Escalate to RPD after (days)
+              </Label>
               <Input
                 type="number"
                 min={1}
                 max={180}
                 value={draft.escalateAfterDays}
-                onChange={(e) => patch({ escalateAfterDays: Number(e.target.value) })}
+                onChange={(e) =>
+                  patch({ escalateAfterDays: Number(e.target.value) })
+                }
                 disabled={!canEdit}
               />
             </div>
@@ -164,7 +174,8 @@ export function NotificationSettingsPanel({
                 : "Stub provider — messages are written to the outbox only"}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {pendingCount} round{pendingCount === 1 ? "" : "s"} currently past the grace period.
+              {pendingCount} round{pendingCount === 1 ? "" : "s"} currently past
+              the grace period.
             </span>
             <div className="ml-auto flex items-center gap-2">
               {canEdit && (
@@ -178,16 +189,22 @@ export function NotificationSettingsPanel({
                       try {
                         const res = await runRemindersNow();
                         toast.success(
-                          `Sweep complete — ${res.candidates} overdue round${res.candidates === 1 ? "" : "s"}, ${res.notified} in-app, ${res.emailed} email${res.emailed === 1 ? "" : "s"}.`,
+                          `Sweep complete — ${res.candidates} overdue round${res.candidates === 1 ? "" : "s"}, ${res.notified} in-app, ${res.emailed} email${res.emailed === 1 ? "" : "s"}.`
                         );
                         router.refresh();
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Sweep failed");
+                        toast.error(
+                          e instanceof Error ? e.message : "Sweep failed"
+                        );
                       }
                     })
                   }
                 >
-                  {running ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                  {running ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
                   Run now
                 </Button>
               )}
@@ -204,12 +221,18 @@ export function NotificationSettingsPanel({
                         toast.success("Notification settings saved");
                         router.refresh();
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Save failed");
+                        toast.error(
+                          e instanceof Error ? e.message : "Save failed"
+                        );
                       }
                     })
                   }
                 >
-                  {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  {saving ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
                   Save
                 </Button>
               )}
@@ -240,16 +263,24 @@ export function NotificationSettingsPanel({
             <TableBody>
               {outbox.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
-                    Nothing queued yet. Use Run now to generate the current sweep.
+                  <TableCell
+                    colSpan={5}
+                    className="h-24 text-center text-sm text-muted-foreground"
+                  >
+                    Nothing queued yet. Use Run now to generate the current
+                    sweep.
                   </TableCell>
                 </TableRow>
               )}
               {outbox.map((m) => (
                 <TableRow key={m.id}>
-                  <TableCell className="whitespace-nowrap pl-6 text-xs">{m.createdAt}</TableCell>
+                  <TableCell className="whitespace-nowrap pl-6 text-xs">
+                    {m.createdAt}
+                  </TableCell>
                   <TableCell className="text-xs">{m.toEmail}</TableCell>
-                  <TableCell className="max-w-72 truncate text-xs">{m.subject}</TableCell>
+                  <TableCell className="max-w-72 truncate text-xs">
+                    {m.subject}
+                  </TableCell>
                   <TableCell className="text-xs">{m.kind}</TableCell>
                   <TableCell className="pr-4">
                     <Badge

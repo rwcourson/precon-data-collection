@@ -1,18 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createPursuitSchema } from "@/domain/contracts";
 import { db } from "@/db";
 import { jobs, type RoundStatus } from "@/db/schema";
+import { createPursuitSchema } from "@/domain/contracts";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { connectProvider } from "@/lib/integrations/connect";
 import {
-  pursuitService,
   type AddRoundInput,
   type CreatePursuitInput,
+  pursuitService,
 } from "@/services/pursuit-service";
 
-export type { CreatePursuitInput, AddRoundInput };
+export type { AddRoundInput, CreatePursuitInput };
 
 export async function searchSalesforceJobs(query: string) {
   if (query.trim().length < 2) return [];
@@ -43,7 +43,10 @@ export async function transitionStatus(roundId: number, to: RoundStatus) {
   revalidatePath(`/rounds/${roundId}`);
 }
 
-export async function assignEstimateLead(roundId: number, userId: number | null) {
+export async function assignEstimateLead(
+  roundId: number,
+  userId: number | null
+) {
   const principal = await getWebPrincipal();
   await pursuitService.assignEstimateLead(principal, roundId, userId);
   revalidatePath("/bid-schedule");
@@ -53,7 +56,11 @@ export async function assignEstimateLead(roundId: number, userId: number | null)
 /** Match-and-merge: link a manual job to a Salesforce record (BRD Section 5). */
 export async function linkJobToSalesforce(jobId: number, sfId: string) {
   const principal = await getWebPrincipal();
-  const result = await pursuitService.linkJobToSalesforce(principal, jobId, sfId);
+  const result = await pursuitService.linkJobToSalesforce(
+    principal,
+    jobId,
+    sfId
+  );
   revalidatePath(`/jobs/${result.jobId}`);
   revalidatePath("/bid-schedule");
   return result;
@@ -62,7 +69,9 @@ export async function linkJobToSalesforce(jobId: number, sfId: string) {
 /** Candidate Salesforce matches for a manual job (name/region/sector similarity). */
 export async function getSalesforceCandidates(jobId: number) {
   const principal = await getWebPrincipal();
-  const { authorizationService } = await import("@/services/authorization-service");
+  const { authorizationService } = await import(
+    "@/services/authorization-service"
+  );
   const jobResult = await authorizationService.readJob(principal, jobId);
   if (!jobResult.ok) return [];
   const job = jobResult.value;
@@ -73,7 +82,10 @@ export async function getSalesforceCandidates(jobId: number) {
     .filter(Boolean) as string[];
 
   const all = await connectProvider().list();
-  const tokens = job.jobName.toLowerCase().split(/\s+/).filter((t) => t.length > 3);
+  const tokens = job.jobName
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 3);
   return all
     .filter((sf) => !linkedIds.includes(sf.sfId))
     .map((sf) => {

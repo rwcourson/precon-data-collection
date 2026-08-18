@@ -5,6 +5,7 @@ import {
   updateRoundCell,
 } from "@/actions/post-bid";
 import { DomainError } from "@/domain/errors";
+import { loadRoundForPrincipal } from "@/lib/authorization/loaders";
 import { FIELD_DEFS } from "@/lib/fields";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import {
@@ -15,19 +16,22 @@ import {
 } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
 import { authorizationService } from "@/services/authorization-service";
-import { loadRoundForPrincipal } from "@/lib/authorization/loaders";
 
 export async function GET(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
   return withMobileAuth(req, { scopes: "read:pursuits" }, async (principal) => {
     const { id } = await ctx.params;
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
 
-    const result = await authorizationService.readRound(principal.authorization, roundId);
-    if (!result.ok) return jsonError(result.error.what, 404, { code: result.error.code });
+    const result = await authorizationService.readRound(
+      principal.authorization,
+      roundId
+    );
+    if (!result.ok)
+      return jsonError(result.error.what, 404, { code: result.error.code });
     const row = result.value;
 
     const [multi, customMap, lists] = await Promise.all([
@@ -60,55 +64,63 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  return withMobileAuth(req, { scopes: "write:pursuits" }, async (principal) => {
-    const { id } = await ctx.params;
-    const roundId = Number(id);
-    if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
-    let body: {
-      values?: Record<string, string>;
-      multiValues?: Record<string, string[]>;
-      customValues?: Record<string, string>;
-      estimateLeadId?: number | null;
-      cell?: { key: string; value: string };
-    };
-    try {
-      body = await req.json();
-    } catch {
-      return jsonError("Invalid JSON", 400);
-    }
+  return withMobileAuth(
+    req,
+    { scopes: "write:pursuits" },
+    async (principal) => {
+      const { id } = await ctx.params;
+      const roundId = Number(id);
+      if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
+      let body: {
+        values?: Record<string, string>;
+        multiValues?: Record<string, string[]>;
+        customValues?: Record<string, string>;
+        estimateLeadId?: number | null;
+        cell?: { key: string; value: string };
+      };
+      try {
+        body = await req.json();
+      } catch {
+        return jsonError("Invalid JSON", 400);
+      }
 
-    try {
-      const editable = await loadRoundForPrincipal(principal.authorization, roundId, {
-        capability: "edit",
-      });
-      if (!editable) throw DomainError.notFound("Round not found");
-      if (body.cell) {
-        await updateRoundCell(roundId, body.cell.key, body.cell.value);
-        return jsonOk({ ok: true, mode: "cell" });
+      try {
+        const editable = await loadRoundForPrincipal(
+          principal.authorization,
+          roundId,
+          {
+            capability: "edit",
+          }
+        );
+        if (!editable) throw DomainError.notFound("Round not found");
+        if (body.cell) {
+          await updateRoundCell(roundId, body.cell.key, body.cell.value);
+          return jsonOk({ ok: true, mode: "cell" });
+        }
+        const customValues: Record<number, string> = {};
+        for (const [k, v] of Object.entries(body.customValues ?? {})) {
+          customValues[Number(k)] = v;
+        }
+        await savePostBidData({
+          roundId,
+          values: body.values ?? {},
+          multiValues: body.multiValues ?? {},
+          customValues,
+          estimateLeadId: body.estimateLeadId,
+        });
+        return jsonOk({ ok: true, mode: "save" });
+      } catch (err) {
+        return mapError(err);
       }
-      const customValues: Record<number, string> = {};
-      for (const [k, v] of Object.entries(body.customValues ?? {})) {
-        customValues[Number(k)] = v;
-      }
-      await savePostBidData({
-        roundId,
-        values: body.values ?? {},
-        multiValues: body.multiValues ?? {},
-        customValues,
-        estimateLeadId: body.estimateLeadId,
-      });
-      return jsonOk({ ok: true, mode: "save" });
-    } catch (err) {
-      return mapError(err);
     }
-  });
+  );
 }
 
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
   return withMobileAuth(req, { scopes: "write:pursuits" }, async () => {
     const { id } = await ctx.params;
@@ -179,7 +191,7 @@ export async function POST(
       try {
         await setOutcome(
           roundId,
-          body.outcome as Parameters<typeof setOutcome>[1],
+          body.outcome as Parameters<typeof setOutcome>[1]
         );
         return jsonOk({ ok: true, outcome: body.outcome });
       } catch (err) {

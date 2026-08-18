@@ -1,7 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   CalendarRange,
   FolderKanban,
@@ -10,6 +8,9 @@ import {
   Search,
   Sheet,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -26,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 type Hit = { href: string; label: string; hint?: string };
 type SearchResult = { pages: Hit[]; jobs: Hit[]; rounds: Hit[]; sheets: Hit[] };
@@ -65,7 +65,7 @@ export function GlobalSearch() {
       setOpen(next);
       if (!next) resetSearch();
     },
-    [resetSearch],
+    [resetSearch]
   );
 
   useEffect(() => {
@@ -122,7 +122,7 @@ export function GlobalSearch() {
       setOpenSafe(false);
       router.push(href);
     },
-    [router, setOpenSafe],
+    [router, setOpenSafe]
   );
 
   const q = query.trim();
@@ -209,9 +209,7 @@ export function GlobalSearch() {
                 </CommandGroup>
               )}
 
-              {showEmpty && (
-                <CommandEmpty>No matches for “{q}”.</CommandEmpty>
-              )}
+              {showEmpty && <CommandEmpty>No matches for “{q}”.</CommandEmpty>}
 
               {hasResults && (
                 <>
@@ -257,7 +255,8 @@ export function GlobalSearch() {
 
                   {activeResults.jobs.length > 0 && (
                     <>
-                      {(activeResults.pages.length > 0 || activeResults.sheets?.length > 0) && (
+                      {(activeResults.pages.length > 0 ||
+                        activeResults.sheets?.length > 0) && (
                         <CommandSeparator />
                       )}
                       <CommandGroup heading="Jobs">
@@ -284,9 +283,8 @@ export function GlobalSearch() {
 
                   {activeResults.rounds.length > 0 && (
                     <>
-                      {(activeResults.pages.length > 0 || activeResults.jobs.length > 0) && (
-                        <CommandSeparator />
-                      )}
+                      {(activeResults.pages.length > 0 ||
+                        activeResults.jobs.length > 0) && <CommandSeparator />}
                       <CommandGroup heading="Estimate rounds">
                         {activeResults.rounds.map((r) => (
                           <CommandItem

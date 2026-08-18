@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { dmrImports, dmrLines } from "@/db/schema";
 import {
@@ -15,7 +15,12 @@ import { reconcileDmr } from "@/lib/dmr-reconcile";
 export async function importDmrUpload(input: {
   name: string;
   periodKey?: string;
-  lines: { jobNumber: string; jobName?: string; region?: string; dmrValue: number }[];
+  lines: {
+    jobNumber: string;
+    jobName?: string;
+    region?: string;
+    dmrValue: number;
+  }[];
 }) {
   const principal = await getWebPrincipal();
   if (!["corporate_admin", "rpd", "leadership"].includes(principal.user.role)) {
@@ -40,7 +45,7 @@ export async function importDmrUpload(input: {
         jobName: l.jobName ?? null,
         region: l.region ?? null,
         dmrValue: l.dmrValue,
-      })),
+      }))
     );
   }
   revalidatePath("/dashboards/reconciliation");
@@ -58,8 +63,8 @@ export async function getDmrReconciliation(importId: number) {
     .where(
       and(
         eq(dmrLines.importId, importId),
-        principalRegionPredicate(dmrLines.region, principal, true),
-      ),
+        principalRegionPredicate(dmrLines.region, principal, true)
+      )
     );
   const rounds = await listRoundsWithJobsForPrincipal(principal);
   return reconcileDmr(
@@ -77,6 +82,6 @@ export async function getDmrReconciliation(importId: number) {
         region: r.round.region,
         preconValue: r.round.estimateValue ?? 0,
         roundId: r.round.id,
-      })),
+      }))
   );
 }

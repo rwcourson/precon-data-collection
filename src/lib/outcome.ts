@@ -1,7 +1,7 @@
+import type { EstimateRound, User } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { authorize } from "@/lib/authorization/kernel";
 import { createPrincipal } from "@/lib/authorization/principal";
-import type { EstimateRound, User } from "@/db/schema";
 
 export type OutcomeValue = "pending" | "successful" | "unsuccessful";
 
@@ -22,7 +22,7 @@ export type OutcomeAuditEntry = {
 export function planOutcomeUpdate(
   user: User,
   round: Pick<EstimateRound, "id" | "status" | "region" | "outcome">,
-  outcome: OutcomeValue,
+  outcome: OutcomeValue
 ): { audit: OutcomeAuditEntry | null } {
   const principal = createPrincipal({
     user,
@@ -42,7 +42,7 @@ export function planOutcomeUpdate(
   if (round.status === "locked" && !canCorrect) {
     throw DomainError.forbidden(
       "Record is locked — only the RPD/SPD can update the outcome",
-      "Post-lock outcome corrections are limited to the regional RPD/SPD.",
+      "Post-lock outcome corrections are limited to the regional RPD/SPD."
     );
   }
 

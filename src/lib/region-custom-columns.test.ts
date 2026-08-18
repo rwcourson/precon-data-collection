@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import type { CustomColumn } from "@/db/schema";
+import type { CustomColumn, EstimateRound } from "@/db/schema";
+import { postBidQueueRow } from "./post-bid-queue";
 import {
   regionCustomTabForRound,
   regionCustomTabTitle,
   regionScopedColumnsForRound,
 } from "./region-custom-columns";
-import { postBidQueueRow } from "./post-bid-queue";
-import type { EstimateRound } from "@/db/schema";
 
-function column(partial: Partial<CustomColumn> & Pick<CustomColumn, "id" | "key" | "label" | "scope">): CustomColumn {
+function column(
+  partial: Partial<CustomColumn> &
+    Pick<CustomColumn, "id" | "key" | "label" | "scope">
+): CustomColumn {
   return {
     region: null,
     preconDepartment: null,
@@ -45,7 +47,9 @@ describe("region custom tab", () => {
   });
 
   it("titles Central Heavy Civil as Central — Heavy Civil", () => {
-    expect(regionCustomTabTitle("Central", "Central Heavy Civil")).toBe("Central — Heavy Civil");
+    expect(regionCustomTabTitle("Central", "Central Heavy Civil")).toBe(
+      "Central — Heavy Civil"
+    );
   });
 
   it("shows the Central tab on a Central Heavy Civil round and not on a Georgia round", () => {
@@ -73,10 +77,10 @@ describe("region custom tab", () => {
   });
 
   it("does not mix company-scope columns into the region tab", () => {
-    const cols = regionScopedColumnsForRound(
-      [centralIndustrial, company],
-      { region: "Central", preconDepartment: "Central Heavy Civil" },
-    );
+    const cols = regionScopedColumnsForRound([centralIndustrial, company], {
+      region: "Central",
+      preconDepartment: "Central Heavy Civil",
+    });
     expect(cols.every((c) => c.scope === "region")).toBe(true);
   });
 });

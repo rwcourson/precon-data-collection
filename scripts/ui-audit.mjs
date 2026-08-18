@@ -108,14 +108,26 @@ async function auditRoute(route, theme) {
 
   for (const b of r.badges) {
     if (!onScale(b.h, BADGE_HEIGHT_REM) || !onScale(b.font, BADGE_FONT_REM))
-      record("badge off-token", `h=${b.h}px font=${b.font}px · “${b.text}”`, where);
+      record(
+        "badge off-token",
+        `h=${b.h}px font=${b.font}px · “${b.text}”`,
+        where
+      );
     /* Every badge is a pill; a rounded rectangle means a local override. */
     if (b.radius < b.h / 2 - 0.51)
-      record("badge not a pill", `radius=${b.radius}px h=${b.h}px · “${b.text}”`, where);
+      record(
+        "badge not a pill",
+        `radius=${b.radius}px h=${b.h}px · “${b.text}”`,
+        where
+      );
   }
   for (const b of r.buttons) {
     if (!onScale(b.h, BUTTON_HEIGHT_REM) || !onScale(b.font, BUTTON_FONT_REM))
-      record("button off-token", `h=${b.h}px font=${b.font}px · “${b.text}”`, where);
+      record(
+        "button off-token",
+        `h=${b.h}px font=${b.font}px · “${b.text}”`,
+        where
+      );
   }
   for (const c of r.unnamed) record("button has no accessible name", c, where);
   for (const c of r.noType) record("button missing type=", c, where);
@@ -151,13 +163,13 @@ async function firstHref(selector) {
 
 async function detailRoutes() {
   const extra = [];
-  await page.goto(BASE + "/post-bid", { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/post-bid`, { waitUntil: "domcontentloaded" });
   const round = await firstHref('a[href^="/rounds/"]');
   if (round) extra.push(round);
-  await page.goto(BASE + "/sheets", { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/sheets`, { waitUntil: "domcontentloaded" });
   const sheet = await firstHref('a[href^="/sheets/"]');
   if (sheet) extra.push(sheet);
-  await page.goto(BASE + "/bid-schedule", { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/bid-schedule`, { waitUntil: "domcontentloaded" });
   const job = await firstHref('a[href^="/jobs/"]');
   if (job) extra.push(job);
   return extra;
@@ -195,9 +207,13 @@ for (const [kind, list] of grouped) {
 
 const noisy = consoleErrors.filter(
   (e) =>
-    !/favicon|hydrat|Minified React error #418|status of 404|Failed to load resource/i.test(e),
+    !/favicon|hydrat|Minified React error #418|status of 404|Failed to load resource/i.test(
+      e
+    )
 );
-console.log(`\nConsole errors (excluding hydration/favicon/404): ${noisy.length}`);
+console.log(
+  `\nConsole errors (excluding hydration/favicon/404): ${noisy.length}`
+);
 for (const e of noisy.slice(0, 5)) console.log("  ✗", e.slice(0, 160));
 
 // Soft mode (isolated CI wrapper): report token findings but fail only on hard console errors.

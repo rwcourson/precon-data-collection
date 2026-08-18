@@ -20,7 +20,7 @@ Plain sentence.`;
 
   it("unwraps links and code", () => {
     expect(toPlainText("See [docs](https://example.com) and `winRate`.")).toBe(
-      "See docs and winRate.",
+      "See docs and winRate."
     );
   });
 });

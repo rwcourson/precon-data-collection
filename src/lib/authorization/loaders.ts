@@ -9,36 +9,39 @@ import {
   isNotNull,
   isNull,
   or,
-  sql,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
-  dashboards,
+  type CustomColumn,
   customColumns,
+  type Dashboard,
+  dashboards,
+  type EstimateRound,
   estimateRounds,
   fieldWritePolicies,
+  type Job,
   jobRegionVisibility,
   jobs,
   jobUserVisibility,
+  type SavedReportConfig,
+  type Sheet,
   savedReports,
   sheetAcls,
   sheets,
-  users,
-  type Dashboard,
-  type CustomColumn,
-  type EstimateRound,
-  type Job,
-  type SavedReportConfig,
-  type Sheet,
   type User,
+  users,
 } from "@/db/schema";
 import { authorize } from "./kernel";
 import type { Capability, Principal, ResourceDescriptor } from "./types";
 
 export type ResourceState = "active" | "deleted";
-export type AuthorizedResource<T> = { value: T; descriptor: ResourceDescriptor };
+export type AuthorizedResource<T> = {
+  value: T;
+  descriptor: ResourceDescriptor;
+};
 
 export const ADMIN_SECTIONS = [
   "columns",
@@ -70,7 +73,7 @@ function statePredicate(column: AnyPgColumn, state: ResourceState): SQL {
 export function principalRegionPredicate(
   column: AnyPgColumn,
   principal: Principal,
-  includeCorporate = false,
+  includeCorporate = false
 ): SQL | undefined {
   const scoped =
     principal.workspace.kind === "region"
@@ -95,7 +98,7 @@ export function principalRegionPredicate(
  */
 export function principalJobVisibilityPredicate(
   jobIdColumn: AnyPgColumn,
-  principal: Principal,
+  principal: Principal
 ): SQL | undefined {
   const scoped =
     principal.workspace.kind === "region"
@@ -126,7 +129,7 @@ export async function loadJobForPrincipal(
   principal: Principal,
   id: number,
   capability: Capability = "read",
-  state: ResourceState = "active",
+  state: ResourceState = "active"
 ): Promise<AuthorizedResource<Job> | null> {
   const [value] = await db
     .select()
@@ -135,8 +138,8 @@ export async function loadJobForPrincipal(
       and(
         eq(jobs.id, id),
         statePredicate(jobs.deletedAt, state),
-        principalJobVisibilityPredicate(jobs.id, principal),
-      ),
+        principalJobVisibilityPredicate(jobs.id, principal)
+      )
     );
   if (!value) return null;
   const descriptor: ResourceDescriptor = {
@@ -148,7 +151,9 @@ export async function loadJobForPrincipal(
     deleted: value.deletedAt != null,
     visibilitySatisfied: true,
   };
-  return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
+  return authorize(principal, capability, descriptor).allowed
+    ? { value, descriptor }
+    : null;
 }
 
 /** All active pursuit rows are Region-scoped in SQL before auxiliary values load. */
@@ -160,7 +165,7 @@ export async function listRoundsWithJobsForPrincipal(
     /** Stable id-ordered page window for API pagination; omit for the full fetch. */
     limit?: number;
     offset?: number;
-  } = {},
+  } = {}
 ): Promise<AuthorizedRound[]> {
   let query = db
     .select({ round: estimateRounds, job: jobs, estimateLeadName: users.name })
@@ -174,8 +179,8 @@ export async function listRoundsWithJobsForPrincipal(
         options.statuses?.length
           ? inArray(estimateRounds.status, [...options.statuses])
           : undefined,
-        principalJobVisibilityPredicate(jobs.id, principal),
-      ),
+        principalJobVisibilityPredicate(jobs.id, principal)
+      )
     )
     .orderBy(asc(estimateRounds.id))
     .$dynamic();
@@ -192,7 +197,7 @@ export type PipelineBucketCounts = {
 
 /** Pre-bid bucket counts for the rail — region-scoped, no row payload. */
 export async function countPreBidStatusesForPrincipal(
-  principal: Principal,
+  principal: Principal
 ): Promise<PipelineBucketCounts> {
   const rows = await db
     .select({
@@ -206,21 +211,31 @@ export async function countPreBidStatusesForPrincipal(
         isNull(estimateRounds.deletedAt),
         isNull(jobs.deletedAt),
         inArray(estimateRounds.status, ["active", "upcoming", "outstanding"]),
-        principalJobVisibilityPredicate(jobs.id, principal),
-      ),
+        principalJobVisibilityPredicate(jobs.id, principal)
+      )
     )
     .groupBy(estimateRounds.status);
 
-  const counts: PipelineBucketCounts = { active: 0, upcoming: 0, outstanding: 0 };
+  const counts: PipelineBucketCounts = {
+    active: 0,
+    upcoming: 0,
+    outstanding: 0,
+  };
   for (const row of rows) {
-    if (row.status === "active" || row.status === "upcoming" || row.status === "outstanding") {
+    if (
+      row.status === "active" ||
+      row.status === "upcoming" ||
+      row.status === "outstanding"
+    ) {
       counts[row.status] = Number(row.count);
     }
   }
   return counts;
 }
 
-export async function listDirectoryUsersForPrincipal(principal: Principal): Promise<User[]> {
+export async function listDirectoryUsersForPrincipal(
+  principal: Principal
+): Promise<User[]> {
   return db
     .select()
     .from(users)
@@ -229,7 +244,7 @@ export async function listDirectoryUsersForPrincipal(principal: Principal): Prom
 }
 
 export async function listCustomColumnsForPrincipal(
-  principal: Principal,
+  principal: Principal
 ): Promise<CustomColumn[]> {
   return db
     .select()
@@ -237,8 +252,8 @@ export async function listCustomColumnsForPrincipal(
     .where(
       or(
         eq(customColumns.scope, "company"),
-        principalRegionPredicate(customColumns.region, principal),
-      ),
+        principalRegionPredicate(customColumns.region, principal)
+      )
     )
     .orderBy(asc(customColumns.id));
 }
@@ -252,7 +267,11 @@ export type AuthorizedRound = {
 export async function loadRoundForPrincipal(
   principal: Principal,
   id: number,
-  options: { capability?: Capability; state?: ResourceState; fieldKey?: string } = {},
+  options: {
+    capability?: Capability;
+    state?: ResourceState;
+    fieldKey?: string;
+  } = {}
 ): Promise<AuthorizedResource<AuthorizedRound> | null> {
   const capability = options.capability ?? "read";
   const state = options.state ?? "active";
@@ -266,8 +285,8 @@ export async function loadRoundForPrincipal(
         eq(estimateRounds.id, id),
         statePredicate(estimateRounds.deletedAt, state),
         state === "active" ? isNull(jobs.deletedAt) : undefined,
-        principalJobVisibilityPredicate(jobs.id, principal),
-      ),
+        principalJobVisibilityPredicate(jobs.id, principal)
+      )
     );
   if (!value) return null;
   const [fieldPolicy] = options.fieldKey
@@ -277,8 +296,8 @@ export async function loadRoundForPrincipal(
         .where(
           and(
             eq(fieldWritePolicies.fieldKey, options.fieldKey),
-            eq(fieldWritePolicies.role, principal.user.role),
-          ),
+            eq(fieldWritePolicies.role, principal.user.role)
+          )
         )
         .limit(1)
     : [];
@@ -308,7 +327,9 @@ export async function loadRoundForPrincipal(
         }
       : null,
   };
-  return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
+  return authorize(principal, capability, descriptor).allowed
+    ? { value, descriptor }
+    : null;
 }
 
 function requiredSheetAcls(capability: Capability) {
@@ -317,10 +338,13 @@ function requiredSheetAcls(capability: Capability) {
   return ["viewer", "editor", "manager"] as const;
 }
 
-function sheetAccessPredicate(principal: Principal, capability: Capability): SQL {
+function sheetAccessPredicate(
+  principal: Principal,
+  capability: Capability
+): SQL {
   const aclAudience = or(
     eq(sheetAcls.userId, principal.user.id),
-    eq(sheetAcls.grantRole, principal.user.role),
+    eq(sheetAcls.grantRole, principal.user.role)
   );
   const aclExists = sql<boolean>`exists (
     select 1 from ${sheetAcls}
@@ -328,39 +352,45 @@ function sheetAccessPredicate(principal: Principal, capability: Capability): SQL
       and ${aclAudience}
       and ${inArray(sheetAcls.acl, [...requiredSheetAcls(capability)])}
   )`;
-  if (capability === "manage" || capability === "restore" || capability === "permanent-delete") {
+  if (
+    capability === "manage" ||
+    capability === "restore" ||
+    capability === "permanent-delete"
+  ) {
     return or(
       eq(sheets.ownerId, principal.user.id),
       sql<boolean>`${principal.user.role} = 'corporate_admin'`,
       and(
         sql<boolean>`${principal.user.role} = 'rpd'`,
-        principal.user.region ? eq(sheets.region, principal.user.region) : sql<boolean>`false`,
+        principal.user.region
+          ? eq(sheets.region, principal.user.region)
+          : sql<boolean>`false`
       ),
       and(
         sql<boolean>`${principal.user.role} = 'admin_jsa'`,
-        principalRegionPredicate(sheets.region, principal),
+        principalRegionPredicate(sheets.region, principal)
       ),
-      aclExists,
+      aclExists
     )!;
   }
   if (capability === "edit") {
     return or(
       eq(sheets.ownerId, principal.user.id),
       sql<boolean>`${principal.user.role} in ('pcm', 'estimate_lead', 'admin_jsa', 'rpd', 'corporate_admin')`,
-      aclExists,
+      aclExists
     )!;
   }
   return or(
     isNull(sheets.region),
     principalRegionPredicate(sheets.region, principal),
     sql<boolean>`${principal.user.role} = 'corporate_admin'`,
-    aclExists,
+    aclExists
   )!;
 }
 
 export async function listSheetsForPrincipal(
   principal: Principal,
-  options: { archived?: boolean } = {},
+  options: { archived?: boolean } = {}
 ): Promise<Sheet[]> {
   return db
     .select()
@@ -368,10 +398,12 @@ export async function listSheetsForPrincipal(
     .where(
       and(
         isNull(sheets.deletedAt),
-        options.archived ? isNotNull(sheets.archivedAt) : isNull(sheets.archivedAt),
+        options.archived
+          ? isNotNull(sheets.archivedAt)
+          : isNull(sheets.archivedAt),
         principalRegionPredicate(sheets.region, principal, true),
-        sheetAccessPredicate(principal, "read"),
-      ),
+        sheetAccessPredicate(principal, "read")
+      )
     )
     .orderBy(options.archived ? desc(sheets.archivedAt) : asc(sheets.name));
 }
@@ -379,7 +411,7 @@ export async function listSheetsForPrincipal(
 export async function searchSheetsForPrincipal(
   principal: Principal,
   pattern: string,
-  limit = 10,
+  limit = 10
 ): Promise<Sheet[]> {
   return db
     .select()
@@ -393,9 +425,9 @@ export async function searchSheetsForPrincipal(
         or(
           ilike(sheets.name, pattern),
           ilike(sheets.folder, pattern),
-          ilike(sheets.description, pattern),
-        ),
-      ),
+          ilike(sheets.description, pattern)
+        )
+      )
     )
     .orderBy(asc(sheets.name))
     .limit(limit);
@@ -405,7 +437,7 @@ export async function loadSheetForPrincipal(
   principal: Principal,
   id: number,
   capability: Capability = "read",
-  state: ResourceState = "active",
+  state: ResourceState = "active"
 ): Promise<AuthorizedResource<Sheet> | null> {
   const [value] = await db
     .select()
@@ -415,11 +447,14 @@ export async function loadSheetForPrincipal(
         eq(sheets.id, id),
         statePredicate(sheets.deletedAt, state),
         principalRegionPredicate(sheets.region, principal, true),
-        sheetAccessPredicate(principal, capability),
-      ),
+        sheetAccessPredicate(principal, capability)
+      )
     );
   if (!value) return null;
-  const acls = await db.select().from(sheetAcls).where(eq(sheetAcls.sheetId, value.id));
+  const acls = await db
+    .select()
+    .from(sheetAcls)
+    .where(eq(sheetAcls.sheetId, value.id));
   const descriptor: ResourceDescriptor = {
     type: "sheet",
     id: value.id,
@@ -429,24 +464,28 @@ export async function loadSheetForPrincipal(
     deleted: value.deletedAt != null,
     sheetAcls: acls,
   };
-  return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
+  return authorize(principal, capability, descriptor).allowed
+    ? { value, descriptor }
+    : null;
 }
 
 function dashboardVisibility(principal: Principal): SQL {
   const regionPublished = and(
     eq(dashboards.published, true),
     eq(dashboards.scope, "region"),
-    principalRegionPredicate(dashboards.region, principal),
+    principalRegionPredicate(dashboards.region, principal)
   );
   return or(
     eq(dashboards.ownerId, principal.user.id),
     sql<boolean>`${principal.user.role} = 'corporate_admin'`,
     regionPublished,
-    and(eq(dashboards.published, true), eq(dashboards.scope, "corporate")),
+    and(eq(dashboards.published, true), eq(dashboards.scope, "corporate"))
   )!;
 }
 
-export async function listDashboardsForPrincipal(principal: Principal): Promise<Dashboard[]> {
+export async function listDashboardsForPrincipal(
+  principal: Principal
+): Promise<Dashboard[]> {
   return db
     .select()
     .from(dashboards)
@@ -458,7 +497,7 @@ export async function loadDashboardForPrincipal(
   principal: Principal,
   id: number,
   capability: Capability = "read",
-  state: ResourceState = "active",
+  state: ResourceState = "active"
 ): Promise<AuthorizedResource<Dashboard> | null> {
   const [value] = await db
     .select()
@@ -467,8 +506,8 @@ export async function loadDashboardForPrincipal(
       and(
         eq(dashboards.id, id),
         statePredicate(dashboards.deletedAt, state),
-        dashboardVisibility(principal),
-      ),
+        dashboardVisibility(principal)
+      )
     );
   if (!value) return null;
   const descriptor: ResourceDescriptor = {
@@ -481,7 +520,9 @@ export async function loadDashboardForPrincipal(
     dashboardScope: value.scope,
     isStandard: value.isStandard,
   };
-  return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
+  return authorize(principal, capability, descriptor).allowed
+    ? { value, descriptor }
+    : null;
 }
 
 export type SavedReportValue = {
@@ -505,19 +546,20 @@ function reportVisibility(principal: Principal): SQL {
       ? sql<boolean>`jsonb_array_length(coalesce(${savedReports.sharedWithRegions}, '[]'::jsonb)) > 0`
       : or(
           ...principal.allowedRegions.map(
-            (region) => sql<boolean>`coalesce(${savedReports.sharedWithRegions}, '[]'::jsonb) @> ${JSON.stringify([region])}::jsonb`,
-          ),
+            (region) =>
+              sql<boolean>`coalesce(${savedReports.sharedWithRegions}, '[]'::jsonb) @> ${JSON.stringify([region])}::jsonb`
+          )
         );
   return or(
     eq(savedReports.ownerId, principal.user.id),
     sql<boolean>`${principal.user.role} = 'corporate_admin'`,
     userShare,
-    regionShare,
+    regionShare
   )!;
 }
 
 export async function listReportsForPrincipal(
-  principal: Principal,
+  principal: Principal
 ): Promise<SavedReportValue[]> {
   return db
     .select()
@@ -530,30 +572,40 @@ export async function loadReportForPrincipal(
   principal: Principal,
   id: number,
   capability: Capability = "read",
-  state: ResourceState = "active",
+  state: ResourceState = "active"
 ): Promise<AuthorizedResource<SavedReportValue> | null> {
   const [value] = await db
     .select()
     .from(savedReports)
-    .where(and(eq(savedReports.id, id), statePredicate(savedReports.deletedAt, state), reportVisibility(principal)));
+    .where(
+      and(
+        eq(savedReports.id, id),
+        statePredicate(savedReports.deletedAt, state),
+        reportVisibility(principal)
+      )
+    );
   if (!value) return null;
   const descriptor: ResourceDescriptor = {
     type: "report",
     id: value.id,
     region: null,
     ownerId: value.ownerId,
-    published: Boolean(value.sharedWithUserIds?.length || value.sharedWithRegions?.length),
+    published: Boolean(
+      value.sharedWithUserIds?.length || value.sharedWithRegions?.length
+    ),
     deleted: value.deletedAt != null,
     sharedWithUserIds: value.sharedWithUserIds ?? [],
     sharedWithRegions: value.sharedWithRegions ?? [],
   };
-  return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
+  return authorize(principal, capability, descriptor).allowed
+    ? { value, descriptor }
+    : null;
 }
 
 export async function loadAdminSectionForPrincipal(
   principal: Principal,
   section: string,
-  capability: Capability = "read",
+  capability: Capability = "read"
 ): Promise<AuthorizedResource<{ section: string }> | null> {
   const descriptor: ResourceDescriptor = {
     type: "admin",
@@ -570,15 +622,17 @@ export async function loadAdminSectionForPrincipal(
 }
 
 export async function listAdminSectionsForPrincipal(
-  principal: Principal,
+  principal: Principal
 ): Promise<AdminSection[]> {
   const decisions = await Promise.all(
     ADMIN_SECTIONS.map(async (section) => ({
       section,
       allowed: Boolean(await loadAdminSectionForPrincipal(principal, section)),
-    })),
+    }))
   );
-  return decisions.filter((decision) => decision.allowed).map((decision) => decision.section);
+  return decisions
+    .filter((decision) => decision.allowed)
+    .map((decision) => decision.section);
 }
 
 export type TrashEntity = "job" | "round" | "sheet" | "dashboard" | "report";
@@ -587,7 +641,7 @@ export async function loadTrashForPrincipal(
   principal: Principal,
   entity: TrashEntity,
   id: number,
-  capability: "read" | "restore" | "permanent-delete",
+  capability: "read" | "restore" | "permanent-delete"
 ): Promise<AuthorizedResource<unknown> | null> {
   // Deleted rows only pass authorize() for restore/permanent-delete (deleted-state).
   // Load with restore for SQL + region scope; final capability is checked on trash descriptor.
@@ -596,12 +650,30 @@ export async function loadTrashForPrincipal(
     entity === "job"
       ? await loadJobForPrincipal(principal, id, loadCapability, "deleted")
       : entity === "round"
-        ? await loadRoundForPrincipal(principal, id, { capability: loadCapability, state: "deleted" })
+        ? await loadRoundForPrincipal(principal, id, {
+            capability: loadCapability,
+            state: "deleted",
+          })
         : entity === "sheet"
-          ? await loadSheetForPrincipal(principal, id, loadCapability, "deleted")
+          ? await loadSheetForPrincipal(
+              principal,
+              id,
+              loadCapability,
+              "deleted"
+            )
           : entity === "dashboard"
-            ? await loadDashboardForPrincipal(principal, id, loadCapability, "deleted")
-            : await loadReportForPrincipal(principal, id, loadCapability, "deleted");
+            ? await loadDashboardForPrincipal(
+                principal,
+                id,
+                loadCapability,
+                "deleted"
+              )
+            : await loadReportForPrincipal(
+                principal,
+                id,
+                loadCapability,
+                "deleted"
+              );
   if (!loaded) return null;
   const descriptor: ResourceDescriptor = {
     type: "trash",

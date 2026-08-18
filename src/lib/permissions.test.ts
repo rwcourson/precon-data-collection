@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Role, User } from "@/db/schema";
 import {
-  ROLE_LABELS,
   allowedTransitions,
   canApproveLock,
   canCreatePursuit,
@@ -11,6 +10,7 @@ import {
   canManageCompanyColumns,
   canManageRegionColumns,
   canViewAudit,
+  ROLE_LABELS,
 } from "./permissions";
 
 function user(role: Role, region: string | null = "Central"): User {
@@ -25,7 +25,16 @@ function user(role: Role, region: string | null = "Central"): User {
   };
 }
 
-const round = (status: "active" | "upcoming" | "outstanding" | "submitted" | "post_bid" | "locked", region = "Central") => ({
+const round = (
+  status:
+    | "active"
+    | "upcoming"
+    | "outstanding"
+    | "submitted"
+    | "post_bid"
+    | "locked",
+  region = "Central"
+) => ({
   status,
   region,
 });
@@ -62,21 +71,35 @@ describe("pursuit and schedule permissions", () => {
 describe("post-bid entry and lock", () => {
   it("blocks post-bid entry until submitted", () => {
     expect(canEnterPostBid(user("estimate_lead"), round("active"))).toBe(false);
-    expect(canEnterPostBid(user("estimate_lead"), round("submitted"))).toBe(true);
+    expect(canEnterPostBid(user("estimate_lead"), round("submitted"))).toBe(
+      true
+    );
     expect(canEnterPostBid(user("pcm"), round("submitted"))).toBe(false);
   });
 
   it("allows RPD post-lock edits only in their region", () => {
     expect(canEnterPostBid(user("rpd"), round("locked"))).toBe(true);
-    expect(canEditAfterLock(user("rpd", "Central"), round("locked", "Central"))).toBe(true);
-    expect(canEditAfterLock(user("rpd", "Central"), round("locked", "Southeast"))).toBe(false);
-    expect(canEditAfterLock(user("estimate_lead"), round("locked"))).toBe(false);
+    expect(
+      canEditAfterLock(user("rpd", "Central"), round("locked", "Central"))
+    ).toBe(true);
+    expect(
+      canEditAfterLock(user("rpd", "Central"), round("locked", "Southeast"))
+    ).toBe(false);
+    expect(canEditAfterLock(user("estimate_lead"), round("locked"))).toBe(
+      false
+    );
   });
 
   it("restricts approve/lock to regional RPD", () => {
-    expect(canApproveLock(user("rpd", "Central"), round("post_bid", "Central"))).toBe(true);
-    expect(canApproveLock(user("rpd", "Central"), round("post_bid", "Southeast"))).toBe(false);
-    expect(canApproveLock(user("estimate_lead"), round("post_bid"))).toBe(false);
+    expect(
+      canApproveLock(user("rpd", "Central"), round("post_bid", "Central"))
+    ).toBe(true);
+    expect(
+      canApproveLock(user("rpd", "Central"), round("post_bid", "Southeast"))
+    ).toBe(false);
+    expect(canApproveLock(user("estimate_lead"), round("post_bid"))).toBe(
+      false
+    );
   });
 });
 
@@ -103,17 +126,27 @@ describe("allowedTransitions", () => {
   });
 
   it("lets estimate leads submit from pre-bid", () => {
-    expect(allowedTransitions(user("estimate_lead"), round("active"))).toContain("submitted");
-    expect(allowedTransitions(user("pcm"), round("active"))).not.toContain("submitted");
+    expect(
+      allowedTransitions(user("estimate_lead"), round("active"))
+    ).toContain("submitted");
+    expect(allowedTransitions(user("pcm"), round("active"))).not.toContain(
+      "submitted"
+    );
   });
 
   it("requires rpd to lock from post_bid and treats locked as terminal", () => {
-    expect(allowedTransitions(user("rpd"), round("post_bid"))).toEqual(["locked"]);
-    expect(allowedTransitions(user("estimate_lead"), round("post_bid"))).toEqual([]);
+    expect(allowedTransitions(user("rpd"), round("post_bid"))).toEqual([
+      "locked",
+    ]);
+    expect(
+      allowedTransitions(user("estimate_lead"), round("post_bid"))
+    ).toEqual([]);
     expect(allowedTransitions(user("rpd"), round("locked"))).toEqual([]);
   });
 
   it("moves submitted → post_bid for entry roles", () => {
-    expect(allowedTransitions(user("admin_jsa"), round("submitted"))).toEqual(["post_bid"]);
+    expect(allowedTransitions(user("admin_jsa"), round("submitted"))).toEqual([
+      "post_bid",
+    ]);
   });
 });

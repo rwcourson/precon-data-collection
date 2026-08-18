@@ -39,7 +39,10 @@ export async function probeDatabricksTables(): Promise<{
   const tables: DatabricksProbeRow[] = [];
   for (const t of DATABRICKS_PROBE_SUMMARY.tablesOfInterest) {
     try {
-      const res = await runStatement(cfg, `SELECT COUNT(*) AS n FROM ${t.table}`);
+      const res = await runStatement(
+        cfg,
+        `SELECT COUNT(*) AS n FROM ${t.table}`
+      );
       const raw = res.result?.data_array?.[0]?.[0];
       const n = raw == null ? null : Number(raw);
       tables.push({
@@ -80,7 +83,7 @@ export async function pullDestiniEstimateSample(limit = 25): Promise<{
   try {
     const res = await runStatement(
       cfg,
-      `SELECT * FROM domain.preconstruction.destiniestimates LIMIT ${Math.min(Math.max(limit, 1), 100)}`,
+      `SELECT * FROM domain.preconstruction.destiniestimates LIMIT ${Math.min(Math.max(limit, 1), 100)}`
     );
     const rows = res.result?.data_array ?? [];
     return { configured: true, columns: [], rows };

@@ -18,7 +18,9 @@ const TABLES = [
 ];
 
 if (!host || !token || !warehouseId) {
-  console.error("Need DATABRICKS_HOST, DATABRICKS_TOKEN, DATABRICKS_WAREHOUSE_ID");
+  console.error(
+    "Need DATABRICKS_HOST, DATABRICKS_TOKEN, DATABRICKS_WAREHOUSE_ID"
+  );
   process.exit(1);
 }
 

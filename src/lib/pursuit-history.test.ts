@@ -3,13 +3,15 @@ import { DomainError } from "@/domain/errors";
 import { REFERENCE_LISTS } from "@/lib/reference-data";
 import {
   applySalesforceLinkPlan,
-  planSalesforceLink,
   type PursuitHistoryState,
+  planSalesforceLink,
 } from "./salesforce-link";
 
 describe("ROM / prospect Salesforce history", () => {
   it("includes Budget – Quick ROM in estimate phase reference data", () => {
-    expect(REFERENCE_LISTS.estimatePhase.values).toContain("Budget – Quick ROM");
+    expect(REFERENCE_LISTS.estimatePhase.values).toContain(
+      "Budget – Quick ROM"
+    );
   });
 
   it("links a manual unnumbered pursuit without dropping ROM round history", () => {
@@ -36,7 +38,7 @@ describe("ROM / prospect Salesforce history", () => {
         jobNumber: "25-1234",
         jobName: "Riverside Medical Tower",
       },
-      beforeRoundIds,
+      beforeRoundIds
     );
 
     expect(plan.jobId).toBe(42);
@@ -66,8 +68,8 @@ describe("ROM / prospect Salesforce history", () => {
           isLinked: true,
         },
         { sfId: "SF-2", jobNumber: "25-2", jobName: "Other" },
-        [1],
-      ),
+        [1]
+      )
     ).toThrow(DomainError);
   });
 });

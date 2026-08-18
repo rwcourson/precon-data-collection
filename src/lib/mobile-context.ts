@@ -1,4 +1,4 @@
-import { AsyncLocalStorage } from "async_hooks";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { User } from "@/db/schema";
 import type { Principal } from "@/lib/authorization/types";
 
@@ -22,7 +22,7 @@ export function getMobileContext(): MobileRequestContext | undefined {
 
 export function runWithMobileContext<T>(
   ctx: MobileRequestContext,
-  fn: () => T | Promise<T>,
+  fn: () => T | Promise<T>
 ): T | Promise<T> {
   return mobileContext.run(ctx, fn);
 }

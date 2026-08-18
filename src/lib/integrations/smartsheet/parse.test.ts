@@ -6,7 +6,8 @@ import {
   smartsheetRowToCells,
 } from "./parse";
 
-const CEN_ACTIVE = "CEN_Precon_Data_CEN_Bid_Schedule_Post_Bid_Data_Collection__CEN_CBG_Bid_Schedule_-_Active__4432048245657476.json";
+const CEN_ACTIVE =
+  "CEN_Precon_Data_CEN_Bid_Schedule_Post_Bid_Data_Collection__CEN_CBG_Bid_Schedule_-_Active__4432048245657476.json";
 
 describe("parseSheetDate", () => {
   it("keeps ISO dates and normalizes M/D/YYYY without UTC shift", () => {
@@ -35,7 +36,7 @@ describe("parseSmartsheetRound", () => {
         "Bid Amount": "$42,000,000",
         Status: "Active",
       },
-      CEN_ACTIVE,
+      CEN_ACTIVE
     );
 
     expect(draft).not.toBeNull();
@@ -70,7 +71,10 @@ describe("parseSmartsheetRound", () => {
         { columnId: 6, displayValue: "Budget - SD" },
       ],
     };
-    const draft = parseSmartsheetRound(smartsheetRowToCells(sheet, row), CEN_ACTIVE);
+    const draft = parseSmartsheetRound(
+      smartsheetRowToCells(sheet, row),
+      CEN_ACTIVE
+    );
     expect(draft?.owner).toBe("Auburn University");
     expect(draft?.drawingsDueDate).toBe("2026-05-10");
     expect(draft?.bidReviewDate).toBe("2026-05-20");
@@ -80,19 +84,19 @@ describe("parseSmartsheetRound", () => {
     expect(
       parseSmartsheetRound(
         { "Job #": "1", "Job Name": "Active Pursuits" },
-        CEN_ACTIVE,
-      ),
+        CEN_ACTIVE
+      )
     ).toBeNull();
   });
 
-  it("treats an unchecked boolean as blank, never the string \"false\"", () => {
+  it('treats an unchecked boolean as blank, never the string "false"', () => {
     const unchecked = parseSmartsheetRound(
       {
         "Job #": "24151",
         "Job Name": "Boolean subject",
         "Internal Joint Venture?": false,
       },
-      CEN_ACTIVE,
+      CEN_ACTIVE
     );
     expect(unchecked!.internalJointVenture).toBeNull();
 
@@ -102,7 +106,7 @@ describe("parseSmartsheetRound", () => {
         "Job Name": "Boolean subject",
         "Internal Joint Venture?": true,
       },
-      CEN_ACTIVE,
+      CEN_ACTIVE
     );
     expect(checked!.internalJointVenture).toBe("true");
   });
@@ -114,7 +118,7 @@ describe("parseSmartsheetRound", () => {
         "Job Name": "Pricing status subject",
         Status: "Active",
       },
-      CEN_ACTIVE,
+      CEN_ACTIVE
     );
     expect(draft!.statusAtPricing).toBeNull();
 
@@ -125,7 +129,7 @@ describe("parseSmartsheetRound", () => {
         Status: "Active",
         "Contract Status (at time of pricing)": "Contracted",
       },
-      CEN_ACTIVE,
+      CEN_ACTIVE
     );
     expect(explicit!.statusAtPricing).toBe("Contracted");
   });
@@ -143,7 +147,7 @@ describe("mergeSmartsheetDrafts", () => {
         "Estimate Phase": "GMP",
         Status: "Active",
       },
-      CEN_ACTIVE,
+      CEN_ACTIVE
     )!;
     const metrics = parseSmartsheetRound(
       {
@@ -153,7 +157,7 @@ describe("mergeSmartsheetDrafts", () => {
         "Estimate Value $": "42000000",
         Outcome: "Pending",
       },
-      "CEN_Estimate_Metrics_Capture.json",
+      "CEN_Estimate_Metrics_Capture.json"
     )!;
     const merged = mergeSmartsheetDrafts(schedule, metrics);
     expect(merged.owner).toBe("HCA Healthcare");

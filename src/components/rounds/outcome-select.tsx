@@ -1,8 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { toast } from "sonner";
+import { setOutcome } from "@/actions/post-bid";
 import {
   Select,
   SelectContent,
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { setOutcome } from "@/actions/post-bid";
 
 export function OutcomeSelect({
   roundId,

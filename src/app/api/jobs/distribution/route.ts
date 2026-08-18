@@ -26,12 +26,12 @@ export async function POST(req: Request) {
           failed: Boolean(row.failed),
         })),
       },
-      { status: failed ? 502 : 200 },
+      { status: failed ? 502 : 200 }
     );
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "failed" },
-      { status: 502 },
+      { status: 502 }
     );
   }
 }

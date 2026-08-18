@@ -1,10 +1,13 @@
-import { afterAll, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { bidScheduleViews, userTablePrefs, users } from "@/db/schema";
 import type { User } from "@/db/schema";
+import { bidScheduleViews, users, userTablePrefs } from "@/db/schema";
 import { createPrincipal } from "@/lib/authorization/principal";
-import { BID_SCHEDULE_SURFACE, resolveBidScheduleTableState } from "@/lib/table-prefs";
+import {
+  BID_SCHEDULE_SURFACE,
+  resolveBidScheduleTableState,
+} from "@/lib/table-prefs";
 import { parseBidScheduleViewConfig } from "@/lib/view-config";
 import { tablePrefsService } from "@/services/table-prefs-service";
 
@@ -18,16 +21,28 @@ describe("per-user bid-schedule table prefs", () => {
 
   afterAll(async () => {
     if (createdViewIds.length > 0) {
-      await db.delete(bidScheduleViews).where(inArray(bidScheduleViews.id, createdViewIds));
+      await db
+        .delete(bidScheduleViews)
+        .where(inArray(bidScheduleViews.id, createdViewIds));
     }
     if (touchedUserIds.length > 0) {
-      await db.delete(userTablePrefs).where(inArray(userTablePrefs.userId, touchedUserIds));
+      await db
+        .delete(userTablePrefs)
+        .where(inArray(userTablePrefs.userId, touchedUserIds));
     }
   });
 
   it("survives a fresh load for the same user and does not leak to another user", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
-    const [lead] = await db.select().from(users).where(eq(users.role, "estimate_lead")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
+    const [lead] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "estimate_lead"))
+      .limit(1);
     expect(pcm.id).not.toBe(lead.id);
     touchedUserIds.push(pcm.id, lead.id);
 
@@ -44,8 +59,14 @@ describe("per-user bid-schedule table prefs", () => {
       density: "summary",
     });
 
-    const pcmReload = await tablePrefsService.load(pcmPrincipal, BID_SCHEDULE_SURFACE);
-    const leadReload = await tablePrefsService.load(leadPrincipal, BID_SCHEDULE_SURFACE);
+    const pcmReload = await tablePrefsService.load(
+      pcmPrincipal,
+      BID_SCHEDULE_SURFACE
+    );
+    const leadReload = await tablePrefsService.load(
+      leadPrincipal,
+      BID_SCHEDULE_SURFACE
+    );
     expect(pcmReload.columns).toEqual(["jobNumber", "jobName", "status"]);
     expect(pcmReload.density).toBe("detail");
     expect(pcmReload.columnWidths).toEqual({ jobName: 320 });
@@ -55,7 +76,11 @@ describe("per-user bid-schedule table prefs", () => {
   });
 
   it("stores a default-view pointer that resolve auto-applies, then restores prefs when skipped", async () => {
-    const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
     touchedUserIds.push(pcm.id);
     const principal = principalFor(pcm, "Central");
 
@@ -87,7 +112,15 @@ describe("per-user bid-schedule table prefs", () => {
 
     const onLoad = resolveBidScheduleTableState({
       prefs,
-      views: [{ id: view.id, config: parseBidScheduleViewConfig({ columns: ["jobName", "status", "bidDueDate"], density: "detail" }) }],
+      views: [
+        {
+          id: view.id,
+          config: parseBidScheduleViewConfig({
+            columns: ["jobName", "status", "bidDueDate"],
+            density: "detail",
+          }),
+        },
+      ],
     });
     expect(onLoad.source).toBe("view");
     expect(onLoad.activeViewId).toBe(view.id);
@@ -96,14 +129,24 @@ describe("per-user bid-schedule table prefs", () => {
     const named = resolveBidScheduleTableState({
       urlViewId: view.id,
       prefs,
-      views: [{ id: view.id, config: { columns: ["jobName", "status", "bidDueDate"] } }],
+      views: [
+        {
+          id: view.id,
+          config: { columns: ["jobName", "status", "bidDueDate"] },
+        },
+      ],
     });
     expect(named.source).toBe("view");
 
     const cleared = resolveBidScheduleTableState({
       skipDefaultView: true,
       prefs,
-      views: [{ id: view.id, config: { columns: ["jobName", "status", "bidDueDate"] } }],
+      views: [
+        {
+          id: view.id,
+          config: { columns: ["jobName", "status", "bidDueDate"] },
+        },
+      ],
     });
     expect(cleared.source).toBe("prefs");
     expect(cleared.columns).toEqual(["jobNumber", "jobName"]);

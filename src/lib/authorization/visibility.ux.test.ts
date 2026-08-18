@@ -1,16 +1,26 @@
-import { afterAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { auditLog, estimateRounds, jobRegionVisibility, jobs, statusTransitions, users } from "@/db/schema";
-import { createPrincipal } from "@/lib/authorization/principal";
-import { resolveCreatorHomeRegion } from "@/lib/home-region";
+import type { User } from "@/db/schema";
+import {
+  auditLog,
+  estimateRounds,
+  jobRegionVisibility,
+  jobs,
+  statusTransitions,
+  users,
+} from "@/db/schema";
 import {
   listRoundsWithJobsForPrincipal,
   loadJobForPrincipal,
 } from "@/lib/authorization/loaders";
-import { pursuitService, requireCreatedPursuit } from "@/services/pursuit-service";
+import { createPrincipal } from "@/lib/authorization/principal";
+import { resolveCreatorHomeRegion } from "@/lib/home-region";
+import {
+  pursuitService,
+  requireCreatedPursuit,
+} from "@/services/pursuit-service";
 import { visibilityService } from "@/services/visibility-service";
-import type { User } from "@/db/schema";
 
 function principalFor(user: User, workspaceRegion: string | null) {
   return createPrincipal({ user, authSource: "sso", workspaceRegion });
@@ -29,10 +39,16 @@ describe("visibility UX + duplicate guard", () => {
       const roundIds = rounds.map((row) => row.id);
       if (roundIds.length > 0) {
         await db.delete(auditLog).where(inArray(auditLog.roundId, roundIds));
-        await db.delete(statusTransitions).where(inArray(statusTransitions.roundId, roundIds));
-        await db.delete(estimateRounds).where(inArray(estimateRounds.id, roundIds));
+        await db
+          .delete(statusTransitions)
+          .where(inArray(statusTransitions.roundId, roundIds));
+        await db
+          .delete(estimateRounds)
+          .where(inArray(estimateRounds.id, roundIds));
       }
-      await db.delete(auditLog).where(inArray(auditLog.entityId, createdJobIds));
+      await db
+        .delete(auditLog)
+        .where(inArray(auditLog.entityId, createdJobIds));
       await db.delete(jobs).where(inArray(jobs.id, createdJobIds));
     }
     if (createdUserIds.length > 0) {
@@ -56,7 +72,9 @@ describe("visibility UX + duplicate guard", () => {
   });
 
   it("lets a director add only their own region and denies others", async () => {
-    const centralPcm = (await db.select().from(users)).find((row) => row.role === "pcm")!;
+    const centralPcm = (await db.select().from(users)).find(
+      (row) => row.role === "pcm"
+    )!;
     const [georgiaPcm] = await db
       .insert(users)
       .values({
@@ -76,7 +94,9 @@ describe("visibility UX + duplicate guard", () => {
       .limit(1);
     const georgia = principalFor(georgiaPcm, "Georgia");
     const central = principalFor(centralPcm, "Central");
-    await expect(visibilityService.addRegion(central, job.id, "Florida")).rejects.toMatchObject({
+    await expect(
+      visibilityService.addRegion(central, job.id, "Florida")
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
     const added = await visibilityService.addRegion(georgia, job.id, "Georgia");
@@ -107,12 +127,18 @@ describe("visibility UX + duplicate guard", () => {
     const admin = principalFor(corporate, null);
     const florida = principalFor(floridaPcm, "Florida");
     expect(await loadJobForPrincipal(florida, job.id)).toBeNull();
-    expect((await visibilityService.addRegion(admin, job.id, "Texas")).added).toBe(true);
-    expect((await visibilityService.addUser(admin, job.id, floridaPcm.id)).added).toBe(true);
+    expect(
+      (await visibilityService.addRegion(admin, job.id, "Texas")).added
+    ).toBe(true);
+    expect(
+      (await visibilityService.addUser(admin, job.id, floridaPcm.id)).added
+    ).toBe(true);
     expect((await loadJobForPrincipal(florida, job.id))?.value.id).toBe(job.id);
-    expect((await listRoundsWithJobsForPrincipal(florida)).some((row) => row.job.id === job.id)).toBe(
-      true,
-    );
+    expect(
+      (await listRoundsWithJobsForPrincipal(florida)).some(
+        (row) => row.job.id === job.id
+      )
+    ).toBe(true);
     await visibilityService.removeUser(admin, job.id, floridaPcm.id);
     await visibilityService.removeRegion(admin, job.id, "Texas");
   });
@@ -155,7 +181,7 @@ describe("visibility UX + duplicate guard", () => {
         state: "AL",
         initialStatus: "upcoming",
         confirmDuplicate: true,
-      }),
+      })
     );
     createdJobIds.push(existing.jobId);
 
@@ -174,14 +200,22 @@ describe("visibility UX + duplicate guard", () => {
     });
     expect(warning.kind).toBe("duplicates");
     if (warning.kind !== "duplicates") return;
-    expect(warning.matches.some((row) => row.jobId === existing.jobId)).toBe(true);
+    expect(warning.matches.some((row) => row.jobId === existing.jobId)).toBe(
+      true
+    );
     expect(warning.matches[0]?.homeRegion).toBe("Florida");
 
-    const adopted = await visibilityService.addRegion(georgia, existing.jobId, "Georgia");
+    const adopted = await visibilityService.addRegion(
+      georgia,
+      existing.jobId,
+      "Georgia"
+    );
     expect(adopted.added).toBe(true);
     const after = (await db.select({ id: jobs.id }).from(jobs)).length;
     expect(after).toBe(before);
-    expect((await loadJobForPrincipal(georgia, existing.jobId))?.value.id).toBe(existing.jobId);
+    expect((await loadJobForPrincipal(georgia, existing.jobId))?.value.id).toBe(
+      existing.jobId
+    );
   });
 
   it("creates a Georgia home + visibility row even when the requested region is a Salesforce office", async () => {
@@ -208,10 +242,13 @@ describe("visibility UX + duplicate guard", () => {
         bidYear: 2026,
         initialStatus: "upcoming",
         confirmDuplicate: true,
-      }),
+      })
     );
     createdJobIds.push(created.jobId);
-    const [job] = await db.select().from(jobs).where(eq(jobs.id, created.jobId));
+    const [job] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, created.jobId));
     expect(job.region).toBe("Georgia");
     const vis = await db
       .select()

@@ -20,7 +20,7 @@ describe("salesforce match", () => {
         region: "Central",
         expectedValue: 10_500_000,
         sourceVersion: "v1",
-      },
+      }
     );
     expect(c.score).toBeGreaterThan(0.7);
     expect(c.signals.regionMatch).toBe(true);
@@ -44,7 +44,7 @@ describe("salesforce match", () => {
         jobName: "River Hospital Phase 2",
         region: "Central",
         sourceVersion: "v2",
-      },
+      }
     );
     expect(c.discrepancy).toContain("job_number_mismatch");
   });

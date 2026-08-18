@@ -1,7 +1,7 @@
 import { publicUser } from "@/lib/mobile-auth";
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
+import { CORPORATE, canViewCorporate } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
-import { canViewCorporate, CORPORATE } from "@/lib/workspace";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "profile:read" }, async (principal) => {

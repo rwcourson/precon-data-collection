@@ -25,8 +25,13 @@ export type RegionDepartmentNode = {
   departments: readonly string[];
 };
 
-export function regionDepartmentTree(allowedRegions: readonly string[] | "all" = "all"): RegionDepartmentNode[] {
-  const regions = allowedRegions === "all" ? REGION_ORDER : REGION_ORDER.filter((r) => allowedRegions.includes(r));
+export function regionDepartmentTree(
+  allowedRegions: readonly string[] | "all" = "all"
+): RegionDepartmentNode[] {
+  const regions =
+    allowedRegions === "all"
+      ? REGION_ORDER
+      : REGION_ORDER.filter((r) => allowedRegions.includes(r));
   return regions.map((region) => ({
     region,
     departments: REGION_DEPARTMENTS[region] ?? [],
@@ -45,7 +50,9 @@ export function departmentsForRegion(region: string): readonly string[] {
 }
 
 export function allDepartments(): string[] {
-  return REGION_ORDER.flatMap((region) => [...(REGION_DEPARTMENTS[region] ?? [])]);
+  return REGION_ORDER.flatMap((region) => [
+    ...(REGION_DEPARTMENTS[region] ?? []),
+  ]);
 }
 
 /** Throws if reference-list departments are missing from or duplicated in the tree. */
@@ -57,7 +64,7 @@ export function assertRegionDepartmentExhaustiveness(): void {
   const dupes = mapped.filter((value, i) => mapped.indexOf(value) !== i);
   if (missing.length || extra.length || dupes.length) {
     throw new Error(
-      `Region/department map is not exhaustive: missing=${missing.join(", ") || "—"} extra=${extra.join(", ") || "—"} dupes=${dupes.join(", ") || "—"}`,
+      `Region/department map is not exhaustive: missing=${missing.join(", ") || "—"} extra=${extra.join(", ") || "—"} dupes=${dupes.join(", ") || "—"}`
     );
   }
 }

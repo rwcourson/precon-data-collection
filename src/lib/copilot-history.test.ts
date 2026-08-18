@@ -11,20 +11,25 @@ import {
 const user = {
   id: "u1",
   role: "user" as const,
-  parts: [{ type: "text", text: "Which upcoming efforts in my region have no team assigned?" }],
+  parts: [
+    {
+      type: "text",
+      text: "Which upcoming efforts in my region have no team assigned?",
+    },
+  ],
 };
 
 describe("copilot history", () => {
   it("titles a thread from the first user message", () => {
     expect(conversationTitle([user])).toBe(
-      "Which upcoming efforts in my region have no team assigned?",
+      "Which upcoming efforts in my region have no team assigned?"
     );
   });
 
   it("keeps the latest conversation first and drops empty drafts", () => {
     const first = upsertConversation(
       { activeId: "a", conversations: [] },
-      { id: "a", title: "New chat", updatedAt: 1, messages: [user] },
+      { id: "a", title: "New chat", updatedAt: 1, messages: [user] }
     );
     const draft = emptyConversation("b");
     const withDraft = upsertConversation(first, draft);
@@ -35,14 +40,16 @@ describe("copilot history", () => {
   it("returns a cached snapshot so the store hook does not loop", () => {
     const store = upsertConversation(
       { activeId: "a", conversations: [] },
-      { id: "a", title: "New chat", updatedAt: 1, messages: [user] },
+      { id: "a", title: "New chat", updatedAt: 1, messages: [user] }
     );
     saveCopilotHistory(9, store);
     expect(loadCopilotHistory(9)).toBe(loadCopilotHistory(9));
   });
 
   it("caps stored tool rows so history stays small", () => {
-    const rows = Array.from({ length: 40 }, (_, index) => ({ jobNumber: String(index) }));
+    const rows = Array.from({ length: 40 }, (_, index) => ({
+      jobNumber: String(index),
+    }));
     const slim = slimMessages([
       {
         id: "a1",
@@ -50,6 +57,7 @@ describe("copilot history", () => {
         parts: [{ type: "tool-query_needs_staffing", output: rows }],
       },
     ]);
-    expect((slim[0]?.parts[0]?.output as unknown[]).length).toBe(24);
+    const output = slim[0]?.parts[0]?.output;
+    expect(Array.isArray(output) ? output.length : -1).toBe(24);
   });
 });

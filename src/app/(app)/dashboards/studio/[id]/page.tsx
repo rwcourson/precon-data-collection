@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { Download } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { StudioWidgetForm } from "@/components/dashboards/studio-widget-form";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
 import { PageHeader } from "@/components/page-header";
@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { dashboardWidgets } from "@/db/schema";
-import { resolveWidget } from "@/lib/dashboard-query";
 import {
   listRoundsWithJobsForPrincipal,
   loadDashboardForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { resolveWidget } from "@/lib/dashboard-query";
 
 export default async function DashboardStudioDetailPage({
   params,
@@ -105,7 +105,9 @@ export default async function DashboardStudioDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Add widget</CardTitle>
-            <CardDescription>Add a KPI, chart, or table to this canvas.</CardDescription>
+            <CardDescription>
+              Add a KPI, chart, or table to this canvas.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <StudioWidgetForm dashboardId={id} />

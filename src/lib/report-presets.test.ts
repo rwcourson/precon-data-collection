@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { buildPrintHtml } from "./export-helpers";
-import { buildFieldCatalog } from "./report-engine";
 import { eq } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
 import { db, ensureDbReady } from "@/db";
 import { savedReports } from "@/db/schema";
+import { buildPrintHtml } from "./export-helpers";
 import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "./latest-note";
+import { buildFieldCatalog } from "./report-engine";
 import {
   CONSOLIDATED_REGIONAL_PRESET,
   CONSOLIDATED_REGIONAL_PRESET_KEY,
@@ -17,9 +17,16 @@ import {
 describe("consolidated regional bid-schedule export", () => {
   it("includes Owner, Drawings Due, Bid Review, and Latest note rightmost", () => {
     expect(CONSOLIDATED_REGIONAL_PRESET.config.fields).toEqual(
-      expect.arrayContaining(["owner", "drawingsDueDate", "bidReviewDate", "procurement"]),
+      expect.arrayContaining([
+        "owner",
+        "drawingsDueDate",
+        "bidReviewDate",
+        "procurement",
+      ])
     );
-    expect(CONSOLIDATED_REGIONAL_PRESET.config.fields.at(-1)).toBe(LATEST_NOTE_KEY);
+    expect(CONSOLIDATED_REGIONAL_PRESET.config.fields.at(-1)).toBe(
+      LATEST_NOTE_KEY
+    );
   });
 
   it("print HTML from the shipped builder carries those operational labels", () => {
@@ -40,7 +47,8 @@ describe("consolidated regional bid-schedule export", () => {
           drawingsDueDate: "2026-03-15",
           bidReviewDate: "2026-04-01",
           bidDueDate: "2026-04-15",
-          [LATEST_NOTE_KEY]: "Jay McDaniel · Aug 12, 2026 — Drawings slipped a week.",
+          [LATEST_NOTE_KEY]:
+            "Jay McDaniel · Aug 12, 2026 — Drawings slipped a week.",
         },
       ],
       formatValue: (_key, value) => String(value ?? ""),
@@ -61,7 +69,12 @@ describe("consolidated regional bid-schedule export", () => {
     expect(row.presetKey).toBe(CONSOLIDATED_REGIONAL_PRESET_KEY);
     expect(row.config).toBe(CONSOLIDATED_REGIONAL_PRESET.config);
     expect(row.config.fields).toEqual(
-      expect.arrayContaining(["owner", "drawingsDueDate", "bidReviewDate", LATEST_NOTE_KEY]),
+      expect.arrayContaining([
+        "owner",
+        "drawingsDueDate",
+        "bidReviewDate",
+        LATEST_NOTE_KEY,
+      ])
     );
   });
 
@@ -72,16 +85,25 @@ describe("consolidated regional bid-schedule export", () => {
       .from(savedReports)
       .where(eq(savedReports.presetKey, CONSOLIDATED_REGIONAL_PRESET_KEY));
     expect(row).toBeTruthy();
-    expect(row.config.fields).toEqual(CONSOLIDATED_REGIONAL_PRESET.config.fields);
     expect(row.config.fields).toEqual(
-      expect.arrayContaining(["owner", "drawingsDueDate", "bidReviewDate", LATEST_NOTE_KEY]),
+      CONSOLIDATED_REGIONAL_PRESET.config.fields
+    );
+    expect(row.config.fields).toEqual(
+      expect.arrayContaining([
+        "owner",
+        "drawingsDueDate",
+        "bidReviewDate",
+        LATEST_NOTE_KEY,
+      ])
     );
   });
 });
 
 describe("upcoming bid-schedule preset", () => {
   it("filters Upcoming and puts Latest note rightmost without grouping", () => {
-    expect(UPCOMING_BID_SCHEDULE_PRESET.config.fields.at(-1)).toBe(LATEST_NOTE_KEY);
+    expect(UPCOMING_BID_SCHEDULE_PRESET.config.fields.at(-1)).toBe(
+      LATEST_NOTE_KEY
+    );
     expect(UPCOMING_BID_SCHEDULE_PRESET.config.groupBy).toEqual([]);
     expect(UPCOMING_BID_SCHEDULE_PRESET.config.filters).toEqual([
       { field: "status", op: "eq", value: "Upcoming" },
@@ -97,6 +119,8 @@ describe("upcoming bid-schedule preset", () => {
       .from(savedReports)
       .where(eq(savedReports.presetKey, UPCOMING_BID_SCHEDULE_PRESET_KEY));
     expect(row).toBeTruthy();
-    expect(row.config.fields).toEqual(UPCOMING_BID_SCHEDULE_PRESET.config.fields);
+    expect(row.config.fields).toEqual(
+      UPCOMING_BID_SCHEDULE_PRESET.config.fields
+    );
   });
 });

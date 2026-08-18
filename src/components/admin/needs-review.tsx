@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Check, CheckCheck, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Check, CheckCheck, Loader2, RefreshCw, RotateCcw } from "lucide-react";
+import {
+  confirmLegacyBaseline,
+  reopenFlag,
+  rescanDataQuality,
+  resolveFlag,
+  resolveGroup,
+} from "@/actions/data-quality";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,13 +31,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { UrlSelect } from "@/components/url-select";
-import {
-  confirmLegacyBaseline,
-  reopenFlag,
-  rescanDataQuality,
-  resolveFlag,
-  resolveGroup,
-} from "@/actions/data-quality";
 import { FLAG_LABELS, type FlagKind } from "@/lib/data-quality";
 
 export type ReviewRow = {
@@ -95,7 +95,7 @@ export function NeedsReview({
       try {
         const res = await confirmLegacyBaseline();
         toast.success(
-          `Confirmed ${res.resolved.toLocaleString()} imported values as-is — only new entries are flagged from here.`,
+          `Confirmed ${res.resolved.toLocaleString()} imported values as-is — only new entries are flagged from here.`
         );
         router.refresh();
       } catch (e) {
@@ -108,7 +108,7 @@ export function NeedsReview({
       try {
         const res = await rescanDataQuality();
         toast.success(
-          `Scan complete — ${res.open} open, ${res.resolved} reviewed, ${res.cleared} cleared.`,
+          `Scan complete — ${res.open} open, ${res.resolved} reviewed, ${res.cleared} cleared.`
         );
         router.refresh();
       } catch (e) {
@@ -123,10 +123,10 @@ export function NeedsReview({
           <div className="space-y-1">
             <CardTitle className="text-sm">Import review queue</CardTitle>
             <CardDescription>
-              Legacy SmartSheet rows keep their original text — nothing is rewritten
-              on import. Blank required values, entries that do not match a managed
-              list, and jobs with no Connect link are flagged here for a human to
-              confirm or correct.
+              Legacy SmartSheet rows keep their original text — nothing is
+              rewritten on import. Blank required values, entries that do not
+              match a managed list, and jobs with no Connect link are flagged
+              here for a human to confirm or correct.
             </CardDescription>
           </div>
           {canTriage && (
@@ -190,8 +190,8 @@ export function NeedsReview({
           />
           {matching > rows.length && (
             <span className="text-xs text-muted-foreground">
-              Showing the first {rows.length} of {matching.toLocaleString()} — use the
-              groups below to clear whole columns at once.
+              Showing the first {rows.length} of {matching.toLocaleString()} —
+              use the groups below to clear whole columns at once.
             </span>
           )}
         </div>
@@ -203,7 +203,11 @@ export function NeedsReview({
             </p>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {groups.map((g) => (
-                <GroupCard key={`${g.field}-${g.kind}`} group={g} canTriage={canTriage} />
+                <GroupCard
+                  key={`${g.field}-${g.kind}`}
+                  group={g}
+                  canTriage={canTriage}
+                />
               ))}
             </div>
           </div>
@@ -222,7 +226,10 @@ export function NeedsReview({
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="h-28 text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="h-28 text-center text-sm text-muted-foreground"
+                >
                   {neverScanned
                     ? "No scan has been run yet. Choose Rescan to build the review queue from imported data."
                     : "Nothing to review — every imported value matches a managed list and no required fields are blank."}
@@ -232,14 +239,19 @@ export function NeedsReview({
             {rows.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="pl-6">
-                  <Link href={`/rounds/${r.roundId}`} className="text-sm font-medium hover:underline">
+                  <Link
+                    href={`/rounds/${r.roundId}`}
+                    className="text-sm font-medium hover:underline"
+                  >
                     {r.jobName}
                   </Link>
                   <p className="text-xs text-muted-foreground">
                     #{r.jobNumber} · {r.region} · BY {r.bidYear}
                   </p>
                 </TableCell>
-                <TableCell className="text-xs font-medium">{r.fieldLabel}</TableCell>
+                <TableCell className="text-xs font-medium">
+                  {r.fieldLabel}
+                </TableCell>
                 <TableCell>
                   <Badge variant={KIND_VARIANT[r.kind]} size="sm">
                     {FLAG_LABELS[r.kind]}
@@ -268,7 +280,13 @@ export function NeedsReview({
   );
 }
 
-function GroupCard({ group, canTriage }: { group: ReviewGroup; canTriage: boolean }) {
+function GroupCard({
+  group,
+  canTriage,
+}: {
+  group: ReviewGroup;
+  canTriage: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -300,7 +318,9 @@ function GroupCard({ group, canTriage }: { group: ReviewGroup; canTriage: boolea
             startTransition(async () => {
               try {
                 const res = await resolveGroup(group.field, group.kind, "");
-                toast.success(`Confirmed ${res.resolved.toLocaleString()} flags as-is`);
+                toast.success(
+                  `Confirmed ${res.resolved.toLocaleString()} flags as-is`
+                );
                 router.refresh();
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "Failed");
@@ -308,7 +328,11 @@ function GroupCard({ group, canTriage }: { group: ReviewGroup; canTriage: boolea
             })
           }
         >
-          {pending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+          {pending ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <Check className="size-3" />
+          )}
           Confirm all as-is
         </Button>
       )}
@@ -321,7 +345,8 @@ function ResolveForm({ id, canTriage }: { id: number; canTriage: boolean }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  if (!canTriage) return <span className="text-xs text-muted-foreground">Open</span>;
+  if (!canTriage)
+    return <span className="text-xs text-muted-foreground">Open</span>;
 
   return (
     <div className="flex items-center justify-end gap-1.5">
@@ -348,14 +373,24 @@ function ResolveForm({ id, canTriage }: { id: number; canTriage: boolean }) {
           })
         }
       >
-        {pending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+        {pending ? (
+          <Loader2 className="size-3 animate-spin" />
+        ) : (
+          <Check className="size-3" />
+        )}
         Reviewed
       </Button>
     </div>
   );
 }
 
-function ResolvedCell({ row, canTriage }: { row: ReviewRow; canTriage: boolean }) {
+function ResolvedCell({
+  row,
+  canTriage,
+}: {
+  row: ReviewRow;
+  canTriage: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -384,7 +419,11 @@ function ResolvedCell({ row, canTriage }: { row: ReviewRow; canTriage: boolean }
             })
           }
         >
-          {pending ? <Loader2 className="size-3 animate-spin" /> : <RotateCcw className="size-3" />}
+          {pending ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <RotateCcw className="size-3" />
+          )}
           Reopen
         </Button>
       )}

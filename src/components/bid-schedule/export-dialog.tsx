@@ -1,8 +1,5 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import {
   ArrowDown,
   ArrowUp,
@@ -12,6 +9,10 @@ import {
   Save,
   Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { deleteReportTemplate, saveReportTemplate } from "@/actions/templates";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -32,10 +33,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import type { ExportTemplateConfig } from "@/db/schema";
 import { FIELD_DEFS } from "@/lib/fields";
 import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "@/lib/latest-note";
-import type { ExportTemplateConfig } from "@/db/schema";
-import { deleteReportTemplate, saveReportTemplate } from "@/actions/templates";
 
 const DEFAULT_COLUMNS = [
   "jobNumber",
@@ -51,7 +51,14 @@ const DEFAULT_COLUMNS = [
   LATEST_NOTE_KEY,
 ];
 
-const GROUPABLE = ["region", "preconDepartment", "estimatePhase", "bidYear", "marketSector", "mlt"];
+const GROUPABLE = [
+  "region",
+  "preconDepartment",
+  "estimatePhase",
+  "bidYear",
+  "marketSector",
+  "mlt",
+];
 
 type Template = { id: number; name: string; config: ExportTemplateConfig };
 
@@ -70,7 +77,9 @@ export function ExportDialog({
   const [sortField, setSortField] = useState<string>("bidDueDate");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [header, setHeader] = useState("Bid Schedule");
-  const [footer, setFooter] = useState("Brasfield & Gorrie Preconstruction — Confidential");
+  const [footer, setFooter] = useState(
+    "Brasfield & Gorrie Preconstruction — Confidential"
+  );
   const [templateName, setTemplateName] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -85,7 +94,7 @@ export function ExportDialog({
       // Region-specific custom columns surface automatically (Section 11)
       ...customCols,
     ],
-    [customCols],
+    [customCols]
   );
 
   const config: ExportTemplateConfig = {
@@ -108,7 +117,7 @@ export function ExportDialog({
 
   function toggle(key: string) {
     setColumns((cols) =>
-      cols.includes(key) ? cols.filter((c) => c !== key) : [...cols, key],
+      cols.includes(key) ? cols.filter((c) => c !== key) : [...cols, key]
     );
   }
 
@@ -125,20 +134,22 @@ export function ExportDialog({
 
   const exportUrl = (format: "xlsx" | "pdf") =>
     `/api/export/bid-schedule?format=${format}&config=${encodeURIComponent(
-      JSON.stringify(config),
+      JSON.stringify(config)
     )}${queryString ? `&${queryString}` : ""}`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" className="gap-1.5" />}>
+      <DialogTrigger
+        render={<Button variant="outline" size="sm" className="gap-1.5" />}
+      >
         <Download className="size-4" /> Export
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Export Bid Schedule</DialogTitle>
           <DialogDescription>
-            Choose columns, order, grouping, and sorting. Save the configuration as a
-            reusable template.
+            Choose columns, order, grouping, and sorting. Save the configuration
+            as a reusable template.
           </DialogDescription>
         </DialogHeader>
 
@@ -147,7 +158,10 @@ export function ExportDialog({
             <Label className="text-xs">Saved templates</Label>
             <div className="flex flex-wrap gap-1.5">
               {templates.map((t) => (
-                <span key={t.id} className="flex items-center rounded-md border bg-muted/40 pr-0.5">
+                <span
+                  key={t.id}
+                  className="flex items-center rounded-md border bg-muted/40 pr-0.5"
+                >
                   <Button
                     variant="ghost"
                     size="xs"
@@ -167,7 +181,9 @@ export function ExportDialog({
                           await deleteReportTemplate(t.id);
                           router.refresh();
                         } catch (e) {
-                          toast.error(e instanceof Error ? e.message : "Delete failed");
+                          toast.error(
+                            e instanceof Error ? e.message : "Delete failed"
+                          );
                         }
                       })
                     }
@@ -188,7 +204,10 @@ export function ExportDialog({
                 const def = available.find((f) => f.key === key);
                 if (!def) return null;
                 return (
-                  <div key={key} className="flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-accent">
+                  <div
+                    key={key}
+                    className="flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-accent"
+                  >
                     <Checkbox checked onCheckedChange={() => toggle(key)} />
                     <span className="flex-1 truncate text-xs">{def.label}</span>
                     <Button
@@ -216,9 +235,17 @@ export function ExportDialog({
               {available
                 .filter((f) => !columns.includes(f.key))
                 .map((f) => (
-                  <div key={f.key} className="flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-accent">
-                    <Checkbox checked={false} onCheckedChange={() => toggle(f.key)} />
-                    <span className="flex-1 truncate text-xs text-muted-foreground">{f.label}</span>
+                  <div
+                    key={f.key}
+                    className="flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-accent"
+                  >
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={() => toggle(f.key)}
+                    />
+                    <span className="flex-1 truncate text-xs text-muted-foreground">
+                      {f.label}
+                    </span>
                   </div>
                 ))}
             </div>
@@ -255,7 +282,10 @@ export function ExportDialog({
               <div className="space-y-1.5">
                 <Label className="text-xs">Sort by</Label>
                 <Select
-                  items={available.map((f) => ({ value: f.key, label: f.label }))}
+                  items={available.map((f) => ({
+                    value: f.key,
+                    label: f.label,
+                  }))}
                   value={sortField}
                   onValueChange={(v) => setSortField(v ?? "bidDueDate")}
                 >
@@ -279,7 +309,9 @@ export function ExportDialog({
                     { value: "desc", label: "Descending" },
                   ]}
                   value={sortDir}
-                  onValueChange={(v) => setSortDir((v ?? "asc") as "asc" | "desc")}
+                  onValueChange={(v) =>
+                    setSortDir((v ?? "asc") as "asc" | "desc")
+                  }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -293,11 +325,17 @@ export function ExportDialog({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Header</Label>
-              <Input value={header} onChange={(e) => setHeader(e.target.value)} />
+              <Input
+                value={header}
+                onChange={(e) => setHeader(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Footer</Label>
-              <Input value={footer} onChange={(e) => setFooter(e.target.value)} />
+              <Input
+                value={footer}
+                onChange={(e) => setFooter(e.target.value)}
+              />
             </div>
           </div>
         </div>
@@ -333,13 +371,20 @@ export function ExportDialog({
             </Button>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button size="sm" nativeButton={false} render={<a href={exportUrl("xlsx")} />}>
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<a href={exportUrl("xlsx")} />}
+            >
               <FileSpreadsheet className="size-4" /> Excel
             </Button>
             <Button
               size="sm"
-              variant="outline" nativeButton={false}
-              render={<a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />}
+              variant="outline"
+              nativeButton={false}
+              render={
+                <a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />
+              }
             >
               <FileText className="size-4" /> PDF
             </Button>

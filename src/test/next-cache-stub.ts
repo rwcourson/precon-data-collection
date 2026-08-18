@@ -8,6 +8,8 @@ export function revalidateTag(tag?: string): void {
   void tag;
 }
 
-export function unstable_cache<T extends (...args: never[]) => unknown>(fn: T): T {
+export function unstable_cache<T extends (...args: never[]) => unknown>(
+  fn: T
+): T {
   return fn;
 }

@@ -8,17 +8,17 @@
  * tracking, dashboard backing tables) come across as standalone grids with
  * their columns and rows intact.
  */
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import { db } from "./index";
 import {
   estimateRounds,
-  sheetColumns,
-  sheetRows,
-  sheets,
   type SheetColumnType,
   type SheetFilter,
   type SheetViewConfig,
+  sheetColumns,
+  sheetRows,
+  sheets,
 } from "./schema";
 
 const REGION_BY_PREFIX: Record<string, string | null> = {
@@ -127,15 +127,22 @@ function statusFilter(values: string[]): SheetFilter {
   return { field: "status", op: "in", value: values.join(", ") };
 }
 
-function classify(name: string, region: string | null, divisions: string[]): Classified {
+function classify(
+  name: string,
+  region: string | null,
+  divisions: string[]
+): Classified {
   const base: SheetFilter[] = [];
   if (region) base.push({ field: "region", op: "eq", value: region });
   if (divisions.length > 0)
-    base.push({ field: "preconDepartment", op: "in", value: divisions.join(", ") });
+    base.push({
+      field: "preconDepartment",
+      op: "in",
+      value: divisions.join(", "),
+    });
 
   /** "CEN CBG Bid Schedule" covers AL HLC, AL MED, N AL… — say which. */
-  const scope =
-    divisions.length > 0 ? ` Covers ${divisions.join(", ")}.` : "";
+  const scope = divisions.length > 0 ? ` Covers ${divisions.join(", ")}.` : "";
 
   if (/Bid Schedule/i.test(name)) {
     const wanted: string[] = [];
@@ -149,7 +156,12 @@ function classify(name: string, region: string | null, divisions: string[]): Cla
         scope,
       config: {
         columns: BID_SCHEDULE_COLUMNS,
-        filters: [...base, statusFilter(wanted.length ? wanted : ["Active", "Upcoming", "Outstanding"])],
+        filters: [
+          ...base,
+          statusFilter(
+            wanted.length ? wanted : ["Active", "Upcoming", "Outstanding"]
+          ),
+        ],
         sortBy: [{ field: "bidDueDate", dir: "asc" }],
         groupBy: [],
       },
@@ -174,12 +186,16 @@ function classify(name: string, region: string | null, divisions: string[]): Cla
   if (/Post Bid Data Collection/i.test(name)) {
     return {
       kind: "view",
-      description: "Estimates that have bid and are collecting post-bid data." + scope,
+      description: `Estimates that have bid and are collecting post-bid data.${scope}`,
       config: {
         columns: POST_BID_COLUMNS,
         filters: [
           ...base,
-          statusFilter(["Submitted", "Post-Bid Data Entry", "RPD Approved / Locked"]),
+          statusFilter([
+            "Submitted",
+            "Post-Bid Data Entry",
+            "RPD Approved / Locked",
+          ]),
         ],
         sortBy: [{ field: "bidDueDate", dir: "desc" }],
         groupBy: [],
@@ -190,10 +206,13 @@ function classify(name: string, region: string | null, divisions: string[]): Cla
   if (/Self Perform/i.test(name) && /Metrics Capture/i.test(name)) {
     return {
       kind: "view",
-      description: "Estimates carrying self-perform scope, with capture rates." + scope,
+      description: `Estimates carrying self-perform scope, with capture rates.${scope}`,
       config: {
         columns: SELF_PERFORM_COLUMNS,
-        filters: [...base, { field: "selfPerformPriced", op: "notblank", value: "" }],
+        filters: [
+          ...base,
+          { field: "selfPerformPriced", op: "notblank", value: "" },
+        ],
         sortBy: [{ field: "estimateValue", dir: "desc" }],
         groupBy: [],
       },
@@ -218,7 +237,7 @@ function classify(name: string, region: string | null, divisions: string[]): Cla
   if (/Consolidated Metrics/i.test(name)) {
     return {
       kind: "view",
-      description: "Region rollup by Precon Department, subtotalled in place." + scope,
+      description: `Region rollup by Precon Department, subtotalled in place.${scope}`,
       config: {
         columns: METRICS_COLUMNS,
         filters: base,
@@ -245,14 +264,19 @@ type SmartsheetRow = {
   cells?: { columnId: number; value?: unknown; displayValue?: string }[];
 };
 
-function cellText(cell: { value?: unknown; displayValue?: string } | undefined): string | null {
+function cellText(
+  cell: { value?: unknown; displayValue?: string } | undefined
+): string | null {
   const raw = cell?.displayValue ?? cell?.value ?? null;
   if (raw == null || typeof raw === "object") return null;
   const text = String(raw).trim();
   return text === "" ? null : text;
 }
 
-function columnType(col: SmartsheetColumn, values: (string | null)[]): SheetColumnType {
+function columnType(
+  col: SmartsheetColumn,
+  values: (string | null)[]
+): SheetColumnType {
   switch (col.type) {
     case "DATE":
     case "DATETIME":
@@ -283,9 +307,14 @@ function columnType(col: SmartsheetColumn, values: (string | null)[]): SheetColu
  * would ever reproduce. Reading them off the sheet's own rows makes the
  * migrated filter exactly as wide as the sheet it replaces.
  */
-function divisionCodes(columns: SmartsheetColumn[], rows: SmartsheetRow[]): string[] {
+function divisionCodes(
+  columns: SmartsheetColumn[],
+  rows: SmartsheetRow[]
+): string[] {
   const col = columns.find((c) =>
-    DIVISION_TITLES.some((t) => t.toLowerCase() === c.title.trim().toLowerCase()),
+    DIVISION_TITLES.some(
+      (t) => t.toLowerCase() === c.title.trim().toLowerCase()
+    )
   );
   if (!col) return [];
   const found = new Set<string>();
@@ -313,23 +342,33 @@ type RoundFacts = { region: string; preconDepartment: string; status: string };
  * predicate is dropped until the sheet has something in it, so a migration
  * never lands a sheet that silently matches nothing.
  */
-function relaxToNonEmpty(filters: SheetFilter[], facts: RoundFacts[]): SheetFilter[] {
+function relaxToNonEmpty(
+  filters: SheetFilter[],
+  facts: RoundFacts[]
+): SheetFilter[] {
   const matches = (set: SheetFilter[]) =>
     facts.some((f) =>
       set.every((filter) => {
-        const value = (f as unknown as Record<string, string>)[filter.field] ?? "";
+        const value =
+          (f as unknown as Record<string, string>)[filter.field] ?? "";
         const needle = filter.value.toLowerCase();
         if (filter.op === "in")
-          return needle.split(",").map((s) => s.trim()).includes(value.toLowerCase());
-        if (filter.op === "contains") return value.toLowerCase().includes(needle);
+          return needle
+            .split(",")
+            .map((s) => s.trim())
+            .includes(value.toLowerCase());
+        if (filter.op === "contains")
+          return value.toLowerCase().includes(needle);
         if (filter.op === "notblank") return value !== "";
         return value.toLowerCase() === needle;
-      }),
+      })
     );
 
   if (matches(filters)) return filters;
 
-  const withoutDepartment = filters.filter((f) => f.field !== "preconDepartment");
+  const withoutDepartment = filters.filter(
+    (f) => f.field !== "preconDepartment"
+  );
   if (withoutDepartment.length !== filters.length && matches(withoutDepartment))
     return withoutDepartment;
 
@@ -366,20 +405,26 @@ export async function seedSheetsFromExport(dataDir: string): Promise<{
     region: r.region,
     preconDepartment: r.preconDepartment,
     status: STATUS_LABEL[r.status] ?? r.status,
-    selfPerformPriced: r.selfPerformPriced == null ? "" : String(r.selfPerformPriced),
+    selfPerformPriced:
+      r.selfPerformPriced == null ? "" : String(r.selfPerformPriced),
   }));
 
   await db.delete(sheetRows);
   await db.delete(sheetColumns);
   await db.delete(sheets);
 
-  const files = fs.readdirSync(dataDir).filter((f) => f.endsWith(".json")).sort();
+  const files = fs
+    .readdirSync(dataDir)
+    .filter((f) => f.endsWith(".json"))
+    .sort();
   let views = 0;
   let grids = 0;
   let rowTotal = 0;
 
   for (const file of files) {
-    const raw = JSON.parse(fs.readFileSync(path.join(dataDir, file), "utf8")) as {
+    const raw = JSON.parse(
+      fs.readFileSync(path.join(dataDir, file), "utf8")
+    ) as {
       name?: string;
       columns?: SmartsheetColumn[];
       rows?: SmartsheetRow[];
@@ -393,7 +438,7 @@ export async function seedSheetsFromExport(dataDir: string): Promise<{
     const { kind, config, description } = classify(
       name,
       region,
-      divisionCodes(raw.columns ?? [], raw.rows ?? []),
+      divisionCodes(raw.columns ?? [], raw.rows ?? [])
     );
     const resolved = config
       ? { ...config, filters: relaxToNonEmpty(config.filters, facts) }
@@ -423,7 +468,8 @@ export async function seedSheetsFromExport(dataDir: string): Promise<{
     for (const col of cols) valuesByColumn.set(col.id, []);
     for (const row of sourceRows) {
       const byId = new Map((row.cells ?? []).map((c) => [c.columnId, c]));
-      for (const col of cols) valuesByColumn.get(col.id)!.push(cellText(byId.get(col.id)));
+      for (const col of cols)
+        valuesByColumn.get(col.id)!.push(cellText(byId.get(col.id)));
     }
 
     const keyByColumnId = new Map<number, string>();
@@ -449,7 +495,8 @@ export async function seedSheetsFromExport(dataDir: string): Promise<{
         sortOrder: index,
       };
     });
-    if (columnValues.length > 0) await db.insert(sheetColumns).values(columnValues);
+    if (columnValues.length > 0)
+      await db.insert(sheetColumns).values(columnValues);
 
     const rowValues = sourceRows
       .map((row, index) => {

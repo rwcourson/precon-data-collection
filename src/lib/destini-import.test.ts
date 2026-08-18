@@ -11,7 +11,9 @@ import {
 describe("normLabel", () => {
   it("normalizes punctuation and dollars", () => {
     expect(normLabel("Fee – Back Page $")).toBe("fee - back page");
-    expect(normLabel("GC $ Proposed – Owner SOV")).toBe("gc proposed - owner sov");
+    expect(normLabel("GC $ Proposed – Owner SOV")).toBe(
+      "gc proposed - owner sov"
+    );
   });
 });
 
@@ -26,7 +28,7 @@ describe("tabular map", () => {
         "GC $ Proposed - Owner SOV",
         "Mystery Col",
       ],
-      ["2600123", "GMP", "12500000", "400000", "250000", "x"],
+      ["2600123", "GMP", "12500000", "400000", "250000", "x"]
     );
     expect(row.jobNumber).toBe("2600123");
     expect(row.estimatePhase).toBe("GMP");
@@ -38,8 +40,13 @@ describe("tabular map", () => {
 
   it("does not import judgmental / non-Destini columns even if present", () => {
     const row = mapDestiniRow(
-      ["Job Number", "Fee - Expected $", "Contingency - Total $", "GR $ - B&G Sort"],
-      ["1", "100", "200", "300"],
+      [
+        "Job Number",
+        "Fee - Expected $",
+        "Contingency - Total $",
+        "GR $ - B&G Sort",
+      ],
+      ["1", "100", "200", "300"]
     );
     expect(row.values).not.toHaveProperty("feeExpected");
     expect(row.values).not.toHaveProperty("contingencyTotal");
@@ -52,7 +59,7 @@ describe("tabular map", () => {
       [
         ["", ""],
         ["26001", "100"],
-      ],
+      ]
     );
     expect(mapped).toHaveLength(1);
   });
@@ -104,7 +111,7 @@ describe("vertical Destini report", () => {
 describe("CSV parse", () => {
   it("maps a tabular CSV", () => {
     const result = parseDestiniCsv(
-      "Job Number,Estimate Phase,Estimate Value $\n12345,ROM,1500000\n",
+      "Job Number,Estimate Phase,Estimate Value $\n12345,ROM,1500000\n"
     );
     expect(result.format).toBe("tabular");
     expect(result.rows).toHaveLength(1);

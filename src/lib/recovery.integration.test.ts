@@ -1,14 +1,32 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+  getTrashItems,
+  permanentlyDeleteTrashItem,
+  trashJob,
+} from "@/actions/recovery";
+import {
+  GET as trashGet,
+  POST as trashPost,
+} from "@/app/api/v1/mobile/trash/route";
 import { db, ensureDbReady } from "@/db";
 import {
+  apiDestructiveChallenges,
+  apiTokens,
   estimateRounds,
   jobs,
   sheetRows,
   sheets,
   users,
 } from "@/db/schema";
+import { DomainError } from "@/domain/errors";
+import { authenticateBearer } from "@/lib/api-auth";
+import { createDestructiveChallenge } from "@/lib/api-safety";
+import { hashToken } from "@/lib/api-tokens";
+import { createPrincipal } from "@/lib/authorization/principal";
+import { DESTRUCTIVE_CHALLENGE_HEADER } from "@/lib/destructive-challenge";
+import { issueDemoSession } from "@/lib/mobile-auth";
 import {
   createDataSnapshot,
   listTrash,
@@ -19,20 +37,6 @@ import {
   softDeleteSheetRow,
   verifyBackupIntegrity,
 } from "@/lib/recovery";
-import {
-  permanentlyDeleteTrashItem,
-  trashJob,
-  getTrashItems,
-} from "@/actions/recovery";
-import { DomainError } from "@/domain/errors";
-import { createPrincipal } from "@/lib/authorization/principal";
-import { POST as trashPost, GET as trashGet } from "@/app/api/v1/mobile/trash/route";
-import { DESTRUCTIVE_CHALLENGE_HEADER } from "@/lib/destructive-challenge";
-import { issueDemoSession } from "@/lib/mobile-auth";
-import { apiDestructiveChallenges, apiTokens } from "@/db/schema";
-import { createDestructiveChallenge } from "@/lib/api-safety";
-import { hashToken } from "@/lib/api-tokens";
-import { authenticateBearer } from "@/lib/api-auth";
 
 let admin: typeof users.$inferSelect;
 let pcm: typeof users.$inferSelect;
@@ -50,7 +54,7 @@ function request(
   url: string,
   token: string,
   body?: unknown,
-  extraHeaders?: Record<string, string>,
+  extraHeaders?: Record<string, string>
 ) {
   return new Request(url, {
     method: body ? "POST" : "GET",
@@ -72,7 +76,11 @@ async function authedToken(plaintext: string) {
 
 beforeAll(async () => {
   await ensureDbReady();
-  [admin] = await db.select().from(users).where(eq(users.role, "corporate_admin")).limit(1);
+  [admin] = await db
+    .select()
+    .from(users)
+    .where(eq(users.role, "corporate_admin"))
+    .limit(1);
   [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
   [rpd] = await db.select().from(users).where(eq(users.role, "rpd")).limit(1);
   if (!admin || !pcm?.region || !rpd) throw new Error("seed roles missing");
@@ -137,7 +145,10 @@ describe("recovery soft-delete and provenance", () => {
     expect(afterBatchRound?.deletionBatchId).toBe(batchId);
 
     await restoreEntity(principal, "job", job.id);
-    const [restoredJob] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    const [restoredJob] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, job.id));
     const [restoredBatch] = await db
       .select()
       .from(estimateRounds)
@@ -155,7 +166,8 @@ describe("recovery soft-delete and provenance", () => {
   });
 
   it("denies cross-Region soft-delete and unscoped trash list for RPD", async () => {
-    const otherRegion = (rpd.region ?? pcm.region) === "Florida" ? "Central" : "Florida";
+    const otherRegion =
+      (rpd.region ?? pcm.region) === "Florida" ? "Central" : "Florida";
     const rpdPrincipal = createPrincipal({
       user: rpd,
       authSource: "demo_session",
@@ -172,10 +184,14 @@ describe("recovery soft-delete and provenance", () => {
       })
       .returning();
 
-    await expect(softDeleteJob(rpdPrincipal, crossJob.id)).rejects.toMatchObject({
+    await expect(
+      softDeleteJob(rpdPrincipal, crossJob.id)
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
-    await expect(trashJob(crossJob.id, rpdPrincipal)).rejects.toBeInstanceOf(DomainError);
+    await expect(trashJob(crossJob.id, rpdPrincipal)).rejects.toBeInstanceOf(
+      DomainError
+    );
 
     const [localJob] = await db
       .insert(jobs)
@@ -203,18 +219,26 @@ describe("recovery soft-delete and provenance", () => {
       .returning();
 
     const trash = await listTrash(rpdPrincipal);
-    expect(trash.some((item) => item.entityId === localJob.id && item.entityType === "job")).toBe(
-      true,
+    expect(
+      trash.some(
+        (item) => item.entityId === localJob.id && item.entityType === "job"
+      )
+    ).toBe(true);
+    expect(trash.some((item) => item.entityId === foreignDeleted.id)).toBe(
+      false
     );
-    expect(trash.some((item) => item.entityId === foreignDeleted.id)).toBe(false);
 
     const pcmPrincipal = createPrincipal({
       user: pcm,
       authSource: "demo_session",
       workspaceRegion: pcm.region,
     });
-    await expect(listTrash(pcmPrincipal)).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(getTrashItems(pcmPrincipal)).rejects.toBeInstanceOf(DomainError);
+    await expect(listTrash(pcmPrincipal)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(getTrashItems(pcmPrincipal)).rejects.toBeInstanceOf(
+      DomainError
+    );
 
     await db.delete(jobs).where(eq(jobs.id, crossJob.id));
     await db.delete(jobs).where(eq(jobs.id, localJob.id));
@@ -245,7 +269,12 @@ describe("recovery soft-delete and provenance", () => {
 
     // Live (not soft-deleted) ID must not hard-delete
     await expect(
-      permanentlyDeleteTrashItem("job", job.id, "PERMANENTLY DELETE", adminPrincipal),
+      permanentlyDeleteTrashItem(
+        "job",
+        job.id,
+        "PERMANENTLY DELETE",
+        adminPrincipal
+      )
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
     const [stillLive] = await db.select().from(jobs).where(eq(jobs.id, job.id));
     expect(stillLive?.deletedAt).toBeNull();
@@ -254,16 +283,28 @@ describe("recovery soft-delete and provenance", () => {
 
     // RPD cannot permanently delete
     await expect(
-      permanentlyDeleteTrashItem("job", job.id, "PERMANENTLY DELETE", rpdPrincipal),
-    ).rejects.toMatchObject({ code: expect.stringMatching(/FORBIDDEN|NOT_FOUND/) });
+      permanentlyDeleteTrashItem(
+        "job",
+        job.id,
+        "PERMANENTLY DELETE",
+        rpdPrincipal
+      )
+    ).rejects.toMatchObject({
+      code: expect.stringMatching(/FORBIDDEN|NOT_FOUND/),
+    });
 
     // Wrong confirmation
     await expect(
-      permanentlyDeleteTrashItem("job", job.id, "DELETE", adminPrincipal),
+      permanentlyDeleteTrashItem("job", job.id, "DELETE", adminPrincipal)
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     // Correct path
-    await permanentlyDeleteTrashItem("job", job.id, "PERMANENTLY DELETE", adminPrincipal);
+    await permanentlyDeleteTrashItem(
+      "job",
+      job.id,
+      "PERMANENTLY DELETE",
+      adminPrincipal
+    );
     const remaining = await db.select().from(jobs).where(eq(jobs.id, job.id));
     expect(remaining).toHaveLength(0);
   });
@@ -295,9 +336,11 @@ describe("recovery soft-delete and provenance", () => {
 
     await softDeleteSheetRow(rpdPrincipal, row.id);
     const trash = await listTrash(rpdPrincipal);
-    expect(trash.some((item) => item.entityType === "sheet_row" && item.entityId === row.id)).toBe(
-      true,
-    );
+    expect(
+      trash.some(
+        (item) => item.entityType === "sheet_row" && item.entityId === row.id
+      )
+    ).toBe(true);
 
     await expect(
       permanentDelete({
@@ -305,7 +348,7 @@ describe("recovery soft-delete and provenance", () => {
         entityType: "sheet_row",
         entityId: row.id,
         confirmation: "PERMANENTLY DELETE",
-      }),
+      })
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
     await permanentDelete({
@@ -314,7 +357,10 @@ describe("recovery soft-delete and provenance", () => {
       entityId: row.id,
       confirmation: "PERMANENTLY DELETE",
     });
-    const remaining = await db.select().from(sheetRows).where(eq(sheetRows.id, row.id));
+    const remaining = await db
+      .select()
+      .from(sheetRows)
+      .where(eq(sheetRows.id, row.id));
     expect(remaining).toHaveLength(0);
 
     await softDeleteSheet(rpdPrincipal, sheet.id);
@@ -358,13 +404,16 @@ describe("mobile trash POST boundary", () => {
         entityType: "job",
         entityId: job.id,
         confirmation: "PERMANENTLY DELETE",
-      }),
+      })
     );
     expect(missingChallenge.status).toBe(400);
     expect(await missingChallenge.json()).toMatchObject({
       error: expect.stringMatching(/X-Destructive-Challenge|challenge/i),
     });
-    const [stillThere] = await db.select().from(jobs).where(eq(jobs.id, job.id));
+    const [stillThere] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, job.id));
     expect(stillThere?.deletedAt).not.toBeNull();
 
     // RPD with a valid-looking challenge still fails capability
@@ -389,8 +438,8 @@ describe("mobile trash POST boundary", () => {
           entityId: job.id,
           confirmation: "PERMANENTLY DELETE",
         },
-        { [DESTRUCTIVE_CHALLENGE_HEADER]: rpdChallenge.challenge },
-      ),
+        { [DESTRUCTIVE_CHALLENGE_HEADER]: rpdChallenge.challenge }
+      )
     );
     expect([403, 404]).toContain(rpdPermanent.status);
 
@@ -416,8 +465,8 @@ describe("mobile trash POST boundary", () => {
           entityId: job.id,
           confirmation: "PERMANENTLY DELETE",
         },
-        { [DESTRUCTIVE_CHALLENGE_HEADER]: challenge.challenge },
-      ),
+        { [DESTRUCTIVE_CHALLENGE_HEADER]: challenge.challenge }
+      )
     );
     expect(adminOk.status).toBe(200);
     const remaining = await db.select().from(jobs).where(eq(jobs.id, job.id));
@@ -446,11 +495,14 @@ describe("mobile trash POST boundary", () => {
           entityId: job2.id,
           confirmation: "PERMANENTLY DELETE",
         },
-        { [DESTRUCTIVE_CHALLENGE_HEADER]: challenge.challenge },
-      ),
+        { [DESTRUCTIVE_CHALLENGE_HEADER]: challenge.challenge }
+      )
     );
     expect([409, 400, 404]).toContain(replay.status);
-    const [job2Still] = await db.select().from(jobs).where(eq(jobs.id, job2.id));
+    const [job2Still] = await db
+      .select()
+      .from(jobs)
+      .where(eq(jobs.id, job2.id));
     expect(job2Still).toBeTruthy();
 
     // Service-level requireApiChallenge without challenge
@@ -459,20 +511,30 @@ describe("mobile trash POST boundary", () => {
         "job",
         job2.id,
         "PERMANENTLY DELETE",
-        createPrincipal({ user: admin, authSource: "api_token", workspaceRegion: null, token: adminApiToken }),
+        createPrincipal({
+          user: admin,
+          authSource: "api_token",
+          workspaceRegion: null,
+          token: adminApiToken,
+        }),
         null,
-        { requireApiChallenge: true },
-      ),
+        { requireApiChallenge: true }
+      )
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     const pcmToken = await session(pcm);
-    const list = await trashGet(request("http://localhost/api/v1/mobile/trash", pcmToken));
+    const list = await trashGet(
+      request("http://localhost/api/v1/mobile/trash", pcmToken)
+    );
     expect([403, 404]).toContain(list.status);
 
     await db.delete(jobs).where(eq(jobs.id, job2.id));
     for (const plaintext of issued) {
       const tokenHash = hashToken(plaintext);
-      const rows = await db.select().from(apiTokens).where(eq(apiTokens.tokenHash, tokenHash));
+      const rows = await db
+        .select()
+        .from(apiTokens)
+        .where(eq(apiTokens.tokenHash, tokenHash));
       for (const row of rows) {
         await db
           .delete(apiDestructiveChallenges)
@@ -493,6 +555,8 @@ describe("backup restore integrity", () => {
     expect(integrity.checksumMatch).toBe(true);
     expect(integrity.counts.jobs).toBeGreaterThan(0);
     expect(integrity.counts.estimateRounds).toBeGreaterThan(0);
-    expect(createHash("sha256").update(JSON.stringify({})).digest("hex")).not.toBe(snap.checksum);
+    expect(
+      createHash("sha256").update(JSON.stringify({})).digest("hex")
+    ).not.toBe(snap.checksum);
   });
 });

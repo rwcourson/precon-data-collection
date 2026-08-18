@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { appSettings, auditLog, type Role } from "@/db/schema";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   ACCESS_SETTINGS_KEY,
+  type AccessSettings,
   DEFAULT_ACCESS,
   getAccessSettings,
-  type AccessSettings,
 } from "@/lib/auth";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 const ROLES: Role[] = [
@@ -49,7 +49,9 @@ export async function saveAccessSettings(next: AccessSettings) {
   const merged: AccessSettings = {
     groupRoles,
     groupRegions,
-    defaultRole: ROLES.includes(next.defaultRole) ? next.defaultRole : DEFAULT_ACCESS.defaultRole,
+    defaultRole: ROLES.includes(next.defaultRole)
+      ? next.defaultRole
+      : DEFAULT_ACCESS.defaultRole,
   };
 
   await db

@@ -16,7 +16,10 @@ export type LatestNoteSource = {
   body: string;
 };
 
-export function truncatePrintNote(body: string, max = PRINT_NOTE_MAX_CHARS): string {
+export function truncatePrintNote(
+  body: string,
+  max = PRINT_NOTE_MAX_CHARS
+): string {
   const collapsed = body.replace(/\s+/g, " ").trim();
   if (collapsed.length <= max) return collapsed;
   return `${collapsed.slice(0, Math.max(0, max - 1))}…`;
@@ -34,7 +37,7 @@ export function formatLatestNoteDate(value: Date | string): string {
 /** Author · date — truncated body. Empty body still keeps author + date. */
 export function formatLatestNoteCell(
   note: LatestNoteSource,
-  maxChars = PRINT_NOTE_MAX_CHARS,
+  maxChars = PRINT_NOTE_MAX_CHARS
 ): string {
   const author = note.authorName?.trim() || "Someone";
   const date = formatLatestNoteDate(note.createdAt);

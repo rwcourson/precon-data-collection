@@ -6,7 +6,9 @@ import { sanitizePlan } from "@/lib/dashboard-sanitize";
 import { fmtDollars, fmtPercent } from "@/lib/format";
 import { computeStats, rollup } from "@/lib/rollup";
 
-function round(partial: Partial<EstimateRound> & { id: number }): EstimateRound {
+function round(
+  partial: Partial<EstimateRound> & { id: number }
+): EstimateRound {
   return {
     jobId: 1,
     roundNumber: 1,
@@ -31,10 +33,7 @@ const toolOpts = {
 };
 
 // AI SDK tool.execute may type as T | AsyncIterable<T>; our tools always return T.
-async function runTool<T>(
-  execute: unknown,
-  input: unknown,
-): Promise<T> {
+async function runTool<T>(execute: unknown, input: unknown): Promise<T> {
   if (typeof execute !== "function") throw new Error("missing execute");
   return (await execute(input, toolOpts)) as T;
 }
@@ -53,7 +52,12 @@ describe("magnus tools", () => {
       outcome: "unsuccessful",
       estimateValue: 20_000_000,
     }),
-    round({ id: 3, region: "Texas", outcome: "pending", estimateValue: 40_000_000 }),
+    round({
+      id: 3,
+      region: "Texas",
+      outcome: "pending",
+      estimateValue: 40_000_000,
+    }),
   ];
 
   it("get_portfolio_brief returns scoped brief", async () => {
@@ -91,9 +95,17 @@ describe("magnus tools", () => {
   it("plan_dashboard_rules returns resolved widgets with allowlisted metrics", async () => {
     const tools = createMagnusTools({ rounds });
     const result = await runTool<{
-      plan: { widgets: { metricKey?: string | null; groupBy?: string | null; filters?: { field: string }[] }[] };
+      plan: {
+        widgets: {
+          metricKey?: string | null;
+          groupBy?: string | null;
+          filters?: { field: string }[];
+        }[];
+      };
       widgets: unknown[];
-    }>(tools.plan_dashboard_rules.execute, { intent: "Build a region scorecard" });
+    }>(tools.plan_dashboard_rules.execute, {
+      intent: "Build a region scorecard",
+    });
     expect(result.plan.widgets.length).toBeGreaterThan(0);
     expect(result.widgets.length).toBe(result.plan.widgets.length);
     const allowedMetrics = new Set([
@@ -126,7 +138,8 @@ describe("magnus tools", () => {
     for (const w of result.plan.widgets) {
       if (w.metricKey) expect(allowedMetrics.has(w.metricKey)).toBe(true);
       if (w.groupBy) expect(allowedGroup.has(w.groupBy)).toBe(true);
-      for (const f of w.filters ?? []) expect(allowedFilters.has(f.field)).toBe(true);
+      for (const f of w.filters ?? [])
+        expect(allowedFilters.has(f.field)).toBe(true);
     }
   });
 
@@ -156,7 +169,12 @@ describe("magnus tools", () => {
     delete process.env.AI_GATEWAY_API_KEY;
     try {
       const result = await runTool<{
-        plan: { widgets: { metricKey?: string | null; filters?: { field: string }[] }[] };
+        plan: {
+          widgets: {
+            metricKey?: string | null;
+            filters?: { field: string }[];
+          }[];
+        };
       }>(tools.refine_dashboard.execute, {
         instruction: "Keep a Florida win-rate scorecard",
         previousPlan: {

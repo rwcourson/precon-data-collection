@@ -3,7 +3,10 @@ import { authorize } from "./kernel";
 import { principalAllowsRegion } from "./principal";
 import type { Principal, ResourceDescriptor } from "./types";
 
-function jobResource(principal: Principal, region: string | null): ResourceDescriptor {
+function jobResource(
+  principal: Principal,
+  region: string | null
+): ResourceDescriptor {
   return {
     type: "job",
     id: "new",
@@ -16,7 +19,7 @@ function jobResource(principal: Principal, region: string | null): ResourceDescr
 
 function roundResource(
   round: Pick<EstimateRound, "id" | "status" | "region">,
-  extra: Partial<ResourceDescriptor> = {},
+  extra: Partial<ResourceDescriptor> = {}
 ): ResourceDescriptor {
   return {
     type: "round",
@@ -30,7 +33,10 @@ function roundResource(
   };
 }
 
-export function principalCanCreatePursuit(principal: Principal, region?: string | null): boolean {
+export function principalCanCreatePursuit(
+  principal: Principal,
+  region?: string | null
+): boolean {
   const target = region ?? principal.workspace.region ?? principal.user.region;
   if (principal.user.role === "corporate_admin") {
     return principalAllowsRegion(principal, target ?? null);
@@ -43,40 +49,46 @@ export function principalCanEditBidSchedule(principal: Principal): boolean {
   return authorize(
     principal,
     "edit",
-    jobResource(principal, principal.workspace.region ?? principal.user.region),
+    jobResource(principal, principal.workspace.region ?? principal.user.region)
   ).allowed;
 }
 
 export function principalCanApproveLock(
   principal: Principal,
-  round: Pick<EstimateRound, "id" | "status" | "region">,
+  round: Pick<EstimateRound, "id" | "status" | "region">
 ): boolean {
-  return authorize(principal, "approve", roundResource({ ...round, status: "post_bid" })).allowed;
+  return authorize(
+    principal,
+    "approve",
+    roundResource({ ...round, status: "post_bid" })
+  ).allowed;
 }
 
 export function principalCanEditAfterLock(
   principal: Principal,
-  round: Pick<EstimateRound, "id" | "status" | "region">,
+  round: Pick<EstimateRound, "id" | "status" | "region">
 ): boolean {
   return authorize(
     principal,
     "edit",
-    roundResource(round, { fieldKey: "outcome" }),
+    roundResource(round, { fieldKey: "outcome" })
   ).allowed;
 }
 
 export function principalCanEnterPostBid(
   principal: Principal,
-  round: Pick<EstimateRound, "id" | "status" | "region">,
+  round: Pick<EstimateRound, "id" | "status" | "region">
 ): boolean {
   return authorize(
     principal,
     "edit",
-    roundResource(round, { fieldKey: "estimateValue" }),
+    roundResource(round, { fieldKey: "estimateValue" })
   ).allowed;
 }
 
-export function principalCanManageCompanyColumns(principal: Principal): boolean {
+export function principalCanManageCompanyColumns(
+  principal: Principal
+): boolean {
   return authorize(principal, "manage", {
     type: "admin",
     id: "columns",
@@ -100,7 +112,9 @@ export function principalCanManageRegionColumns(principal: Principal): boolean {
   }).allowed;
 }
 
-export function principalCanManageReferenceLists(principal: Principal): boolean {
+export function principalCanManageReferenceLists(
+  principal: Principal
+): boolean {
   return authorize(principal, "manage", {
     type: "admin",
     id: "lists",
@@ -136,7 +150,10 @@ export function principalCanManagePeople(principal: Principal): boolean {
   }).allowed;
 }
 
-export function principalCanCreateSheet(principal: Principal, region: string | null): boolean {
+export function principalCanCreateSheet(
+  principal: Principal,
+  region: string | null
+): boolean {
   return authorize(principal, "edit", {
     type: "sheet",
     id: "new",
@@ -149,7 +166,7 @@ export function principalCanCreateSheet(principal: Principal, region: string | n
 
 export function principalCanManageJobRegion(
   principal: Principal,
-  region: string,
+  region: string
 ): boolean {
   return authorize(principal, "visibility.manage-region", {
     type: "job",
@@ -163,12 +180,12 @@ export function principalCanManageJobRegion(
 
 export function principalCanMarkStaffing(
   principal: Principal,
-  round: Pick<EstimateRound, "id" | "status" | "region">,
+  round: Pick<EstimateRound, "id" | "status" | "region">
 ): boolean {
   return authorize(
     principal,
     "staffing.mark",
-    roundResource(round, { visibilitySatisfied: true }),
+    roundResource(round, { visibilitySatisfied: true })
   ).allowed;
 }
 

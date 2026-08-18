@@ -23,7 +23,10 @@ const TOKEN_SCOPES = new Set<ApiTokenScope>([
   "admin:tokens",
 ]);
 
-function intersection(left: readonly string[], right: readonly string[]): string[] {
+function intersection(
+  left: readonly string[],
+  right: readonly string[]
+): string[] {
   const allowed = new Set(right);
   return left.filter((value) => allowed.has(value));
 }
@@ -50,15 +53,20 @@ export function createPrincipal(input: {
   let allowedRegions: "all" | string[] = baseRegions;
   if (workspace.kind === "region") {
     allowedRegions =
-      baseRegions === "all" || baseRegions.includes(workspace.region) ? [workspace.region] : [];
+      baseRegions === "all" || baseRegions.includes(workspace.region)
+        ? [workspace.region]
+        : [];
   }
   const tokenRegions = input.token?.regionAllowlist ?? [];
   if (tokenRegions.length > 0) {
-    allowedRegions = allowedRegions === "all" ? [...tokenRegions] : intersection(allowedRegions, tokenRegions);
+    allowedRegions =
+      allowedRegions === "all"
+        ? [...tokenRegions]
+        : intersection(allowedRegions, tokenRegions);
   }
 
   const scopes = (input.token?.scopes ?? []).filter(
-    (scope): scope is ApiTokenScope => TOKEN_SCOPES.has(scope as ApiTokenScope),
+    (scope): scope is ApiTokenScope => TOKEN_SCOPES.has(scope as ApiTokenScope)
   );
   return {
     authSource: input.authSource,
@@ -76,7 +84,13 @@ export function createPrincipal(input: {
   };
 }
 
-export function principalAllowsRegion(principal: Principal, region: string | null): boolean {
+export function principalAllowsRegion(
+  principal: Principal,
+  region: string | null
+): boolean {
   if (region == null) return true;
-  return principal.allowedRegions === "all" || principal.allowedRegions.includes(region);
+  return (
+    principal.allowedRegions === "all" ||
+    principal.allowedRegions.includes(region)
+  );
 }

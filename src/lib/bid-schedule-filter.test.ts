@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { departmentsForRegion } from "@/lib/region-departments";
 import {
   canonicalizeHierarchy,
   expandHierarchy,
@@ -10,11 +9,16 @@ import {
   toggleDepartment,
   toggleRegion,
 } from "@/lib/bid-schedule-filter";
+import { departmentsForRegion } from "@/lib/region-departments";
 
 const FIXTURE = [
   { id: 1, region: "Georgia", preconDepartment: "Georgia – Commercial" },
   { id: 2, region: "Georgia", preconDepartment: "Georgia – Healthcare" },
-  { id: 3, region: "Georgia", preconDepartment: "Georgia – Mission Critical & Industrial" },
+  {
+    id: 3,
+    region: "Georgia",
+    preconDepartment: "Georgia – Mission Critical & Industrial",
+  },
   { id: 4, region: "Florida", preconDepartment: "Florida" },
   { id: 5, region: "Central", preconDepartment: "Central Building Group" },
   { id: 6, region: "Central", preconDepartment: "Central Federal" },
@@ -43,14 +47,24 @@ describe("hierarchical region-market filter", () => {
     for (const dept of departmentsForRegion("Georgia")) {
       selection = toggleDepartment(selection, dept);
     }
-    expect(canonicalizeHierarchy(selection)).toEqual({ regions: ["Georgia"], departments: [] });
-    expect(hierarchyEquals(selection, { regions: ["Georgia"], departments: [] })).toBe(true);
-    expect(ids(selection)).toEqual(ids({ regions: ["Georgia"], departments: [] }));
+    expect(canonicalizeHierarchy(selection)).toEqual({
+      regions: ["Georgia"],
+      departments: [],
+    });
+    expect(
+      hierarchyEquals(selection, { regions: ["Georgia"], departments: [] })
+    ).toBe(true);
+    expect(ids(selection)).toEqual(
+      ids({ regions: ["Georgia"], departments: [] })
+    );
   });
 
   it("nests and filters Central's four departments identically", () => {
     const byRegion = ids({ regions: ["Central"], departments: [] });
-    const byDepts = ids({ regions: [], departments: [...departmentsForRegion("Central")] });
+    const byDepts = ids({
+      regions: [],
+      departments: [...departmentsForRegion("Central")],
+    });
     expect(byRegion).toEqual([5, 6, 7, 8]);
     expect(byDepts).toEqual(byRegion);
   });
@@ -78,7 +92,10 @@ describe("hierarchical region-market filter", () => {
   });
 
   it("partial toggle of Georgia leaves the parent un-canonicalized as a region", () => {
-    const next = toggleDepartment({ regions: ["Georgia"], departments: [] }, "Georgia – Commercial");
+    const next = toggleDepartment(
+      { regions: ["Georgia"], departments: [] },
+      "Georgia – Commercial"
+    );
     expect(next.regions).toEqual([]);
     expect(next.departments.sort()).toEqual([
       "Georgia – Healthcare",

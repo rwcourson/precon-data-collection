@@ -54,11 +54,19 @@ export async function listSheets(token: string): Promise<SheetListItem[]> {
 }
 
 /** Full sheet payload (columns + rows). Read-only GET. */
-export async function getSheet(token: string, sheetId: number): Promise<unknown> {
+export async function getSheet(
+  token: string,
+  sheetId: number
+): Promise<unknown> {
   return ssFetch(`/sheets/${sheetId}`, token);
 }
 
 /** Lightweight whoami / token check. */
-export async function getCurrentUser(token: string): Promise<{ email?: string; firstName?: string }> {
-  return (await ssFetch("/users/me", token)) as { email?: string; firstName?: string };
+export async function getCurrentUser(
+  token: string
+): Promise<{ email?: string; firstName?: string }> {
+  return (await ssFetch("/users/me", token)) as {
+    email?: string;
+    firstName?: string;
+  };
 }

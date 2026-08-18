@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { KeyRound, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { saveAccessSettings } from "@/actions/access";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,9 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { saveAccessSettings } from "@/actions/access";
-import type { AccessSettings } from "@/lib/auth";
 import type { Role } from "@/db/schema";
+import type { AccessSettings } from "@/lib/auth";
 
 type Pair = { group: string; value: string };
 
@@ -44,10 +44,16 @@ export function AccessSettingsPanel({
   canEdit: boolean;
 }) {
   const [roles, setRoles] = useState<Pair[]>(
-    Object.entries(settings.groupRoles).map(([group, value]) => ({ group, value })),
+    Object.entries(settings.groupRoles).map(([group, value]) => ({
+      group,
+      value,
+    }))
   );
   const [regionPairs, setRegionPairs] = useState<Pair[]>(
-    Object.entries(settings.groupRegions).map(([group, value]) => ({ group, value })),
+    Object.entries(settings.groupRegions).map(([group, value]) => ({
+      group,
+      value,
+    }))
   );
   const [defaultRole, setDefaultRole] = useState<string>(settings.defaultRole);
   const [dirty, setDirty] = useState(false);
@@ -61,10 +67,14 @@ export function AccessSettingsPanel({
       try {
         await saveAccessSettings({
           groupRoles: Object.fromEntries(
-            roles.filter((r) => r.group.trim()).map((r) => [r.group, r.value as Role]),
+            roles
+              .filter((r) => r.group.trim())
+              .map((r) => [r.group, r.value as Role])
           ),
           groupRegions: Object.fromEntries(
-            regionPairs.filter((r) => r.group.trim()).map((r) => [r.group, r.value]),
+            regionPairs
+              .filter((r) => r.group.trim())
+              .map((r) => [r.group, r.value])
           ),
           defaultRole: defaultRole as Role,
         });
@@ -86,7 +96,9 @@ export function AccessSettingsPanel({
               <CardDescription>
                 Production sign-in is Microsoft Entra via Better Auth (no app
                 passwords). Set{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-2xs">AUTH_MODE=sso</code>{" "}
+                <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+                  AUTH_MODE=sso
+                </code>{" "}
                 to require SSO and hide the demo persona picker.
               </CardDescription>
             </div>
@@ -100,7 +112,9 @@ export function AccessSettingsPanel({
           <div className="grid gap-2 text-xs sm:grid-cols-2">
             <div className="rounded-md border p-2.5">
               <p className="font-medium">Provider</p>
-              <code className="text-2xs text-muted-foreground">Microsoft Entra ID</code>
+              <code className="text-2xs text-muted-foreground">
+                Microsoft Entra ID
+              </code>
             </div>
             <div className="rounded-md border p-2.5">
               <p className="font-medium">Callback</p>
@@ -110,14 +124,23 @@ export function AccessSettingsPanel({
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            Role and region come from Entra group claims mapped below. Configure the
-            app registration to emit a{" "}
+            Role and region come from Entra group claims mapped below. Configure
+            the app registration to emit a{" "}
             <code className="rounded bg-muted px-1 text-2xs">groups</code> claim
-            (or security group IDs/names matching these keys). Legacy proxy header
-            names remain documented for reference:{" "}
-            <code className="rounded bg-muted px-1 text-2xs">{headers.email}</code>,{" "}
-            <code className="rounded bg-muted px-1 text-2xs">{headers.name}</code>,{" "}
-            <code className="rounded bg-muted px-1 text-2xs">{headers.groups}</code>.
+            (or security group IDs/names matching these keys). Legacy proxy
+            header names remain documented for reference:{" "}
+            <code className="rounded bg-muted px-1 text-2xs">
+              {headers.email}
+            </code>
+            ,{" "}
+            <code className="rounded bg-muted px-1 text-2xs">
+              {headers.name}
+            </code>
+            ,{" "}
+            <code className="rounded bg-muted px-1 text-2xs">
+              {headers.groups}
+            </code>
+            .
           </p>
         </CardContent>
       </Card>
@@ -139,7 +162,10 @@ export function AccessSettingsPanel({
               setRoles(p);
               touch();
             }}
-            options={Object.entries(roleLabels).map(([value, label]) => ({ value, label }))}
+            options={Object.entries(roleLabels).map(([value, label]) => ({
+              value,
+              label,
+            }))}
             fallback="pcm"
             canEdit={canEdit}
           />
@@ -158,9 +184,14 @@ export function AccessSettingsPanel({
 
           <div className="flex flex-wrap items-end gap-3 border-t pt-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Role when no group matches</Label>
+              <Label className="text-xs font-medium">
+                Role when no group matches
+              </Label>
               <Select
-                items={Object.entries(roleLabels).map(([value, label]) => ({ value, label }))}
+                items={Object.entries(roleLabels).map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
                 value={defaultRole}
                 onValueChange={(v) => {
                   setDefaultRole(String(v));
@@ -181,8 +212,17 @@ export function AccessSettingsPanel({
               </Select>
             </div>
             {canEdit && (
-              <Button className="ml-auto gap-1.5" size="sm" disabled={saving || !dirty} onClick={save}>
-                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              <Button
+                className="ml-auto gap-1.5"
+                size="sm"
+                disabled={saving || !dirty}
+                onClick={save}
+              >
+                {saving ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
                 Save mappings
               </Button>
             )}
@@ -217,7 +257,11 @@ function PairEditor({
             <Input
               value={p.group}
               onChange={(e) =>
-                setPairs(pairs.map((q, j) => (i === j ? { ...q, group: e.target.value } : q)))
+                setPairs(
+                  pairs.map((q, j) =>
+                    i === j ? { ...q, group: e.target.value } : q
+                  )
+                )
               }
               placeholder="IdP group name"
               className="h-8 max-w-72 font-mono text-xs"
@@ -228,7 +272,11 @@ function PairEditor({
               items={options}
               value={p.value}
               onValueChange={(v) =>
-                setPairs(pairs.map((q, j) => (i === j ? { ...q, value: String(v) } : q)))
+                setPairs(
+                  pairs.map((q, j) =>
+                    i === j ? { ...q, value: String(v) } : q
+                  )
+                )
               }
               disabled={!canEdit}
             >

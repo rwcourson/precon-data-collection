@@ -1,5 +1,7 @@
-import Link from "next/link";
 import { desc } from "drizzle-orm";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getDmrReconciliation } from "@/actions/dmr";
 import { DmrUpload } from "@/components/dashboards/dmr-upload";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -18,13 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getDmrReconciliation } from "@/actions/dmr";
 import { db } from "@/db";
 import { dmrImports } from "@/db/schema";
-import { fmtDateTime, fmtDollars } from "@/lib/format";
-import { notFound } from "next/navigation";
 import { loadAdminSectionForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { fmtDateTime, fmtDollars } from "@/lib/format";
 
 export default async function ReconciliationPage({
   searchParams,
@@ -33,10 +33,14 @@ export default async function ReconciliationPage({
 }) {
   const params = await searchParams;
   const principal = await getWebPrincipal();
-  if (!(await loadAdminSectionForPrincipal(principal, "integrations"))) notFound();
+  if (!(await loadAdminSectionForPrincipal(principal, "integrations")))
+    notFound();
   const importId = params.importId ? Number(params.importId) : null;
 
-  const imports = await db.select().from(dmrImports).orderBy(desc(dmrImports.createdAt));
+  const imports = await db
+    .select()
+    .from(dmrImports)
+    .orderBy(desc(dmrImports.createdAt));
 
   const reconciliation =
     importId != null && Number.isFinite(importId)
@@ -66,11 +70,15 @@ export default async function ReconciliationPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Past imports</CardTitle>
-            <CardDescription>Select an import to view reconciliation.</CardDescription>
+            <CardDescription>
+              Select an import to view reconciliation.
+            </CardDescription>
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {imports.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-muted-foreground">No imports yet.</p>
+              <p className="px-6 pb-6 text-sm text-muted-foreground">
+                No imports yet.
+              </p>
             ) : (
               <Table>
                 <TableHeader>
@@ -91,7 +99,9 @@ export default async function ReconciliationPage({
                           {imp.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{imp.source}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {imp.source}
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {fmtDateTime(imp.createdAt)}
                       </TableCell>
@@ -149,9 +159,15 @@ export default async function ReconciliationPage({
               <TableBody>
                 {reconciliation.rows.map((row) => (
                   <TableRow key={row.jobNumber}>
-                    <TableCell className="pl-6 font-mono text-sm">{row.jobNumber}</TableCell>
-                    <TableCell className="max-w-48 truncate text-sm">{row.jobName}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{row.region || "—"}</TableCell>
+                    <TableCell className="pl-6 font-mono text-sm">
+                      {row.jobNumber}
+                    </TableCell>
+                    <TableCell className="max-w-48 truncate text-sm">
+                      {row.jobName}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {row.region || "—"}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -167,10 +183,14 @@ export default async function ReconciliationPage({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {row.dmrValue != null ? fmtDollars(row.dmrValue, true) : "—"}
+                      {row.dmrValue != null
+                        ? fmtDollars(row.dmrValue, true)
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {row.preconValue != null ? fmtDollars(row.preconValue, true) : "—"}
+                      {row.preconValue != null
+                        ? fmtDollars(row.preconValue, true)
+                        : "—"}
                     </TableCell>
                     <TableCell className="pr-4 text-right font-mono text-sm tabular-nums">
                       {row.delta != null ? fmtDollars(row.delta, true) : "—"}

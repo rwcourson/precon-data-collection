@@ -38,7 +38,7 @@ export function getZdrModel(): LanguageModel {
   const requested = process.env.AI_MODEL?.trim();
   if (requested && requested !== AI_MODEL_ID) {
     throw new Error(
-      `AI model must be ${AI_MODEL_ID} (ZDR). Refusing "${requested}".`,
+      `AI model must be ${AI_MODEL_ID} (ZDR). Refusing "${requested}".`
     );
   }
   return gateway(AI_MODEL_ID);

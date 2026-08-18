@@ -17,7 +17,9 @@ export type ScopeableRound = {
   status: string;
 };
 
-export function parseDashboardLevel(raw: string | null | undefined): DashboardLevel {
+export function parseDashboardLevel(
+  raw: string | null | undefined
+): DashboardLevel {
   const v = (raw ?? "corporate").toLowerCase();
   if (v === "region" || v === "division" || v === "corporate") return v;
   return "corporate";
@@ -30,7 +32,7 @@ export function parseDashboardLevel(raw: string | null | undefined): DashboardLe
 export function scopeRoundsForLevel<T extends ScopeableRound>(
   rows: T[],
   level: DashboardLevel,
-  focusRegion: string | null | undefined,
+  focusRegion: string | null | undefined
 ): T[] {
   if (level === "corporate") return rows;
   const region = focusRegion?.trim() || null;
@@ -47,7 +49,7 @@ export type GroupVolumePoint = { label: string; value: number };
 export function groupVolumeForLevel<T extends ScopeableRound>(
   scoped: T[],
   level: DashboardLevel,
-  opts?: { max?: number },
+  opts?: { max?: number }
 ): GroupVolumePoint[] {
   const max = opts?.max ?? 8;
   const map = new Map<string, number>();
@@ -82,7 +84,7 @@ export function groupVolumeChartSubtitle(level: DashboardLevel): string {
 
 /** Status counts on already-scoped rows. */
 export function statusSeriesFromRounds<T extends { status: string }>(
-  scoped: T[],
+  scoped: T[]
 ): { label: string; value: number }[] {
   const byStatus = new Map<string, number>();
   for (const r of scoped) {

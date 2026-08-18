@@ -13,7 +13,11 @@ export type PostBidQueueRow = {
 export function postBidQueueRow(
   round: EstimateRound,
   multiValues: Record<string, string[]>,
-  extras: { jobNumber: string; jobName: string; estimateLeadName: string | null },
+  extras: {
+    jobNumber: string;
+    jobName: string;
+    estimateLeadName: string | null;
+  }
 ): PostBidQueueRow {
   const missing = missingRequiredFields(round, multiValues, extras);
   const { done, total } = requiredCompletion(round, multiValues, extras);

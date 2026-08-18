@@ -1,21 +1,27 @@
 import "server-only";
-import { and, eq, isNull, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { distributionLists, distributionRuns } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
-import type { Principal } from "@/lib/authorization/types";
 import { createPrincipal } from "@/lib/authorization/principal";
+import type { Principal } from "@/lib/authorization/types";
+import { isScheduleDue, schedulePeriodKey } from "@/lib/distribution-schedule";
 import { deliverQueued, emailProvider, queueEmails } from "@/lib/email";
 import { recordReportArtifact } from "@/lib/recovery";
-import { CONSOLIDATED_REGIONAL_PRESET_KEY, weekPeriodKey } from "@/lib/report-presets";
-import { isScheduleDue, schedulePeriodKey } from "@/lib/distribution-schedule";
+import {
+  CONSOLIDATED_REGIONAL_PRESET_KEY,
+  weekPeriodKey,
+} from "@/lib/report-presets";
+import { withTransaction } from "@/lib/transactions";
 import { assertPrincipalCanDistribute } from "@/services/mutation-policy";
 import { reportScheduleService } from "@/services/report-schedule-service";
-import { withTransaction } from "@/lib/transactions";
 
 /** Minimal PDF artifact used when Chromium is unavailable in CI/tests. */
-export function buildReportPdfBytes(reportKey: string, listName: string): Uint8Array {
+export function buildReportPdfBytes(
+  reportKey: string,
+  listName: string
+): Uint8Array {
   // Minimal valid-enough PDF structure for checksum/storage tests.
   const body = `%PDF-1.4
 1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
@@ -41,7 +47,9 @@ startxref
   return new TextEncoder().encode(body);
 }
 
-export function createServicePrincipal(region: string | null = null): Principal {
+export function createServicePrincipal(
+  region: string | null = null
+): Principal {
   return createPrincipal({
     user: {
       id: 0,
@@ -62,7 +70,12 @@ export const distributionService = {
     const [list] = await db
       .select()
       .from(distributionLists)
-      .where(and(eq(distributionLists.id, listId), isNull(distributionLists.deletedAt)));
+      .where(
+        and(
+          eq(distributionLists.id, listId),
+          isNull(distributionLists.deletedAt)
+        )
+      );
     if (!list) throw DomainError.notFound("Distribution list not found");
     assertPrincipalCanDistribute(principal, list.region);
 
@@ -100,7 +113,8 @@ export const distributionService = {
     await db
       .update(distributionLists)
       .set({
-        lastSentAt: delivery.sent > 0 || delivery.previewed > 0 ? new Date() : null,
+        lastSentAt:
+          delivery.sent > 0 || delivery.previewed > 0 ? new Date() : null,
         updatedAt: new Date(),
       })
       .where(eq(distributionLists.id, listId));
@@ -126,9 +140,12 @@ export const distributionService = {
       .from(distributionLists)
       .where(
         and(
-          or(eq(distributionLists.cadence, "weekly"), eq(distributionLists.cadence, "scheduled")),
-          isNull(distributionLists.deletedAt),
-        ),
+          or(
+            eq(distributionLists.cadence, "weekly"),
+            eq(distributionLists.cadence, "scheduled")
+          ),
+          isNull(distributionLists.deletedAt)
+        )
       );
 
     const results: {
@@ -141,10 +158,13 @@ export const distributionService = {
     for (const list of lists) {
       if (list.cadence === "scheduled") {
         if (list.paused || list.weekday == null || list.hour == null) continue;
-        if (!isScheduleDue(now, list.timezone, list.weekday, list.hour)) continue;
+        if (!isScheduleDue(now, list.timezone, list.weekday, list.hour))
+          continue;
       }
       const periodKey =
-        list.cadence === "scheduled" && list.weekday != null && list.hour != null
+        list.cadence === "scheduled" &&
+        list.weekday != null &&
+        list.hour != null
           ? schedulePeriodKey(now, list.timezone, list.weekday, list.hour)
           : weekPeriodKey(now, list.timezone);
       if (list.lastPeriodKey === periodKey) {
@@ -159,8 +179,8 @@ export const distributionService = {
           .where(
             and(
               eq(distributionRuns.distributionListId, list.id),
-              eq(distributionRuns.periodKey, periodKey),
-            ),
+              eq(distributionRuns.periodKey, periodKey)
+            )
           );
         if (existing[0]) return null;
         const [run] = await tx
@@ -211,10 +231,16 @@ export const distributionService = {
           .update(distributionRuns)
           .set({
             status: "failed",
-            error: error instanceof Error ? error.message : "distribution failed",
+            error:
+              error instanceof Error ? error.message : "distribution failed",
           })
           .where(eq(distributionRuns.id, claimed.id));
-        results.push({ listId: list.id, periodKey, skipped: false, failed: true });
+        results.push({
+          listId: list.id,
+          periodKey,
+          skipped: false,
+          failed: true,
+        });
       }
     }
 

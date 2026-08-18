@@ -12,14 +12,18 @@ export type RollupStatsLike = {
   totalValue?: number;
 };
 
-export function roundsFromStats(stats: RollupStatsLike | null | undefined): number {
+export function roundsFromStats(
+  stats: RollupStatsLike | null | undefined
+): number {
   if (!stats) return 0;
   if (typeof stats.rounds === "number") return stats.rounds;
   if (typeof stats.count === "number") return stats.count;
   return 0;
 }
 
-export function volumeFromStats(stats: RollupStatsLike | null | undefined): number | null {
+export function volumeFromStats(
+  stats: RollupStatsLike | null | undefined
+): number | null {
   if (!stats) return null;
   if (typeof stats.volume === "number") return stats.volume;
   if (typeof stats.totalValue === "number") return stats.totalValue;
@@ -31,11 +35,15 @@ export function formatDollars(n: number | null | undefined): string {
   return `$${Math.round(n).toLocaleString()}`;
 }
 
-export function formatRoundsVolumeLine(stats: RollupStatsLike | null | undefined): string {
+export function formatRoundsVolumeLine(
+  stats: RollupStatsLike | null | undefined
+): string {
   const rounds = roundsFromStats(stats);
   return `${rounds} rounds · ${formatDollars(volumeFromStats(stats))}`;
 }
 
-export function formatRoundsBadge(stats: RollupStatsLike | null | undefined): string {
+export function formatRoundsBadge(
+  stats: RollupStatsLike | null | undefined
+): string {
   return `${roundsFromStats(stats)} rounds`;
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   clampPageSize,
-  decodeCursor,
   DEFAULT_PAGE_SIZE,
+  decodeCursor,
   encodeCursor,
   MAX_PAGE_SIZE,
   pageFromRows,
@@ -27,11 +27,15 @@ describe("pagination", () => {
       limit: DEFAULT_PAGE_SIZE,
       offset: 0,
     });
-    expect(parsePagination(new URLSearchParams("limit=25&offset=100"))).toEqual({
-      limit: 25,
-      offset: 100,
-    });
-    expect(parsePagination(new URLSearchParams("limit=5000&offset=-3"))).toEqual({
+    expect(parsePagination(new URLSearchParams("limit=25&offset=100"))).toEqual(
+      {
+        limit: 25,
+        offset: 100,
+      }
+    );
+    expect(
+      parsePagination(new URLSearchParams("limit=5000&offset=-3"))
+    ).toEqual({
       limit: MAX_PAGE_SIZE,
       offset: 0,
     });
@@ -42,7 +46,9 @@ describe("pagination", () => {
   });
 
   it("allows endpoints to raise the default limit up to the max", () => {
-    expect(parsePagination(new URLSearchParams(), { limit: MAX_PAGE_SIZE })).toEqual({
+    expect(
+      parsePagination(new URLSearchParams(), { limit: MAX_PAGE_SIZE })
+    ).toEqual({
       limit: MAX_PAGE_SIZE,
       offset: 0,
     });
@@ -53,7 +59,10 @@ describe("pagination", () => {
   });
 
   it("pages rows with a next cursor when more remain", () => {
-    const rows = Array.from({ length: 5 }, (_, i) => ({ id: i + 1, name: `r${i}` }));
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      id: i + 1,
+      name: `r${i}`,
+    }));
     const page = pageFromRows(rows, 2, (row) => row.name);
     expect(page.items).toHaveLength(2);
     expect(page.nextCursor).toBeTruthy();

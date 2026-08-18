@@ -3,14 +3,20 @@ import fs from "node:fs";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.BASE_URL;
-assert.match(baseUrl ?? "", /^http:\/\/127\.0\.0\.1:\d+$/, "BASE_URL must target the isolated local server");
+assert.match(
+  baseUrl ?? "",
+  /^http:\/\/127\.0\.0\.1:\d+$/,
+  "BASE_URL must target the isolated local server"
+);
 
 const shots = ".smoke-shots";
 fs.mkdirSync(shots, { recursive: true });
 const errors = [];
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.on("pageerror", (error) => errors.push(`${page.url()} pageerror: ${error.message}`));
+page.on("pageerror", (error) =>
+  errors.push(`${page.url()} pageerror: ${error.message}`)
+);
 page.on("console", (message) => {
   const text = message.text();
   if (message.type() !== "error") return;
@@ -20,7 +26,8 @@ page.on("console", (message) => {
 });
 
 const report = (message) => process.stdout.write(`PASS ${message}\n`);
-const shot = (name) => page.screenshot({ path: `${shots}/${name}.png`, fullPage: false });
+const shot = (name) =>
+  page.screenshot({ path: `${shots}/${name}.png`, fullPage: false });
 
 async function pickPersona(name) {
   const trigger = page.locator('header [data-slot="dropdown-menu-trigger"]');
@@ -34,7 +41,10 @@ async function pickPersona(name) {
 try {
   await page.goto(`${baseUrl}/`);
   await page.waitForLoadState("networkidle");
-  assert.ok(await page.locator("h1").first().textContent(), "Home must render a heading");
+  assert.ok(
+    await page.locator("h1").first().textContent(),
+    "Home must render a heading"
+  );
   await shot("01-home");
   report("home renders");
 
@@ -47,7 +57,9 @@ try {
 
   await page.getByRole("button", { name: "New Pursuit" }).click();
   await page.getByRole("tab", { name: /No job number yet/ }).click();
-  await page.getByPlaceholder(/Riverside Medical/).fill("Isolated Smoke Test ROM");
+  await page
+    .getByPlaceholder(/Riverside Medical/)
+    .fill("Isolated Smoke Test ROM");
   async function pickDialogSelect(label, option) {
     const field = page.locator('[role="dialog"] div.space-y-1\\.5', {
       has: page.getByText(label, { exact: false }),
@@ -55,7 +67,10 @@ try {
     const combo = field.locator('[role="combobox"]');
     if ((await combo.count()) === 0) return;
     await combo.click();
-    await page.getByRole("option", { name: option, exact: true }).first().click();
+    await page
+      .getByRole("option", { name: option, exact: true })
+      .first()
+      .click();
   }
   await pickDialogSelect("Region", "Central");
   await pickDialogSelect("Precon Department", "Central Heavy Civil");
@@ -74,13 +89,18 @@ try {
   await firstRound.click();
   await page.waitForLoadState("networkidle");
   const feeField = page
-    .locator("div.space-y-1", { has: page.getByText("Fee – Expected $", { exact: false }) })
+    .locator("div.space-y-1", {
+      has: page.getByText("Fee – Expected $", { exact: false }),
+    })
     .locator("input")
     .first();
   await feeField.waitFor({ state: "visible" });
   await feeField.fill("1234567");
   await page.getByRole("button", { name: /Save Changes/ }).click();
-  await page.locator("[data-sonner-toast]").last().waitFor({ state: "visible" });
+  await page
+    .locator("[data-sonner-toast]")
+    .last()
+    .waitFor({ state: "visible" });
   await shot("04-round-saved");
   report("post-bid field mutation saves");
 
@@ -92,19 +112,27 @@ try {
   const approveButton = page.getByRole("button", { name: /Approve/ });
   await approveButton.waitFor({ state: "visible" });
   await approveButton.click();
-  await page.locator("[data-sonner-toast]").last().waitFor({ state: "visible" });
+  await page
+    .locator("[data-sonner-toast]")
+    .last()
+    .waitFor({ state: "visible" });
   report("RPD approval path responds");
 
   await page.goto(`${baseUrl}/dashboards?level=corporate`);
   await page.waitForLoadState("networkidle");
-  assert.ok(await page.locator("main").isVisible(), "Dashboard surface must render");
+  assert.ok(
+    await page.locator("main").isVisible(),
+    "Dashboard surface must render"
+  );
   await shot("05-dashboards");
   report("corporate dashboard renders");
 
   await pickPersona("Tom Reeves");
   await page.goto(`${baseUrl}/reports`);
   await page.waitForLoadState("networkidle");
-  const savedReport = page.getByRole("button", { name: /Fee % by Region \(Locked Rounds\)/ }).first();
+  const savedReport = page
+    .getByRole("button", { name: /Fee % by Region \(Locked Rounds\)/ })
+    .first();
   await savedReport.waitFor({ state: "visible" });
   await savedReport.click();
   await page.getByRole("button", { name: "Run Report" }).click();
@@ -116,7 +144,9 @@ try {
   await page.waitForLoadState("networkidle");
   const addColumnButtons = page.getByRole("button", { name: "Add Column" });
   await addColumnButtons.last().click();
-  await page.getByPlaceholder("e.g. River Mile Marker").fill("Isolated Smoke Column");
+  await page
+    .getByPlaceholder("e.g. River Mile Marker")
+    .fill("Isolated Smoke Column");
   await page.getByRole("button", { name: "Add Column" }).last().click();
   const column = page.getByText("Isolated Smoke Column").first();
   await column.waitFor({ state: "visible" });
@@ -126,11 +156,18 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${baseUrl}/bid-schedule`);
   await page.waitForLoadState("networkidle");
-  assert.ok(await page.locator("main").isVisible(), "Mobile viewport must render the app");
+  assert.ok(
+    await page.locator("main").isVisible(),
+    "Mobile viewport must render the app"
+  );
   await shot("08-mobile-bid-schedule");
   report("mobile viewport renders");
 
-  assert.deepEqual(errors, [], `Browser errors detected:\n${errors.join("\n")}`);
+  assert.deepEqual(
+    errors,
+    [],
+    `Browser errors detected:\n${errors.join("\n")}`
+  );
 } finally {
   await browser.close();
 }

@@ -12,10 +12,17 @@ import {
   users,
 } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
-import { loadRoundForPrincipal, principalJobVisibilityPredicate } from "@/lib/authorization/loaders";
+import {
+  loadRoundForPrincipal,
+  principalJobVisibilityPredicate,
+} from "@/lib/authorization/loaders";
 import { createPrincipal } from "@/lib/authorization/principal";
 import type { Principal } from "@/lib/authorization/types";
-import { extractMentionUserIds, firstLine, previewLatestNote } from "@/lib/note-body";
+import {
+  extractMentionUserIds,
+  firstLine,
+  previewLatestNote,
+} from "@/lib/note-body";
 import {
   assertAllowedNoteAttachment,
   readNoteAttachmentBytes,
@@ -54,7 +61,9 @@ export type MentionPreview = {
 };
 
 async function requireReadableRound(principal: Principal, roundId: number) {
-  const loaded = await loadRoundForPrincipal(principal, roundId, { capability: "read" });
+  const loaded = await loadRoundForPrincipal(principal, roundId, {
+    capability: "read",
+  });
   if (!loaded) throw DomainError.notFound("Round not found");
   return loaded;
 }
@@ -62,7 +71,7 @@ async function requireReadableRound(principal: Principal, roundId: number) {
 async function requireWritableRound(
   principal: Principal,
   roundId: number,
-  capability: "notes.write" | "notes.attach",
+  capability: "notes.write" | "notes.attach"
 ) {
   const loaded = await requireReadableRound(principal, roundId);
   requireAuthorized(principal, capability, loaded.descriptor, "Round notes");
@@ -73,13 +82,19 @@ function canModerateNotes(principal: Principal): boolean {
   return ["corporate_admin", "rpd", "admin_jsa"].includes(principal.user.role);
 }
 
-async function mentionedUserCanRead(user: (typeof users.$inferSelect), roundId: number) {
+async function mentionedUserCanRead(
+  user: typeof users.$inferSelect,
+  roundId: number
+) {
   const principal = createPrincipal({
     user,
     authSource: "demo_session",
     workspaceRegion: user.region,
   });
-  return (await loadRoundForPrincipal(principal, roundId, { capability: "read" })) != null;
+  return (
+    (await loadRoundForPrincipal(principal, roundId, { capability: "read" })) !=
+    null
+  );
 }
 
 async function fanOutMentions(opts: {
@@ -90,7 +105,9 @@ async function fanOutMentions(opts: {
   jobName: string;
   roundNumber: number;
 }) {
-  const ids = extractMentionUserIds(opts.body).filter((id) => id !== opts.author.user.id);
+  const ids = extractMentionUserIds(opts.body).filter(
+    (id) => id !== opts.author.user.id
+  );
   if (ids.length === 0) return;
   const existing = await db
     .select({ userId: roundNoteMentions.mentionedUserId })
@@ -140,8 +157,8 @@ export const notesService = {
       .where(
         inArray(
           roundNoteAttachments.noteId,
-          rows.map((row) => row.note.id),
-        ),
+          rows.map((row) => row.note.id)
+        )
       );
     const byNote = new Map<number, NoteThreadItem["attachments"]>();
     for (const file of attachments) {
@@ -181,8 +198,8 @@ export const notesService = {
         and(
           inArray(roundNotes.roundId, roundIds),
           isNull(roundNotes.deletedAt),
-          principalJobVisibilityPredicate(jobs.id, principal),
-        ),
+          principalJobVisibilityPredicate(jobs.id, principal)
+        )
       )
       .groupBy(roundNotes.roundId);
     return new Map(rows.map((row) => [row.roundId, Number(row.n)]));
@@ -205,8 +222,8 @@ export const notesService = {
         and(
           inArray(roundNotes.roundId, roundIds),
           isNull(roundNotes.deletedAt),
-          principalJobVisibilityPredicate(jobs.id, principal),
-        ),
+          principalJobVisibilityPredicate(jobs.id, principal)
+        )
       )
       .orderBy(desc(roundNotes.createdAt));
     const out = new Map<number, string>();
@@ -218,7 +235,7 @@ export const notesService = {
           authorName: note.authorName,
           createdAt: note.createdAt,
           body: note.body,
-        }),
+        })
       );
     }
     return out;
@@ -228,16 +245,30 @@ export const notesService = {
     principal: Principal,
     roundId: number,
     body: string,
-    files: NoteAttachmentInput[] = [],
+    files: NoteAttachmentInput[] = []
   ): Promise<NoteThreadItem> {
-    const loaded = await requireWritableRound(principal, roundId, "notes.write");
+    const loaded = await requireWritableRound(
+      principal,
+      roundId,
+      "notes.write"
+    );
     const trimmed = body.trim();
     if (!trimmed) throw DomainError.badRequest("Note body is required");
-    if (trimmed.length > 10_000) throw DomainError.badRequest("Notes are limited to 10,000 characters");
+    if (trimmed.length > 10_000)
+      throw DomainError.badRequest("Notes are limited to 10,000 characters");
     if (files.length > 0) {
-      requireAuthorized(principal, "notes.attach", loaded.descriptor, "Round notes");
+      requireAuthorized(
+        principal,
+        "notes.attach",
+        loaded.descriptor,
+        "Round notes"
+      );
       for (const file of files) {
-        assertAllowedNoteAttachment(file.filename, file.contentType, file.bytes.byteLength);
+        assertAllowedNoteAttachment(
+          file.filename,
+          file.contentType,
+          file.bytes.byteLength
+        );
       }
     }
     const [note] = await db
@@ -274,17 +305,32 @@ export const notesService = {
       jobName: loaded.value.job.jobName,
       roundNumber: loaded.value.round.roundNumber,
     });
-    const match = (await this.list(principal, roundId)).find((row) => row.id === note.id);
+    const match = (await this.list(principal, roundId)).find(
+      (row) => row.id === note.id
+    );
     if (!match) throw DomainError.notFound("Note not found");
     return match;
   },
 
-  async edit(principal: Principal, noteId: number, body: string): Promise<NoteThreadItem> {
+  async edit(
+    principal: Principal,
+    noteId: number,
+    body: string
+  ): Promise<NoteThreadItem> {
     const trimmed = body.trim();
     if (!trimmed) throw DomainError.badRequest("Note body is required");
-    const [existing] = await db.select().from(roundNotes).where(eq(roundNotes.id, noteId)).limit(1);
-    if (!existing || existing.deletedAt) throw DomainError.notFound("Note not found");
-    const loaded = await requireWritableRound(principal, existing.roundId, "notes.write");
+    const [existing] = await db
+      .select()
+      .from(roundNotes)
+      .where(eq(roundNotes.id, noteId))
+      .limit(1);
+    if (!existing || existing.deletedAt)
+      throw DomainError.notFound("Note not found");
+    const loaded = await requireWritableRound(
+      principal,
+      existing.roundId,
+      "notes.write"
+    );
     if (existing.authorUserId !== principal.user.id) {
       throw DomainError.forbidden("Only the author can edit this note");
     }
@@ -300,16 +346,26 @@ export const notesService = {
       jobName: loaded.value.job.jobName,
       roundNumber: loaded.value.round.roundNumber,
     });
-    const match = (await this.list(principal, existing.roundId)).find((row) => row.id === noteId);
+    const match = (await this.list(principal, existing.roundId)).find(
+      (row) => row.id === noteId
+    );
     if (!match) throw DomainError.notFound("Note not found");
     return match;
   },
 
   async softDelete(principal: Principal, noteId: number): Promise<number> {
-    const [existing] = await db.select().from(roundNotes).where(eq(roundNotes.id, noteId)).limit(1);
-    if (!existing || existing.deletedAt) throw DomainError.notFound("Note not found");
+    const [existing] = await db
+      .select()
+      .from(roundNotes)
+      .where(eq(roundNotes.id, noteId))
+      .limit(1);
+    if (!existing || existing.deletedAt)
+      throw DomainError.notFound("Note not found");
     await requireWritableRound(principal, existing.roundId, "notes.write");
-    if (existing.authorUserId !== principal.user.id && !canModerateNotes(principal)) {
+    if (
+      existing.authorUserId !== principal.user.id &&
+      !canModerateNotes(principal)
+    ) {
       throw DomainError.forbidden("Only the author can delete this note");
     }
     await db
@@ -339,7 +395,8 @@ export const notesService = {
       .innerJoin(roundNotes, eq(roundNoteAttachments.noteId, roundNotes.id))
       .where(eq(roundNoteAttachments.id, attachmentId))
       .limit(1);
-    if (!file || file.note.deletedAt) throw DomainError.notFound("Attachment not found");
+    if (!file || file.note.deletedAt)
+      throw DomainError.notFound("Attachment not found");
     await requireReadableRound(principal, file.note.roundId);
     const bytes = await readNoteAttachmentBytes(file.attachment.storageKey);
     if (!bytes) throw DomainError.notFound("Attachment not found");
@@ -350,11 +407,21 @@ export const notesService = {
     };
   },
 
-  async previewMentions(principal: Principal, roundId: number, userIds: number[]) {
+  async previewMentions(
+    principal: Principal,
+    roundId: number,
+    userIds: number[]
+  ) {
     const loaded = await requireReadableRound(principal, roundId);
-    const unique = [...new Set(userIds.filter((id) => Number.isInteger(id) && id > 0))];
-    if (unique.length === 0) return { jobId: loaded.value.job.id, mentions: [] as MentionPreview[] };
-    const roster = await db.select().from(users).where(inArray(users.id, unique));
+    const unique = [
+      ...new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)),
+    ];
+    if (unique.length === 0)
+      return { jobId: loaded.value.job.id, mentions: [] as MentionPreview[] };
+    const roster = await db
+      .select()
+      .from(users)
+      .where(inArray(users.id, unique));
     const mentions: MentionPreview[] = [];
     for (const target of roster) {
       mentions.push({
@@ -369,6 +436,9 @@ export const notesService = {
 };
 
 /** Phase 8 reports — latest note on a pricing effort, never a job. */
-export async function getLatestNotesForRounds(principal: Principal, roundIds: number[]) {
+export async function getLatestNotesForRounds(
+  principal: Principal,
+  roundIds: number[]
+) {
   return notesService.latestForRounds(principal, roundIds);
 }

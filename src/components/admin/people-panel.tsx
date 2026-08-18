@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Loader2, Search, Shield } from "lucide-react";
-import type { Role } from "@/db/schema";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
 import type { PeopleRow } from "@/actions/people";
 import { updatePersonRole } from "@/actions/people";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { Role } from "@/db/schema";
 
 const ROLES: Role[] = [
   "pcm",
@@ -62,7 +62,7 @@ export function PeoplePanel({
         p.email.toLowerCase().includes(needle) ||
         p.title.toLowerCase().includes(needle) ||
         p.role.includes(needle) ||
-        (p.region ?? "").toLowerCase().includes(needle),
+        (p.region ?? "").toLowerCase().includes(needle)
     );
   }, [people, q]);
 
@@ -87,8 +87,8 @@ export function PeoplePanel({
         <div className="space-y-1">
           <p className="text-sm font-medium">People &amp; roles</p>
           <p className="text-xs text-muted-foreground">
-            {people.length} roster users. Super admins always keep Corporate Precon Admin
-            and full corporate visibility.
+            {people.length} roster users. Super admins always keep Corporate
+            Precon Admin and full corporate visibility.
           </p>
         </div>
         <div className="relative w-full max-w-xs">
@@ -129,7 +129,10 @@ export function PeoplePanel({
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="py-8 text-center text-sm text-muted-foreground"
+                >
                   No people match “{q}”.
                 </TableCell>
               </TableRow>
@@ -166,7 +169,10 @@ function PersonRow({
     (region === "__corp__" ? null : region) !== person.region;
 
   const roleOptions = ROLES.filter(
-    (r) => r !== "corporate_admin" || canGrantCorporateAdmin || person.role === "corporate_admin",
+    (r) =>
+      r !== "corporate_admin" ||
+      canGrantCorporateAdmin ||
+      person.role === "corporate_admin"
   );
 
   return (
@@ -182,12 +188,17 @@ function PersonRow({
           )}
         </span>
       </TableCell>
-      <TableCell className="text-xs text-muted-foreground">{person.email}</TableCell>
+      <TableCell className="text-xs text-muted-foreground">
+        {person.email}
+      </TableCell>
       <TableCell className="text-xs">{person.title}</TableCell>
       <TableCell>
         {canEdit && !locked ? (
           <Select
-            items={roleOptions.map((r) => ({ value: r, label: roleLabels[r] ?? r }))}
+            items={roleOptions.map((r) => ({
+              value: r,
+              label: roleLabels[r] ?? r,
+            }))}
             value={role}
             onValueChange={(v) => {
               if (v) setRole(v as Role);
@@ -205,7 +216,9 @@ function PersonRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-sm">{roleLabels[person.role] ?? person.role}</span>
+          <span className="text-sm">
+            {roleLabels[person.role] ?? person.role}
+          </span>
         )}
       </TableCell>
       <TableCell>

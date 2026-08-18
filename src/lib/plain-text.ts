@@ -7,7 +7,9 @@ export function toPlainText(input: string): string {
   if (!text) return "";
 
   // Fenced code blocks → inner text
-  text = text.replace(/```[\w-]*\n?([\s\S]*?)```/g, (_, body: string) => body.trim());
+  text = text.replace(/```[\w-]*\n?([\s\S]*?)```/g, (_, body: string) =>
+    body.trim()
+  );
   // Inline code
   text = text.replace(/`([^`]+)`/g, "$1");
   // Images / links → label

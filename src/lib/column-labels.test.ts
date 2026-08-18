@@ -31,14 +31,14 @@ describe("column display labels", () => {
         jobName: "UAB St. Vincent’s Pelham",
         status: "outstanding",
         homeRegion: "Central",
-      }),
+      })
     ).toEqual(["jobNumber", "jobName", "status", "homeRegion"]);
   });
 
   it("formats status enums for the grid", () => {
     expect(formatColumnValue("status", "outstanding")).toBe("Outstanding");
     expect(formatColumnValue("jobName", "UAB St. Vincent’s Pelham")).toBe(
-      "UAB St. Vincent’s Pelham",
+      "UAB St. Vincent’s Pelham"
     );
   });
 });

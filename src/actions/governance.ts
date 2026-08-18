@@ -1,12 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   auditLog,
-  customColumnValues,
   customColumns,
+  customColumnValues,
   fieldPromotions,
   sheetAcls,
 } from "@/db/schema";
@@ -17,17 +17,25 @@ export async function proposeFieldPromotion(columnId: number, note?: string) {
   const principal = await getWebPrincipal();
   assertPrincipalAdmin(principal, "promotions", "edit", "Field promotion");
   const user = principal.user;
-  const [col] = await db.select().from(customColumns).where(eq(customColumns.id, columnId));
+  const [col] = await db
+    .select()
+    .from(customColumns)
+    .where(eq(customColumns.id, columnId));
   if (!col) throw new Error("Column not found");
-  if (col.scope !== "region") throw new Error("Only region columns can be promoted");
+  if (col.scope !== "region")
+    throw new Error("Only region columns can be promoted");
   if (user.role === "rpd" && col.region !== user.region) {
-    throw new Error("Permission denied: RPDs may only propose columns for their region.");
+    throw new Error(
+      "Permission denied: RPDs may only propose columns for their region."
+    );
   }
 
   const companySameKey = await db
     .select()
     .from(customColumns)
-    .where(and(eq(customColumns.scope, "company"), eq(customColumns.key, col.key)));
+    .where(
+      and(eq(customColumns.scope, "company"), eq(customColumns.key, col.key))
+    );
 
   let conflictSummary: string | null = null;
   if (companySameKey[0]) {
@@ -65,7 +73,7 @@ export async function proposeFieldPromotion(columnId: number, note?: string) {
 export async function reviewFieldPromotion(
   promotionId: number,
   decision: "promote" | "reject",
-  reviewNote?: string,
+  reviewNote?: string
 ) {
   const principal = await getWebPrincipal();
   assertPrincipalAdmin(principal, "promotions", "manage", "Field promotion");
@@ -74,7 +82,8 @@ export async function reviewFieldPromotion(
     .select()
     .from(fieldPromotions)
     .where(eq(fieldPromotions.id, promotionId));
-  if (!promo || promo.status !== "proposed") throw new Error("Promotion not found or not open");
+  if (promo?.status !== "proposed")
+    throw new Error("Promotion not found or not open");
 
   const [col] = await db
     .select()
@@ -110,7 +119,9 @@ export async function reviewFieldPromotion(
   const existing = await db
     .select()
     .from(customColumns)
-    .where(and(eq(customColumns.scope, "company"), eq(customColumns.key, col.key)));
+    .where(
+      and(eq(customColumns.scope, "company"), eq(customColumns.key, col.key))
+    );
 
   let promotedId = existing[0]?.id;
   if (!promotedId) {
@@ -162,7 +173,14 @@ export async function reviewFieldPromotion(
 export async function setSheetAcl(input: {
   sheetId: number;
   userId?: number | null;
-  grantRole?: "pcm" | "estimate_lead" | "admin_jsa" | "rpd" | "leadership" | "corporate_admin" | null;
+  grantRole?:
+    | "pcm"
+    | "estimate_lead"
+    | "admin_jsa"
+    | "rpd"
+    | "leadership"
+    | "corporate_admin"
+    | null;
   acl: "viewer" | "editor" | "manager";
   regionAllowlist?: string[];
 }) {

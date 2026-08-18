@@ -1,27 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Paperclip, Pencil, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   deleteRoundNote,
   editRoundNote,
-  previewRoundNoteMentions,
   type NotesDirectoryUser,
+  previewRoundNoteMentions,
 } from "@/actions/notes";
 import { addJobUserVisibility } from "@/actions/visibility";
-import { Button } from "@/components/ui/button";
-import { NoteBody } from "@/components/notes/note-body";
-import { NoteComposer } from "@/components/notes/note-composer";
 import {
   AnchoredMentionPicker,
   filterMentionUsers,
   insertMention,
   mentionTrigger,
 } from "@/components/notes/mention-picker";
-import { formatAttachmentBytes, relativeAge } from "@/lib/note-body";
+import { NoteBody } from "@/components/notes/note-body";
+import { NoteComposer } from "@/components/notes/note-composer";
+import { Button } from "@/components/ui/button";
 import { fmtDateTime } from "@/lib/format";
+import { formatAttachmentBytes, relativeAge } from "@/lib/note-body";
 
 const NOTE_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 
@@ -34,14 +34,19 @@ function userFacingError(error: unknown, fallback: string) {
 }
 
 async function postNoteFromForm(formData: FormData): Promise<NotesThreadNote> {
-  const response = await fetch("/api/notes", { method: "POST", body: formData });
+  const response = await fetch("/api/notes", {
+    method: "POST",
+    body: formData,
+  });
   const payload = (await response.json().catch(() => null)) as
     | NotesThreadNote
     | { error?: string }
     | null;
   if (!response.ok) {
     throw new Error(
-      payload && "error" in payload && payload.error ? payload.error : "Could not post the note",
+      payload && "error" in payload && payload.error
+        ? payload.error
+        : "Could not post the note"
     );
   }
   if (!payload || !("id" in payload)) {
@@ -95,15 +100,21 @@ export function NotesThread({
   const [body, setBody] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editBody, setEditBody] = useState("");
-  const [picker, setPicker] = useState<{ start: number; query: string } | null>(null);
+  const [picker, setPicker] = useState<{ start: number; query: string } | null>(
+    null
+  );
   const [activeIndex, setActiveIndex] = useState(0);
-  const [blockedMentions, setBlockedMentions] = useState<{ userId: number; name: string }[]>([]);
+  const [blockedMentions, setBlockedMentions] = useState<
+    { userId: number; name: string }[]
+  >([]);
   const [attachments, setAttachments] = useState<File[]>([]);
-  const mentionMatches = picker ? filterMentionUsers(directory, picker.query) : [];
+  const mentionMatches = picker
+    ? filterMentionUsers(directory, picker.query)
+    : [];
   const showMentionPicker = Boolean(picker && picker.query.trim().length > 0);
   const names = useMemo(
     () => Object.fromEntries(directory.map((user) => [user.id, user.name])),
-    [directory],
+    [directory]
   );
 
   useEffect(() => {
@@ -111,7 +122,7 @@ export function NotesThread({
     const el = document.getElementById(`note-${highlightNoteId}`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [highlightNoteId, notes]);
+  }, [highlightNoteId]);
 
   function refreshFrom(next: NotesThreadNote[]) {
     setNotes(next);
@@ -130,7 +141,9 @@ export function NotesThread({
   function onSubmit(formData: FormData) {
     const trimmed = String(formData.get("body") ?? "").trim();
     if (!trimmed) return;
-    const oversized = attachments.find((file) => file.size > NOTE_ATTACHMENT_MAX_BYTES);
+    const oversized = attachments.find(
+      (file) => file.size > NOTE_ATTACHMENT_MAX_BYTES
+    );
     if (oversized) {
       toast.error(`${oversized.name} is larger than 25 MB`);
       return;
@@ -158,12 +171,17 @@ export function NotesThread({
       try {
         const preview = await previewRoundNoteMentions(roundId, trimmed);
         const blocked = preview.mentions.filter((row) => !row.canRead);
-        setBlockedMentions(blocked.map((row) => ({ userId: row.userId, name: row.name })));
+        setBlockedMentions(
+          blocked.map((row) => ({ userId: row.userId, name: row.name }))
+        );
         setNotes((prev) => [...prev, optimistic]);
         setBody("");
         setAttachments([]);
         const created = await postNoteFromForm(formData);
-        setNotes((prev) => [...prev.filter((note) => note.id !== optimistic.id), created]);
+        setNotes((prev) => [
+          ...prev.filter((note) => note.id !== optimistic.id),
+          created,
+        ]);
         formRef.current?.reset();
         router.refresh();
       } catch (err) {
@@ -179,11 +197,15 @@ export function NotesThread({
     startTransition(async () => {
       try {
         const updated = await editRoundNote({ noteId, body: editBody });
-        setNotes((prev) => prev.map((note) => (note.id === noteId ? updated : note)));
+        setNotes((prev) =>
+          prev.map((note) => (note.id === noteId ? updated : note))
+        );
         setEditingId(null);
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not edit the note");
+        toast.error(
+          err instanceof Error ? err.message : "Could not edit the note"
+        );
       }
     });
   }
@@ -197,7 +219,9 @@ export function NotesThread({
         router.refresh();
       } catch (err) {
         refreshFrom(previous);
-        toast.error(err instanceof Error ? err.message : "Could not delete the note");
+        toast.error(
+          err instanceof Error ? err.message : "Could not delete the note"
+        );
       }
     });
   }
@@ -211,7 +235,10 @@ export function NotesThread({
           </p>
         ) : (
           notes.map((note) => {
-            const created = note.createdAt instanceof Date ? note.createdAt : new Date(note.createdAt);
+            const created =
+              note.createdAt instanceof Date
+                ? note.createdAt
+                : new Date(note.createdAt);
             const own = note.authorUserId === currentUserId;
             return (
               <article
@@ -275,10 +302,18 @@ export function NotesThread({
                       onValueChange={(next) => setEditBody(next)}
                     />
                     <div className="flex gap-1.5">
-                      <Button size="sm" disabled={pending} onClick={() => saveEdit(note.id)}>
+                      <Button
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => saveEdit(note.id)}
+                      >
                         Save
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingId(null)}
+                      >
                         Cancel
                       </Button>
                     </div>
@@ -353,7 +388,10 @@ export function NotesThread({
               setCaret(nextCaret);
               const nextPicker = mentionTrigger(next, nextCaret);
               setPicker(nextPicker);
-              if (nextPicker?.start !== picker?.start || nextPicker?.query !== picker?.query) {
+              if (
+                nextPicker?.start !== picker?.start ||
+                nextPicker?.query !== picker?.query
+              ) {
                 setActiveIndex(0);
               }
             }}
@@ -362,19 +400,27 @@ export function NotesThread({
               if (event.key === "ArrowDown") {
                 event.preventDefault();
                 setActiveIndex((index) =>
-                  mentionMatches.length === 0 ? 0 : (index + 1) % mentionMatches.length,
+                  mentionMatches.length === 0
+                    ? 0
+                    : (index + 1) % mentionMatches.length
                 );
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 setActiveIndex((index) =>
                   mentionMatches.length === 0
                     ? 0
-                    : (index - 1 + mentionMatches.length) % mentionMatches.length,
+                    : (index - 1 + mentionMatches.length) %
+                      mentionMatches.length
                 );
               } else if (event.key === "Enter") {
                 event.preventDefault();
                 const user =
-                  mentionMatches[Math.min(activeIndex, Math.max(0, mentionMatches.length - 1))];
+                  mentionMatches[
+                    Math.min(
+                      activeIndex,
+                      Math.max(0, mentionMatches.length - 1)
+                    )
+                  ];
                 if (user) applyMention(user);
               } else if (event.key === "Escape") {
                 setPicker(null);
@@ -383,9 +429,12 @@ export function NotesThread({
           />
         </div>
         {blockedMentions.length > 0 ? (
-          <p className="text-xs text-amber-700 dark:text-amber-300" data-testid="mention-access-warning">
-            {blockedMentions.map((row) => row.name).join(", ")} cannot see this effort — mention
-            will not notify them.
+          <p
+            className="text-xs text-amber-700 dark:text-amber-300"
+            data-testid="mention-access-warning"
+          >
+            {blockedMentions.map((row) => row.name).join(", ")} cannot see this
+            effort — mention will not notify them.
             {canAssignUsers && jobId
               ? blockedMentions.map((row) => (
                   <Button
@@ -396,7 +445,10 @@ export function NotesThread({
                     className="ml-1"
                     onClick={() =>
                       startTransition(async () => {
-                        await addJobUserVisibility({ jobId, userId: row.userId });
+                        await addJobUserVisibility({
+                          jobId,
+                          userId: row.userId,
+                        });
                         toast.success(`Added ${row.name} to this job`);
                       })
                     }
@@ -439,7 +491,9 @@ function NoteAttachControl({
         onChange={(event) => {
           const added = Array.from(event.target.files ?? []);
           event.target.value = "";
-          const oversized = added.find((file) => file.size > NOTE_ATTACHMENT_MAX_BYTES);
+          const oversized = added.find(
+            (file) => file.size > NOTE_ATTACHMENT_MAX_BYTES
+          );
           if (oversized) {
             toast.error(`${oversized.name} is larger than 25 MB`);
             return;
@@ -465,7 +519,9 @@ function NoteAttachControl({
           <span className="truncate" title={file.name}>
             {file.name}
           </span>
-          <span className="shrink-0 text-muted-foreground">{formatAttachmentBytes(file.size)}</span>
+          <span className="shrink-0 text-muted-foreground">
+            {formatAttachmentBytes(file.size)}
+          </span>
           <button
             type="button"
             aria-label={`Remove ${file.name}`}

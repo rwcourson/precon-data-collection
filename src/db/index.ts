@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { getRuntimeConfig, type DatabaseMode } from "@/lib/runtime-config";
+import { type DatabaseMode, getRuntimeConfig } from "@/lib/runtime-config";
 import * as schema from "./schema";
 
 export type AppDb = PostgresJsDatabase<typeof schema>;
@@ -21,7 +21,8 @@ function createDb(): AppDb {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const postgres = require("postgres") as typeof import("postgres");
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { drizzle } = require("drizzle-orm/postgres-js") as typeof import("drizzle-orm/postgres-js");
+    const { drizzle } =
+      require("drizzle-orm/postgres-js") as typeof import("drizzle-orm/postgres-js");
     const client =
       globalForDb.__preconPg ??
       postgres(config.database.url, {
@@ -39,9 +40,11 @@ function createDb(): AppDb {
 
   // PGlite is reachable only through an explicit, validated local/demo config.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PGlite } = require("@electric-sql/pglite") as typeof import("@electric-sql/pglite");
+  const { PGlite } =
+    require("@electric-sql/pglite") as typeof import("@electric-sql/pglite");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { drizzle } = require("drizzle-orm/pglite") as typeof import("drizzle-orm/pglite");
+  const { drizzle } =
+    require("drizzle-orm/pglite") as typeof import("drizzle-orm/pglite");
   const client = globalForDb.__pglite ?? new PGlite(config.database.dataDir);
   globalForDb.__pglite = client;
   return drizzle(client, { schema }) as unknown as AppDb;

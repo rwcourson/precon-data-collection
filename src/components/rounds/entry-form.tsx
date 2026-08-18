@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Check, ChevronDown, Info, Loader2, Lock, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { savePostBidData } from "@/actions/post-bid";
+import { CustomColumnFields } from "@/components/rounds/custom-column-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge, BadgeRemove } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,8 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Popover,
   PopoverContent,
@@ -30,21 +32,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { CustomColumn } from "@/db/schema";
 import {
+  type ConditionContext,
   conditionalHint,
-  fieldApplies,
   FIELD_DEFS,
   FIELD_GROUPS,
+  type FieldDef,
+  fieldApplies,
   isInternalJointVenture,
   isRateOnly,
   SOURCE_LABELS,
-  type ConditionContext,
-  type FieldDef,
 } from "@/lib/fields";
-import { savePostBidData } from "@/actions/post-bid";
-import { CustomColumnFields } from "@/components/rounds/custom-column-fields";
 import { companyScopedColumns } from "@/lib/region-custom-columns";
-import type { CustomColumn } from "@/db/schema";
 
 type Props = {
   roundId: number;
@@ -109,7 +109,10 @@ export function EntryForm({
   }, []);
 
   const visibleGroups = groups
-    .map(([group, fields]) => [group, fields.filter((f) => fieldApplies(f, ctx))] as const)
+    .map(
+      ([group, fields]) =>
+        [group, fields.filter((f) => fieldApplies(f, ctx))] as const
+    )
     .filter(([, fields]) => fields.length > 0);
 
   const set = (k: string, v: string) => {
@@ -117,7 +120,8 @@ export function EntryForm({
       const next = { ...s, [k]: v };
       // Conditional fields keep no stale value once their trigger goes away.
       if (k === "awardability" || k === "estimatePhase") {
-        if (!isRateOnly(next.awardability, next.estimatePhase)) next.costOfWorkBasis = "";
+        if (!isRateOnly(next.awardability, next.estimatePhase))
+          next.costOfWorkBasis = "";
       }
       return next;
     });
@@ -139,7 +143,7 @@ export function EntryForm({
         toast.success(
           res.audited > 0
             ? `Saved — ${res.audited} post-lock change${res.audited === 1 ? "" : "s"} recorded in the audit log`
-            : "Saved",
+            : "Saved"
         );
         router.refresh();
       } catch (e) {
@@ -157,10 +161,10 @@ export function EntryForm({
         <Alert variant="info" className="text-xs">
           <Info />
           <AlertDescription className="text-inherit">
-            <span className="font-medium">Internal Joint Venture</span> — record the
-            lead operational Region and lead Preconstruction Department per the DMR,
-            not the supporting party. The full estimate value stays on this round so
-            it is counted once in Corporate rollups.
+            <span className="font-medium">Internal Joint Venture</span> — record
+            the lead operational Region and lead Preconstruction Department per
+            the DMR, not the supporting party. The full estimate value stays on
+            this round so it is counted once in Corporate rollups.
           </AlertDescription>
         </Alert>
       )}
@@ -169,9 +173,9 @@ export function EntryForm({
         <Alert variant="accent" className="text-xs">
           <Info />
           <AlertDescription className="text-inherit">
-            <span className="font-medium">Rate Only round</span> — Cost of Work Basis
-            is shown because fee and GC rates are priced against an estimated future
-            construction cost rather than a bid amount.
+            <span className="font-medium">Rate Only round</span> — Cost of Work
+            Basis is shown because fee and GC rates are priced against an
+            estimated future construction cost rather than a bid amount.
           </AlertDescription>
         </Alert>
       )}
@@ -186,7 +190,16 @@ export function EntryForm({
               // Job-level identity fields are read-only from the parent job
               if (f.key === "jobNumber")
                 return (
-                  <ReadOnlyField key={f.key} def={f} value={jobNumber} hint={jobLinked ? "Linked to B&G Connect" : "Placeholder — pending Salesforce match"} />
+                  <ReadOnlyField
+                    key={f.key}
+                    def={f}
+                    value={jobNumber}
+                    hint={
+                      jobLinked
+                        ? "Linked to B&G Connect"
+                        : "Placeholder — pending Salesforce match"
+                    }
+                  />
                 );
               if (f.key === "jobName")
                 return <ReadOnlyField key={f.key} def={f} value={jobName} />;
@@ -195,7 +208,10 @@ export function EntryForm({
                   <div key={f.key} className="space-y-1">
                     <FieldLabel def={f} missing={missingKeys.includes(f.key)} />
                     <Select
-                      items={users.map((u) => ({ value: String(u.id), label: u.name }))}
+                      items={users.map((u) => ({
+                        value: String(u.id),
+                        label: u.name,
+                      }))}
                       value={leadId != null ? String(leadId) : ""}
                       onValueChange={(v) => {
                         setLeadId(v ? Number(v) : null);
@@ -221,7 +237,10 @@ export function EntryForm({
                 const selected = multi[f.key] ?? [];
                 const options = lists[f.listKey ?? ""] ?? [];
                 return (
-                  <div key={f.key} className="space-y-1 sm:col-span-2 lg:col-span-3">
+                  <div
+                    key={f.key}
+                    className="space-y-1 sm:col-span-2 lg:col-span-3"
+                  >
                     <FieldLabel def={f} missing={missingKeys.includes(f.key)} />
                     <MultiSelect
                       options={options}
@@ -259,7 +278,9 @@ export function EntryForm({
                         ))}
                       </SelectContent>
                     </Select>
-                    {hint && <p className="text-2xs text-info-foreground">{hint}</p>}
+                    {hint && (
+                      <p className="text-2xs text-info-foreground">{hint}</p>
+                    )}
                   </div>
                 );
               }
@@ -296,7 +317,9 @@ export function EntryForm({
                       />
                     )}
                   </div>
-                  {hint && <p className="text-2xs text-info-foreground">{hint}</p>}
+                  {hint && (
+                    <p className="text-2xs text-info-foreground">{hint}</p>
+                  )}
                 </div>
               );
             })}
@@ -307,7 +330,9 @@ export function EntryForm({
       {companyCols.length > 0 && (
         <Card className="border-dashed">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Optional company columns</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Optional company columns
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <CustomColumnFields
@@ -325,9 +350,24 @@ export function EntryForm({
 
       {canEdit && (
         <div className="sticky bottom-4 flex justify-end">
-          <Button onClick={save} disabled={pending || !dirty} size="lg" className="gap-2 shadow-lg">
-            {pending ? <Loader2 className="size-4 animate-spin" /> : locked ? <Lock className="size-4" /> : <Save className="size-4" />}
-            {locked ? "Save Correction (audit-logged)" : dirty ? "Save Changes" : "Saved"}
+          <Button
+            onClick={save}
+            disabled={pending || !dirty}
+            size="lg"
+            className="gap-2 shadow-lg"
+          >
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : locked ? (
+              <Lock className="size-4" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {locked
+              ? "Save Correction (audit-logged)"
+              : dirty
+                ? "Save Changes"
+                : "Saved"}
           </Button>
         </div>
       )}
@@ -338,9 +378,13 @@ export function EntryForm({
 function FieldLabel({ def, missing }: { def: FieldDef; missing: boolean }) {
   return (
     <div className="flex items-center gap-1.5">
-      <Label className={`text-xs font-medium ${missing ? "text-destructive" : ""}`}>
+      <Label
+        className={`text-xs font-medium ${missing ? "text-destructive" : ""}`}
+      >
         {def.label}
-        {def.tier === "required" && <span className="ml-0.5 text-destructive">*</span>}
+        {def.tier === "required" && (
+          <span className="ml-0.5 text-destructive">*</span>
+        )}
       </Label>
       {def.source && (
         <Tooltip>
@@ -356,9 +400,9 @@ function FieldLabel({ def, missing }: { def: FieldDef; missing: boolean }) {
             {SOURCE_LABELS[def.source]}
           </TooltipTrigger>
           <TooltipContent className="max-w-64 text-xs">
-            Mapped to {SOURCE_LABELS[def.source]}. Manual entry at launch; the data
-            model mirrors the source system so a future API connection populates it
-            without schema changes.
+            Mapped to {SOURCE_LABELS[def.source]}. Manual entry at launch; the
+            data model mirrors the source system so a future API connection
+            populates it without schema changes.
             {def.note ? ` ${def.note}.` : ""}
           </TooltipContent>
         </Tooltip>
@@ -367,7 +411,15 @@ function FieldLabel({ def, missing }: { def: FieldDef; missing: boolean }) {
   );
 }
 
-function ReadOnlyField({ def, value, hint }: { def: FieldDef; value: string; hint?: string }) {
+function ReadOnlyField({
+  def,
+  value,
+  hint,
+}: {
+  def: FieldDef;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="space-y-1">
       <FieldLabel def={def} missing={false} />
@@ -394,7 +446,10 @@ function MultiSelect({
         <Badge key={s} variant="secondary">
           {s}
           {!disabled && (
-            <BadgeRemove label={s} onClick={() => onChange(selected.filter((x) => x !== s))} />
+            <BadgeRemove
+              label={s}
+              onClick={() => onChange(selected.filter((x) => x !== s))}
+            />
           )}
         </Badge>
       ))}
@@ -405,7 +460,10 @@ function MultiSelect({
           >
             Add <ChevronDown className="size-3" />
           </PopoverTrigger>
-          <PopoverContent align="start" className="max-h-64 w-72 overflow-y-auto p-1.5">
+          <PopoverContent
+            align="start"
+            className="max-h-64 w-72 overflow-y-auto p-1.5"
+          >
             {options.map((o) => {
               const checked = selected.includes(o);
               return (
@@ -414,10 +472,17 @@ function MultiSelect({
                   type="button"
                   className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
                   onClick={() =>
-                    onChange(checked ? selected.filter((x) => x !== o) : [...selected, o])
+                    onChange(
+                      checked
+                        ? selected.filter((x) => x !== o)
+                        : [...selected, o]
+                    )
                   }
                 >
-                  <Checkbox checked={checked} className="pointer-events-none size-3.5" />
+                  <Checkbox
+                    checked={checked}
+                    className="pointer-events-none size-3.5"
+                  />
                   {o}
                   {checked && <Check className="ml-auto size-3 text-primary" />}
                 </button>

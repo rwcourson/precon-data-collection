@@ -1,4 +1,11 @@
+import { Download } from "lucide-react";
 import Link from "next/link";
+import {
+  TrendChart,
+  VolumeByGroupChart,
+  VolumeByYearChart,
+} from "@/components/dashboards/charts";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,14 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  TrendChart,
-  VolumeByGroupChart,
-  VolumeByYearChart,
-} from "@/components/dashboards/charts";
-import { getReferenceValues } from "@/lib/queries";
+import { UrlSelect } from "@/components/url-select";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { fmtDollars, fmtPercent } from "@/lib/format";
+import { getReferenceValues } from "@/lib/queries";
 import {
   applyLeadershipRoundScope,
   computeStats,
@@ -31,10 +35,6 @@ import {
   rollup,
   scopeRoundsForDashboardExport,
 } from "@/lib/rollup";
-import { fmtDollars, fmtPercent } from "@/lib/format";
-import { Download } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
-import { UrlSelect } from "@/components/url-select";
 import { toOptions } from "@/lib/select-options";
 import { getWorkspace } from "@/lib/workspace-server";
 
@@ -50,7 +50,10 @@ export default async function DashboardsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const user = principal.user;
   const [rows, lists] = await Promise.all([
     listRoundsWithJobsForPrincipal(principal),
@@ -58,11 +61,18 @@ export default async function DashboardsPage({
   ]);
 
   // A Region workspace has no Corporate rollup — that view belongs to Corporate.
-  const levels = workspace.region == null ? LEVELS : LEVELS.filter((l) => l.key !== "corporate");
+  const levels =
+    workspace.region == null
+      ? LEVELS
+      : LEVELS.filter((l) => l.key !== "corporate");
   const level =
     levels.find((l) => l.key === (params.level ?? levels[0].key)) ?? levels[0];
   const region =
-    workspace.region ?? params.region ?? user.region ?? lists.region?.[0] ?? "Central";
+    workspace.region ??
+    params.region ??
+    user.region ??
+    lists.region?.[0] ??
+    "Central";
   const dept = params.dept ?? "all";
   const sector = params.sector ?? "all";
   const year = params.year ?? "all";
@@ -80,7 +90,7 @@ export default async function DashboardsPage({
       phase,
       status,
       rounds: params.rounds,
-    },
+    }
   );
 
   const totals = computeStats("all", scoped);
@@ -96,9 +106,10 @@ export default async function DashboardsPage({
   // Multi-year trend series (ignores the bid-year filter so trends stay multi-year)
   let trendBase = applyLeadershipRoundScope(
     rows.map((r) => r.round),
-    roundMode,
+    roundMode
   );
-  if (level.key !== "corporate") trendBase = trendBase.filter((r) => r.region === region);
+  if (level.key !== "corporate")
+    trendBase = trendBase.filter((r) => r.region === region);
   if (level.key === "division" && dept !== "all")
     trendBase = trendBase.filter((r) => r.preconDepartment === dept);
 
@@ -113,7 +124,7 @@ export default async function DashboardsPage({
           .reduce((s, r) => s + (r.estimateValue ?? 0), 0);
       }
     } else {
-      row["Volume"] = trendBase
+      row.Volume = trendBase
         .filter((r) => r.bidYear === y)
         .reduce((s, r) => s + (r.estimateValue ?? 0), 0);
     }
@@ -122,7 +133,10 @@ export default async function DashboardsPage({
   const volumeSeries = level.key === "corporate" ? regions : ["Volume"];
 
   const trendData = years.map((y) => {
-    const stats = computeStats(String(y), trendBase.filter((r) => r.bidYear === y));
+    const stats = computeStats(
+      String(y),
+      trendBase.filter((r) => r.bidYear === y)
+    );
     return {
       year: y,
       winRate: stats.winRate,
@@ -140,19 +154,62 @@ export default async function DashboardsPage({
           ? `${totals.rounds} jobs (latest / final round)`
           : `${totals.rounds} estimate rounds`,
     },
-    { label: "Win Rate", value: fmtPercent(totals.winRate), sub: `${totals.wins} of ${totals.decided} decided` },
-    { label: "Fee % (Expected)", value: fmtPercent(totals.weightedFeePct), sub: "Dollar-weighted across the portfolio" },
-    { label: "Contingency %", value: fmtPercent(totals.weightedContingencyPct), sub: "Dollar-weighted across the portfolio" },
-    { label: "Fee per PM Month", value: fmtDollars(totals.feePerPmMonth, true), sub: "Total fee ÷ total PM months" },
+    {
+      label: "Win Rate",
+      value: fmtPercent(totals.winRate),
+      sub: `${totals.wins} of ${totals.decided} decided`,
+    },
+    {
+      label: "Fee % (Expected)",
+      value: fmtPercent(totals.weightedFeePct),
+      sub: "Dollar-weighted across the portfolio",
+    },
+    {
+      label: "Contingency %",
+      value: fmtPercent(totals.weightedContingencyPct),
+      sub: "Dollar-weighted across the portfolio",
+    },
+    {
+      label: "Fee per PM Month",
+      value: fmtDollars(totals.feePerPmMonth, true),
+      sub: "Total fee ÷ total PM months",
+    },
   ];
 
   const secondaryKpis = [
-    { label: "Win Rate by Value", value: fmtPercent(totals.winRateByValue), sub: `${fmtDollars(totals.wonVolume, true)} of ${fmtDollars(totals.decidedVolume, true)} decided` },
-    { label: "Revenue per PM Year", value: fmtDollars(totals.revenuePerPmYear, true), sub: `${totals.totalPmMonths.toLocaleString()} PM months` },
-    { label: "GC+GR % of Volume", value: fmtPercent(totals.weightedGcGrPct), sub: "B&G Sort, dollar-weighted" },
-    { label: "Self-Perform Capture", value: fmtPercent(totals.selfPerformCaptureRate), sub: `${fmtDollars(totals.totalSelfPerform, true)} proposed` },
-    { label: "Craft Labor $ / Man Hour", value: fmtDollars(totals.laborCostPerManHour), sub: `${Math.round(totals.totalManHours).toLocaleString()} man hours` },
-    { label: "Estimate $ per GSF", value: fmtDollars(totals.costPerGsf), sub: totals.totalGsf > 0 ? `${Math.round(totals.totalGsf).toLocaleString()} GSF reported` : "No GSF reported" },
+    {
+      label: "Win Rate by Value",
+      value: fmtPercent(totals.winRateByValue),
+      sub: `${fmtDollars(totals.wonVolume, true)} of ${fmtDollars(totals.decidedVolume, true)} decided`,
+    },
+    {
+      label: "Revenue per PM Year",
+      value: fmtDollars(totals.revenuePerPmYear, true),
+      sub: `${totals.totalPmMonths.toLocaleString()} PM months`,
+    },
+    {
+      label: "GC+GR % of Volume",
+      value: fmtPercent(totals.weightedGcGrPct),
+      sub: "B&G Sort, dollar-weighted",
+    },
+    {
+      label: "Self-Perform Capture",
+      value: fmtPercent(totals.selfPerformCaptureRate),
+      sub: `${fmtDollars(totals.totalSelfPerform, true)} proposed`,
+    },
+    {
+      label: "Craft Labor $ / Man Hour",
+      value: fmtDollars(totals.laborCostPerManHour),
+      sub: `${Math.round(totals.totalManHours).toLocaleString()} man hours`,
+    },
+    {
+      label: "Estimate $ per GSF",
+      value: fmtDollars(totals.costPerGsf),
+      sub:
+        totals.totalGsf > 0
+          ? `${Math.round(totals.totalGsf).toLocaleString()} GSF reported`
+          : "No GSF reported",
+    },
   ];
 
   const qs = (patch: Record<string, string>) =>
@@ -240,7 +297,10 @@ export default async function DashboardsPage({
               param="region"
               value={region}
               currentParams={filterParams}
-              options={(lists.region ?? []).map((r) => ({ value: r, label: r }))}
+              options={(lists.region ?? []).map((r) => ({
+                value: r,
+                label: r,
+              }))}
             />
           )}
           {level.key === "division" && (
@@ -249,7 +309,10 @@ export default async function DashboardsPage({
               param="dept"
               value={dept}
               currentParams={filterParams}
-              options={toOptions(["all", ...(lists.preconDepartment ?? [])], "All Divisions")}
+              options={toOptions(
+                ["all", ...(lists.preconDepartment ?? [])],
+                "All Divisions"
+              )}
             />
           )}
           <UrlSelect
@@ -257,21 +320,30 @@ export default async function DashboardsPage({
             param="sector"
             value={sector}
             currentParams={filterParams}
-            options={toOptions(["all", ...(lists.marketSector ?? [])], "All Market Sectors")}
+            options={toOptions(
+              ["all", ...(lists.marketSector ?? [])],
+              "All Market Sectors"
+            )}
           />
           <UrlSelect
             pathname="/dashboards"
             param="year"
             value={year}
             currentParams={filterParams}
-            options={toOptions(["all", ...(lists.bidYear ?? [])], "All Bid Years")}
+            options={toOptions(
+              ["all", ...(lists.bidYear ?? [])],
+              "All Bid Years"
+            )}
           />
           <UrlSelect
             pathname="/dashboards"
             param="phase"
             value={phase}
             currentParams={filterParams}
-            options={toOptions(["all", ...(lists.estimatePhase ?? [])], "All Phases")}
+            options={toOptions(
+              ["all", ...(lists.estimatePhase ?? [])],
+              "All Phases"
+            )}
           />
           <UrlSelect
             pathname="/dashboards"
@@ -279,8 +351,16 @@ export default async function DashboardsPage({
             value={status}
             currentParams={filterParams}
             options={toOptions(
-              ["all", "active", "upcoming", "outstanding", "submitted", "post_bid", "locked"],
-              "All Statuses",
+              [
+                "all",
+                "active",
+                "upcoming",
+                "outstanding",
+                "submitted",
+                "post_bid",
+                "locked",
+              ],
+              "All Statuses"
             )}
           />
           <UrlSelect
@@ -316,7 +396,9 @@ export default async function DashboardsPage({
         {secondaryKpis.map((k) => (
           <div key={k.label} className="rounded-lg border bg-card px-3 py-2.5">
             <p className="text-2xs text-muted-foreground">{k.label}</p>
-            <p className="font-mono text-base font-medium tabular-nums">{k.value}</p>
+            <p className="font-mono text-base font-medium tabular-nums">
+              {k.value}
+            </p>
             <p className="text-2xs text-muted-foreground">{k.sub}</p>
           </div>
         ))}
@@ -325,10 +407,12 @@ export default async function DashboardsPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Pursuit volume by Bid Year</CardTitle>
+            <CardTitle className="text-base">
+              Pursuit volume by Bid Year
+            </CardTitle>
             <CardDescription>
-              Each Estimate Round counts separately — five pricing rounds on one job
-              contribute five records.
+              Each Estimate Round counts separately — five pricing rounds on one
+              job contribute five records.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -338,7 +422,9 @@ export default async function DashboardsPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Multi-year trends</CardTitle>
-            <CardDescription>Win rate, fee %, and contingency % by bid year.</CardDescription>
+            <CardDescription>
+              Win rate, fee %, and contingency % by bid year.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <TrendChart
@@ -357,18 +443,26 @@ export default async function DashboardsPage({
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Volume by {level.groupLabel}</CardTitle>
+            <CardTitle className="text-base">
+              Volume by {level.groupLabel}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <VolumeByGroupChart
-              data={groups.slice(0, 10).map((g) => ({ name: g.key, volume: g.volume, rounds: g.rounds }))}
+              data={groups.slice(0, 10).map((g) => ({
+                name: g.key,
+                volume: g.volume,
+                rounds: g.rounds,
+              }))}
             />
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Rollup by {level.groupLabel}</CardTitle>
+            <CardTitle className="text-base">
+              Rollup by {level.groupLabel}
+            </CardTitle>
             <CardDescription>
               Aggregated like today&apos;s Project Estimate Summary — computed
               server-side from the underlying records.
@@ -426,8 +520,9 @@ export default async function DashboardsPage({
         <Badge variant="outline" size="sm" className="mr-1.5">
           Databricks / Power BI
         </Badge>
-        This same read-optimized data set — including Region-specific custom columns —
-        is exposed for downstream ingestion (mocked in this prototype).
+        This same read-optimized data set — including Region-specific custom
+        columns — is exposed for downstream ingestion (mocked in this
+        prototype).
       </p>
     </div>
   );

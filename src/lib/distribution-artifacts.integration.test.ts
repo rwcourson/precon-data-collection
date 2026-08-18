@@ -1,15 +1,20 @@
-import { beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db, ensureDbReady } from "@/db";
-import { distributionLists, distributionRuns, emailOutbox, users } from "@/db/schema";
+import {
+  distributionLists,
+  distributionRuns,
+  emailOutbox,
+  users,
+} from "@/db/schema";
 import { createPrincipal } from "@/lib/authorization/principal";
+import { deliverQueued, emailProvider, queueEmails } from "@/lib/email";
 import {
   buildReportPdfBytes,
   createServicePrincipal,
   distributionService,
   pdfChecksum,
 } from "@/services/distribution-service";
-import { deliverQueued, emailProvider, queueEmails } from "@/lib/email";
 
 let rpd: typeof users.$inferSelect;
 
@@ -52,13 +57,18 @@ describe("distribution artifacts and outbox", () => {
     expect(result.delivery.sent).toBe(0);
 
     for (const id of result.outboxIds) {
-      const [row] = await db.select().from(emailOutbox).where(eq(emailOutbox.id, id));
+      const [row] = await db
+        .select()
+        .from(emailOutbox)
+        .where(eq(emailOutbox.id, id));
       expect(row?.status).toBe("previewed");
       expect(row?.sentAt).toBeNull();
       expect(row?.attachmentStorageKey).toBeTruthy();
     }
 
-    await db.delete(emailOutbox).where(eq(emailOutbox.distributionListId, list.id));
+    await db
+      .delete(emailOutbox)
+      .where(eq(emailOutbox.distributionListId, list.id));
     await db.delete(distributionLists).where(eq(distributionLists.id, list.id));
   });
 
@@ -80,16 +90,24 @@ describe("distribution artifacts and outbox", () => {
       })
       .returning();
 
-    const first = await distributionService.runDueDistributions(new Date("2026-08-10T15:00:00Z"));
+    const first = await distributionService.runDueDistributions(
+      new Date("2026-08-10T15:00:00Z")
+    );
     const mine = first.find((row) => row.listId === list.id);
     expect(mine?.skipped).toBe(false);
 
-    const second = await distributionService.runDueDistributions(new Date("2026-08-10T16:00:00Z"));
+    const second = await distributionService.runDueDistributions(
+      new Date("2026-08-10T16:00:00Z")
+    );
     const again = second.find((row) => row.listId === list.id);
     expect(again?.skipped).toBe(true);
 
-    await db.delete(emailOutbox).where(eq(emailOutbox.distributionListId, list.id));
-    await db.delete(distributionRuns).where(eq(distributionRuns.distributionListId, list.id));
+    await db
+      .delete(emailOutbox)
+      .where(eq(emailOutbox.distributionListId, list.id));
+    await db
+      .delete(distributionRuns)
+      .where(eq(distributionRuns.distributionListId, list.id));
     await db.delete(distributionLists).where(eq(distributionLists.id, list.id));
   });
 
@@ -105,7 +123,10 @@ describe("distribution artifacts and outbox", () => {
     const delivery = await deliverQueued(ids);
     expect(delivery.previewed).toBe(1);
     expect(delivery.sent).toBe(0);
-    const [row] = await db.select().from(emailOutbox).where(eq(emailOutbox.id, ids[0]!));
+    const [row] = await db
+      .select()
+      .from(emailOutbox)
+      .where(eq(emailOutbox.id, ids[0]!));
     expect(row?.status).toBe("previewed");
     expect(row?.sentAt).toBeNull();
     await db.delete(emailOutbox).where(eq(emailOutbox.id, ids[0]!));

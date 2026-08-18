@@ -1,17 +1,18 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { db, type AppDb } from "@/db";
+import { type AppDb, db } from "@/db";
 import {
+  type ApiToken,
   apiDestructiveChallenges,
   apiIdempotencyKeys,
-  type ApiToken,
 } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { generateDestructiveChallenge } from "@/lib/api-tokens";
 
 function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+  if (value === null || typeof value !== "object")
+    return JSON.stringify(value) ?? "null";
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   return `{${Object.entries(value as Record<string, unknown>)
     .filter(([, item]) => item !== undefined)
@@ -58,7 +59,7 @@ export async function withDestructiveChallenge<T>(
     payload: unknown;
     now?: Date;
   },
-  mutate: (tx: AppDb) => Promise<T>,
+  mutate: (tx: AppDb) => Promise<T>
 ): Promise<T> {
   const now = input.now ?? new Date();
   return db.transaction(async (rawTx) => {
@@ -70,18 +71,21 @@ export async function withDestructiveChallenge<T>(
         and(
           eq(apiDestructiveChallenges.tokenId, input.token.id),
           eq(apiDestructiveChallenges.actorId, input.token.createdById),
-          eq(apiDestructiveChallenges.challengeHash, secretHash(input.challenge)),
+          eq(
+            apiDestructiveChallenges.challengeHash,
+            secretHash(input.challenge)
+          ),
           eq(apiDestructiveChallenges.operation, input.operation),
           eq(apiDestructiveChallenges.target, input.target),
           eq(apiDestructiveChallenges.payloadHash, payloadHash(input.payload)),
           isNull(apiDestructiveChallenges.usedAt),
-          gt(apiDestructiveChallenges.expiresAt, now),
-        ),
+          gt(apiDestructiveChallenges.expiresAt, now)
+        )
       )
       .returning({ id: apiDestructiveChallenges.id });
     if (!consumed) {
       throw DomainError.conflict(
-        "Destructive challenge is invalid, expired, mismatched, or already used.",
+        "Destructive challenge is invalid, expired, mismatched, or already used."
       );
     }
     return mutate(tx);
@@ -101,11 +105,13 @@ export async function executeIdempotent<T extends Record<string, unknown>>(
     operation: string;
     payload: unknown;
   },
-  execute: (tx: AppDb) => Promise<{ status: number; body: T }>,
+  execute: (tx: AppDb) => Promise<{ status: number; body: T }>
 ): Promise<IdempotentResponse<T>> {
   const key = input.key.trim();
   if (!/^[A-Za-z0-9._:-]{8,160}$/.test(key)) {
-    throw DomainError.badRequest("Idempotency-Key must contain 8–160 safe characters.");
+    throw DomainError.badRequest(
+      "Idempotency-Key must contain 8–160 safe characters."
+    );
   }
   const hash = payloadHash(input.payload);
   return db.transaction(async (rawTx) => {
@@ -120,16 +126,29 @@ export async function executeIdempotent<T extends Record<string, unknown>>(
         responseStatus: 0,
         responseBody: { state: "pending" },
       })
-      .onConflictDoNothing({ target: [apiIdempotencyKeys.tokenId, apiIdempotencyKeys.key] })
+      .onConflictDoNothing({
+        target: [apiIdempotencyKeys.tokenId, apiIdempotencyKeys.key],
+      })
       .returning({ id: apiIdempotencyKeys.id });
 
     if (!reservation) {
       const [existing] = await tx
         .select()
         .from(apiIdempotencyKeys)
-        .where(and(eq(apiIdempotencyKeys.tokenId, input.tokenId), eq(apiIdempotencyKeys.key, key)));
-      if (!existing || existing.operation !== input.operation || existing.payloadHash !== hash) {
-        throw DomainError.conflict("Idempotency key was already used for a different request.");
+        .where(
+          and(
+            eq(apiIdempotencyKeys.tokenId, input.tokenId),
+            eq(apiIdempotencyKeys.key, key)
+          )
+        );
+      if (
+        !existing ||
+        existing.operation !== input.operation ||
+        existing.payloadHash !== hash
+      ) {
+        throw DomainError.conflict(
+          "Idempotency key was already used for a different request."
+        );
       }
       if (existing.responseStatus === 0) {
         throw DomainError.conflict("Idempotent request is still in progress.");

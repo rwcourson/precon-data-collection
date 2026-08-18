@@ -1,16 +1,6 @@
 "use client";
 
 import {
-  Fragment,
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type PointerEvent,
-} from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -19,7 +9,28 @@ import {
   Unlink,
   X,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  type DragEvent,
+  Fragment,
+  type PointerEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
+import type { BidScheduleViewRow } from "@/actions/bid-schedule-views";
+import { updateRoundCell } from "@/actions/post-bid";
+import {
+  resetBidScheduleTablePrefs,
+  saveBidScheduleTablePrefs,
+} from "@/actions/table-prefs";
+import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
+import { SavedViewsMenu } from "@/components/bid-schedule/saved-views-menu";
+import { StatusMenu } from "@/components/bid-schedule/status-menu";
+import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
+import { CellEditor } from "@/components/sheets/cell-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,34 +40,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
-import { SavedViewsMenu } from "@/components/bid-schedule/saved-views-menu";
-import { StatusMenu } from "@/components/bid-schedule/status-menu";
-import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
-import { CellEditor } from "@/components/sheets/cell-editor";
-import { updateRoundCell } from "@/actions/post-bid";
-import {
-  resetBidScheduleTablePrefs,
-  saveBidScheduleTablePrefs,
-} from "@/actions/table-prefs";
-import type { BidScheduleViewRow } from "@/actions/bid-schedule-views";
+import type { RoundStatus } from "@/db/schema";
+import type { BidScheduleGroupBy } from "@/domain/contracts";
 import {
   BID_DUE_URGENCY_LABEL,
-  bidDueUrgency,
-  buildBidScheduleSections,
   type BidScheduleSort,
   type BidScheduleViewQuery,
+  bidDueUrgency,
+  buildBidScheduleSections,
 } from "@/lib/bid-schedule";
-import type { BidScheduleGroupBy } from "@/domain/contracts";
-import { cn } from "@/lib/utils";
 import { fmtDate, fmtDollars } from "@/lib/format";
-import type { RoundStatus } from "@/db/schema";
 import {
   beginColumnResize,
   COLUMN_RESIZE_HANDLE_CLASS,
   dropPlaceForPoint,
   moveColumnKey,
 } from "@/lib/sheet-grid";
+import { cn } from "@/lib/utils";
 
 export type SiblingRound = {
   id: number;
@@ -319,7 +319,10 @@ const COLS: ColDef[] = [
   },
 ];
 
-const COL_BY_KEY = Object.fromEntries(COLS.map((c) => [c.key, c])) as Record<ColKey, ColDef>;
+const COL_BY_KEY = Object.fromEntries(COLS.map((c) => [c.key, c])) as Record<
+  ColKey,
+  ColDef
+>;
 
 export const SUMMARY_COL_KEYS: ColKey[] = [
   "jobNumber",
@@ -377,12 +380,17 @@ type SortState = { key: ColKey; dir: "asc" | "desc" } | null;
 type Filters = Partial<Record<ColKey, { text?: string; values?: string[] }>>;
 
 const DEFAULT_COL_WIDTHS = Object.freeze(
-  Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<string, number>,
+  Object.fromEntries(COLS.map((c) => [c.key, c.width])) as Record<
+    string,
+    number
+  >
 );
 
 const PREFS_SAVE_MS = 400;
 
-function mergeColWidths(stored?: Record<string, number>): Record<string, number> {
+function mergeColWidths(
+  stored?: Record<string, number>
+): Record<string, number> {
   const merged = { ...DEFAULT_COL_WIDTHS, ...(stored ?? {}) };
   // Previous default (160) left the status pill floating in empty cell space.
   if (stored?.status === 160) merged.status = DEFAULT_COL_WIDTHS.status;
@@ -432,22 +440,31 @@ export function BidScheduleSheet({
   viewConfig: BidScheduleViewQuery;
   shareLabel?: string;
 }) {
-  const [committedWidths, setCommittedWidths] = useState(() => mergeColWidths(initialWidths));
-  const [draftWidths, setDraftWidths] = useState<Record<string, number> | null>(null);
+  const [committedWidths, setCommittedWidths] = useState(() =>
+    mergeColWidths(initialWidths)
+  );
+  const [draftWidths, setDraftWidths] = useState<Record<string, number> | null>(
+    null
+  );
   const widths = draftWidths ?? committedWidths;
   const pendingPrefs = useRef<Record<string, unknown>>({});
-  const prefsTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const prefsTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
   const draftWidthsRef = useRef<Record<string, number> | null>(null);
   const [colSort, setColSort] = useState<SortState>(null);
   const [filters, setFilters] = useState<Filters>({});
   const [filterOpen, setFilterOpen] = useState<ColKey | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<ColKey[]>(() => {
-    const fromView = (initialColumns ?? []).filter((k): k is ColKey => k in COL_BY_KEY);
+    const fromView = (initialColumns ?? []).filter(
+      (k): k is ColKey => k in COL_BY_KEY
+    );
     return fromView.length > 0 ? fromView : keysForDensity(density);
   });
-  const [dragOver, setDragOver] = useState<{ key: ColKey; place: "before" | "after" } | null>(
-    null,
-  );
+  const [dragOver, setDragOver] = useState<{
+    key: ColKey;
+    place: "before" | "after";
+  } | null>(null);
   const [dismissedIds, setDismissedIds] = useState<number[]>([]);
   const hideOnMark = viewConfig.queue === "needs-staffing";
 
@@ -465,7 +482,10 @@ export function BidScheduleSheet({
     }, PREFS_SAVE_MS);
   };
 
-  const persistSnapshot = (nextKeys: ColKey[], nextWidths: Record<string, number>) => {
+  const persistSnapshot = (
+    nextKeys: ColKey[],
+    nextWidths: Record<string, number>
+  ) => {
     schedulePrefsSave({
       ...(persistColumnPrefs ? { columns: nextKeys, density } : {}),
       columnWidths: nextWidths,
@@ -479,7 +499,7 @@ export function BidScheduleSheet({
 
   const visibleCols = useMemo(
     () => visibleKeys.map((k) => COL_BY_KEY[k]).filter(Boolean),
-    [visibleKeys],
+    [visibleKeys]
   );
 
   const onResizeStart = (key: ColKey, e: PointerEvent<HTMLElement>) => {
@@ -521,14 +541,22 @@ export function BidScheduleSheet({
   const onHeaderDragOver = (key: ColKey, e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
-    setDragOver((prev) => (prev?.key === key && prev.place === place ? prev : { key, place }));
+    const place = dropPlaceForPoint(
+      e.clientX,
+      e.currentTarget.getBoundingClientRect()
+    );
+    setDragOver((prev) =>
+      prev?.key === key && prev.place === place ? prev : { key, place }
+    );
   };
 
   const onHeaderDrop = (key: ColKey, e: DragEvent<HTMLElement>) => {
     e.preventDefault();
     const from = e.dataTransfer.getData("text/plain") as ColKey;
-    const place = dropPlaceForPoint(e.clientX, e.currentTarget.getBoundingClientRect());
+    const place = dropPlaceForPoint(
+      e.clientX,
+      e.currentTarget.getBoundingClientRect()
+    );
     setDragOver(null);
     if (!from || !(from in COL_BY_KEY)) return;
     const next = moveColumnKey(visibleKeys, from, key, place);
@@ -544,7 +572,7 @@ export function BidScheduleSheet({
   };
 
   const activeFilterCount = Object.values(filters).filter(
-    (f) => (f?.text && f.text.trim()) || (f?.values && f.values.length > 0),
+    (f) => f?.text?.trim() || (f?.values && f.values.length > 0)
   ).length;
 
   const filtered = useMemo(() => {
@@ -554,8 +582,9 @@ export function BidScheduleSheet({
         const f = filters[col.key];
         if (!f) continue;
         const val = col.getValue(row);
-        if (f.text && f.text.trim()) {
-          if (!val.toLowerCase().includes(f.text.trim().toLowerCase())) return false;
+        if (f.text?.trim()) {
+          if (!val.toLowerCase().includes(f.text.trim().toLowerCase()))
+            return false;
         }
         if (f.values && f.values.length > 0) {
           if (!f.values.includes(val)) return false;
@@ -576,7 +605,10 @@ export function BidScheduleSheet({
         const bv = col.getSortValue(b);
         let cmp = 0;
         if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
-        else cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+        else
+          cmp = String(av).localeCompare(String(bv), undefined, {
+            numeric: true,
+          });
         return colSort.dir === "asc" ? cmp : -cmp;
       });
     return built.map((section) => ({
@@ -590,7 +622,7 @@ export function BidScheduleSheet({
 
   const filteredSorted = useMemo(
     () => sections.flatMap((s) => s.rows),
-    [sections],
+    [sections]
   );
 
   const uniqueValues = useMemo(() => {
@@ -602,7 +634,9 @@ export function BidScheduleSheet({
         const v = col.getValue(row);
         if (v) set.add(v);
       }
-      map[col.key] = [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      map[col.key] = [...set].sort((a, b) =>
+        a.localeCompare(b, undefined, { numeric: true })
+      );
     }
     return map;
   }, [rows, visibleCols]);
@@ -612,7 +646,8 @@ export function BidScheduleSheet({
   const actionWidth = actionColumnWidth(canEdit, canMarkStaffing);
   const showActions = actionWidth > 0;
   const totalWidth =
-    visibleCols.reduce((sum, c) => sum + (widths[c.key] ?? c.width), 0) + actionWidth;
+    visibleCols.reduce((sum, c) => sum + (widths[c.key] ?? c.width), 0) +
+    actionWidth;
   const colSpan = visibleCols.length + (showActions ? 1 : 0);
 
   const config: BidScheduleViewQuery = {
@@ -634,7 +669,12 @@ export function BidScheduleSheet({
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
           {activeFilterCount > 0 && (
-            <Button variant="ghost" size="sm" className="gap-1" onClick={clearFilters}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1"
+              onClick={clearFilters}
+            >
               <X className="size-3" /> Clear filters
             </Button>
           )}
@@ -652,8 +692,12 @@ export function BidScheduleSheet({
                 setCommittedWidths(nextWidths);
                 return;
               }
-              const fromView = (initialColumns ?? []).filter((k): k is ColKey => k in COL_BY_KEY);
-              setVisibleKeys(fromView.length > 0 ? fromView : keysForDensity(density));
+              const fromView = (initialColumns ?? []).filter(
+                (k): k is ColKey => k in COL_BY_KEY
+              );
+              setVisibleKeys(
+                fromView.length > 0 ? fromView : keysForDensity(density)
+              );
             }}
           />
           <SavedViewsMenu
@@ -675,7 +719,10 @@ export function BidScheduleSheet({
         >
           <colgroup>
             {visibleCols.map((col) => (
-              <col key={col.key} style={{ width: widths[col.key] ?? col.width }} />
+              <col
+                key={col.key}
+                style={{ width: widths[col.key] ?? col.width }}
+              />
             ))}
             {showActions ? <col style={{ width: actionWidth }} /> : null}
           </colgroup>
@@ -702,7 +749,7 @@ export function BidScheduleSheet({
                         "shadow-[-2px_0_0_0_var(--color-primary)]",
                       dragOver?.key === col.key &&
                         dragOver.place === "after" &&
-                        "shadow-[2px_0_0_0_var(--color-primary)]",
+                        "shadow-[2px_0_0_0_var(--color-primary)]"
                     )}
                     style={{ width: widths[col.key] ?? col.width }}
                   >
@@ -712,7 +759,7 @@ export function BidScheduleSheet({
                         className={cn(
                           "flex min-w-0 flex-1 items-center gap-1 rounded py-0.5 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                           col.align === "right" && "justify-end",
-                          isSorted && "text-foreground",
+                          isSorted && "text-foreground"
                         )}
                         onClick={() => toggleSort(col.key)}
                       >
@@ -731,7 +778,9 @@ export function BidScheduleSheet({
                       {col.filter !== "none" && (
                         <Popover
                           open={filterOpen === col.key}
-                          onOpenChange={(open) => setFilterOpen(open ? col.key : null)}
+                          onOpenChange={(open) =>
+                            setFilterOpen(open ? col.key : null)
+                          }
                         >
                           <PopoverTrigger
                             render={
@@ -739,7 +788,7 @@ export function BidScheduleSheet({
                                 type="button"
                                 className={cn(
                                   "rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground",
-                                  hasFilter && "bg-primary/10 text-primary",
+                                  hasFilter && "bg-primary/10 text-primary"
                                 )}
                                 aria-label={`Filter ${col.label}`}
                               />
@@ -747,13 +796,19 @@ export function BidScheduleSheet({
                           >
                             <Filter className="size-3" />
                           </PopoverTrigger>
-                          <PopoverContent align="start" className="w-64 gap-2 p-3">
+                          <PopoverContent
+                            align="start"
+                            className="w-64 gap-2 p-3"
+                          >
                             <ColumnFilterPanel
                               col={col}
                               filter={filters[col.key]}
                               options={uniqueValues[col.key] ?? []}
                               onChange={(next) =>
-                                setFilters((prev) => ({ ...prev, [col.key]: next }))
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  [col.key]: next,
+                                }))
                               }
                               onClear={() =>
                                 setFilters((prev) => {
@@ -769,9 +824,7 @@ export function BidScheduleSheet({
                     </div>
 
                     <div
-                      role="separator"
-                      aria-orientation="vertical"
-                      aria-label={`Resize ${col.label}`}
+                      aria-hidden="true"
                       onPointerDown={(e) => onResizeStart(col.key, e)}
                       onMouseDown={(e) => e.stopPropagation()}
                       draggable={false}
@@ -860,7 +913,7 @@ export function BidScheduleSheet({
                                 ? prev.includes(row.id)
                                   ? prev
                                   : [...prev, row.id]
-                                : prev.filter((id) => id !== row.id),
+                                : prev.filter((id) => id !== row.id)
                             );
                           }}
                         />
@@ -900,7 +953,9 @@ function BidScheduleDataRow({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<ColKey | null>(null);
-  const [overrides, setOverrides] = useState<Partial<Record<ColKey, string>>>({});
+  const [overrides, setOverrides] = useState<Partial<Record<ColKey, string>>>(
+    {}
+  );
 
   return (
     <tr className="border-b border-border/60 hover:bg-muted/35">
@@ -914,7 +969,7 @@ function BidScheduleDataRow({
             className={cn(
               "overflow-hidden border-r border-border/40 px-2.5 py-2 align-middle last:border-r-0",
               col.align === "right" && "text-right tabular-nums",
-              editable && "cursor-text hover:bg-primary/5",
+              editable && "cursor-text hover:bg-primary/5"
             )}
             style={{ width: widths[col.key] ?? col.width }}
             onDoubleClick={() => editable && setEditing(col.key)}
@@ -932,7 +987,11 @@ function BidScheduleDataRow({
                     setOverrides((prev) => ({ ...prev, [col.key]: next }));
                     router.refresh();
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Could not save that value");
+                    toast.error(
+                      e instanceof Error
+                        ? e.message
+                        : "Could not save that value"
+                    );
                   }
                 }}
               />
@@ -940,7 +999,11 @@ function BidScheduleDataRow({
               <CellDisplay
                 col={col}
                 row={row}
-                display={overrides[col.key] !== undefined ? overrides[col.key]! : col.getValue(row)}
+                display={
+                  overrides[col.key] !== undefined
+                    ? overrides[col.key]!
+                    : col.getValue(row)
+                }
                 siblings={siblings}
                 canEdit={canEdit}
               />
@@ -1010,6 +1073,7 @@ function CellDisplay({
         )}
         {row.status === "upcoming" && !row.teamAssignedAt && (
           <span
+            role="img"
             className="inline-block size-1.5 shrink-0 rounded-full bg-warning"
             title="Needs staffing"
             aria-label="Needs staffing"
@@ -1021,7 +1085,9 @@ function CellDisplay({
 
   if (col.key === "jobName") {
     const home = row.homeRegion ?? row.region;
-    const extras = (row.visibilityRegions ?? []).filter((region) => region !== home);
+    const extras = (row.visibilityRegions ?? []).filter(
+      (region) => region !== home
+    );
     return (
       <div className="min-w-0">
         <Link
@@ -1033,7 +1099,8 @@ function CellDisplay({
         </Link>
         <p className="mt-0.5 truncate text-2xs leading-4 text-muted-foreground">
           {row.preconDepartment}
-          {row.marketSector ? ` · ${row.marketSector}` : ""} · Round {row.roundNumber}
+          {row.marketSector ? ` · ${row.marketSector}` : ""} · Round{" "}
+          {row.roundNumber}
         </p>
         {extras.length > 0 && (
           <Popover>
@@ -1051,7 +1118,10 @@ function CellDisplay({
               <p className="mb-2 text-xs font-medium">
                 Also visible in {extras.join(", ")}
               </p>
-              <Link href={`/jobs/${row.jobId}`} className="text-xs text-primary hover:underline">
+              <Link
+                href={`/jobs/${row.jobId}`}
+                className="text-xs text-primary hover:underline"
+              >
                 Edit regions
               </Link>
             </PopoverContent>
@@ -1088,13 +1158,20 @@ function CellDisplay({
     col.key === "projectStartDate"
   ) {
     const shown = display;
-    const urgency = col.key === "bidDueDate" ? bidDueUrgency(shown || null) : null;
+    const urgency =
+      col.key === "bidDueDate" ? bidDueUrgency(shown || null) : null;
     return (
       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-5">
         <span className="tabular-nums">{fmtDate(shown || null)}</span>
         {urgency ? (
           <Badge
-            variant={urgency === "overdue" ? "destructive" : urgency === "week" ? "warning" : "info"}
+            variant={
+              urgency === "overdue"
+                ? "destructive"
+                : urgency === "week"
+                  ? "warning"
+                  : "info"
+            }
             size="sm"
           >
             {BID_DUE_URGENCY_LABEL[urgency]}
@@ -1106,7 +1183,10 @@ function CellDisplay({
 
   return (
     <span
-      className={cn("block truncate leading-5", !display && "text-muted-foreground")}
+      className={cn(
+        "block truncate leading-5",
+        !display && "text-muted-foreground"
+      )}
       title={display || undefined}
     >
       {display || "—"}
@@ -1121,15 +1201,18 @@ function JobLookupPopover({
   row: BidSheetRow;
   siblings: SiblingRound[];
 }) {
-  const phases = siblings.length > 0 ? siblings : [
-    {
-      id: row.id,
-      estimatePhase: row.estimatePhase,
-      bidDueDate: row.bidDueDate,
-      status: row.status,
-      roundNumber: row.roundNumber,
-    },
-  ];
+  const phases =
+    siblings.length > 0
+      ? siblings
+      : [
+          {
+            id: row.id,
+            estimatePhase: row.estimatePhase,
+            bidDueDate: row.bidDueDate,
+            status: row.status,
+            roundNumber: row.roundNumber,
+          },
+        ];
 
   return (
     <Popover>
@@ -1153,14 +1236,18 @@ function JobLookupPopover({
                 href={`/rounds/${phase.id}`}
                 className={cn(
                   "flex items-center justify-between gap-2 rounded px-1.5 py-1 text-xs hover:bg-muted",
-                  phase.id === row.id && "bg-info-soft font-medium text-primary",
+                  phase.id === row.id && "bg-info-soft font-medium text-primary"
                 )}
               >
                 <span className="truncate">
                   {phase.estimatePhase}
-                  <span className="ml-1 text-muted-foreground">· R{phase.roundNumber}</span>
+                  <span className="ml-1 text-muted-foreground">
+                    · R{phase.roundNumber}
+                  </span>
                 </span>
-                <span className="shrink-0 text-muted-foreground">{fmtDate(phase.bidDueDate)}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {fmtDate(phase.bidDueDate)}
+                </span>
               </Link>
             </li>
           ))}

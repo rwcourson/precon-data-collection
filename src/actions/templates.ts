@@ -1,12 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { reportTemplates, type ExportTemplateConfig } from "@/db/schema";
+import { type ExportTemplateConfig, reportTemplates } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
-export async function saveReportTemplate(name: string, config: ExportTemplateConfig) {
+export async function saveReportTemplate(
+  name: string,
+  config: ExportTemplateConfig
+) {
   const principal = await getWebPrincipal();
   if (!name.trim()) throw new Error("Template name is required");
   await db.insert(reportTemplates).values({
@@ -19,9 +22,13 @@ export async function saveReportTemplate(name: string, config: ExportTemplateCon
 
 export async function deleteReportTemplate(id: number) {
   const principal = await getWebPrincipal();
-  const [tpl] = await db.select().from(reportTemplates).where(eq(reportTemplates.id, id));
+  const [tpl] = await db
+    .select()
+    .from(reportTemplates)
+    .where(eq(reportTemplates.id, id));
   if (!tpl) return;
-  if (tpl.ownerId !== principal.user.id) throw new Error("Templates are personal — only the owner can delete");
+  if (tpl.ownerId !== principal.user.id)
+    throw new Error("Templates are personal — only the owner can delete");
   await db.delete(reportTemplates).where(eq(reportTemplates.id, id));
   revalidatePath("/bid-schedule");
 }

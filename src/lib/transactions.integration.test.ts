@@ -1,6 +1,10 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, sql } from "drizzle-orm";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { db, ensureDbReady } from "@/db";
+import {
+  analyzeLogicalDuplicates,
+  resolveLogicalDuplicates,
+} from "@/db/duplicate-preflight";
 import {
   estimateRounds,
   jobs,
@@ -8,14 +12,13 @@ import {
   statusTransitions,
   users,
 } from "@/db/schema";
-import { createPrincipal } from "@/lib/authorization/principal";
 import { DomainError } from "@/domain/errors";
+import { createPrincipal } from "@/lib/authorization/principal";
 import { transactionFault } from "@/lib/transactions";
-import { pursuitService, requireCreatedPursuit } from "@/services/pursuit-service";
 import {
-  analyzeLogicalDuplicates,
-  resolveLogicalDuplicates,
-} from "@/db/duplicate-preflight";
+  pursuitService,
+  requireCreatedPursuit,
+} from "@/services/pursuit-service";
 
 let pcm: typeof users.$inferSelect;
 let rpd: typeof users.$inferSelect;
@@ -25,8 +28,13 @@ beforeAll(async () => {
   await ensureDbReady();
   [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
   [rpd] = await db.select().from(users).where(eq(users.role, "rpd")).limit(1);
-  [estimateLead] = await db.select().from(users).where(eq(users.role, "estimate_lead")).limit(1);
-  if (!pcm?.region || !rpd || !estimateLead) throw new Error("seed roles missing");
+  [estimateLead] = await db
+    .select()
+    .from(users)
+    .where(eq(users.role, "estimate_lead"))
+    .limit(1);
+  if (!pcm?.region || !rpd || !estimateLead)
+    throw new Error("seed roles missing");
 });
 
 afterEach(() => {
@@ -67,8 +75,12 @@ async function seedPostBidRound() {
 }
 
 async function cleanup(roundId: number, jobId: number) {
-  await db.delete(roundMultiValues).where(eq(roundMultiValues.roundId, roundId));
-  await db.delete(statusTransitions).where(eq(statusTransitions.roundId, roundId));
+  await db
+    .delete(roundMultiValues)
+    .where(eq(roundMultiValues.roundId, roundId));
+  await db
+    .delete(statusTransitions)
+    .where(eq(statusTransitions.roundId, roundId));
   await db.delete(estimateRounds).where(eq(estimateRounds.id, roundId));
   await db.delete(jobs).where(eq(jobs.id, jobId));
 }
@@ -89,7 +101,7 @@ describe("transactions and concurrency", () => {
           values: {},
           multiValues: { selfPerformWorkType: ["Steel"] },
           customValues: {},
-        }),
+        })
       ).rejects.toThrow(/Injected transaction fault/);
 
       const remaining = await db
@@ -98,8 +110,8 @@ describe("transactions and concurrency", () => {
         .where(
           and(
             eq(roundMultiValues.roundId, round.id),
-            eq(roundMultiValues.field, "selfPerformWorkType"),
-          ),
+            eq(roundMultiValues.field, "selfPerformWorkType")
+          )
         );
       expect(remaining.map((row) => row.value)).toEqual(["Concrete"]);
     } finally {
@@ -142,14 +154,16 @@ describe("transactions and concurrency", () => {
           values: { city: "StaleCity" },
           multiValues: {},
           customValues: {},
-        }),
+        })
       ).rejects.toBeInstanceOf(DomainError);
 
       // RPD save with stale unloaded state also fails concurrency when updatedAt changed.
       // Reload is inside service, so RPD would see locked status and succeed field policy —
       // concurrency is proven by updateRoundIfUnchanged when two concurrent ops share a snapshot.
       const stalePrincipal = rpdPrincipal;
-      const { updateRoundIfUnchanged, withTransaction } = await import("@/lib/transactions");
+      const { updateRoundIfUnchanged, withTransaction } = await import(
+        "@/lib/transactions"
+      );
       await expect(
         withTransaction((tx) =>
           updateRoundIfUnchanged(tx, {
@@ -157,8 +171,8 @@ describe("transactions and concurrency", () => {
             expectedStatus: fresh!.status,
             expectedUpdatedAt: fresh!.updatedAt,
             patch: { city: "Race" },
-          }),
-        ),
+          })
+        )
       ).rejects.toMatchObject({ code: "CONFLICT" });
 
       const [after] = await db
@@ -179,7 +193,7 @@ describe("transactions and concurrency", () => {
       // Real Postgres defaults write now() with microseconds; JS Date only has
       // milliseconds. Simulate that row state explicitly.
       await db.execute(
-        sql`update estimate_rounds set updated_at = '2026-01-05 12:34:56.123456'::timestamp where id = ${round.id}`,
+        sql`update estimate_rounds set updated_at = '2026-01-05 12:34:56.123456'::timestamp where id = ${round.id}`
       );
       // The snapshot a caller loads through drizzle is ms-precision.
       const [loadedRound] = await db
@@ -188,7 +202,9 @@ describe("transactions and concurrency", () => {
         .where(eq(estimateRounds.id, round.id));
       expect(loadedRound.updatedAt.getMilliseconds()).toBe(123);
 
-      const { updateRoundIfUnchanged, withTransaction } = await import("@/lib/transactions");
+      const { updateRoundIfUnchanged, withTransaction } = await import(
+        "@/lib/transactions"
+      );
       await expect(
         withTransaction((tx) =>
           updateRoundIfUnchanged(tx, {
@@ -196,8 +212,8 @@ describe("transactions and concurrency", () => {
             expectedStatus: loadedRound.status,
             expectedUpdatedAt: loadedRound.updatedAt,
             patch: { city: "Microsecond City" },
-          }),
-        ),
+          })
+        )
       ).resolves.toBeUndefined();
 
       const [after] = await db
@@ -232,7 +248,7 @@ describe("transactions and concurrency", () => {
           multiValues: {},
           customValues: {},
           expectedUpdatedAt: staleSnapshot,
-        }),
+        })
       ).rejects.toMatchObject({ code: "CONFLICT" });
 
       const [after] = await db
@@ -254,7 +270,7 @@ describe("transactions and concurrency", () => {
     });
     try {
       await expect(
-        pursuitService.transitionStatus(rpdPrincipal, round.id, "locked"),
+        pursuitService.transitionStatus(rpdPrincipal, round.id, "locked")
       ).rejects.toMatchObject({ code: "BAD_REQUEST" });
       const [after] = await db
         .select()
@@ -275,15 +291,15 @@ describe("transactions and concurrency", () => {
     });
     const created = requireCreatedPursuit(
       await pursuitService.createPursuit(principal, {
-      mode: "manual",
-      jobName: `Atomic ${Date.now()}`,
-      region: pcm.region!,
-      preconDepartment: "Test",
-      estimatePhase: "ROM",
-      bidYear: 2026,
-      initialStatus: "active",
-      confirmDuplicate: true,
-    }),
+        mode: "manual",
+        jobName: `Atomic ${Date.now()}`,
+        region: pcm.region!,
+        preconDepartment: "Test",
+        estimatePhase: "ROM",
+        bidYear: 2026,
+        initialStatus: "active",
+        confirmDuplicate: true,
+      })
     );
     try {
       const transitions = await db
@@ -354,7 +370,7 @@ describe("migrations uniqueness and indexes", () => {
           estimatePhase: "GMP",
           bidYear: 2026,
           createdById: pcm.id,
-        }),
+        })
       ).rejects.toThrow();
       const dupes = await db
         .select({ id: estimateRounds.id })
@@ -362,8 +378,8 @@ describe("migrations uniqueness and indexes", () => {
         .where(
           and(
             eq(estimateRounds.jobId, job.id),
-            eq(estimateRounds.roundNumber, round.roundNumber),
-          ),
+            eq(estimateRounds.roundNumber, round.roundNumber)
+          )
         );
       expect(dupes).toHaveLength(1);
     } finally {
@@ -389,7 +405,9 @@ describe("migrations uniqueness and indexes", () => {
     const rows = Array.isArray(indexes)
       ? indexes
       : ((indexes as { rows?: { indexname: string }[] }).rows ?? []);
-    const names = new Set(rows.map((row) => (row as { indexname: string }).indexname));
+    const names = new Set(
+      rows.map((row) => (row as { indexname: string }).indexname)
+    );
     expect(names.has("custom_column_values_column_round_unique")).toBe(true);
     expect(names.has("estimate_rounds_status_region_idx")).toBe(true);
     expect(names.has("round_multi_values_round_field_idx")).toBe(true);

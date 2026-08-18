@@ -23,9 +23,15 @@ function trustedOrigins(): string[] {
     }
   }
   // Local dev conveniences — never trusted on production/hosted runs.
-  const production = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+  const production =
+    process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
   if (!production) {
-    fromList.push("http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001");
+    fromList.push(
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:3001"
+    );
   }
   return [...new Set(fromList)];
 }
@@ -37,9 +43,7 @@ function trustedOrigins(): string[] {
  */
 function baseURL(): string {
   const explicit =
-    env("BETTER_AUTH_URL") ||
-    env("APP_ORIGIN") ||
-    env("NEXT_PUBLIC_APP_URL");
+    env("BETTER_AUTH_URL") || env("APP_ORIGIN") || env("NEXT_PUBLIC_APP_URL");
   if (explicit) {
     try {
       return new URL(explicit).origin;
@@ -50,7 +54,9 @@ function baseURL(): string {
   // Vercel production hostname (custom domain / stable project URL), not dpl_*.
   const prodHost = env("VERCEL_PROJECT_PRODUCTION_URL");
   if (prodHost) {
-    return prodHost.startsWith("http") ? prodHost.replace(/\/$/, "") : `https://${prodHost}`;
+    return prodHost.startsWith("http")
+      ? prodHost.replace(/\/$/, "")
+      : `https://${prodHost}`;
   }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
@@ -105,7 +111,8 @@ export const auth = betterAuth({
   },
   advanced: {
     // Production on Vercel is always HTTPS.
-    useSecureCookies: process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL),
+    useSecureCookies:
+      process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL),
   },
 });
 

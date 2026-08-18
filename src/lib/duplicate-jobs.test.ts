@@ -9,16 +9,20 @@ import {
 describe("duplicate job scoring", () => {
   it("expands Perf/Ctr abbreviations so Auburn names collide", () => {
     expect(normalizeJobName("Auburn Football Perf. Ctr")).toBe(
-      "auburn football performance center",
+      "auburn football performance center"
     );
     expect(normalizeJobName("Auburn Football Performance Center")).toBe(
-      "auburn football performance center",
+      "auburn football performance center"
     );
   });
 
   it("surfaces Auburn Football Performance Center vs Auburn Football Perf Ctr above threshold", () => {
     const match = scoreDuplicateJob(
-      { jobName: "Auburn Football Performance Center", city: "Auburn", state: "AL" },
+      {
+        jobName: "Auburn Football Performance Center",
+        city: "Auburn",
+        state: "AL",
+      },
       {
         jobId: 9,
         jobName: "Auburn Football Perf. Ctr",
@@ -28,7 +32,7 @@ describe("duplicate job scoring", () => {
         lastActivityAt: "2026-08-01T00:00:00.000Z",
         city: "Auburn",
         state: "AL",
-      },
+      }
     );
     expect(match.score).toBeGreaterThanOrEqual(DUPLICATE_SCORE_THRESHOLD);
     expect(match.homeRegion).toBe("Georgia");

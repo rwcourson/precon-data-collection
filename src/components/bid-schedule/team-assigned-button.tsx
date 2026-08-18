@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, UserCheck, UserMinus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import { setTeamAssigned } from "@/actions/staffing";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,9 @@ export function TeamAssignedButton({
         router.refresh();
       } catch (error) {
         onAssignedChange?.(!next);
-        toast.error(error instanceof Error ? error.message : "Could not update staffing");
+        toast.error(
+          error instanceof Error ? error.message : "Could not update staffing"
+        );
       }
     });
   };

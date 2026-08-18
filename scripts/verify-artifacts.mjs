@@ -68,14 +68,14 @@ console.log(JSON.stringify({
   outboxStatus: row.status,
   provider: result.provider,
 }, null, 2));
-`,
+`
 );
 
 try {
   const result = spawnSync(
     process.execPath,
     ["--conditions=react-server", "--import", "tsx", runner],
-    { cwd: appRoot, env, encoding: "utf8" },
+    { cwd: appRoot, env, encoding: "utf8" }
   );
   process.stdout.write(result.stdout || "");
   process.stderr.write(result.stderr || "");

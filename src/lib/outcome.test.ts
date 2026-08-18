@@ -25,7 +25,7 @@ describe("post-lock outcome correction", () => {
         region: "Central",
         outcome: "pending",
       },
-      "successful",
+      "successful"
     );
 
     expect(audit).toEqual({
@@ -49,8 +49,8 @@ describe("post-lock outcome correction", () => {
           region: "Central",
           outcome: "pending",
         },
-        "unsuccessful",
-      ),
+        "unsuccessful"
+      )
     ).toThrow(DomainError);
   });
 
@@ -63,7 +63,7 @@ describe("post-lock outcome correction", () => {
         region: "Central",
         outcome: "successful",
       },
-      "successful",
+      "successful"
     );
     expect(audit).toBeNull();
   });

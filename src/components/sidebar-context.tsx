@@ -2,10 +2,10 @@
 
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useSyncExternalStore,
-  type ReactNode,
 } from "react";
 
 const STORAGE_KEY = "precon-sidebar-collapsed";
@@ -53,7 +53,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const ready = useSyncExternalStore(
     subscribe,
     () => true,
-    () => false,
+    () => false
   );
 
   const setCollapsed = useCallback((value: boolean) => {

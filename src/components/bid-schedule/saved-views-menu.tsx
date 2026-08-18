@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Bookmark, Loader2, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Loader2, Star, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  type BidScheduleViewRow,
   deleteBidScheduleView,
   saveBidScheduleView,
-  type BidScheduleViewRow,
 } from "@/actions/bid-schedule-views";
 import { setBidScheduleDefaultView } from "@/actions/table-prefs";
-import { bidScheduleViewHref, type BidScheduleViewQuery } from "@/lib/bid-schedule";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -31,6 +30,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  type BidScheduleViewQuery,
+  bidScheduleViewHref,
+} from "@/lib/bid-schedule";
 
 export function SavedViewsMenu({
   views,
@@ -79,7 +82,9 @@ export function SavedViewsMenu({
         toast.success("Deleted view");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not delete the view");
+        toast.error(
+          e instanceof Error ? e.message : "Could not delete the view"
+        );
       }
     });
   };
@@ -92,7 +97,9 @@ export function SavedViewsMenu({
         toast.success(next ? "Default view set" : "Default view cleared");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Could not update the default view");
+        toast.error(
+          e instanceof Error ? e.message : "Could not update the default view"
+        );
       }
     });
   };
@@ -108,7 +115,9 @@ export function SavedViewsMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-56">
           {views.length === 0 && (
-            <p className="px-2 py-1.5 text-xs text-muted-foreground">No saved views yet.</p>
+            <p className="px-2 py-1.5 text-xs text-muted-foreground">
+              No saved views yet.
+            </p>
           )}
           {views.map((view) => {
             const starred = defaultViewId === view.id;
@@ -116,7 +125,9 @@ export function SavedViewsMenu({
               <DropdownMenuItem
                 key={view.id}
                 className="gap-2"
-                render={<Link href={bidScheduleViewHref(view.config, view.id)} />}
+                render={
+                  <Link href={bidScheduleViewHref(view.config, view.id)} />
+                }
               >
                 <span className="min-w-0 flex-1 truncate">{view.name}</span>
                 {view.shared && (
@@ -126,7 +137,9 @@ export function SavedViewsMenu({
                   type="button"
                   className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={
-                    starred ? `Clear default view ${view.name}` : `Set ${view.name} as default view`
+                    starred
+                      ? `Clear default view ${view.name}`
+                      : `Set ${view.name} as default view`
                   }
                   aria-pressed={starred}
                   onClick={(e) => {
@@ -165,7 +178,9 @@ export function SavedViewsMenu({
             </>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setSaveOpen(true)}>Save current view…</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSaveOpen(true)}>
+            Save current view…
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -174,8 +189,9 @@ export function SavedViewsMenu({
           <DialogHeader>
             <DialogTitle>Save Bid Schedule view</DialogTitle>
             <DialogDescription>
-              Stores columns, grouping, sort, and the current section. Personal by default;
-              sharing follows the region workspace (BRD §6 templates).
+              Stores columns, grouping, sort, and the current section. Personal
+              by default; sharing follows the region workspace (BRD §6
+              templates).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -190,7 +206,10 @@ export function SavedViewsMenu({
               />
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={shared} onCheckedChange={(v) => setShared(Boolean(v))} />
+              <Checkbox
+                checked={shared}
+                onCheckedChange={(v) => setShared(Boolean(v))}
+              />
               {shareLabel}
             </label>
           </div>

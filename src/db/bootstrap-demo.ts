@@ -29,9 +29,12 @@ function wipePgliteDataDir(): void {
   const allowed =
     absolute === projectRoot ||
     absolute.startsWith(projectRoot + path.sep) ||
-    (e2eRoot != null && (absolute === e2eRoot || absolute.startsWith(e2eRoot + path.sep)));
+    (e2eRoot != null &&
+      (absolute === e2eRoot || absolute.startsWith(e2eRoot + path.sep)));
   if (!allowed) {
-    throw new Error(`Refusing to wipe PGlite dir outside the project: ${absolute}`);
+    throw new Error(
+      `Refusing to wipe PGlite dir outside the project: ${absolute}`
+    );
   }
   if (fs.existsSync(absolute)) {
     fs.rmSync(absolute, { recursive: true, force: true });
@@ -42,7 +45,7 @@ function wipePgliteDataDir(): void {
 
 async function main(): Promise<void> {
   process.stdout.write(
-    "Demo bootstrap: synthetic seed only (not Smartsheet/Neon full data).\n",
+    "Demo bootstrap: synthetic seed only (not Smartsheet/Neon full data).\n"
   );
   wipePgliteDataDir();
 
@@ -54,13 +57,13 @@ async function main(): Promise<void> {
     await seedDemoData();
     process.stdout.write("Demo database migration and seed completed.\n");
     process.stdout.write(
-      `PGlite data dir: ${process.env.PGLITE_DATA_DIR ?? ".pglite/data"}\n`,
+      `PGlite data dir: ${process.env.PGLITE_DATA_DIR ?? ".pglite/data"}\n`
     );
     process.stdout.write(
-      "Tip: full Smartsheet import → npm run db:bootstrap:smartsheet\n",
+      "Tip: full Smartsheet import → npm run db:bootstrap:smartsheet\n"
     );
     process.stdout.write(
-      "Tip: use hosted Neon data → DATABASE_MODE=postgres in .env.local (already configured if Neon URLs present)\n",
+      "Tip: use hosted Neon data → DATABASE_MODE=postgres in .env.local (already configured if Neon URLs present)\n"
     );
   } finally {
     await closeDatabase();
@@ -68,6 +71,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error instanceof Error ? error.message : "Demo bootstrap failed."}\n`);
+  process.stderr.write(
+    `${error instanceof Error ? error.message : "Demo bootstrap failed."}\n`
+  );
   process.exitCode = 1;
 });

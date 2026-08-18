@@ -3,12 +3,9 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
+import { createMagnusAgent, isAiConfigured } from "@/lib/ai/magnus-agent";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import {
-  createMagnusAgent,
-  isAiConfigured,
-} from "@/lib/ai/magnus-agent";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
 import { resolveWidgets } from "@/lib/dashboard-query";
 import { runMagnusTurn } from "@/lib/magnus-ai";
@@ -44,8 +41,10 @@ export async function POST(req: Request) {
           m &&
           typeof m === "object" &&
           "role" in m &&
-          (m as { role: string }).role === "user",
-      ) as { parts?: { type: string; text?: string }[]; content?: string } | undefined;
+          (m as { role: string }).role === "user"
+      ) as
+      | { parts?: { type: string; text?: string }[]; content?: string }
+      | undefined;
 
     const prompt =
       lastUser?.parts

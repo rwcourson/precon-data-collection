@@ -1,15 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq, or } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
-  bidScheduleViews,
   type BidScheduleView,
   type BidScheduleViewConfig,
+  bidScheduleViews,
 } from "@/db/schema";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { principalRegionPredicate } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { parseBidScheduleViewConfig } from "@/lib/view-config";
 import { tablePrefsService } from "@/services/table-prefs-service";
 
@@ -35,16 +35,16 @@ export async function listBidScheduleViews(): Promise<BidScheduleViewRow[]> {
         eq(bidScheduleViews.ownerId, principal.user.id),
         and(
           eq(bidScheduleViews.shared, true),
-          principalRegionPredicate(bidScheduleViews.region, principal, true),
-        ),
-      ),
+          principalRegionPredicate(bidScheduleViews.region, principal, true)
+        )
+      )
     );
 }
 
 export async function saveBidScheduleView(
   name: string,
   config: BidScheduleViewConfig,
-  shared: boolean,
+  shared: boolean
 ) {
   const principal = await getWebPrincipal();
   const trimmed = name.trim();
@@ -72,14 +72,22 @@ export async function deleteBidScheduleView(id: number) {
     .select()
     .from(bidScheduleViews)
     .where(
-      and(eq(bidScheduleViews.id, id), eq(bidScheduleViews.ownerId, principal.user.id)),
+      and(
+        eq(bidScheduleViews.id, id),
+        eq(bidScheduleViews.ownerId, principal.user.id)
+      )
     );
   if (!view) {
     throw new Error("Only the owner can delete a saved view");
   }
   await db
     .delete(bidScheduleViews)
-    .where(and(eq(bidScheduleViews.id, id), eq(bidScheduleViews.ownerId, principal.user.id)));
+    .where(
+      and(
+        eq(bidScheduleViews.id, id),
+        eq(bidScheduleViews.ownerId, principal.user.id)
+      )
+    );
   await tablePrefsService.clearDefaultViewIf(principal, id);
   revalidatePath("/bid-schedule");
 }

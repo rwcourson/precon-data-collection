@@ -1,19 +1,19 @@
+import { ChevronRight, Grid3x3, Table2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronRight, Grid3x3, Table2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { loadSheetRows } from "@/actions/sheets";
 import { PageHeader } from "@/components/page-header";
 import { GridSheet } from "@/components/sheets/grid-sheet";
 import { SheetPinButton } from "@/components/sheets/sheet-pin-button";
 import { ViewSheet } from "@/components/sheets/view-sheet";
-import { loadSheetRows } from "@/actions/sheets";
+import { Badge } from "@/components/ui/badge";
+import { authorize } from "@/lib/authorization/kernel";
+import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getAllCustomColumns } from "@/lib/queries";
 import { buildFieldCatalog } from "@/lib/report-engine";
 import { BLANK_VIEW_CONFIG } from "@/lib/sheets";
 import { loadSheetGrid } from "@/lib/sheets-server";
-import { authorize } from "@/lib/authorization/kernel";
-import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,11 @@ export default async function SheetPage({
               {sheet.kind === "view" ? "Pursuit view" : "Standalone"}
             </Badge>
             {sheet.sourceSheet && (
-              <Badge variant="outline" size="md" className="text-muted-foreground">
+              <Badge
+                variant="outline"
+                size="md"
+                className="text-muted-foreground"
+              >
                 Migrated from {sheet.sourceSheet}
               </Badge>
             )}

@@ -4,14 +4,14 @@
  * change, and a full re-import to see it costs minutes and rolls the demo
  * personas' ids.
  */
-import path from "path";
+import path from "node:path";
 import { seedSheetsFromExport } from "./seed-sheets";
 
 async function main() {
   const dir = path.join(process.cwd(), "data/smartsheet/json");
   const tree = await seedSheetsFromExport(dir);
   console.log(
-    `Workspace rebuilt: ${tree.views} pursuit views + ${tree.grids} standalone sheets (${tree.rows.toLocaleString()} rows).`,
+    `Workspace rebuilt: ${tree.views} pursuit views + ${tree.grids} standalone sheets (${tree.rows.toLocaleString()} rows).`
   );
   process.exit(0);
 }

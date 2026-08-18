@@ -10,18 +10,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { fmtDollars } from "@/lib/format";
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   buildForecastSeries,
   DEFAULT_FORECAST_ASSUMPTIONS,
   resolveForecastTimingDate,
 } from "@/lib/forecast";
-import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { fmtDollars } from "@/lib/format";
 import { getWorkspace } from "@/lib/workspace-server";
 
 export default async function ForecastDashboardPage() {
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const rounds = await listRoundsWithJobsForPrincipal(principal);
 
   const series = buildForecastSeries(
@@ -38,7 +41,7 @@ export default async function ForecastDashboardPage() {
       outcome: r.round.outcome,
       region: r.round.region,
     })),
-    DEFAULT_FORECAST_ASSUMPTIONS,
+    DEFAULT_FORECAST_ASSUMPTIONS
   );
 
   const chartData = series.months.map((m) => ({
@@ -69,7 +72,9 @@ export default async function ForecastDashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">Objective total</CardDescription>
+            <CardDescription className="text-2xs">
+              Objective total
+            </CardDescription>
             <CardTitle className="font-mono text-lg font-medium tabular-nums">
               {fmtDollars(series.totals.objective, true)}
             </CardTitle>
@@ -77,7 +82,9 @@ export default async function ForecastDashboardPage() {
         </Card>
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">Risk-adjusted total</CardDescription>
+            <CardDescription className="text-2xs">
+              Risk-adjusted total
+            </CardDescription>
             <CardTitle className="font-mono text-lg font-medium tabular-nums">
               {fmtDollars(series.totals.adjusted, true)}
             </CardTitle>
@@ -85,7 +92,9 @@ export default async function ForecastDashboardPage() {
         </Card>
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">Excluded rounds</CardDescription>
+            <CardDescription className="text-2xs">
+              Excluded rounds
+            </CardDescription>
             <CardTitle className="font-mono text-lg font-medium tabular-nums">
               {series.excluded.length}
             </CardTitle>
@@ -93,7 +102,9 @@ export default async function ForecastDashboardPage() {
         </Card>
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">Months in series</CardDescription>
+            <CardDescription className="text-2xs">
+              Months in series
+            </CardDescription>
             <CardTitle className="font-mono text-lg font-medium tabular-nums">
               {series.months.length}
             </CardTitle>
@@ -105,14 +116,15 @@ export default async function ForecastDashboardPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Monthly volume curves</CardTitle>
           <CardDescription>
-            Blue objective curve assumes 100% win at stated timing; green curve applies win
-            probability and schedule slip to pending pursuits.
+            Blue objective curve assumes 100% win at stated timing; green curve
+            applies win probability and schedule slip to pending pursuits.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {chartData.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No forecastable rounds in scope (missing estimate value or timing).
+              No forecastable rounds in scope (missing estimate value or
+              timing).
             </p>
           ) : (
             <ForecastVolumeChart data={chartData} />
@@ -123,7 +135,9 @@ export default async function ForecastDashboardPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Assumptions</CardTitle>
-          <CardDescription>Applied only to the adjusted curve — source data unchanged.</CardDescription>
+          <CardDescription>
+            Applied only to the adjusted curve — source data unchanged.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>
@@ -140,8 +154,9 @@ export default async function ForecastDashboardPage() {
           </p>
           {series.excluded.length > 0 && (
             <p className="text-muted-foreground">
-              {series.excluded.length} round{series.excluded.length === 1 ? "" : "s"} excluded
-              (missing estimate value or timing date).
+              {series.excluded.length} round
+              {series.excluded.length === 1 ? "" : "s"} excluded (missing
+              estimate value or timing date).
             </p>
           )}
         </CardContent>

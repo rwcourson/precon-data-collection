@@ -1,22 +1,22 @@
+import { and, eq } from "drizzle-orm";
 import {
+  addSheetRow,
   archiveSheet,
   restoreSheet,
   toggleSheetPin,
   updateSheetCell,
   updateSheetMeta,
-  addSheetRow,
 } from "@/actions/sheets";
 import { db } from "@/db";
 import { sheetPins } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
-import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { authorize } from "@/lib/authorization/kernel";
 import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
+import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { loadSheetGrid, loadSheetView } from "@/lib/sheets-server";
 
 export async function GET(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
   return withMobileAuth(req, { scopes: "read:sheets" }, async (principal) => {
     const { id } = await ctx.params;
@@ -24,20 +24,38 @@ export async function GET(
     if (!Number.isFinite(sheetId)) return jsonError("Invalid sheet id", 400);
 
     const url = new URL(req.url);
-    const limit = Math.min(Number(url.searchParams.get("limit") ?? 50) || 50, 200);
-    const offset = Math.max(Number(url.searchParams.get("offset") ?? 0) || 0, 0);
+    const limit = Math.min(
+      Number(url.searchParams.get("limit") ?? 50) || 50,
+      200
+    );
+    const offset = Math.max(
+      Number(url.searchParams.get("offset") ?? 0) || 0,
+      0
+    );
 
-    const loaded = await loadSheetForPrincipal(principal.authorization, sheetId);
+    const loaded = await loadSheetForPrincipal(
+      principal.authorization,
+      sheetId
+    );
     if (!loaded) return jsonError("Sheet not found", 404);
     const sheet = loaded.value;
 
     const pinRows = await db
       .select({ sheetId: sheetPins.sheetId })
       .from(sheetPins)
-      .where(and(eq(sheetPins.userId, principal.user.id), eq(sheetPins.sheetId, sheetId)))
+      .where(
+        and(
+          eq(sheetPins.userId, principal.user.id),
+          eq(sheetPins.sheetId, sheetId)
+        )
+      )
       .limit(1);
     const pinned = pinRows.length > 0;
-    const canManage = authorize(principal.authorization, "manage", loaded.descriptor).allowed;
+    const canManage = authorize(
+      principal.authorization,
+      "manage",
+      loaded.descriptor
+    ).allowed;
 
     // Grid sheets: column store + cell map rows.
     // View sheets: live pursuit/field catalog via evaluateView (Smartsheet-style).
@@ -56,7 +74,11 @@ export async function GET(
         for (const col of result.columns) {
           const raw = r[col.key];
           values[col.key] =
-            raw == null ? null : typeof raw === "number" ? String(raw) : String(raw);
+            raw == null
+              ? null
+              : typeof raw === "number"
+                ? String(raw)
+                : String(raw);
         }
         // Synthetic stable id for mobile edit UI (views are read-mostly)
         return {
@@ -117,7 +139,7 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ id: string }> }
 ) {
   return withMobileAuth(req, { scopes: "write:sheets" }, async () => {
     const { id } = await ctx.params;

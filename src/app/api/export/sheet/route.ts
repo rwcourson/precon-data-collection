@@ -1,18 +1,18 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import type { SheetFilter } from "@/db/schema";
+import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   buildPrintHtml,
   buildWorkbook,
-  getFlatDataset,
   type ExportColumn,
+  getFlatDataset,
 } from "@/lib/export-helpers";
-import { formatReportValue, type FlatRow } from "@/lib/report-engine";
 import { pdfResponse } from "@/lib/pdf";
+import { type FlatRow, formatReportValue } from "@/lib/report-engine";
 import { formatCell } from "@/lib/sheet-format";
 import { BLANK_VIEW_CONFIG, matchesFilter } from "@/lib/sheets";
 import { loadSheetGrid } from "@/lib/sheets-server";
-import { loadSheetForPrincipal } from "@/lib/authorization/loaders";
-import { getWebPrincipal } from "@/lib/authorization/web-principal";
 
 export const dynamic = "force-dynamic";
 // Synchronous xlsx/PDF build; PDF uses headless Chromium.
@@ -22,11 +22,13 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const id = Number(params.get("id"));
-  if (!Number.isInteger(id)) return new Response("Missing sheet id", { status: 400 });
+  if (!Number.isInteger(id))
+    return new Response("Missing sheet id", { status: 400 });
 
   const principal = await getWebPrincipal();
   const loaded = await loadSheetForPrincipal(principal, id);
-  if (!loaded || loaded.value.archivedAt) return new Response("Sheet not found", { status: 404 });
+  if (!loaded || loaded.value.archivedAt)
+    return new Response("Sheet not found", { status: 404 });
   const sheet = loaded.value;
 
   const format = params.get("format") ?? "xlsx";
@@ -38,23 +40,35 @@ export async function GET(req: NextRequest) {
 
   if (sheet.kind === "grid") {
     const grid = await loadSheetGrid(sheet);
-    columns = grid.columns.map((c) => ({ key: c.key, label: c.label, type: c.type }));
+    columns = grid.columns.map((c) => ({
+      key: c.key,
+      label: c.label,
+      type: c.type,
+    }));
     rows = grid.rows.map((r) => {
       const row: FlatRow = {};
       for (const c of grid.columns) {
         const raw = r.values[c.key] ?? null;
-        row[c.key] = raw != null && ["number", "dollars"].includes(c.type) ? Number(raw) : raw;
+        row[c.key] =
+          raw != null && ["number", "dollars"].includes(c.type)
+            ? Number(raw)
+            : raw;
       }
       return row;
     });
-    const typeByKey = new Map(grid.columns.map((c) => [c.key, c.type as string]));
+    const typeByKey = new Map(
+      grid.columns.map((c) => [c.key, c.type as string])
+    );
     formatValue = (key, value) =>
-      value == null || value === "" ? "" : formatCell(typeByKey.get(key) ?? "text", value);
+      value == null || value === ""
+        ? ""
+        : formatCell(typeByKey.get(key) ?? "text", value);
   } else {
     const config = sheet.config ?? BLANK_VIEW_CONFIG;
     // The toolbar passes what is on screen, so an export matches the view even
     // before someone saves the layout.
-    const columnKeys = params.get("columns")?.split(",").filter(Boolean) ?? config.columns;
+    const columnKeys =
+      params.get("columns")?.split(",").filter(Boolean) ?? config.columns;
     let filters: SheetFilter[] = config.filters;
     const raw = params.get("filters");
     if (raw) {
@@ -69,12 +83,20 @@ export async function GET(req: NextRequest) {
     const byKey = new Map(dataset.catalog.map((c) => [c.key, c]));
     columns = columnKeys
       .filter((k) => byKey.has(k))
-      .map((k) => ({ key: k, label: byKey.get(k)!.label, type: byKey.get(k)!.type }));
-    rows = dataset.rows.filter((r) => filters.every((f) => matchesFilter(r, f)));
-    formatValue = (key, value) => formatReportValue(key, value, dataset.catalog);
+      .map((k) => ({
+        key: k,
+        label: byKey.get(k)!.label,
+        type: byKey.get(k)!.type,
+      }));
+    rows = dataset.rows.filter((r) =>
+      filters.every((f) => matchesFilter(r, f))
+    );
+    formatValue = (key, value) =>
+      formatReportValue(key, value, dataset.catalog);
   }
 
-  if (columns.length === 0) return new Response("This sheet has no columns", { status: 400 });
+  if (columns.length === 0)
+    return new Response("This sheet has no columns", { status: 400 });
 
   if (format === "pdf") {
     const html = buildPrintHtml({ title, columns, rows, formatValue });

@@ -6,22 +6,44 @@ import readline from "node:readline";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 if (!fs.existsSync(path.join(repoRoot, ".next", "BUILD_ID"))) {
-  process.stderr.write("Isolated UI audit requires a completed production build.\n");
+  process.stderr.write(
+    "Isolated UI audit requires a completed production build.\n"
+  );
   process.exit(1);
 }
 
-const retainedEnvironment = ["HOME", "LANG", "LC_ALL", "PATH", "SHELL", "TMPDIR", "USER"];
+const retainedEnvironment = [
+  "HOME",
+  "LANG",
+  "LC_ALL",
+  "PATH",
+  "SHELL",
+  "TMPDIR",
+  "USER",
+];
 const env = Object.fromEntries(
   retainedEnvironment
     .filter((key) => process.env[key] != null)
-    .map((key) => [key, process.env[key]]),
+    .map((key) => [key, process.env[key]])
 );
-const isolatedProject = fs.mkdtempSync(path.join(os.tmpdir(), "precon-ui-audit-"));
+const isolatedProject = fs.mkdtempSync(
+  path.join(os.tmpdir(), "precon-ui-audit-")
+);
 const databaseDir = path.join(isolatedProject, "database");
-for (const entry of [".next", "node_modules", "public", "package.json", "next.config.ts"]) {
+for (const entry of [
+  ".next",
+  "node_modules",
+  "public",
+  "package.json",
+  "next.config.ts",
+]) {
   const source = path.join(repoRoot, entry);
   const target = path.join(isolatedProject, entry);
-  fs.symlinkSync(source, target, fs.statSync(source).isDirectory() ? "dir" : "file");
+  fs.symlinkSync(
+    source,
+    target,
+    fs.statSync(source).isDirectory() ? "dir" : "file"
+  );
 }
 
 Object.assign(env, {
@@ -43,14 +65,21 @@ Object.assign(env, {
 });
 
 await new Promise((resolve, reject) => {
-  const bootstrap = spawn(path.join(repoRoot, "node_modules", ".bin", "tsx"), ["src/db/bootstrap-demo.ts"], {
-    cwd: repoRoot,
-    env,
-    stdio: "inherit",
-  });
+  const bootstrap = spawn(
+    path.join(repoRoot, "node_modules", ".bin", "tsx"),
+    ["src/db/bootstrap-demo.ts"],
+    {
+      cwd: repoRoot,
+      env,
+      stdio: "inherit",
+    }
+  );
   bootstrap.once("exit", (code) => {
     if (code === 0) resolve();
-    else reject(new Error(`Isolated database bootstrap failed with code ${code}.`));
+    else
+      reject(
+        new Error(`Isolated database bootstrap failed with code ${code}.`)
+      );
   });
 });
 
@@ -63,10 +92,15 @@ server.stderr.pipe(process.stderr);
 const lines = readline.createInterface({ input: server.stdout });
 let readyUrl;
 const ready = new Promise((resolve, reject) => {
-  const timeout = setTimeout(() => reject(new Error("Isolated server startup timed out.")), 60_000);
+  const timeout = setTimeout(
+    () => reject(new Error("Isolated server startup timed out.")),
+    60_000
+  );
   lines.on("line", (line) => {
     process.stdout.write(`${line}\n`);
-    const match = /^ISOLATED_SERVER_READY (http:\/\/127\.0\.0\.1:\d+)$/.exec(line);
+    const match = /^ISOLATED_SERVER_READY (http:\/\/127\.0\.0\.1:\d+)$/.exec(
+      line
+    );
     if (match && !readyUrl) {
       readyUrl = match[1];
       clearTimeout(timeout);
@@ -76,7 +110,9 @@ const ready = new Promise((resolve, reject) => {
   server.once("exit", (code) => {
     if (!readyUrl) {
       clearTimeout(timeout);
-      reject(new Error(`Isolated server exited before readiness (code ${code}).`));
+      reject(
+        new Error(`Isolated server exited before readiness (code ${code}).`)
+      );
     }
   });
 });

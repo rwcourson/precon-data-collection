@@ -1,14 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { auditLog, users, type Role, type User } from "@/db/schema";
+import { auditLog, type Role, type User, users } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { ROLE_LABELS } from "@/lib/labels";
+import { REFERENCE_LISTS } from "@/lib/reference-data";
 import { isSuperAdmin, isSuperAdminEmail } from "@/lib/super-admin";
 import { assertPrincipalAdmin } from "@/services/mutation-policy";
-import { REFERENCE_LISTS } from "@/lib/reference-data";
 
 const ROLES: Role[] = [
   "pcm",
@@ -69,19 +69,31 @@ export async function updatePersonRole(input: {
     throw new Error(`${ROLE_LABELS[input.role]} requires a Region.`);
   }
 
-  const [target] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+  const [target] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, input.userId))
+    .limit(1);
   if (!target) throw new Error("User not found.");
 
   // Super-admin emails cannot be demoted or reassigned by anyone (including self demote).
   if (isSuperAdminEmail(target.email)) {
     if (input.role !== "corporate_admin" || region !== null) {
-      throw new Error("Platform super admins cannot be demoted or region-scoped.");
+      throw new Error(
+        "Platform super admins cannot be demoted or region-scoped."
+      );
     }
   }
 
   // Only super admins may grant corporate_admin to others (prevents privilege sprawl).
-  if (input.role === "corporate_admin" && !isSuperAdmin(me) && target.role !== "corporate_admin") {
-    throw new Error("Only a platform super admin can grant Corporate Precon Admin.");
+  if (
+    input.role === "corporate_admin" &&
+    !isSuperAdmin(me) &&
+    target.role !== "corporate_admin"
+  ) {
+    throw new Error(
+      "Only a platform super admin can grant Corporate Precon Admin."
+    );
   }
 
   const [updated] = await db

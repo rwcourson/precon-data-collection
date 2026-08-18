@@ -3,8 +3,8 @@
  * Read-only Smartsheet pull → data/smartsheet/json
  * Usage: node --env-file=.env.local scripts/pull-smartsheet.mjs
  */
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 const API = "https://api.smartsheet.com/2.0";
 const TOKEN = process.env.SMARTSHEET_ACCESS_TOKEN?.trim();
@@ -42,7 +42,9 @@ console.log(`Token OK — ${me.email ?? me.firstName ?? "user"}`);
 const list = await ss("/sheets?includeAll=true");
 const all = list.data ?? [];
 const matched = all.filter((s) => PRECON_RE.test(s.name));
-console.log(`Listed ${all.length} sheets; matched ${matched.length} precon-like.`);
+console.log(
+  `Listed ${all.length} sheets; matched ${matched.length} precon-like.`
+);
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const summary = [];

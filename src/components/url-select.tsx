@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import type { UrlSelectOption } from "@/lib/select-options";
+import { cn } from "@/lib/utils";
 
 /** Styled select that updates a query-string param immediately (no form submit). */
 export function UrlSelect({
@@ -46,7 +46,8 @@ export function UrlSelect({
           if (key === param || !v) continue;
           params.set(key, v);
         }
-        if (nextVal && !omitValues.includes(nextVal)) params.set(param, nextVal);
+        if (nextVal && !omitValues.includes(nextVal))
+          params.set(param, nextVal);
         const qs = params.toString();
         router.push(qs ? `${pathname}?${qs}` : pathname);
       }}
@@ -55,7 +56,7 @@ export function UrlSelect({
         size="sm"
         className={cn(
           "min-w-[8.5rem] max-w-[min(22rem,100%)] border-border/80 bg-card text-[13px] *:data-[slot=select-value]:line-clamp-none",
-          className,
+          className
         )}
       >
         <SelectValue placeholder={current?.label} />

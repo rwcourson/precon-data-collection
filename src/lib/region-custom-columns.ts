@@ -7,7 +7,10 @@ export type RegionCustomTab = {
 };
 
 /** Strip the region prefix so "Central Heavy Civil" → "Heavy Civil". */
-export function regionCustomTabTitle(region: string, preconDepartment: string | null | undefined): string {
+export function regionCustomTabTitle(
+  region: string,
+  preconDepartment: string | null | undefined
+): string {
   if (!preconDepartment) return region;
   const stripped = preconDepartment
     .replace(new RegExp(`^${region}\\s*[–-]?\\s*`, "i"), "")
@@ -22,19 +25,23 @@ export function regionCustomTabTitle(region: string, preconDepartment: string | 
  */
 export function regionScopedColumnsForRound(
   columns: CustomColumn[],
-  round: { region: string; preconDepartment: string },
+  round: { region: string; preconDepartment: string }
 ): CustomColumn[] {
   return columns.filter((column) => {
     if (column.scope !== "region") return false;
     if (column.region !== round.region) return false;
-    if (column.preconDepartment && column.preconDepartment !== round.preconDepartment) return false;
+    if (
+      column.preconDepartment &&
+      column.preconDepartment !== round.preconDepartment
+    )
+      return false;
     return true;
   });
 }
 
 export function regionCustomTabForRound(
   columns: CustomColumn[],
-  round: { region: string; preconDepartment: string },
+  round: { region: string; preconDepartment: string }
 ): RegionCustomTab | null {
   const matching = regionScopedColumnsForRound(columns, round);
   if (matching.length === 0) return null;

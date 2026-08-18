@@ -45,11 +45,16 @@ const mockProvider: ConnectProvider = {
     return db
       .select()
       .from(salesforceJobs)
-      .where(or(ilike(salesforceJobs.jobName, q), ilike(salesforceJobs.jobNumber, q)))
+      .where(
+        or(ilike(salesforceJobs.jobName, q), ilike(salesforceJobs.jobNumber, q))
+      )
       .limit(8);
   },
   async getById(sfId) {
-    const [row] = await db.select().from(salesforceJobs).where(eq(salesforceJobs.sfId, sfId));
+    const [row] = await db
+      .select()
+      .from(salesforceJobs)
+      .where(eq(salesforceJobs.sfId, sfId));
     return row ?? null;
   },
   async list() {
@@ -63,7 +68,10 @@ const mockProvider: ConnectProvider = {
  */
 function restProvider(baseUrl: string, token: string): ConnectProvider {
   const call = async (path: string, params: Record<string, string> = {}) => {
-    const url = new URL(path.replace(/^\//, ""), baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+    const url = new URL(
+      path.replace(/^\//, ""),
+      baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
+    );
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
     const res = await fetch(url, {
@@ -124,7 +132,10 @@ export function connectProvider(): ConnectProvider {
   const mode = connectMode();
   if (mode === "mock") return mockProvider;
   if (mode === "rest") {
-    return restProvider(process.env.CONNECT_API_URL!, process.env.CONNECT_API_TOKEN!);
+    return restProvider(
+      process.env.CONNECT_API_URL!,
+      process.env.CONNECT_API_TOKEN!
+    );
   }
   throw new Error("B&G Connect is disabled for this deployment.");
 }

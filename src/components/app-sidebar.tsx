@@ -1,9 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import type { ComponentType } from "react";
 import {
   CalendarRange,
   ChevronDown,
@@ -14,13 +10,16 @@ import {
   LayoutDashboard,
   Settings2,
   Sheet,
-  Table2,
   Sparkles,
+  Table2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import type { ComponentType } from "react";
+import { Suspense } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import { useSidebar } from "@/components/sidebar-context";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 export type PipelineBucketCounts = {
   active: number;
@@ -70,7 +70,8 @@ const NAV_SECTIONS: NavSection[] = [
           {
             href: "/bid-schedule?section=all",
             label: "All",
-            match: (_, s) => !s.includes("section=") || s.includes("section=all"),
+            match: (_, s) =>
+              !s.includes("section=") || s.includes("section=all"),
           },
           {
             href: "/bid-schedule?section=active",
@@ -118,7 +119,8 @@ const NAV_SECTIONS: NavSection[] = [
           {
             href: "/dashboards?level=division",
             label: "Division",
-            match: (p, s) => p === "/dashboards" && s.includes("level=division"),
+            match: (p, s) =>
+              p === "/dashboards" && s.includes("level=division"),
           },
         ],
       },
@@ -230,7 +232,7 @@ const itemClass = (active: boolean, collapsed = false) =>
     active &&
       (collapsed
         ? "bg-info-soft font-medium text-primary hover:bg-info-soft data-popup-open:bg-info-soft"
-        : "border-l-primary bg-info-soft font-medium text-primary"),
+        : "border-l-primary bg-info-soft font-medium text-primary")
   );
 
 function CollapsedFlyout({
@@ -256,7 +258,13 @@ function CollapsedFlyout({
         delay={60}
         closeDelay={140}
         nativeButton={false}
-        render={<Link href={href} className={itemClass(active, true)} aria-label={label} />}
+        render={
+          <Link
+            href={href}
+            className={itemClass(active, true)}
+            aria-label={label}
+          />
+        }
       >
         <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
       </DropdownMenuTrigger>
@@ -288,7 +296,7 @@ function CollapsedFlyout({
                   key={sub.href}
                   className={cn(
                     "rounded-md px-2 py-1 text-[13px]",
-                    subActive && "bg-info-soft font-medium text-primary",
+                    subActive && "bg-info-soft font-medium text-primary"
                   )}
                   render={<Link href={sub.href} />}
                 >
@@ -310,7 +318,10 @@ function CollapsedFlyout({
   );
 }
 
-function withPinnedSheets(sections: NavSection[], pinnedSheets: PinnedSheet[]): NavSection[] {
+function withPinnedSheets(
+  sections: NavSection[],
+  pinnedSheets: PinnedSheet[]
+): NavSection[] {
   if (pinnedSheets.length === 0) return sections;
   return sections.map((section) => ({
     ...section,
@@ -319,7 +330,11 @@ function withPinnedSheets(sections: NavSection[], pinnedSheets: PinnedSheet[]): 
         ? {
             ...item,
             children: [
-              { href: "/sheets", label: "All sheets", match: (p: string) => p === "/sheets" },
+              {
+                href: "/sheets",
+                label: "All sheets",
+                match: (p: string) => p === "/sheets",
+              },
               ...pinnedSheets.map((s) => ({
                 href: `/sheets/${s.id}`,
                 label: s.name,
@@ -327,7 +342,7 @@ function withPinnedSheets(sections: NavSection[], pinnedSheets: PinnedSheet[]): 
               })),
             ],
           }
-        : item,
+        : item
     ),
   }));
 }
@@ -349,21 +364,22 @@ function SidebarNav({
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-30 hidden flex-col border-r bg-sidebar md:flex",
-        ready && "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        collapsed ? "w-16" : "w-52",
+        ready &&
+          "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        collapsed ? "w-16" : "w-52"
       )}
     >
       <div
         className={cn(
           "-mr-px flex h-14 items-center border-b border-border",
-          collapsed ? "justify-center px-2" : "gap-3 px-3",
+          collapsed ? "justify-center px-2" : "gap-3 px-3"
         )}
       >
         <BrandMark className="size-8" />
         <div
           className={cn(
             "min-w-0 overflow-hidden leading-tight transition-opacity duration-200",
-            collapsed ? "w-0 opacity-0" : "flex-1 opacity-100",
+            collapsed ? "w-0 opacity-0" : "flex-1 opacity-100"
           )}
         >
           <p className="truncate whitespace-nowrap text-sm font-semibold tracking-tight">
@@ -378,21 +394,34 @@ function SidebarNav({
       <nav
         className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden py-3",
-          collapsed ? "flex flex-col gap-1 px-2" : "space-y-4 px-2",
+          collapsed ? "flex flex-col gap-1 px-2" : "space-y-4 px-2"
         )}
       >
         {sections.map((section, sectionIndex) => (
-          <div key={section.label} className={cn(collapsed && sectionIndex > 0 && "mt-1 w-full border-t border-sidebar-border pt-1")}>
+          <div
+            key={section.label}
+            className={cn(
+              collapsed &&
+                sectionIndex > 0 &&
+                "mt-1 w-full border-t border-sidebar-border pt-1"
+            )}
+          >
             {!collapsed && (
               <p className="px-3 pb-1.5 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                 {section.label}
               </p>
             )}
-            <div className={cn(collapsed ? "flex w-full flex-col gap-0.5" : "space-y-0.5")}>
+            <div
+              className={cn(
+                collapsed ? "flex w-full flex-col gap-0.5" : "space-y-0.5"
+              )}
+            >
               {section.items.map((item) => {
                 const { href, label, icon: Icon, children } = item;
                 const active = isSectionActive(item, pathname);
-                const expanded = Boolean(active && children?.length && !collapsed);
+                const expanded = Boolean(
+                  active && children?.length && !collapsed
+                );
 
                 if (collapsed) {
                   return (
@@ -411,12 +440,16 @@ function SidebarNav({
                   <div key={href} className="space-y-0.5">
                     <Link href={href} className={itemClass(active)}>
                       <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
-                      <span className="min-w-0 flex-1 truncate leading-none">{label}</span>
+                      <span className="min-w-0 flex-1 truncate leading-none">
+                        {label}
+                      </span>
                       {children && children.length > 0 && (
                         <ChevronDown
                           className={cn(
                             "size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                            expanded ? "rotate-0 opacity-100" : "-rotate-90 opacity-40",
+                            expanded
+                              ? "rotate-0 opacity-100"
+                              : "-rotate-90 opacity-40"
                           )}
                         />
                       )}
@@ -426,7 +459,7 @@ function SidebarNav({
                       <div
                         className={cn(
                           "grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                         )}
                       >
                         <div className="overflow-hidden">
@@ -436,18 +469,24 @@ function SidebarNav({
                                 active &&
                                 (sub.match
                                   ? sub.match(pathname, search)
-                                  : pathname + (search ? `?${search}` : "") === sub.href);
-                              const count = sub.countKey ? counts[sub.countKey] : undefined;
+                                  : pathname + (search ? `?${search}` : "") ===
+                                    sub.href);
+                              const count = sub.countKey
+                                ? counts[sub.countKey]
+                                : undefined;
                               return (
                                 <Link
                                   key={sub.href}
                                   href={sub.href}
                                   className={cn(
                                     "flex items-center gap-2 rounded-r-md border-l-2 border-transparent px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                                    subActive && "border-l-primary bg-info-soft font-medium text-primary",
+                                    subActive &&
+                                      "border-l-primary bg-info-soft font-medium text-primary"
                                   )}
                                 >
-                                  <span className="min-w-0 flex-1 truncate">{sub.label}</span>
+                                  <span className="min-w-0 flex-1 truncate">
+                                    {sub.label}
+                                  </span>
                                   {count != null && (
                                     <span className="font-mono text-2xs tabular-nums">
                                       {count}
@@ -476,7 +515,7 @@ function SidebarNav({
           onClick={toggle}
           className={cn(
             "h-9 w-full text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            collapsed ? "justify-center px-0" : "justify-start gap-3",
+            collapsed ? "justify-center px-0" : "justify-start gap-3"
           )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -494,7 +533,11 @@ function SidebarNav({
   );
 }
 
-const EMPTY_COUNTS: PipelineBucketCounts = { active: 0, upcoming: 0, outstanding: 0 };
+const EMPTY_COUNTS: PipelineBucketCounts = {
+  active: 0,
+  upcoming: 0,
+  outstanding: 0,
+};
 
 export function AppSidebar({
   pinnedSheets = [],

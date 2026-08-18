@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { ArrowLeft, Download, FileText } from "lucide-react";
+import Link from "next/link";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,14 +17,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeader } from "@/components/page-header";
 import { UrlSelect } from "@/components/url-select";
-import { toOptions } from "@/lib/select-options";
 import { buildAnnualReport } from "@/lib/annual-report";
-import { fmtDollars, fmtPercent } from "@/lib/format";
-import { getReferenceValues } from "@/lib/queries";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { fmtDollars, fmtPercent } from "@/lib/format";
+import { getReferenceValues } from "@/lib/queries";
+import { toOptions } from "@/lib/select-options";
 import { getWorkspace } from "@/lib/workspace-server";
 
 export default async function AnnualReportPage({
@@ -32,7 +32,10 @@ export default async function AnnualReportPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const [rows, lists] = await Promise.all([
     listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
@@ -43,7 +46,10 @@ export default async function AnnualReportPage({
   const earliest = availableYears[0] ?? latest;
 
   const toYear = pickYear(params.to, availableYears, latest);
-  const fromYear = Math.min(pickYear(params.from, availableYears, Math.max(earliest, toYear - 2)), toYear);
+  const fromYear = Math.min(
+    pickYear(params.from, availableYears, Math.max(earliest, toYear - 2)),
+    toYear
+  );
   const regionParam = workspace.region ?? params.region ?? "all";
   const region = regionParam === "all" ? null : regionParam;
 
@@ -85,7 +91,9 @@ export default async function AnnualReportPage({
               size="sm"
               className="gap-1.5"
               nativeButton={false}
-              render={<a href={`/api/export/annual?format=xlsx&${exportQuery}`} />}
+              render={
+                <a href={`/api/export/annual?format=xlsx&${exportQuery}`} />
+              }
             >
               <Download className="size-4" /> Excel
             </Button>
@@ -147,14 +155,32 @@ export default async function AnnualReportPage({
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: `${report.focusYear} Pursuit Volume`, value: fmtDollars(report.focus.volume, true), sub: `${report.focus.rounds} estimate rounds` },
-              { label: "Win Rate by Value", value: fmtPercent(report.focus.winRateByValue), sub: `${fmtDollars(report.focus.wonVolume, true)} won` },
-              { label: "Expected Fee", value: fmtDollars(report.focus.totalFee, true), sub: `${fmtPercent(report.focus.weightedFeePct)} of volume` },
-              { label: "Revenue per PM Year", value: fmtDollars(report.focus.revenuePerPmYear, true), sub: `${Math.round(report.focus.totalPmMonths).toLocaleString()} PM months` },
+              {
+                label: `${report.focusYear} Pursuit Volume`,
+                value: fmtDollars(report.focus.volume, true),
+                sub: `${report.focus.rounds} estimate rounds`,
+              },
+              {
+                label: "Win Rate by Value",
+                value: fmtPercent(report.focus.winRateByValue),
+                sub: `${fmtDollars(report.focus.wonVolume, true)} won`,
+              },
+              {
+                label: "Expected Fee",
+                value: fmtDollars(report.focus.totalFee, true),
+                sub: `${fmtPercent(report.focus.weightedFeePct)} of volume`,
+              },
+              {
+                label: "Revenue per PM Year",
+                value: fmtDollars(report.focus.revenuePerPmYear, true),
+                sub: `${Math.round(report.focus.totalPmMonths).toLocaleString()} PM months`,
+              },
             ].map((k) => (
               <Card key={k.label} className="gap-2 py-3">
                 <CardHeader className="pb-0">
-                  <CardDescription className="text-2xs">{k.label}</CardDescription>
+                  <CardDescription className="text-2xs">
+                    {k.label}
+                  </CardDescription>
                   <CardTitle className="font-mono text-lg font-medium tabular-nums">
                     {k.value}
                   </CardTitle>
@@ -184,19 +210,33 @@ export default async function AnnualReportPage({
                     <TableHead className="text-right">Won Volume</TableHead>
                     <TableHead className="text-right">Win Rate</TableHead>
                     <TableHead className="text-right">Fee %</TableHead>
-                    <TableHead className="pr-4 text-right">Fee / PM Mo</TableHead>
+                    <TableHead className="pr-4 text-right">
+                      Fee / PM Mo
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {report.years.map(({ year, stats }) => (
                     <TableRow key={year}>
                       <TableCell className="pl-6 font-medium">{year}</TableCell>
-                      <TableCell className="text-right tabular-nums">{stats.rounds}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtDollars(stats.volume, true)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtDollars(stats.wonVolume, true)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtPercent(stats.winRate)}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fmtPercent(stats.weightedFeePct)}</TableCell>
-                      <TableCell className="pr-4 text-right tabular-nums">{fmtDollars(stats.feePerPmMonth, true)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {stats.rounds}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {fmtDollars(stats.volume, true)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {fmtDollars(stats.wonVolume, true)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {fmtPercent(stats.winRate)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {fmtPercent(stats.weightedFeePct)}
+                      </TableCell>
+                      <TableCell className="pr-4 text-right tabular-nums">
+                        {fmtDollars(stats.feePerPmMonth, true)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -219,7 +259,9 @@ export default async function AnnualReportPage({
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">{report.focusYear} wins</CardTitle>
+              <CardTitle className="text-base">
+                {report.focusYear} wins
+              </CardTitle>
               <CardDescription>
                 Largest successful outcomes recorded for the year.
               </CardDescription>
@@ -231,27 +273,39 @@ export default async function AnnualReportPage({
                     <TableHead className="pl-6">Project</TableHead>
                     <TableHead>Market Sector</TableHead>
                     <TableHead>Precon Department</TableHead>
-                    <TableHead className="pr-4 text-right">Estimate Value</TableHead>
+                    <TableHead className="pr-4 text-right">
+                      Estimate Value
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {report.wins.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">
-                        No successful outcomes recorded for {report.focusYear} yet.
+                      <TableCell
+                        colSpan={4}
+                        className="h-24 text-center text-sm text-muted-foreground"
+                      >
+                        No successful outcomes recorded for {report.focusYear}{" "}
+                        yet.
                       </TableCell>
                     </TableRow>
                   )}
                   {report.wins.map((w) => (
-                    <TableRow key={`${w.jobNumber}-${w.jobName}-${w.estimatePhase}`}>
+                    <TableRow
+                      key={`${w.jobNumber}-${w.jobName}-${w.estimatePhase}`}
+                    >
                       <TableCell className="pl-6">
                         <span className="font-medium">{w.jobName}</span>
                         <p className="text-xs text-muted-foreground">
                           #{w.jobNumber} · {w.estimatePhase}
                         </p>
                       </TableCell>
-                      <TableCell className="text-sm">{w.marketSector ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{w.preconDepartment}</TableCell>
+                      <TableCell className="text-sm">
+                        {w.marketSector ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {w.preconDepartment}
+                      </TableCell>
                       <TableCell className="pr-4 text-right text-sm tabular-nums">
                         {fmtDollars(w.estimateValue, true)}
                       </TableCell>
@@ -274,7 +328,13 @@ function GroupCard({
 }: {
   title: string;
   groupLabel: string;
-  groups: { key: string; rounds: number; volume: number; winRate: number | null; weightedFeePct: number | null }[];
+  groups: {
+    key: string;
+    rounds: number;
+    volume: number;
+    winRate: number | null;
+    weightedFeePct: number | null;
+  }[];
 }) {
   return (
     <Card>
@@ -295,11 +355,21 @@ function GroupCard({
           <TableBody>
             {groups.slice(0, 12).map((g) => (
               <TableRow key={g.key}>
-                <TableCell className="pl-6 text-sm font-medium">{g.key}</TableCell>
-                <TableCell className="text-right tabular-nums">{g.rounds}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtDollars(g.volume, true)}</TableCell>
-                <TableCell className="text-right tabular-nums">{fmtPercent(g.winRate)}</TableCell>
-                <TableCell className="pr-4 text-right tabular-nums">{fmtPercent(g.weightedFeePct)}</TableCell>
+                <TableCell className="pl-6 text-sm font-medium">
+                  {g.key}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {g.rounds}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {fmtDollars(g.volume, true)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {fmtPercent(g.winRate)}
+                </TableCell>
+                <TableCell className="pr-4 text-right tabular-nums">
+                  {fmtPercent(g.weightedFeePct)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -309,7 +379,11 @@ function GroupCard({
   );
 }
 
-function pickYear(raw: string | undefined, available: number[], fallback: number): number {
+function pickYear(
+  raw: string | undefined,
+  available: number[],
+  fallback: number
+): number {
   const n = Number(raw);
   return available.includes(n) ? n : fallback;
 }

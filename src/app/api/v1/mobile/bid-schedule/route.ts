@@ -1,16 +1,18 @@
+import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import {
   LIFECYCLE_SECTION_ORDER,
-  parseBidScheduleGroupBy,
   type LifecycleSectionKey,
+  parseBidScheduleGroupBy,
 } from "@/lib/bid-schedule";
 import { jsonOk, withMobileAuth } from "@/lib/mobile-http";
-import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:pursuits" }, async (principal) => {
     const url = new URL(req.url);
     const section = (url.searchParams.get("section") ?? "all").toLowerCase();
-    const groupBy = parseBidScheduleGroupBy(url.searchParams.get("groupBy") ?? "none");
+    const groupBy = parseBidScheduleGroupBy(
+      url.searchParams.get("groupBy") ?? "none"
+    );
     const rows = await listRoundsWithJobsForPrincipal(principal.authorization);
 
     const lifecycle = new Set<string>(LIFECYCLE_SECTION_ORDER);
@@ -52,10 +54,12 @@ export async function GET(req: Request) {
                     : r.round.bidDueDate,
     }));
 
-    const sections = LIFECYCLE_SECTION_ORDER.map((key: LifecycleSectionKey) => ({
-      key,
-      count: rows.filter((r) => r.round.status === key).length,
-    }));
+    const sections = LIFECYCLE_SECTION_ORDER.map(
+      (key: LifecycleSectionKey) => ({
+        key,
+        count: rows.filter((r) => r.round.status === key).length,
+      })
+    );
 
     return jsonOk({
       data,

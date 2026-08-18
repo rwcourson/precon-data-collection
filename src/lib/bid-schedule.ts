@@ -1,10 +1,16 @@
 import type { BidScheduleGroupBy } from "@/domain/contracts";
 import { bidScheduleGroupBySchema } from "@/domain/contracts";
+import {
+  filterByHierarchy,
+  parseHierarchyFromSearchParams,
+} from "@/lib/bid-schedule-filter";
 import { STATUS_LABELS } from "@/lib/labels";
 import { groupRowsByField, type LabeledGroup } from "@/lib/sheets";
-import { filterByHierarchy, parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
 
-const EXPORT_SECTION_STATUSES: Record<string, Array<keyof typeof STATUS_LABELS>> = {
+const EXPORT_SECTION_STATUSES: Record<
+  string,
+  Array<keyof typeof STATUS_LABELS>
+> = {
   all: ["active", "upcoming", "outstanding"],
   active: ["active"],
   upcoming: ["upcoming"],
@@ -23,9 +29,11 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
     year?: string | null;
     q?: string | null;
     sortBy?: { field: string; dir: "asc" | "desc" }[];
-  },
+  }
 ): T[] {
-  const keys = EXPORT_SECTION_STATUSES[opts.section ?? "all"] ?? EXPORT_SECTION_STATUSES.all;
+  const keys =
+    EXPORT_SECTION_STATUSES[opts.section ?? "all"] ??
+    EXPORT_SECTION_STATUSES.all;
   const statuses = keys.map((s) => STATUS_LABELS[s]);
   let filtered = rows.filter((r) => statuses.includes(String(r.status)));
   if (opts.regions || opts.departments) {
@@ -38,7 +46,7 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
         ...r,
         preconDepartment: String(r.preconDepartment ?? ""),
       })),
-      hierarchy,
+      hierarchy
     );
   } else if (opts.region) {
     filtered = filtered.filter((r) => r.region === opts.region);
@@ -53,8 +61,12 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
   if (q) {
     filtered = filtered.filter(
       (r) =>
-        String(r.jobName ?? "").toLowerCase().includes(q) ||
-        String(r.jobNumber ?? "").toLowerCase().includes(q),
+        String(r.jobName ?? "")
+          .toLowerCase()
+          .includes(q) ||
+        String(r.jobNumber ?? "")
+          .toLowerCase()
+          .includes(q)
     );
   }
   for (const s of [...(opts.sortBy ?? [])].reverse()) {
@@ -85,7 +97,7 @@ export const BID_SCHEDULE_GROUP_OPTIONS: {
 ];
 
 export const BID_SCHEDULE_SORT_OPTIONS = BID_SCHEDULE_GROUP_OPTIONS.filter(
-  (o) => o.value !== "none",
+  (o) => o.value !== "none"
 );
 
 export type BidScheduleSortField = Exclude<BidScheduleGroupBy, "none">;
@@ -95,7 +107,11 @@ export type BidScheduleSort = {
   dir: "asc" | "desc";
 };
 
-export const LIFECYCLE_SECTION_ORDER = ["active", "upcoming", "outstanding"] as const;
+export const LIFECYCLE_SECTION_ORDER = [
+  "active",
+  "upcoming",
+  "outstanding",
+] as const;
 
 export type LifecycleSectionKey = (typeof LIFECYCLE_SECTION_ORDER)[number];
 
@@ -106,7 +122,7 @@ export const LIFECYCLE_SECTION_LABELS: Record<LifecycleSectionKey, string> = {
 };
 
 export function parseBidScheduleGroupBy(
-  raw: string | undefined,
+  raw: string | undefined
 ): BidScheduleGroupBy {
   const parsed = bidScheduleGroupBySchema.safeParse(raw ?? "none");
   return parsed.success ? parsed.data : "none";
@@ -114,9 +130,11 @@ export function parseBidScheduleGroupBy(
 
 export function parseBidScheduleSort(
   fieldRaw: string | undefined,
-  dirRaw: string | undefined,
+  dirRaw: string | undefined
 ): BidScheduleSort {
-  const fieldParsed = bidScheduleGroupBySchema.safeParse(fieldRaw ?? "bidDueDate");
+  const fieldParsed = bidScheduleGroupBySchema.safeParse(
+    fieldRaw ?? "bidDueDate"
+  );
   const field: BidScheduleSortField =
     fieldParsed.success && fieldParsed.data !== "none"
       ? fieldParsed.data
@@ -128,11 +146,18 @@ export function parseBidScheduleSort(
 export type BidDueUrgency = "overdue" | "week" | "fortnight" | null;
 
 /** Assignment-level urgency on bid due — overdue / ≤7d / ≤14d. Not resource planning. */
-export function bidDueUrgency(date: string | null | undefined, today = new Date()): BidDueUrgency {
+export function bidDueUrgency(
+  date: string | null | undefined,
+  today = new Date()
+): BidDueUrgency {
   if (!date) return null;
   const due = new Date(`${date}T00:00:00`);
   if (Number.isNaN(due.getTime())) return null;
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
   const days = Math.round((due.getTime() - start.getTime()) / 86_400_000);
   if (days < 0) return "overdue";
   if (days <= 7) return "week";
@@ -140,7 +165,10 @@ export function bidDueUrgency(date: string | null | undefined, today = new Date(
   return null;
 }
 
-export const BID_DUE_URGENCY_LABEL: Record<Exclude<BidDueUrgency, null>, string> = {
+export const BID_DUE_URGENCY_LABEL: Record<
+  Exclude<BidDueUrgency, null>,
+  string
+> = {
   overdue: "Overdue",
   week: "Due ≤7d",
   fortnight: "Due ≤14d",
@@ -159,21 +187,30 @@ export type BidScheduleViewQuery = {
   density?: "summary" | "detail";
 };
 
-function bidScheduleSearchParams(config: BidScheduleViewQuery): URLSearchParams {
+function bidScheduleSearchParams(
+  config: BidScheduleViewQuery
+): URLSearchParams {
   const p = new URLSearchParams();
-  if (config.section && config.section !== "all") p.set("section", config.section);
+  if (config.section && config.section !== "all")
+    p.set("section", config.section);
   if (config.group && config.group !== "none") p.set("group", config.group);
   if (config.sort && config.sort !== "bidDueDate") p.set("sort", config.sort);
   if (config.dir && config.dir !== "asc") p.set("dir", config.dir);
   if (config.regions?.length) p.set("regions", config.regions.join(","));
-  else if (config.region && config.region !== "all") p.set("region", config.region);
-  if (config.departments?.length) p.set("departments", config.departments.join(","));
-  if (config.density && config.density !== "summary") p.set("density", config.density);
+  else if (config.region && config.region !== "all")
+    p.set("region", config.region);
+  if (config.departments?.length)
+    p.set("departments", config.departments.join(","));
+  if (config.density && config.density !== "summary")
+    p.set("density", config.density);
   if (config.queue) p.set("queue", config.queue);
   return p;
 }
 
-export function bidScheduleViewHref(config: BidScheduleViewQuery, viewId: number): string {
+export function bidScheduleViewHref(
+  config: BidScheduleViewQuery,
+  viewId: number
+): string {
   const p = bidScheduleSearchParams(config);
   p.set("view", String(viewId));
   return `/bid-schedule?${p.toString()}`;
@@ -202,7 +239,7 @@ export type BidScheduleGroupable = {
 
 function groupValue(
   row: BidScheduleGroupable,
-  field: BidScheduleSortField,
+  field: BidScheduleSortField
 ): string | number | null {
   switch (field) {
     case "preconDepartment":
@@ -223,7 +260,7 @@ function groupValue(
 function compareRows(
   a: BidScheduleGroupable,
   b: BidScheduleGroupable,
-  sort: BidScheduleSort,
+  sort: BidScheduleSort
 ): number {
   const av = groupValue(a, sort.field);
   const bv = groupValue(b, sort.field);
@@ -257,7 +294,7 @@ export type BidScheduleSectionView<T extends BidScheduleGroupable> = {
 export function buildBidScheduleSections<T extends BidScheduleGroupable>(
   rows: T[],
   groupBy: BidScheduleGroupBy,
-  sort: BidScheduleSort,
+  sort: BidScheduleSort
 ): BidScheduleSectionView<T>[] {
   return LIFECYCLE_SECTION_ORDER.map((key) => {
     const sectionRows = rows

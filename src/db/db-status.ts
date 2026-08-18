@@ -8,7 +8,9 @@ import { sql } from "drizzle-orm";
 async function count(table: string): Promise<number | null> {
   try {
     const { db } = await import("./index");
-    const result = await db.execute(sql.raw(`select count(*)::int as c from ${table}`));
+    const result = await db.execute(
+      sql.raw(`select count(*)::int as c from ${table}`)
+    );
     if (Array.isArray(result)) return Number((result[0] as { c: number }).c);
     const rows = (result as { rows?: { c: number }[] }).rows;
     return rows?.[0] ? Number(rows[0].c) : null;
@@ -22,7 +24,7 @@ async function main(): Promise<void> {
   const status = inspectRuntimeConfig();
   if (!status.ok) {
     process.stdout.write(
-      `Configuration invalid: ${status.issues.map((i) => i.key).join(", ")}\n`,
+      `Configuration invalid: ${status.issues.map((i) => i.key).join(", ")}\n`
     );
     process.exitCode = 1;
     return;
@@ -58,10 +60,10 @@ async function main(): Promise<void> {
     const jobs = counts.jobs ?? 0;
     if (jobs > 0 && jobs < 100) {
       process.stdout.write(
-        "\nNote: this looks like the synthetic demo seed (~42 jobs).\n",
+        "\nNote: this looks like the synthetic demo seed (~42 jobs).\n"
       );
       process.stdout.write(
-        "  Full data is on Neon (DATABASE_MODE=postgres) or via npm run db:bootstrap:smartsheet.\n",
+        "  Full data is on Neon (DATABASE_MODE=postgres) or via npm run db:bootstrap:smartsheet.\n"
       );
     } else if (jobs >= 500) {
       process.stdout.write("\nLooks like the full imported dataset. Good.\n");
@@ -72,6 +74,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  process.stderr.write(`${error instanceof Error ? error.message : "db:status failed"}\n`);
+  process.stderr.write(
+    `${error instanceof Error ? error.message : "db:status failed"}\n`
+  );
   process.exitCode = 1;
 });

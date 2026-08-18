@@ -1,6 +1,6 @@
-import type { CSSProperties } from "react";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import type { CSSProperties } from "react";
 import "./globals.css";
 import { themeScript } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -53,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       }
     >
       <head>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: compile-time theme boot script from theme-provider, not user content */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full overflow-x-clip font-sans">

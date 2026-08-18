@@ -67,14 +67,18 @@ export function humanizeCategory(name: string): string {
  */
 export function scaleForMetric(
   rawValues: number[],
-  kind: ScaleKind,
+  kind: ScaleKind
 ): ScaledSeries {
   const finite = rawValues.filter((v) => Number.isFinite(v));
-  const maxAbs = finite.length ? Math.max(...finite.map((v) => Math.abs(v))) : 0;
+  const maxAbs = finite.length
+    ? Math.max(...finite.map((v) => Math.abs(v)))
+    : 0;
 
   if (kind === "percent") {
     return {
-      values: finite.length ? rawValues.map((v) => (Number.isFinite(v) ? v * 100 : 0)) : [],
+      values: finite.length
+        ? rawValues.map((v) => (Number.isFinite(v) ? v * 100 : 0))
+        : [],
       format: (v) => `${Number(v).toFixed(1)}%`,
       unitLabel: "%",
       scale: 100,
@@ -93,7 +97,9 @@ export function scaleForMetric(
   if (kind === "currency") {
     if (maxAbs >= 1_000_000_000) {
       return {
-        values: rawValues.map((v) => (Number.isFinite(v) ? v / 1_000_000_000 : 0)),
+        values: rawValues.map((v) =>
+          Number.isFinite(v) ? v / 1_000_000_000 : 0
+        ),
         format: (v) => `$${Number(v).toFixed(1)}B`,
         unitLabel: "$B",
         scale: 1_000_000_000,
@@ -133,9 +139,13 @@ export function scaleForMetric(
 
 export function metricScaleKind(
   metricKey?: string | null,
-  percentFlag?: boolean,
+  percentFlag?: boolean
 ): ScaleKind {
-  if (percentFlag || metricKey === "winRate" || metricKey === "feeExpectedPct") {
+  if (
+    percentFlag ||
+    metricKey === "winRate" ||
+    metricKey === "feeExpectedPct"
+  ) {
     return "percent";
   }
   if (metricKey === "roundCount") return "count";
@@ -152,14 +162,19 @@ export function metricScaleKind(
 /** Format a raw cell for tables (raw ratios / dollars / counts). */
 export function formatTableCell(
   key: string,
-  value: string | number | null,
+  value: string | number | null
 ): string | number | null {
   if (value == null || value === "") return "—";
   if (typeof value === "string") return humanizeCategory(value);
   if (!Number.isFinite(value)) return "—";
 
   const k = key.toLowerCase();
-  if (k.includes("win rate") || k.includes("winrate") || k.includes("fee %") || k.includes("fee%")) {
+  if (
+    k.includes("win rate") ||
+    k.includes("winrate") ||
+    k.includes("fee %") ||
+    k.includes("fee%")
+  ) {
     // Heuristic: values in (0,1.5] are ratios; larger already percent points.
     const ratio = Math.abs(value) <= 1.5 ? value : value / 100;
     return percentLabel(ratio, k.includes("fee") ? 1 : 0);

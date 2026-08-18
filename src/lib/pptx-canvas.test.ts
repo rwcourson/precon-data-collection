@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCanvasPptx, summarizeWidgetsForPptx } from "@/lib/pptx-canvas";
-import type { WidgetResolved } from "@/lib/dashboard-query";
-import { planDashboardFromPrompt } from "@/lib/dashboard-copilot";
-import { resolveWidgets } from "@/lib/dashboard-query";
 import type { EstimateRound } from "@/db/schema";
+import { planDashboardFromPrompt } from "@/lib/dashboard-copilot";
+import type { WidgetResolved } from "@/lib/dashboard-query";
+import { resolveWidgets } from "@/lib/dashboard-query";
+import { buildCanvasPptx, summarizeWidgetsForPptx } from "@/lib/pptx-canvas";
 
 function fixtureRounds(): EstimateRound[] {
   const base = {
@@ -94,7 +94,9 @@ describe("buildCanvasPptx", () => {
     expect(widgets.some((w) => w.config.kind !== "kpi")).toBe(true);
 
     const summary = summarizeWidgetsForPptx(widgets);
-    expect(summary.kpis + summary.charts + summary.tables).toBeGreaterThanOrEqual(3);
+    expect(
+      summary.kpis + summary.charts + summary.tables
+    ).toBeGreaterThanOrEqual(3);
 
     const { buffer, filename, slideCount } = await buildCanvasPptx({
       planName: "Executive region scorecard",
@@ -114,7 +116,7 @@ describe("buildCanvasPptx", () => {
     const JSZip = (await import("jszip")).default;
     const zip = await JSZip.loadAsync(buffer);
     const slideXml = Object.keys(zip.files).filter((n) =>
-      /^ppt\/slides\/slide\d+\.xml$/.test(n),
+      /^ppt\/slides\/slide\d+\.xml$/.test(n)
     );
     const texts: string[] = [];
     let themeXml = "";
@@ -125,7 +127,9 @@ describe("buildCanvasPptx", () => {
         texts.push(m[1]!);
       }
     }
-    expect(texts.some((t) => t.includes("Brasfield") && t.includes("Gorrie"))).toBe(true);
+    expect(
+      texts.some((t) => t.includes("Brasfield") && t.includes("Gorrie"))
+    ).toBe(true);
     expect(themeXml).toContain("002070");
     expect(themeXml).toMatch(/Sharp Grotesk|Verdana/);
   });
@@ -147,7 +151,9 @@ describe("buildCanvasPptx", () => {
     expect(rounds.every((n) => typeof n === "number" && n >= 1)).toBe(true);
 
     // Pure formatter path used by PPTX builder
-    const { formatTableCell } = await import("@/components/dashboards/chart-format");
+    const { formatTableCell } = await import(
+      "@/components/dashboards/chart-format"
+    );
     for (const n of rounds) {
       const cell = formatTableCell("Estimate rounds", n as number);
       expect(String(cell)).not.toMatch(/^\$/);
@@ -161,7 +167,7 @@ describe("buildCanvasPptx", () => {
     const JSZip = (await import("jszip")).default;
     const zip = await JSZip.loadAsync(buffer);
     const slideXml = Object.keys(zip.files).filter((n) =>
-      /^ppt\/slides\/slide\d+\.xml$/.test(n),
+      /^ppt\/slides\/slide\d+\.xml$/.test(n)
     );
     const texts: string[] = [];
     for (const name of slideXml) {

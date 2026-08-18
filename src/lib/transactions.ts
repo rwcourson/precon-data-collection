@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
-import { db, type AppDb } from "@/db";
+import { type AppDb, db } from "@/db";
 import { estimateRounds } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 
@@ -8,7 +8,7 @@ export type TransactionalDb = AppDb;
 
 /** Run work in a single transaction. The callback receives the same AppDb surface. */
 export async function withTransaction<T>(
-  work: (tx: TransactionalDb) => Promise<T>,
+  work: (tx: TransactionalDb) => Promise<T>
 ): Promise<T> {
   return db.transaction(async (raw) => work(raw as unknown as TransactionalDb));
 }
@@ -24,7 +24,7 @@ export async function updateRoundIfUnchanged(
     expectedStatus: string;
     expectedUpdatedAt: Date;
     patch: Record<string, unknown>;
-  },
+  }
 ): Promise<void> {
   const [updated] = await tx
     .update(estimateRounds)
@@ -36,14 +36,14 @@ export async function updateRoundIfUnchanged(
         // Postgres `now()` keeps microseconds; JS Date only carries milliseconds,
         // so a strict equality never matches rows whose updated_at came from the
         // column default. Compare both sides at millisecond precision.
-        sql`date_trunc('milliseconds', ${estimateRounds.updatedAt}) = date_trunc('milliseconds', ${sql.param(input.expectedUpdatedAt, estimateRounds.updatedAt)}::timestamp)`,
-      ),
+        sql`date_trunc('milliseconds', ${estimateRounds.updatedAt}) = date_trunc('milliseconds', ${sql.param(input.expectedUpdatedAt, estimateRounds.updatedAt)}::timestamp)`
+      )
     )
     .returning({ id: estimateRounds.id });
   if (!updated) {
     throw DomainError.conflict(
       "This record changed since you loaded it.",
-      "Another user locked or edited the round. Refresh and try again.",
+      "Another user locked or edited the round. Refresh and try again."
     );
   }
 }

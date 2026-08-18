@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { auditLog } from "@/db/schema";
+import type { Principal } from "@/lib/authorization/types";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
+  createDataSnapshot,
   listTrash,
   permanentDelete,
   restoreEntity,
@@ -12,10 +14,8 @@ import {
   softDeleteRound,
   softDeleteSheet,
   softDeleteSheetRow,
-  createDataSnapshot,
   type TrashItem,
 } from "@/lib/recovery";
-import type { Principal } from "@/lib/authorization/types";
 
 export async function trashJob(jobId: number, principal?: Principal) {
   const actor = principal ?? (await getWebPrincipal());
@@ -60,7 +60,7 @@ export async function trashSheetRow(rowId: number, principal?: Principal) {
 export async function restoreTrashItem(
   entityType: TrashItem["entityType"],
   entityId: number,
-  principal?: Principal,
+  principal?: Principal
 ) {
   const actor = principal ?? (await getWebPrincipal());
   await restoreEntity(actor, entityType, entityId);
@@ -89,7 +89,7 @@ export async function permanentlyDeleteTrashItem(
     token: import("@/db/schema").ApiToken;
     challenge: string;
   } | null,
-  options?: { requireApiChallenge?: boolean },
+  options?: { requireApiChallenge?: boolean }
 ) {
   const actor = principal ?? (await getWebPrincipal());
   await permanentDelete({

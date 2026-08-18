@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { asc, eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { dashboardWidgets, type EstimateRound } from "@/db/schema";
@@ -8,7 +8,8 @@ import {
   loadDashboardForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { getWorkspace } from "@/lib/workspace-server";
+import { widgetConfigSchema } from "@/lib/dashboard-domain";
+import { resolveWidgets, type WidgetResolved } from "@/lib/dashboard-query";
 import {
   buildForecastSeries,
   DEFAULT_FORECAST_ASSUMPTIONS,
@@ -16,8 +17,7 @@ import {
 } from "@/lib/forecast";
 import { buildCanvasPptx, safeFilename } from "@/lib/pptx-canvas";
 import { buildForecastPptx } from "@/lib/pptx-forecast";
-import { resolveWidgets, type WidgetResolved } from "@/lib/dashboard-query";
-import { widgetConfigSchema } from "@/lib/dashboard-domain";
+import { getWorkspace } from "@/lib/workspace-server";
 
 // Chart-heavy deck build over the full scoped dataset.
 export const maxDuration = 120;
@@ -45,28 +45,38 @@ const canvasBodySchema = z.object({
               name: z.string(),
               value: z.number(),
               secondary: z.number().optional(),
-            }),
+            })
           )
           .optional(),
-        trend: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))).optional(),
+        trend: z
+          .array(
+            z.record(z.string(), z.union([z.string(), z.number(), z.null()]))
+          )
+          .optional(),
         trendKeys: z
           .array(z.object({ key: z.string(), label: z.string() }))
           .optional(),
         stacked: z
           .object({
-            rows: z.array(z.record(z.string(), z.union([z.string(), z.number()]))),
+            rows: z.array(
+              z.record(z.string(), z.union([z.string(), z.number()]))
+            ),
             series: z.array(z.string()),
           })
           .optional(),
         table: z
           .object({
             columns: z.array(z.string()),
-            rows: z.array(z.record(z.string(), z.union([z.string(), z.number(), z.null()]))),
+            rows: z.array(
+              z.record(z.string(), z.union([z.string(), z.number(), z.null()]))
+            ),
           })
           .optional(),
         combo: z
           .object({
-            rows: z.array(z.record(z.string(), z.union([z.string(), z.number()]))),
+            rows: z.array(
+              z.record(z.string(), z.union([z.string(), z.number()]))
+            ),
             categoryKey: z.string(),
             barKeys: z.array(z.string()),
             lineKeys: z.array(z.string()),
@@ -79,11 +89,11 @@ const canvasBodySchema = z.object({
                 name: z.string(),
                 value: z.number(),
                 type: z.enum(["increase", "decrease", "total"]),
-              }),
+              })
             ),
           })
           .optional(),
-      }),
+      })
     )
     .max(20)
     .optional(),
@@ -92,7 +102,7 @@ const canvasBodySchema = z.object({
 });
 
 function pptxResponse(buffer: Buffer, filename: string) {
-  const safe = safeFilename(filename.replace(/\.pptx$/i, "")) + ".pptx";
+  const safe = `${safeFilename(filename.replace(/\.pptx$/i, ""))}.pptx`;
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type":
@@ -103,7 +113,10 @@ function pptxResponse(buffer: Buffer, filename: string) {
 }
 
 async function forecastPptx() {
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const rounds = await listRoundsWithJobsForPrincipal(principal);
   const series = buildForecastSeries(
     rounds.map((r) => ({
@@ -119,7 +132,7 @@ async function forecastPptx() {
       outcome: r.round.outcome,
       region: r.round.region,
     })),
-    DEFAULT_FORECAST_ASSUMPTIONS,
+    DEFAULT_FORECAST_ASSUMPTIONS
   );
   const { buffer, filename } = await buildForecastPptx({
     series,
@@ -129,7 +142,10 @@ async function forecastPptx() {
 }
 
 async function dashboardPptx(dashboardId: number) {
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   const loaded = await loadDashboardForPrincipal(principal, dashboardId);
   if (!loaded) {
     return NextResponse.json({ error: "Dashboard not found" }, { status: 404 });
@@ -144,7 +160,7 @@ async function dashboardPptx(dashboardId: number) {
   ]);
   const resolved = resolveWidgets(
     widgets.map((w) => w.config),
-    rows.map((r) => r.round) as EstimateRound[],
+    rows.map((r) => r.round) as EstimateRound[]
   );
   const { buffer, filename } = await buildCanvasPptx({
     planName: loaded.value.name,
@@ -178,8 +194,11 @@ export async function POST(req: Request) {
   const parsed = canvasBodySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid canvas export payload", issues: parsed.error.flatten() },
-      { status: 400 },
+      {
+        error: "Invalid canvas export payload",
+        issues: parsed.error.flatten(),
+      },
+      { status: 400 }
     );
   }
 
@@ -190,7 +209,10 @@ export async function POST(req: Request) {
     return dashboardPptx(parsed.data.dashboardId);
   }
 
-  const [principal, workspace] = await Promise.all([getWebPrincipal(), getWorkspace()]);
+  const [principal, workspace] = await Promise.all([
+    getWebPrincipal(),
+    getWorkspace(),
+  ]);
   let widgets: WidgetResolved[] = [];
   if (parsed.data.widgets?.length) {
     widgets = parsed.data.widgets.map((w) => ({
@@ -213,8 +235,11 @@ export async function POST(req: Request) {
     widgets = resolveWidgets(parsed.data.widgetConfigs, rounds);
   } else {
     return NextResponse.json(
-      { error: "Provide widgets, widgetConfigs, or dashboardId for canvas export" },
-      { status: 400 },
+      {
+        error:
+          "Provide widgets, widgetConfigs, or dashboardId for canvas export",
+      },
+      { status: 400 }
     );
   }
 

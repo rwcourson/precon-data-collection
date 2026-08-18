@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { resolveDisplayName, resolveJobTitle } from "@/lib/auth";
 import type { User } from "@/db/schema";
+import { resolveDisplayName, resolveJobTitle } from "@/lib/auth";
 
 function roster(partial: Partial<User>): User {
   return {
@@ -20,8 +20,8 @@ describe("SSO name/title matching", () => {
     expect(
       resolveDisplayName(
         { email: "schen@brasfieldgorrie.com", name: "S. Chen", groups: [] },
-        roster({}),
-      ),
+        roster({})
+      )
     ).toBe("S. Chen");
   });
 
@@ -29,8 +29,8 @@ describe("SSO name/title matching", () => {
     expect(
       resolveDisplayName(
         { email: "schen@brasfieldgorrie.com", name: "schen", groups: [] },
-        roster({ name: "Sarah Chen" }),
-      ),
+        roster({ name: "Sarah Chen" })
+      )
     ).toBe("Sarah Chen");
   });
 
@@ -44,24 +44,24 @@ describe("SSO name/title matching", () => {
           title: "Senior Estimator",
         },
         "estimate_lead",
-        roster({ title: "Old Title" }),
-      ),
+        roster({ title: "Old Title" })
+      )
     ).toBe("Senior Estimator");
 
     expect(
       resolveJobTitle(
         { email: "x@brasfieldgorrie.com", name: "X", groups: [] },
         "pcm",
-        roster({ title: "Preconstruction Manager" }),
-      ),
+        roster({ title: "Preconstruction Manager" })
+      )
     ).toBe("Preconstruction Manager");
 
     expect(
       resolveJobTitle(
         { email: "x@brasfieldgorrie.com", name: "X", groups: [] },
         "rpd",
-        roster({ title: "Signed in via SSO" }),
-      ),
+        roster({ title: "Signed in via SSO" })
+      )
     ).toBe("RPD / SPD");
   });
 });

@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   auditLog,
@@ -13,8 +13,8 @@ import {
 } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { connectProvider } from "@/lib/integrations/connect";
-import { proposeMatches } from "@/lib/salesforce-match";
 import { planSalesforceLink } from "@/lib/salesforce-link";
+import { proposeMatches } from "@/lib/salesforce-match";
 import { withTransaction } from "@/lib/transactions";
 import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
@@ -51,7 +51,7 @@ export async function runSalesforceSync() {
         region: o.region,
         sourceVersion: `${o.sfId}:${o.jobNumber}:${o.createdDate ?? "0"}`,
       })),
-      suppressions,
+      suppressions
     );
 
     // Single bulk insert; the partial unique index on (job_id, sf_id,
@@ -73,7 +73,7 @@ export async function runSalesforceSync() {
             signals: c.signals,
             discrepancy: c.discrepancy,
             status: "pending" as const,
-          })),
+          }))
         )
         .onConflictDoNothing()
         .returning({ id: salesforceMatchCandidates.id });
@@ -108,7 +108,7 @@ export async function runSalesforceSync() {
 export async function decideMatchCandidate(
   candidateId: number,
   decision: "approve" | "reject" | "dismiss",
-  note?: string,
+  note?: string
 ) {
   const principal = await getWebPrincipal();
   assertPrincipalAdmin(principal, "salesforce", "edit", "Salesforce match");
@@ -117,7 +117,7 @@ export async function decideMatchCandidate(
     .select()
     .from(salesforceMatchCandidates)
     .where(eq(salesforceMatchCandidates.id, candidateId));
-  if (!c || c.status !== "pending") throw new Error("Candidate not found");
+  if (c?.status !== "pending") throw new Error("Candidate not found");
 
   if (decision === "reject" || decision === "dismiss") {
     await withTransaction(async (tx) => {
@@ -133,8 +133,8 @@ export async function decideMatchCandidate(
         .where(
           and(
             eq(salesforceMatchCandidates.id, candidateId),
-            eq(salesforceMatchCandidates.status, "pending"),
-          ),
+            eq(salesforceMatchCandidates.status, "pending")
+          )
         )
         .returning({ id: salesforceMatchCandidates.id });
       if (!claimed) throw new Error("Candidate not found");
@@ -160,9 +160,12 @@ export async function decideMatchCandidate(
   // approve / link — preserve job + round IDs
   const jobId = c.jobId;
   if (!jobId) throw new Error("Candidate missing job");
-  if (c.discrepancy?.includes("job_number_mismatch") && note !== "confirm-job-number") {
+  if (
+    c.discrepancy?.includes("job_number_mismatch") &&
+    note !== "confirm-job-number"
+  ) {
     throw new Error(
-      "Job number discrepancy requires confirmation (pass note confirm-job-number).",
+      "Job number discrepancy requires confirmation (pass note confirm-job-number)."
     );
   }
 
@@ -179,8 +182,8 @@ export async function decideMatchCandidate(
       .where(
         and(
           eq(salesforceMatchCandidates.id, candidateId),
-          eq(salesforceMatchCandidates.status, "pending"),
-        ),
+          eq(salesforceMatchCandidates.status, "pending")
+        )
       )
       .returning({ id: salesforceMatchCandidates.id });
     if (!claimed) throw new Error("Candidate not found");
@@ -216,7 +219,7 @@ export async function decideMatchCandidate(
           jobNumber: c.proposedJobNumber || job.jobNumber,
           jobName: c.proposedJobName || job.jobName,
         },
-        rounds.map((r) => r.id),
+        rounds.map((r) => r.id)
       );
       await tx.update(jobs).set(plan.patch).where(eq(jobs.id, job.id));
     }

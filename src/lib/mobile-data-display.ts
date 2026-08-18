@@ -7,7 +7,8 @@ export function formatCompactDollars(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
   const abs = Math.abs(n);
   const sign = n < 0 ? "-" : "";
-  if (abs >= 1_000_000_000) return `${sign}$${(abs / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000_000)
+    return `${sign}$${(abs / 1_000_000_000).toFixed(1)}B`;
   if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
   if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(0)}K`;
   return `${sign}$${Math.round(abs).toLocaleString("en-US")}`;
@@ -15,7 +16,7 @@ export function formatCompactDollars(n: number | null | undefined): string {
 
 export function formatKpiValue(
   value: number | null | undefined,
-  format: string,
+  format: string
 ): string {
   if (value == null || Number.isNaN(value)) return "—";
   if (format === "dollars") return formatCompactDollars(value);
@@ -38,7 +39,7 @@ export function cellDisplay(value: string | null | undefined): string {
 /** Heuristic column width from header label (for mobile horizontal grid). */
 export function sheetColumnWidth(
   label: string,
-  opts?: { min?: number; max?: number },
+  opts?: { min?: number; max?: number }
 ): number {
   const min = opts?.min ?? 96;
   const max = opts?.max ?? 200;
@@ -83,7 +84,7 @@ function parseDueDate(iso: string | null | undefined): Date | null {
  */
 export function dueDateBand(
   iso: string | null | undefined,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): DueBand {
   const due = parseDueDate(iso);
   if (!due) return "none";
@@ -119,7 +120,7 @@ export type DueBandGroup<T> = {
 /** Group rows by due-date band; empty bands omitted; order fixed. */
 export function groupRowsByDueBand<T extends { bidDueDate: string | null }>(
   rows: T[],
-  now: Date = new Date(),
+  now: Date = new Date()
 ): DueBandGroup<T>[] {
   const map = new Map<DueBand, T[]>();
   for (const band of DUE_BAND_ORDER) map.set(band, []);
@@ -131,16 +132,20 @@ export function groupRowsByDueBand<T extends { bidDueDate: string | null }>(
   for (const band of DUE_BAND_ORDER) {
     const list = map.get(band)!;
     list.sort((a, b) => {
-      const da = parseDueDate(a.bidDueDate)?.getTime() ?? Number.POSITIVE_INFINITY;
-      const db = parseDueDate(b.bidDueDate)?.getTime() ?? Number.POSITIVE_INFINITY;
+      const da =
+        parseDueDate(a.bidDueDate)?.getTime() ?? Number.POSITIVE_INFINITY;
+      const db =
+        parseDueDate(b.bidDueDate)?.getTime() ?? Number.POSITIVE_INFINITY;
       return da - db;
     });
   }
-  return DUE_BAND_ORDER.filter((b) => (map.get(b)?.length ?? 0) > 0).map((band) => ({
-    band,
-    label: dueBandLabel(band),
-    rows: map.get(band)!,
-  }));
+  return DUE_BAND_ORDER.filter((b) => (map.get(b)?.length ?? 0) > 0).map(
+    (band) => ({
+      band,
+      label: dueBandLabel(band),
+      rows: map.get(band)!,
+    })
+  );
 }
 
 export type SheetColumnLike = { key: string; label: string };
@@ -165,7 +170,7 @@ export function assertGridAligned(matrix: {
 /** Build header + cell matrix for sheet grid from live columns/rows. */
 export function buildSheetGridMatrix(
   columns: SheetColumnLike[],
-  rows: SheetRowLike[],
+  rows: SheetRowLike[]
 ): {
   headers: string[];
   keys: string[];
@@ -191,7 +196,7 @@ export function buildSheetGridMatrix(
  * (`?pinned=1&canManage=true`). Empty/unknown → false.
  */
 export function parseRouteFlag(
-  value: string | string[] | null | undefined,
+  value: string | string[] | null | undefined
 ): boolean {
   const raw = Array.isArray(value) ? value[0] : value;
   if (raw == null) return false;
@@ -200,7 +205,9 @@ export function parseRouteFlag(
 }
 
 /** Detail Archive toolbar — same gate as list swipe and web SheetCard. */
-export function canShowSheetArchive(canManage: boolean | null | undefined): boolean {
+export function canShowSheetArchive(
+  canManage: boolean | null | undefined
+): boolean {
   return canManage === true;
 }
 
@@ -275,7 +282,19 @@ const SHEET_SORT_RANK: Record<string, number> = {
   sub_rate_history: 111,
 };
 
-const SHEET_ACRONYMS = new Set(["GMP", "RPD", "CBG", "BG", "ID", "AL", "FL", "GA", "TX", "CEN", "CAR"]);
+const SHEET_ACRONYMS = new Set([
+  "GMP",
+  "RPD",
+  "CBG",
+  "BG",
+  "ID",
+  "AL",
+  "FL",
+  "GA",
+  "TX",
+  "CEN",
+  "CAR",
+]);
 
 function normalizeSheetKey(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
@@ -291,7 +310,8 @@ export function sheetDisplayName(name: string | null | undefined): string {
 
   const strippedKey = key.replace(/^pcn_/, "");
   if (SHEET_LABELS[strippedKey]) return SHEET_LABELS[strippedKey];
-  if (SHEET_LABELS[`pcn_${strippedKey}`]) return SHEET_LABELS[`pcn_${strippedKey}`];
+  if (SHEET_LABELS[`pcn_${strippedKey}`])
+    return SHEET_LABELS[`pcn_${strippedKey}`];
 
   // Already a human title (spaces, mixed case) — strip accidental pcn_ only.
   if (/\s/.test(raw) && /[A-Z]/.test(raw)) {
@@ -331,7 +351,8 @@ export function sheetSortRank(name: string | null | undefined): number {
   if (SHEET_SORT_RANK[key] != null) return SHEET_SORT_RANK[key];
   const stripped = key.replace(/^pcn_/, "");
   if (SHEET_SORT_RANK[stripped] != null) return SHEET_SORT_RANK[stripped];
-  if (SHEET_SORT_RANK[`pcn_${stripped}`] != null) return SHEET_SORT_RANK[`pcn_${stripped}`];
+  if (SHEET_SORT_RANK[`pcn_${stripped}`] != null)
+    return SHEET_SORT_RANK[`pcn_${stripped}`];
   return 1000;
 }
 
@@ -369,7 +390,9 @@ export function sortSheetsForList<T extends SheetListLike>(sheets: T[]): T[] {
     const rankA = sheetSortRank(a.name);
     const rankB = sheetSortRank(b.name);
     if (rankA !== rankB) return rankA - rankB;
-    const fa = sheetFolderLabel(a.folder).localeCompare(sheetFolderLabel(b.folder));
+    const fa = sheetFolderLabel(a.folder).localeCompare(
+      sheetFolderLabel(b.folder)
+    );
     if (fa !== 0) return fa;
     return sheetDisplayName(a.name).localeCompare(sheetDisplayName(b.name));
   });
@@ -379,7 +402,7 @@ export type SheetFolderGroup<T> = { folder: string; sheets: T[] };
 
 /** Group sorted sheets by folder for sectioned lists. */
 export function groupSheetsByFolder<T extends SheetListLike>(
-  sheets: T[],
+  sheets: T[]
 ): SheetFolderGroup<T>[] {
   const sorted = sortSheetsForList(sheets);
   const map = new Map<string, T[]>();
@@ -398,7 +421,7 @@ export function groupSheetsByFolder<T extends SheetListLike>(
 /** Case-insensitive filter on display name, raw name, folder, description. */
 export function filterSheetsByQuery<T extends SheetListLike>(
   sheets: T[],
-  query: string,
+  query: string
 ): T[] {
   const q = query.trim().toLowerCase();
   if (!q) return sheets;

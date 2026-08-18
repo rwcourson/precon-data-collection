@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 import ExcelJS from "exceljs";
+import { describe, expect, it } from "vitest";
 import { buildPrintHtml, buildWorkbook } from "./export-helpers";
 import {
   formatLatestNoteCell,
@@ -10,11 +10,15 @@ import {
   PRINT_NOTE_MAX_CHARS,
   truncatePrintNote,
 } from "./latest-note";
-import { buildFieldCatalog, formatReportValue, runReportEngine } from "./report-engine";
+import {
+  buildFieldCatalog,
+  formatReportValue,
+  runReportEngine,
+} from "./report-engine";
 
 const EVIDENCE_DIR = path.join(
   process.cwd(),
-  ".supergoal/jay-mcdaniel-roadmap-FfN1Ez/evidence",
+  ".supergoal/jay-mcdaniel-roadmap-FfN1Ez/evidence"
 );
 
 function longNote(len: number, marker: string): string {
@@ -77,7 +81,10 @@ describe("latest-note report + print wrapping", () => {
     expect(html).toContain("Jay McDaniel");
     expect(html).toContain("WRAP");
     mkdirSync(EVIDENCE_DIR, { recursive: true });
-    writeFileSync(path.join(EVIDENCE_DIR, "phase-8-print-latest-note.html"), html);
+    writeFileSync(
+      path.join(EVIDENCE_DIR, "phase-8-print-latest-note.html"),
+      html
+    );
   });
 
   it("Excel export writes latest-note with author/date and wrapText", async () => {
@@ -128,11 +135,13 @@ describe("latest-note report + print wrapping", () => {
         aggregations: [],
         sortBy: [],
       },
-      catalog,
+      catalog
     );
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]![LATEST_NOTE_KEY]).toBe(latest);
-    expect(String(result.rows[0]![LATEST_NOTE_KEY])).toContain("Newest note only");
+    expect(String(result.rows[0]![LATEST_NOTE_KEY])).toContain(
+      "Newest note only"
+    );
     expect(String(result.rows[0]![LATEST_NOTE_KEY])).not.toContain("older");
   });
 
@@ -239,7 +248,7 @@ describe("latest-note report + print wrapping", () => {
     } else {
       writeFileSync(
         path.join(EVIDENCE_DIR, "phase-8-pdf-fallback.txt"),
-        "Playwright Chromium unavailable; print-HTML at phase-8-print-latest-note.html is the artifact.\n",
+        "Playwright Chromium unavailable; print-HTML at phase-8-print-latest-note.html is the artifact.\n"
       );
     }
   });

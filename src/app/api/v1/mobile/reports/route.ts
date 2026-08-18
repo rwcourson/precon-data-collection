@@ -4,10 +4,10 @@ import {
   saveReport,
   shareReport,
 } from "@/actions/reports";
-import { type SavedReportConfig } from "@/db/schema";
+import type { SavedReportConfig } from "@/db/schema";
 import { listReportsForPrincipal } from "@/lib/authorization/loaders";
-import { CONSOLIDATED_REGIONAL_PRESET } from "@/lib/report-presets";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import { CONSOLIDATED_REGIONAL_PRESET } from "@/lib/report-presets";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:reports" }, async (principal) => {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         await shareReport(
           body.id,
           body.sharedWithRegions ?? [],
-          body.sharedWithUserIds ?? [],
+          body.sharedWithUserIds ?? []
         );
         return jsonOk({ ok: true });
       }

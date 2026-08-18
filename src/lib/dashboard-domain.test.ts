@@ -21,14 +21,14 @@ describe("dashboard domain", () => {
         title: "X",
         kind: "bar",
         metricKey: "drop_table",
-      }),
+      })
     ).toThrow(/allowlisted/);
     expect(() =>
       assertWidgetQueryBounds({
         title: "X",
         kind: "table",
         filters: [{ field: "region", op: "nuke", value: "x" }],
-      }),
+      })
     ).toThrow(/allowlisted/);
   });
 

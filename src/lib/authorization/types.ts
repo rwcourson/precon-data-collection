@@ -1,5 +1,5 @@
-import type { ApiTokenScope } from "@/domain/contracts";
 import type { Role, RoundStatus, User } from "@/db/schema";
+import type { ApiTokenScope } from "@/domain/contracts";
 
 export type AuthSource = "demo_session" | "sso" | "api_token" | "service";
 export type Capability =
@@ -73,7 +73,10 @@ export type ResourceDescriptor = {
    * Create-time descriptors omit this and still use `region`.
    */
   visibilitySatisfied?: boolean;
-  parent?: Pick<ResourceDescriptor, "type" | "id" | "region" | "ownerId" | "published" | "deleted">;
+  parent?: Pick<
+    ResourceDescriptor,
+    "type" | "id" | "region" | "ownerId" | "published" | "deleted"
+  >;
   dashboardScope?: "personal" | "region" | "corporate";
   isStandard?: boolean;
   sharedWithUserIds?: readonly number[];

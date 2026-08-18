@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { RoundStatus } from "@/db/schema";
 import { STATUS_LABELS } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
 const STYLES: Record<RoundStatus, string> = {
   active: "tone-info",
@@ -12,7 +12,13 @@ const STYLES: Record<RoundStatus, string> = {
   locked: "tone-success",
 };
 
-export function StatusBadge({ status, className }: { status: RoundStatus; className?: string }) {
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status: RoundStatus;
+  className?: string;
+}) {
   return (
     <Badge variant="outline" className={cn(STYLES[status], className)}>
       {STATUS_LABELS[status]}
