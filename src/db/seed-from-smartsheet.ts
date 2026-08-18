@@ -2,7 +2,7 @@
  * Import downloaded Smartsheet JSON from data/smartsheet/json into PGlite,
  * replacing demo jobs / estimate rounds. Default identity is Brian Meyers (Central RPD).
  *
- * Run (server stopped): npm run db:import-smartsheet
+ * Run (server stopped): pnpm run db:import-smartsheet
  */
 
 import fs from "node:fs";

@@ -1,6 +1,6 @@
 /**
  * Demo/local bootstrap defaults. Applied before any runtime-config read so
- * `npm run db:reset` works without a hand-authored .env, and never seeds a
+ * `pnpm run db:reset` works without a hand-authored .env, and never seeds a
  * hosted Postgres URL that may be present in .env.local for production work.
  */
 export const DEMO_RUNTIME_DEFAULTS: Record<string, string> = {

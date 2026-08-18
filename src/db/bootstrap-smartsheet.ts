@@ -1,7 +1,7 @@
 /**
  * Full local offline bootstrap from committed Smartsheet export.
  *
- *   npm run db:bootstrap:smartsheet
+ *   pnpm run db:bootstrap:smartsheet
  *
  * Writes an isolated PGlite DB at .pglite/data-full (never Neon, never demo
  * .pglite/data). Source files: data/smartsheet/json (47 sheets on disk).

@@ -90,7 +90,6 @@ export function getArtifactStorage(): ArtifactStorage {
           ) => Promise<{ pathname?: string; url?: string }>;
         };
         try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
           mod = require(packageName);
         } catch {
           throw new Error(

@@ -8,13 +8,22 @@ When `DATABASE_URL` is set, the app uses Neon/Postgres via `postgres.js`
 ```bash
 # Load Neon URLs into the shell, then:
 npx drizzle-kit migrate          # apply drizzle/ migrations (prefer UNPOOLED URL)
-npm run db:seed                  # demo personas + sample rounds
+pnpm run db:seed                 # demo personas + sample rounds
 ```
 
 Prefer `DATABASE_URL_UNPOOLED` for migrate/push. App runtime uses the pooled
 `DATABASE_URL`.
 
-Prefer `npm run db:migrate:deploy` in production (`APP_ENV=production` + unpooled URL + advisory lock). Do not import `server-only` services from raw `tsx` seed scripts.
+Prefer `pnpm run db:migrate:deploy` in production (`APP_ENV=production` + unpooled URL + advisory lock). Do not import `server-only` services from raw `tsx` seed scripts.
+
+CI also runs the full vitest suite against a real `postgres:17` service (`web-postgres` job, `TEST_DATABASE_URL`). Locally, optional:
+
+```bash
+docker compose up -d --wait
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres pnpm test
+```
+
+Without `TEST_DATABASE_URL`, `pnpm test` stays on throwaway PGlite.
 
 Hosting and the Vercel env matrix: [github-and-vercel.md](github-and-vercel.md).
 

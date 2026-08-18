@@ -145,11 +145,11 @@ export function SourceProbes({
                 Lists precon sheets visible to the API token. Refresh exports
                 locally with{" "}
                 <code className="rounded bg-muted px-1 py-0.5 text-2xs">
-                  npm run smartsheet:pull
+                  pnpm run smartsheet:pull
                 </code>{" "}
                 then import into Neon with{" "}
                 <code className="rounded bg-muted px-1 py-0.5 text-2xs">
-                  npm run db:import-smartsheet
+                  pnpm run db:import-smartsheet
                 </code>
                 .
               </CardDescription>

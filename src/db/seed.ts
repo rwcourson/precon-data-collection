@@ -1,4 +1,4 @@
-/* Seed script: realistic demo dataset. Run with `npm run db:seed` (server stopped). */
+/* Seed script: realistic demo dataset. Run with `pnpm run db:seed` (server stopped). */
 
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";

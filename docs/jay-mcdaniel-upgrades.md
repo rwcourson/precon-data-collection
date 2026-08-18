@@ -105,7 +105,7 @@ Tools POST `/api/v1/copilot/tools` with HMAC + a **numeric** `x-eve-principal-id
 
 UI: `/copilot` — typography-only empty state, then rail + canvas. The shell is viewport-height so the composer stays on screen; the thread scrolls. Assistant replies render markdown (`CopilotMarkdown`), including GFM tables (and tables that arrived as one pipe-joined line). Query tables on the canvas use product column labels (`columnDisplayLabel`), not raw keys. Chat history is per-user in `localStorage` (`src/lib/copilot-history.ts`): Recent on the empty state, clock icon during a thread, **+** for a new chat. Magnus restore sends the stored messages on follow-up. `prefers-reduced-motion` disables the slide. If `/eve/v1/health` is not ok (typical on Vercel production), the page falls back to Magnus `useChat` over `/api/v1/ai/magnus`. Magnus stays for API and mobile and shares `copilotQueryService`.
 
-Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Next is on). Ignore `.eve/` in git and eslint.
+Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Next is on). Ignore `.eve/` in git and Biome.
 
 ## Chrome
 
@@ -144,9 +144,9 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 ## Verify
 
 ```bash
-npm run docs:check
-npm run db:migrate:check    # 13 migrations
-npm run verify:web          # build + typecheck + lint + test + isolated smoke
+pnpm run docs:check
+pnpm run db:migrate:check    # 13 migrations
+pnpm run verify:web          # build + typecheck + lint + test + isolated smoke
 ```
 
 Typecheck **after** `next build` on a clean tree (Next 16 generates `LayoutProps`). Isolated smoke must not import `server-only` from `tsx` seed.

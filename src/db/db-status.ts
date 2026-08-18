@@ -1,7 +1,7 @@
 /**
  * Print which database the current env targets and row counts (no secrets).
  *
- *   npm run db:status
+ *   pnpm run db:status
  */
 import { sql } from "drizzle-orm";
 
@@ -63,7 +63,7 @@ async function main(): Promise<void> {
         "\nNote: this looks like the synthetic demo seed (~42 jobs).\n"
       );
       process.stdout.write(
-        "  Full data is on Neon (DATABASE_MODE=postgres) or via npm run db:bootstrap:smartsheet.\n"
+        "  Full data is on Neon (DATABASE_MODE=postgres) or via pnpm run db:bootstrap:smartsheet.\n"
       );
     } else if (jobs >= 500) {
       process.stdout.write("\nLooks like the full imported dataset. Good.\n");

@@ -5,8 +5,9 @@ import path from "node:path";
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const developerCandidates = [
   process.env.DEVELOPER_DIR,
-  "/Users/robert/Downloads/Xcode-beta.app/Contents/Developer",
+  "/Applications/Xcode-beta.app/Contents/Developer",
   "/Applications/Xcode.app/Contents/Developer",
+  "/Users/robert/Downloads/Xcode-beta.app/Contents/Developer",
 ].filter(Boolean);
 const developerDir = developerCandidates.find((candidate) =>
   fs.existsSync(path.join(candidate, "usr", "bin", "xcodebuild"))

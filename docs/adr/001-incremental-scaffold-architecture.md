@@ -2,6 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-08-07  
+**Update (2026-08-18):** the repo is now a pnpm workspace (root + `apps/mobile`) with Biome lint. Turborepo and tRPC remain deferred.  
 **Context:** B&G Precon Data Collection prototype vs `bg-new-scaffold`
 
 ## Decision

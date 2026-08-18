@@ -31,7 +31,7 @@ Open questions for the room: [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-
 2. **Vercel Deployment Protection** — invite Brian / Keller / Greg or relax for the demo.
 3. Do **not** set `DATABRICKS_ALLOW_WRITE=true`.
 4. Leave `AUTH_MODE=demo` for the room unless SSO is already mapped.
-5. **Neon schema:** run `npm run db:migrate:deploy` so `estimate_rounds.owner` exists, then `npm run db:import-smartsheet` if you want the hosted dataset to carry Owner / Drawings Due / Bid Review. Parser is shipped; a full Neon rewrite is ops, not required for unit proof.
+5. **Neon schema:** run `pnpm run db:migrate:deploy` so `estimate_rounds.owner` exists, then `pnpm run db:import-smartsheet` if you want the hosted dataset to carry Owner / Drawings Due / Bid Review. Parser is shipped; a full Neon rewrite is ops, not required for unit proof.
 
 ---
 
@@ -49,8 +49,8 @@ Open questions for the room: [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-
 ## Verify
 
 ```bash
-npm test
-npm run docs:check
-npm run smoke:isolated
-npm run verify:web
+pnpm test
+pnpm run docs:check
+pnpm run smoke:isolated
+pnpm run verify:web
 ```

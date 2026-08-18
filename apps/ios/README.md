@@ -10,7 +10,7 @@ Use this app to compare Expo vs native side-by-side.
 
 - Xcode 15+ (this machine uses **Xcode-beta** at `/Users/robert/Downloads/Xcode-beta.app`)
 - [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- Running Precon API: from `Untitled/` → `npm run dev` (port **3000**, `AUTH_MODE=demo`)
+- Running Precon API: from repo root → `pnpm run dev` (port **3000**, `AUTH_MODE=demo`)
 
 ## Configure API base URL
 
@@ -28,7 +28,7 @@ Physical device: use your Mac LAN IP, e.g. `http://192.168.1.68:3000`.
 ```bash
 export DEVELOPER_DIR=/Users/robert/Downloads/Xcode-beta.app/Contents/Developer
 
-cd Untitled/apps/ios
+cd apps/ios
 xcodegen generate
 open PreconNative.xcodeproj
 
@@ -66,14 +66,14 @@ xcodebuild -scheme PreconNative -destination 'platform=iOS Simulator,name=iPhone
 ## Compare to Expo
 
 ```bash
-# Terminal A — API
-cd Untitled && npm run dev
+# Terminal A — API (repo root)
+pnpm run dev
 
 # Terminal B — Expo
-cd Untitled/apps/mobile && EXPO_PUBLIC_API_URL=http://127.0.0.1:3000 npx expo start --lan
+cd apps/mobile && EXPO_PUBLIC_API_URL=http://127.0.0.1:3000 npx expo start --lan
 
 # Terminal C — Native
-cd Untitled/apps/ios && xcodegen generate && open PreconNative.xcodeproj
+cd apps/ios && xcodegen generate && open PreconNative.xcodeproj
 ```
 
 ## Tests

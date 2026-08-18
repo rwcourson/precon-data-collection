@@ -5,11 +5,11 @@
  * PGlite directory and seeds ~42 jobs / ~108 rounds for the role-switcher demo.
  *
  * Full data paths:
- *   - Neon (existing hosted DB): set DATABASE_MODE=postgres in .env.local → npm run dev
- *   - Local full import from data/smartsheet: npm run db:bootstrap:smartsheet
+ *   - Neon (existing hosted DB): set DATABASE_MODE=postgres in .env.local → pnpm run dev
+ *   - Local full import from data/smartsheet: pnpm run db:bootstrap:smartsheet
  *
- *   npm run db:demo:bootstrap
- *   npm run db:reset   # alias of demo bootstrap
+ *   pnpm run db:demo:bootstrap
+ *   pnpm run db:reset   # alias of demo bootstrap
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
       `PGlite data dir: ${process.env.PGLITE_DATA_DIR ?? ".pglite/data"}\n`
     );
     process.stdout.write(
-      "Tip: full Smartsheet import → npm run db:bootstrap:smartsheet\n"
+      "Tip: full Smartsheet import → pnpm run db:bootstrap:smartsheet\n"
     );
     process.stdout.write(
       "Tip: use hosted Neon data → DATABASE_MODE=postgres in .env.local (already configured if Neon URLs present)\n"

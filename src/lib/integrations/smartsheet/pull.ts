@@ -85,7 +85,7 @@ export async function pullSmartsheetExports(opts?: {
 
   try {
     // File pull is for local/ops machines. On Vercel the filesystem is ephemeral —
-    // use listPreconSheets + `npm run smartsheet:pull` + `db:import-smartsheet` instead.
+    // use listPreconSheets + `pnpm run smartsheet:pull` + `db:import-smartsheet` instead.
     if (process.env.VERCEL) {
       return {
         configured: true,
@@ -96,7 +96,7 @@ export async function pullSmartsheetExports(opts?: {
         writtenTo,
         sheets: [],
         error:
-          "File pull is disabled on Vercel. Run `npm run smartsheet:pull` locally, then `npm run db:import-smartsheet` against Neon.",
+          "File pull is disabled on Vercel. Run `pnpm run smartsheet:pull` locally, then `pnpm run db:import-smartsheet` against Neon.",
       };
     }
 

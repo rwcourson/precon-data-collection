@@ -50,4 +50,4 @@ for (const name of keep) {
 
 const pkg = JSON.parse(readFileSync(join(dest, "package.json"), "utf8"));
 console.log(`Synced ${pkg.name}@${pkg.version} → ${dest}`);
-console.log("Run: npm install");
+console.log("Run: pnpm install");

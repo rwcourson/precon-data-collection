@@ -120,9 +120,19 @@ Run `pnpm run typecheck` **after** `pnpm run build` on a clean tree (Next 16 gen
 
 ## Stack
 
-Next.js 16.3 (App Router) · React 19 · TypeScript · Drizzle ORM + PGlite / Neon · Tailwind 4 + shadcn/ui · Better Auth · AI SDK 7 · Eve (`withEve`) · ExcelJS · pnpm workspace (`apps/mobile`)
+Next.js 16.3 (App Router) · React 19 · TypeScript · Drizzle ORM + PGlite / Neon · Tailwind 4 + shadcn/ui · Better Auth · AI SDK 7 · Eve (`withEve`) · ExcelJS · pnpm workspace (`apps/mobile`) · Biome
 
 See [apps/ios/README.md](apps/ios/README.md) for the native client (same `/api/v1/mobile`). It is not part of the V1 leadership demo.
+
+## Toolchain
+
+| Piece | Command / layout |
+| --- | --- |
+| Package manager | pnpm 11.22.0 workspace: root + `apps/mobile` (`pnpm-workspace.yaml`, `node-linker=hoisted` in `.npmrc`) |
+| Lint / format | `pnpm run lint` → `biome check .`; `pnpm run fix` → `biome check --write .` |
+| Tests (default) | `pnpm test` on throwaway PGlite |
+| Tests (real Postgres) | `TEST_DATABASE_URL=… pnpm test` (CI job `web-postgres`; local `docker compose up -d --wait`) |
+| Install | `pnpm install` at repo root (one lockfile: `pnpm-lock.yaml`) |
 
 ## Eve copilot
 

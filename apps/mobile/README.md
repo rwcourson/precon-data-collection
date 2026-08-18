@@ -5,8 +5,8 @@ iOS-first Expo Router client for B&G Precon Data Collection.
 ## Start
 
 ```bash
-# Terminal 1 — web API (from Untitled/)
-npm run dev
+# Terminal 1 — web API (from repo root)
+pnpm run dev
 
 # Terminal 2 — mobile
 cd apps/mobile

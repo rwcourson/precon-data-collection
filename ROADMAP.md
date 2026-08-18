@@ -87,9 +87,9 @@ See [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
 ## Verify
 
 ```bash
-npm test
-npm run docs:check
-npm run db:migrate:check
-npm run smoke:isolated
-npm run verify:web
+pnpm test
+pnpm run docs:check
+pnpm run db:migrate:check
+pnpm run smoke:isolated
+pnpm run verify:web
 ```

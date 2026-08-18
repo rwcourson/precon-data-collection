@@ -21,7 +21,7 @@ How this repo is hosted. Update this file when the project name, domain, or env 
 | `expo` | Ubuntu | Mobile typecheck / tests / bundle |
 | `ios` | macOS, **push to `master`/`main` only** | Native iOS verify |
 
-`verify:web` needs Playwright Chromium (`pnpm exec playwright install --with-deps chromium` in CI) and demo PGlite env (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=pglite`). CI installs with `pnpm install --frozen-lockfile` (lockfile is `pnpm-lock.yaml`; `packageManager` is `pnpm@11.22.0`).
+`verify:web` needs Playwright Chromium (`pnpm exec playwright install --with-deps chromium` in CI) and demo PGlite env (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=pglite`). CI installs with `pnpm install --frozen-lockfile` (lockfile is `pnpm-lock.yaml`; `packageManager` is `pnpm@11.22.0`). Lint is Biome (`pnpm lint` / `pnpm run lint`), not ESLint.
 
 Do not skip hooks on commits. Do not force-push `master`.
 

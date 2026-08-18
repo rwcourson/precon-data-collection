@@ -11,7 +11,7 @@ export function pickDefaultDemoUser<T extends { name: string; role: string }>(
   roster: T[]
 ): T {
   if (roster.length === 0) {
-    throw new Error("No users seeded — run `npm run db:seed` first.");
+    throw new Error("No users seeded — run `pnpm run db:seed` first.");
   }
   const named = roster.find((u) => u.name === DEFAULT_DEMO_RPD.name);
   if (named) return named;

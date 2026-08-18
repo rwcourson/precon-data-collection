@@ -72,7 +72,7 @@ export const getCurrentUser = cache(
     const id = Number(store.get(COOKIE)?.value);
     const all = await db.select().from(users).orderBy(asc(users.id));
     if (all.length === 0) {
-      throw new Error("No users seeded — run `npm run db:seed` first.");
+      throw new Error("No users seeded — run `pnpm run db:seed` first.");
     }
     return all.find((u) => u.id === id) ?? pickDefaultDemoUser(all);
   }
