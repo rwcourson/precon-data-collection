@@ -50,7 +50,7 @@ export function RegionMarketFilter({
     <Popover>
       <PopoverTrigger
         nativeButton={true}
-        className="inline-flex h-8 min-w-[8.5rem] max-w-56 items-center justify-between gap-1.5 rounded-md border border-border/80 bg-card px-2.5 text-[13px] font-normal hover:bg-accent hover:text-accent-foreground"
+        className="inline-flex h-7 min-w-[8.5rem] max-w-56 items-center justify-between gap-1.5 rounded-md border border-border/80 bg-card px-2.5 text-[13px] font-normal hover:bg-accent hover:text-accent-foreground"
         data-testid="region-market-filter"
         aria-label="Filter by region and market"
       >

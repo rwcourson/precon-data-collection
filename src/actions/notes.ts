@@ -8,15 +8,11 @@ import {
 } from "@/domain/contracts";
 import { principalCanAssignJobUser } from "@/lib/authorization/decisions";
 import { listDirectoryUsersForPrincipal, loadRoundForPrincipal } from "@/lib/authorization/loaders";
+import { DomainError, findDomainError } from "@/domain/errors";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { createNoteFromUploadedForm, revalidateRoundNotes } from "@/lib/note-create";
 import { extractMentionUserIds } from "@/lib/note-body";
 import { notesService } from "@/services/notes-service";
-
-function revalidateRound(roundId: number) {
-  revalidatePath("/bid-schedule");
-  revalidatePath(`/rounds/${roundId}`);
-  revalidatePath("/", "layout");
-}
 
 export type NotesDirectoryUser = {
   id: number;
@@ -63,49 +59,33 @@ export async function createRoundNote(input: {
     bytes: Uint8Array.from(file.bytes),
   }));
   const note = await notesService.create(principal, parsed.roundId, parsed.body, files);
-  revalidateRound(parsed.roundId);
+  revalidateRoundNotes(parsed.roundId);
   return note;
 }
 
-function isUploadedFile(value: FormDataEntryValue): value is File {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "arrayBuffer" in value &&
-    typeof value.arrayBuffer === "function" &&
-    "name" in value &&
-    typeof value.name === "string" &&
-    value.name.length > 0 &&
-    "size" in value &&
-    typeof value.size === "number" &&
-    value.size > 0
-  );
+function noteActionError(error: unknown, fallback: string) {
+  const domain = findDomainError(error);
+  if (domain) return domain.what;
+  if (error instanceof DomainError) return error.what;
+  if (error instanceof Error && error.message && !/Minified React error #\d+/.test(error.message)) {
+    return error.message;
+  }
+  return fallback;
 }
 
 export async function createRoundNoteFromForm(formData: FormData) {
-  const roundId = Number(formData.get("roundId"));
-  const body = String(formData.get("body") ?? "");
-  const files: { filename: string; contentType: string; bytes: Uint8Array }[] = [];
-  for (const value of formData.getAll("files")) {
-    if (!isUploadedFile(value)) continue;
-    files.push({
-      filename: value.name,
-      contentType: value.type || "application/octet-stream",
-      bytes: new Uint8Array(await value.arrayBuffer()),
-    });
+  try {
+    return { ok: true as const, note: await createNoteFromUploadedForm(formData) };
+  } catch (error) {
+    return { ok: false as const, error: noteActionError(error, "Could not post the note") };
   }
-  const parsed = createRoundNoteSchema.parse({ roundId, body });
-  const principal = await getWebPrincipal();
-  const note = await notesService.create(principal, parsed.roundId, parsed.body, files);
-  revalidateRound(parsed.roundId);
-  return note;
 }
 
 export async function editRoundNote(input: { noteId: number; body: string }) {
   const parsed = editRoundNoteSchema.parse(input);
   const principal = await getWebPrincipal();
   const note = await notesService.edit(principal, parsed.noteId, parsed.body);
-  revalidateRound(note.roundId);
+  revalidateRoundNotes(note.roundId);
   return note;
 }
 

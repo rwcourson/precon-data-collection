@@ -3,13 +3,21 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEveAgent } from "eve/react";
-import { ArrowUp, BarChart3, ClipboardList, Loader2, UserRound, Users } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, BarChart3, ClipboardList, History, Loader2, Plus, Trash2, UserRound, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CopilotMarkdown } from "@/components/copilot/copilot-markdown";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  emptyConversation,
+  loadCopilotHistory,
+  newConversationId,
+  saveCopilotHistory,
+  upsertConversation,
+  type CopilotConversation,
+} from "@/lib/copilot-history";
 import {
   columnDisplayLabel,
   formatColumnValue,
@@ -247,15 +255,27 @@ function CopilotShell({
   messages,
   pending,
   send,
+  conversations,
+  activeId,
+  onNewChat,
+  onSelectChat,
+  onDeleteChat,
 }: {
   messages: ChatMessage[];
   pending: boolean;
   send: (text: string) => void;
+  conversations: CopilotConversation[];
+  activeId: string;
+  onNewChat: () => void;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
 }) {
   const [input, setInput] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
   const open = messages.length > 0 || pending;
+  const saved = conversations.filter((row) => row.messages.length > 0);
   const chart = useMemo(() => extractChart(messages), [messages]);
   const table = useMemo(() => extractTableRows(messages), [messages]);
   const activity = useMemo(() => extractActivity(messages), [messages]);
@@ -288,8 +308,8 @@ function CopilotShell({
     >
       <section
         className={cn(
-          "mx-auto flex w-full flex-col transition-[max-width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-          open ? "max-w-none self-stretch" : "max-w-xl justify-center",
+          "mx-auto flex h-full min-h-0 w-full flex-col transition-[max-width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          open ? "max-w-none overflow-hidden" : "max-w-xl justify-center",
         )}
       >
         {!open ? (
@@ -297,14 +317,74 @@ function CopilotShell({
             Copilot
           </p>
         ) : null}
-        <h1
-          className={cn(
-            "copilot-title font-heading font-semibold tracking-tight text-foreground",
-            open ? "mb-3 text-left text-sm" : "text-center text-[1.75rem] leading-tight",
-          )}
-        >
-          Ask precon
-        </h1>
+        <div className={cn("flex items-center gap-2", open ? "mb-2" : "justify-center")}>
+          <h1
+            className={cn(
+              "copilot-title font-heading font-semibold tracking-tight text-foreground",
+              open ? "text-left text-sm" : "text-center text-[1.75rem] leading-tight",
+            )}
+          >
+            Ask precon
+          </h1>
+          {open ? (
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="New chat"
+                onClick={onNewChat}
+              >
+                <Plus className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Chat history"
+                aria-pressed={historyOpen}
+                onClick={() => setHistoryOpen((value) => !value)}
+              >
+                <History className="size-3.5" />
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        {open && historyOpen && saved.length > 0 ? (
+          <ul
+            data-testid="copilot-history"
+            className="mb-2 max-h-40 shrink-0 space-y-0.5 overflow-y-auto rounded-lg border bg-card p-1"
+          >
+            {saved.map((row) => (
+              <li key={row.id} className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectChat(row.id);
+                    setHistoryOpen(false);
+                  }}
+                  className={cn(
+                    "min-w-0 flex-1 truncate rounded-md px-2 py-1.5 text-left text-xs",
+                    row.id === activeId
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+                  )}
+                >
+                  {row.title}
+                </button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Delete ${row.title}`}
+                  onClick={() => onDeleteChat(row.id)}
+                >
+                  <Trash2 className="size-3" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <div className="copilot-hero" aria-hidden={open} inert={open}>
           <div className="copilot-hero-inner">
@@ -333,6 +413,26 @@ function CopilotShell({
                 );
               })}
             </div>
+            {saved.length > 0 ? (
+              <div className="mt-6">
+                <p className="mb-2 text-center text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                  Recent
+                </p>
+                <ul data-testid="copilot-history" className="space-y-1">
+                  {saved.slice(0, 6).map((row) => (
+                    <li key={row.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelectChat(row.id)}
+                        className="w-full truncate rounded-md border bg-card px-3 py-2 text-left text-sm hover:border-info-border hover:bg-info-soft/70"
+                      >
+                        {row.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -346,7 +446,7 @@ function CopilotShell({
           }}
           className={cn(
             "copilot-thread min-h-0 space-y-3 overflow-y-auto overscroll-contain pr-1",
-            open ? "mb-3 max-h-[42vh] flex-1 lg:max-h-none" : "hidden",
+            open ? "mb-3 flex-1" : "hidden",
           )}
         >
           {messages.map((message) => {
@@ -363,7 +463,7 @@ function CopilotShell({
               );
             }
             return (
-              <div key={message.id} className="max-w-prose px-0.5 py-0.5">
+              <div key={message.id} className="min-w-0 px-0.5 py-0.5">
                 <CopilotMarkdown text={text} />
               </div>
             );
@@ -376,7 +476,7 @@ function CopilotShell({
           ) : null}
         </div>
 
-        <div className={cn("w-full", open && "mt-auto")}>
+        <div className={cn("w-full shrink-0", open && "mt-auto")}>
           <div className="rounded-xl border bg-card shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
             <Textarea
               value={input}
@@ -444,14 +544,33 @@ function CopilotShell({
   );
 }
 
-function EveCopilot() {
+function EveCopilot({
+  conversation,
+  onMessages,
+  ...history
+}: {
+  conversation: CopilotConversation;
+  onMessages: (messages: ChatMessage[]) => void;
+  conversations: CopilotConversation[];
+  activeId: string;
+  onNewChat: () => void;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
+}) {
   const agent = useEveAgent({
     onError: (error) => toast.error(error.message || "Copilot could not respond"),
   });
+  const live = adaptEveMessages(agent.data.messages);
+  const messages = live.length > 0 ? live : conversation.messages;
+  useEffect(() => {
+    const next = adaptEveMessages(agent.data.messages);
+    if (next.length > 0) onMessages(next);
+  }, [agent.data.messages, onMessages]);
   const pending = agent.status === "submitted" || agent.status === "streaming";
   return (
     <CopilotShell
-      messages={adaptEveMessages(agent.data.messages)}
+      {...history}
+      messages={messages}
       pending={pending}
       send={(text) => {
         void agent.send(text);
@@ -460,15 +579,33 @@ function EveCopilot() {
   );
 }
 
-function MagnusCopilot() {
+function MagnusCopilot({
+  conversation,
+  onMessages,
+  ...history
+}: {
+  conversation: CopilotConversation;
+  onMessages: (messages: ChatMessage[]) => void;
+  conversations: CopilotConversation[];
+  activeId: string;
+  onNewChat: () => void;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
+}) {
   const { messages, sendMessage, status, error } = useChat({
+    id: conversation.id,
+    messages: conversation.messages as never,
     transport: magnusTransport,
   });
+  useEffect(() => {
+    onMessages(messages as unknown as ChatMessage[]);
+  }, [messages, onMessages]);
   useEffect(() => {
     if (error) toast.error(error.message || "Copilot could not respond");
   }, [error]);
   return (
     <CopilotShell
+      {...history}
       messages={messages as unknown as ChatMessage[]}
       pending={status === "submitted" || status === "streaming"}
       send={(text) => {
@@ -478,8 +615,18 @@ function MagnusCopilot() {
   );
 }
 
-export function CopilotCanvas() {
+export function CopilotCanvas({ userId }: { userId: number }) {
   const [mode, setMode] = useState<"eve" | "magnus" | "pending">("pending");
+  const [activeId, setActiveId] = useState("");
+  const [conversations, setConversations] = useState<CopilotConversation[]>([]);
+  const [historyReady, setHistoryReady] = useState(false);
+
+  useEffect(() => {
+    const loaded = loadCopilotHistory(userId);
+    setActiveId(loaded.activeId);
+    setConversations(loaded.conversations);
+    setHistoryReady(true);
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -495,7 +642,68 @@ export function CopilotCanvas() {
     };
   }, []);
 
-  if (mode === "pending") {
+  const persist = useCallback(
+    (store: { activeId: string; conversations: CopilotConversation[] }) => {
+      setActiveId(store.activeId);
+      setConversations(store.conversations);
+      saveCopilotHistory(userId, store);
+    },
+    [userId],
+  );
+
+  const storeRef = useRef({ activeId, conversations });
+  storeRef.current = { activeId, conversations };
+
+  const conversation =
+    conversations.find((row) => row.id === activeId) ?? emptyConversation(activeId || newConversationId());
+
+  const onMessages = useCallback(
+    (messages: ChatMessage[]) => {
+      const current = storeRef.current;
+      const existing =
+        current.conversations.find((row) => row.id === current.activeId) ??
+        emptyConversation(current.activeId || newConversationId());
+      if (messages.length === 0 && existing.messages.length === 0) return;
+      const next = upsertConversation(current, { ...existing, id: existing.id, messages });
+      if (
+        next.activeId === current.activeId &&
+        next.conversations.length === current.conversations.length &&
+        next.conversations[0]?.messages.length === existing.messages.length &&
+        next.conversations[0]?.messages.at(-1)?.id === existing.messages.at(-1)?.id &&
+        JSON.stringify(next.conversations[0]?.messages.at(-1)?.parts) ===
+          JSON.stringify(existing.messages.at(-1)?.parts)
+      ) {
+        return;
+      }
+      persist(next);
+    },
+    [persist],
+  );
+
+  const onNewChat = useCallback(() => {
+    const draft = emptyConversation();
+    persist({ activeId: draft.id, conversations: storeRef.current.conversations });
+  }, [persist]);
+
+  const onSelectChat = useCallback(
+    (id: string) => {
+      persist({ activeId: id, conversations: storeRef.current.conversations });
+    },
+    [persist],
+  );
+
+  const onDeleteChat = useCallback(
+    (id: string) => {
+      const remaining = storeRef.current.conversations.filter((row) => row.id !== id);
+      persist({
+        activeId: id === storeRef.current.activeId ? (remaining[0]?.id ?? newConversationId()) : storeRef.current.activeId,
+        conversations: remaining,
+      });
+    },
+    [persist],
+  );
+
+  if (mode === "pending" || !historyReady) {
     return (
       <div className="flex min-h-[min(36rem,78dvh)] items-center justify-center text-sm text-muted-foreground">
         <Loader2 className="mr-2 size-4 animate-spin" />
@@ -503,5 +711,20 @@ export function CopilotCanvas() {
       </div>
     );
   }
-  return mode === "eve" ? <EveCopilot /> : <MagnusCopilot />;
+
+  const history = {
+    conversations,
+    activeId: conversation.id,
+    onNewChat,
+    onSelectChat,
+    onDeleteChat,
+    conversation,
+    onMessages,
+  };
+
+  return mode === "eve" ? (
+    <EveCopilot key={conversation.id} {...history} />
+  ) : (
+    <MagnusCopilot key={conversation.id} {...history} />
+  );
 }

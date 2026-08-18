@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import { POST as createNote } from "@/app/api/notes/route";
 import { GET as downloadAttachment } from "@/app/api/notes/attachments/[id]/route";
 import { db } from "@/db";
 import { auditLog, estimateRounds, jobs, roundNoteAttachments, roundNotes, users } from "@/db/schema";
@@ -149,6 +150,18 @@ describe("effort notes", () => {
     expect(response.headers.get("content-type")).toBe("image/png");
     const body = new Uint8Array(await response.arrayBuffer());
     expect(body.byteLength).toBe(PNG.byteLength);
+
+    const form = new FormData();
+    form.set("roundId", String(round.id));
+    form.set("body", "posted through the notes API");
+    form.set("files", new File([Buffer.from(PNG)], "api-plan.png", { type: "image/png" }));
+    const posted = await createNote(
+      new NextRequest("http://localhost/api/notes", { method: "POST", body: form }),
+    );
+    expect(posted.status).toBe(200);
+    const json = (await posted.json()) as { id: number; attachments: { filename: string }[] };
+    createdNoteIds.push(json.id);
+    expect(json.attachments[0]?.filename).toBe("api-plan.png");
   });
 
   it("accepts a 10,000-character note and rejects 10,001", async () => {

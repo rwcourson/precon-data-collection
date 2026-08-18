@@ -58,6 +58,7 @@ Identity for Eve: `GET /api/v1/copilot/identity` (session cookie). Do not use Ev
 ## Streaming Magnus chat (AI SDK 7)
 
 The Eve copilot UI lives at `/copilot` (`useEveAgent` → `/eve/v1/*` when healthy).
+Threads persist per user in the browser (`localStorage`, `src/lib/copilot-history.ts`); they are not a server resource.
 Magnus remains the API/mobile fallback and streams via:
 
 ```

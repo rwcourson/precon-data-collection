@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Paperclip, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  createRoundNoteFromForm,
   deleteRoundNote,
   editRoundNote,
   previewRoundNoteMentions,
@@ -25,6 +24,31 @@ import { formatAttachmentBytes, relativeAge } from "@/lib/note-body";
 import { fmtDateTime } from "@/lib/format";
 
 const NOTE_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+
+function userFacingError(error: unknown, fallback: string) {
+  if (!(error instanceof Error) || !error.message) return fallback;
+  if (/Minified React error #\d+/.test(error.message)) {
+    return "Could not save the attachment. Try a smaller file, then post again.";
+  }
+  return error.message;
+}
+
+async function postNoteFromForm(formData: FormData): Promise<NotesThreadNote> {
+  const response = await fetch("/api/notes", { method: "POST", body: formData });
+  const payload = (await response.json().catch(() => null)) as
+    | NotesThreadNote
+    | { error?: string }
+    | null;
+  if (!response.ok) {
+    throw new Error(
+      payload && "error" in payload && payload.error ? payload.error : "Could not post the note",
+    );
+  }
+  if (!payload || !("id" in payload)) {
+    throw new Error("Could not post the note");
+  }
+  return payload;
+}
 
 export type NotesThreadNote = {
   id: number;
@@ -138,7 +162,7 @@ export function NotesThread({
         setNotes((prev) => [...prev, optimistic]);
         setBody("");
         setAttachments([]);
-        const created = await createRoundNoteFromForm(formData);
+        const created = await postNoteFromForm(formData);
         setNotes((prev) => [...prev.filter((note) => note.id !== optimistic.id), created]);
         formRef.current?.reset();
         router.refresh();
@@ -146,7 +170,7 @@ export function NotesThread({
         setNotes((prev) => prev.filter((note) => note.id !== optimistic.id));
         setBody(trimmed);
         setAttachments(pendingFiles);
-        toast.error(err instanceof Error ? err.message : "Could not post the note");
+        toast.error(userFacingError(err, "Could not post the note"));
       }
     });
   }
