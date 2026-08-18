@@ -16,7 +16,8 @@ How this repo is hosted. Update this file when the project name, domain, or env 
 
 | Job | Runner | What it proves |
 | --- | --- | --- |
-| `web` | Ubuntu | `db:migrate:check`, `contract:check`, `security:check`, `perf:check`, `release:check`, `docs:check`, `verify:web` (build + typecheck + lint + test + isolated smoke) |
+| `web` | Ubuntu | `db:migrate:check`, `contract:check`, `security:check`, `perf:check`, `release:check`, `docs:check`, `verify:web` (build + typecheck + lint + test + isolated smoke) on PGlite |
+| `web-postgres` | Ubuntu + `postgres:17` service | Full vitest suite against real Postgres (`TEST_DATABASE_URL`) |
 | `expo` | Ubuntu | Mobile typecheck / tests / bundle |
 | `ios` | macOS, **push to `master`/`main` only** | Native iOS verify |
 
