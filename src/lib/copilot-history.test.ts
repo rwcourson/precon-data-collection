@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   conversationTitle,
   emptyConversation,
+  loadCopilotHistory,
+  saveCopilotHistory,
   slimMessages,
   upsertConversation,
 } from "@/lib/copilot-history";
@@ -28,6 +30,15 @@ describe("copilot history", () => {
     const withDraft = upsertConversation(first, draft);
     expect(withDraft.conversations.map((row) => row.id)).toEqual(["a"]);
     expect(withDraft.activeId).toBe("b");
+  });
+
+  it("returns a cached snapshot so the store hook does not loop", () => {
+    const store = upsertConversation(
+      { activeId: "a", conversations: [] },
+      { id: "a", title: "New chat", updatedAt: 1, messages: [user] },
+    );
+    saveCopilotHistory(9, store);
+    expect(loadCopilotHistory(9)).toBe(loadCopilotHistory(9));
   });
 
   it("caps stored tool rows so history stays small", () => {

@@ -4,17 +4,19 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEveAgent } from "eve/react";
 import { ArrowUp, BarChart3, ClipboardList, History, Loader2, Plus, Trash2, UserRound, Users } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { CopilotMarkdown } from "@/components/copilot/copilot-markdown";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  EMPTY_COPILOT_HISTORY,
   emptyConversation,
   loadCopilotHistory,
   newConversationId,
   saveCopilotHistory,
+  subscribeCopilotHistory,
   upsertConversation,
   type CopilotConversation,
 } from "@/lib/copilot-history";
@@ -617,16 +619,11 @@ function MagnusCopilot({
 
 export function CopilotCanvas({ userId }: { userId: number }) {
   const [mode, setMode] = useState<"eve" | "magnus" | "pending">("pending");
-  const [activeId, setActiveId] = useState("");
-  const [conversations, setConversations] = useState<CopilotConversation[]>([]);
-  const [historyReady, setHistoryReady] = useState(false);
-
-  useEffect(() => {
-    const loaded = loadCopilotHistory(userId);
-    setActiveId(loaded.activeId);
-    setConversations(loaded.conversations);
-    setHistoryReady(true);
-  }, [userId]);
+  const store = useSyncExternalStore(
+    (onChange) => subscribeCopilotHistory(userId, onChange),
+    () => loadCopilotHistory(userId),
+    () => EMPTY_COPILOT_HISTORY,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -643,31 +640,26 @@ export function CopilotCanvas({ userId }: { userId: number }) {
   }, []);
 
   const persist = useCallback(
-    (store: { activeId: string; conversations: CopilotConversation[] }) => {
-      setActiveId(store.activeId);
-      setConversations(store.conversations);
-      saveCopilotHistory(userId, store);
+    (next: { activeId: string; conversations: CopilotConversation[] }) => {
+      saveCopilotHistory(userId, next);
     },
     [userId],
   );
 
-  const storeRef = useRef({ activeId, conversations });
-  storeRef.current = { activeId, conversations };
-
   const conversation =
-    conversations.find((row) => row.id === activeId) ?? emptyConversation(activeId || newConversationId());
+    store.conversations.find((row) => row.id === store.activeId) ??
+    emptyConversation(store.activeId || newConversationId());
 
   const onMessages = useCallback(
     (messages: ChatMessage[]) => {
-      const current = storeRef.current;
       const existing =
-        current.conversations.find((row) => row.id === current.activeId) ??
-        emptyConversation(current.activeId || newConversationId());
+        store.conversations.find((row) => row.id === store.activeId) ??
+        emptyConversation(store.activeId || newConversationId());
       if (messages.length === 0 && existing.messages.length === 0) return;
-      const next = upsertConversation(current, { ...existing, id: existing.id, messages });
+      const next = upsertConversation(store, { ...existing, id: existing.id, messages });
       if (
-        next.activeId === current.activeId &&
-        next.conversations.length === current.conversations.length &&
+        next.activeId === store.activeId &&
+        next.conversations.length === store.conversations.length &&
         next.conversations[0]?.messages.length === existing.messages.length &&
         next.conversations[0]?.messages.at(-1)?.id === existing.messages.at(-1)?.id &&
         JSON.stringify(next.conversations[0]?.messages.at(-1)?.parts) ===
@@ -677,33 +669,32 @@ export function CopilotCanvas({ userId }: { userId: number }) {
       }
       persist(next);
     },
-    [persist],
+    [persist, store],
   );
 
   const onNewChat = useCallback(() => {
-    const draft = emptyConversation();
-    persist({ activeId: draft.id, conversations: storeRef.current.conversations });
-  }, [persist]);
+    persist({ activeId: emptyConversation().id, conversations: store.conversations });
+  }, [persist, store.conversations]);
 
   const onSelectChat = useCallback(
     (id: string) => {
-      persist({ activeId: id, conversations: storeRef.current.conversations });
+      persist({ activeId: id, conversations: store.conversations });
     },
-    [persist],
+    [persist, store.conversations],
   );
 
   const onDeleteChat = useCallback(
     (id: string) => {
-      const remaining = storeRef.current.conversations.filter((row) => row.id !== id);
+      const remaining = store.conversations.filter((row) => row.id !== id);
       persist({
-        activeId: id === storeRef.current.activeId ? (remaining[0]?.id ?? newConversationId()) : storeRef.current.activeId,
+        activeId: id === store.activeId ? (remaining[0]?.id ?? newConversationId()) : store.activeId,
         conversations: remaining,
       });
     },
-    [persist],
+    [persist, store],
   );
 
-  if (mode === "pending" || !historyReady) {
+  if (mode === "pending" || !store.activeId) {
     return (
       <div className="flex min-h-[min(36rem,78dvh)] items-center justify-center text-sm text-muted-foreground">
         <Loader2 className="mr-2 size-4 animate-spin" />
@@ -713,7 +704,7 @@ export function CopilotCanvas({ userId }: { userId: number }) {
   }
 
   const history = {
-    conversations,
+    conversations: store.conversations,
     activeId: conversation.id,
     onNewChat,
     onSelectChat,
