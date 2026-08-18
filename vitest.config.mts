@@ -2,30 +2,32 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { defineConfig } from "vitest/config";
+import {
+  applyTestDatabaseWiring,
+  deriveTestDatabaseWiring,
+} from "./src/test/test-db";
 
-// Isolate PGlite so migrations never touch the developer's local data.
-// Use a unique directory per process; never share with Next build or smoke.
 const pgliteTestDir = path.join(
   os.tmpdir(),
   `precon-vitest-${process.pid}-${Date.now()}`
 );
-fs.mkdirSync(pgliteTestDir, { recursive: true });
-process.env.PGLITE_DATA_DIR = pgliteTestDir;
-delete process.env.DATABASE_URL;
-delete process.env.DATABASE_URL_UNPOOLED;
-Object.assign(process.env, {
-  APP_ENV: "demo",
-  AUTH_MODE: "demo",
-  DATABASE_MODE: "pglite",
-  APP_ORIGIN: "http://127.0.0.1:3000",
-  ALLOWED_ORIGINS: "http://127.0.0.1:3000",
-  EMAIL_MODE: "stub",
-  PRIVATE_STORAGE_MODE: "local",
-  CONNECT_MODE: "mock",
-  SMARTSHEET_MODE: "disabled",
-  DATABRICKS_MODE: "disabled",
-  API_TOKEN_MAX_TTL_DAYS: "90",
+
+const wiring = deriveTestDatabaseWiring(process.env, {
+  pgliteDataDir: pgliteTestDir,
 });
+if (wiring.mode === "pglite") {
+  fs.mkdirSync(pgliteTestDir, { recursive: true });
+}
+applyTestDatabaseWiring(wiring);
+if (wiring.mode === "postgres") {
+  process.stderr.write(
+    `vitest database: postgres ${wiring.databaseName} (DATABASE_MODE=${process.env.DATABASE_MODE})\n`
+  );
+} else {
+  process.stderr.write(
+    `vitest database: pglite ${pgliteTestDir} (DATABASE_MODE=${process.env.DATABASE_MODE})\n`
+  );
+}
 
 export default defineConfig({
   test: {
@@ -40,6 +42,7 @@ export default defineConfig({
     testTimeout: 60_000,
     hookTimeout: 90_000,
     // PGlite file DB and WASM cannot safely be shared across worker processes.
+    // Postgres lane keeps the same single-worker semantics.
     fileParallelism: false,
     maxWorkers: 1,
     globalSetup: ["src/test/global-setup.ts"],

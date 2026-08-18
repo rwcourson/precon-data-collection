@@ -534,6 +534,15 @@ export function runtimeDiagnostics(status: RuntimeConfigStatus) {
   };
 }
 
+export function isLocalPostgresUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
 export function assertDemoSeedAllowed(
   env: RuntimeEnvironment = process.env
 ): void {
@@ -544,13 +553,28 @@ export function assertDemoSeedAllowed(
       { key: "APP_ENV", reason: "must be demo to seed" },
     ]);
   }
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (status.config.database.mode === "postgres") {
+    if (!databaseUrl || !isLocalPostgresUrl(databaseUrl)) {
+      throw new RuntimeConfigError([
+        {
+          key: "DATABASE_URL",
+          reason: "hosted Postgres is forbidden for demo seeding",
+        },
+      ]);
+    }
+    return;
+  }
   if (status.config.database.mode !== "pglite") {
     throw new RuntimeConfigError([
       { key: "DATABASE_MODE", reason: "must be pglite to seed demo data" },
     ]);
   }
-  const databaseUrl = env.DATABASE_URL?.trim();
-  if (databaseUrl && /^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
+  if (
+    databaseUrl &&
+    /^postgres(?:ql)?:\/\//i.test(databaseUrl) &&
+    !isLocalPostgresUrl(databaseUrl)
+  ) {
     throw new RuntimeConfigError([
       {
         key: "DATABASE_URL",

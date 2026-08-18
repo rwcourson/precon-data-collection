@@ -232,5 +232,48 @@ describe("runtime-config demo seed gate", () => {
         DATABASE_URL: "postgresql://user:password@hosted.example.com/prod",
       })
     ).toThrow(RuntimeConfigError);
+    expect(() =>
+      assertDemoSeedAllowed({
+        ...demoEnv,
+        DATABASE_MODE: "postgres",
+        DATABASE_URL: "postgresql://user:password@ep-foo.neon.tech/app",
+        DATABASE_URL_UNPOOLED:
+          "postgresql://user:password@ep-foo.neon.tech/app",
+      })
+    ).toThrow(RuntimeConfigError);
+    try {
+      assertDemoSeedAllowed({
+        ...demoEnv,
+        DATABASE_MODE: "postgres",
+        DATABASE_URL: "postgresql://user:password@ep-foo.neon.tech/app",
+        DATABASE_URL_UNPOOLED:
+          "postgresql://user:password@ep-foo.neon.tech/app",
+      });
+    } catch (error) {
+      expect((error as RuntimeConfigError).issues[0]?.reason).toMatch(
+        /hosted Postgres/
+      );
+    }
+  });
+
+  it("allows demo seeding against localhost Postgres", () => {
+    expect(() =>
+      assertDemoSeedAllowed({
+        ...demoEnv,
+        DATABASE_MODE: "postgres",
+        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/x",
+        DATABASE_URL_UNPOOLED:
+          "postgresql://postgres:postgres@localhost:5432/x",
+      })
+    ).not.toThrow();
+    expect(() =>
+      assertDemoSeedAllowed({
+        ...demoEnv,
+        DATABASE_MODE: "postgres",
+        DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:5432/x",
+        DATABASE_URL_UNPOOLED:
+          "postgresql://postgres:postgres@127.0.0.1:5432/x",
+      })
+    ).not.toThrow();
   });
 });

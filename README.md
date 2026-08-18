@@ -107,6 +107,15 @@ pnpm run verify:web       # build + typecheck + lint + test + isolated smoke
 pnpm run verify:all       # web + Expo + iOS
 ```
 
+Optional real-Postgres suite (same tests as CI's `web-postgres` lane):
+
+```bash
+docker compose up -d --wait
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres pnpm test
+```
+
+Keep `pnpm test` without `TEST_DATABASE_URL` for the zero-setup PGlite default.
+
 Run `pnpm run typecheck` **after** `pnpm run build` on a clean tree (Next 16 generates `LayoutProps`).
 
 ## Stack
