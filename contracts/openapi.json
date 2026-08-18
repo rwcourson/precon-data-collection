@@ -27,7 +27,10 @@
         "summary": "GET /api/v1/mobile/admin",
         "security": [
           {
-            "bearerAuth": ["read:admin", "write:admin"]
+            "bearerAuth": [
+              "read:admin",
+              "write:admin"
+            ]
           }
         ],
         "parameters": [],
@@ -59,7 +62,10 @@
         "summary": "POST /api/v1/mobile/admin",
         "security": [
           {
-            "bearerAuth": ["read:admin", "write:admin"]
+            "bearerAuth": [
+              "read:admin",
+              "write:admin"
+            ]
           }
         ],
         "parameters": [],
@@ -104,7 +110,9 @@
         "summary": "POST /api/v1/mobile/auth/demo",
         "security": [
           {
-            "bearerAuth": ["profile:read"]
+            "bearerAuth": [
+              "profile:read"
+            ]
           }
         ],
         "parameters": [],
@@ -149,7 +157,9 @@
         "summary": "GET /api/v1/mobile/bid-schedule",
         "security": [
           {
-            "bearerAuth": ["profile:read"]
+            "bearerAuth": [
+              "profile:read"
+            ]
           }
         ],
         "parameters": [],
@@ -183,7 +193,9 @@
         "summary": "POST /api/v1/mobile/copilot",
         "security": [
           {
-            "bearerAuth": ["read:dashboards"]
+            "bearerAuth": [
+              "read:dashboards"
+            ]
           }
         ],
         "parameters": [],
@@ -228,7 +240,10 @@
         "summary": "GET /api/v1/mobile/dashboards/{id}",
         "security": [
           {
-            "bearerAuth": ["read:dashboards", "write:dashboards"]
+            "bearerAuth": [
+              "read:dashboards",
+              "write:dashboards"
+            ]
           }
         ],
         "parameters": [
@@ -271,7 +286,10 @@
         "summary": "GET /api/v1/mobile/dashboards",
         "security": [
           {
-            "bearerAuth": ["read:dashboards", "write:dashboards"]
+            "bearerAuth": [
+              "read:dashboards",
+              "write:dashboards"
+            ]
           }
         ],
         "parameters": [],
@@ -303,7 +321,10 @@
         "summary": "POST /api/v1/mobile/dashboards",
         "security": [
           {
-            "bearerAuth": ["read:dashboards", "write:dashboards"]
+            "bearerAuth": [
+              "read:dashboards",
+              "write:dashboards"
+            ]
           }
         ],
         "parameters": [],
@@ -346,7 +367,10 @@
         "summary": "PATCH /api/v1/mobile/dashboards",
         "security": [
           {
-            "bearerAuth": ["read:dashboards", "write:dashboards"]
+            "bearerAuth": [
+              "read:dashboards",
+              "write:dashboards"
+            ]
           }
         ],
         "parameters": [],
@@ -391,7 +415,9 @@
         "summary": "GET /api/v1/mobile/forecast",
         "security": [
           {
-            "bearerAuth": ["read:reports"]
+            "bearerAuth": [
+              "read:reports"
+            ]
           }
         ],
         "parameters": [],
@@ -425,7 +451,9 @@
         "summary": "GET /api/v1/mobile/jobs/{id}",
         "security": [
           {
-            "bearerAuth": ["read:pursuits"]
+            "bearerAuth": [
+              "read:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -468,7 +496,9 @@
         "summary": "GET /api/v1/mobile/me",
         "security": [
           {
-            "bearerAuth": ["profile:read"]
+            "bearerAuth": [
+              "profile:read"
+            ]
           }
         ],
         "parameters": [],
@@ -502,7 +532,9 @@
         "summary": "GET /api/v1/mobile/notifications",
         "security": [
           {
-            "bearerAuth": ["read:notifications"]
+            "bearerAuth": [
+              "read:notifications"
+            ]
           }
         ],
         "parameters": [],
@@ -534,7 +566,9 @@
         "summary": "POST /api/v1/mobile/notifications",
         "security": [
           {
-            "bearerAuth": ["read:notifications"]
+            "bearerAuth": [
+              "read:notifications"
+            ]
           }
         ],
         "parameters": [],
@@ -579,7 +613,9 @@
         "summary": "GET /api/v1/mobile/overview",
         "security": [
           {
-            "bearerAuth": ["read:pursuits"]
+            "bearerAuth": [
+              "read:pursuits"
+            ]
           }
         ],
         "parameters": [],
@@ -613,7 +649,9 @@
         "summary": "POST /api/v1/mobile/pursuits",
         "security": [
           {
-            "bearerAuth": ["write:pursuits"]
+            "bearerAuth": [
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [],
@@ -658,7 +696,9 @@
         "summary": "GET /api/v1/mobile/reconciliation",
         "security": [
           {
-            "bearerAuth": ["read:reports"]
+            "bearerAuth": [
+              "read:reports"
+            ]
           }
         ],
         "parameters": [],
@@ -690,7 +730,9 @@
         "summary": "POST /api/v1/mobile/reconciliation",
         "security": [
           {
-            "bearerAuth": ["read:reports"]
+            "bearerAuth": [
+              "read:reports"
+            ]
           }
         ],
         "parameters": [],
@@ -735,7 +777,9 @@
         "summary": "GET /api/v1/mobile/reports/annual",
         "security": [
           {
-            "bearerAuth": ["read:reports"]
+            "bearerAuth": [
+              "read:reports"
+            ]
           }
         ],
         "parameters": [],
@@ -769,7 +813,9 @@
         "summary": "GET /api/v1/mobile/reports",
         "security": [
           {
-            "bearerAuth": ["read:reports"]
+            "bearerAuth": [
+              "read:reports"
+            ]
           }
         ],
         "parameters": [],
@@ -801,7 +847,9 @@
         "summary": "POST /api/v1/mobile/reports",
         "security": [
           {
-            "bearerAuth": ["read:reports"]
+            "bearerAuth": [
+              "read:reports"
+            ]
           }
         ],
         "parameters": [],
@@ -846,7 +894,10 @@
         "summary": "POST /api/v1/mobile/rounds/{id}/approve-lock",
         "security": [
           {
-            "bearerAuth": ["read:pursuits", "write:pursuits"]
+            "bearerAuth": [
+              "read:pursuits",
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -900,7 +951,10 @@
         "summary": "POST /api/v1/mobile/rounds/{id}/outcome",
         "security": [
           {
-            "bearerAuth": ["read:pursuits", "write:pursuits"]
+            "bearerAuth": [
+              "read:pursuits",
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -954,7 +1008,10 @@
         "summary": "GET /api/v1/mobile/rounds/{id}",
         "security": [
           {
-            "bearerAuth": ["read:pursuits", "write:pursuits"]
+            "bearerAuth": [
+              "read:pursuits",
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -995,7 +1052,10 @@
         "summary": "POST /api/v1/mobile/rounds/{id}",
         "security": [
           {
-            "bearerAuth": ["read:pursuits", "write:pursuits"]
+            "bearerAuth": [
+              "read:pursuits",
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -1047,7 +1107,10 @@
         "summary": "PUT /api/v1/mobile/rounds/{id}",
         "security": [
           {
-            "bearerAuth": ["read:pursuits", "write:pursuits"]
+            "bearerAuth": [
+              "read:pursuits",
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -1101,7 +1164,10 @@
         "summary": "POST /api/v1/mobile/rounds/{id}/transition",
         "security": [
           {
-            "bearerAuth": ["read:pursuits", "write:pursuits"]
+            "bearerAuth": [
+              "read:pursuits",
+              "write:pursuits"
+            ]
           }
         ],
         "parameters": [
@@ -1155,7 +1221,9 @@
         "summary": "GET /api/v1/mobile/salesforce/search",
         "security": [
           {
-            "bearerAuth": ["integrate:connect"]
+            "bearerAuth": [
+              "integrate:connect"
+            ]
           }
         ],
         "parameters": [],
@@ -1189,7 +1257,9 @@
         "summary": "GET /api/v1/mobile/search",
         "security": [
           {
-            "bearerAuth": ["read:pursuits"]
+            "bearerAuth": [
+              "read:pursuits"
+            ]
           }
         ],
         "parameters": [],
@@ -1223,7 +1293,10 @@
         "summary": "GET /api/v1/mobile/sheets/{id}",
         "security": [
           {
-            "bearerAuth": ["read:sheets", "write:sheets"]
+            "bearerAuth": [
+              "read:sheets",
+              "write:sheets"
+            ]
           }
         ],
         "parameters": [
@@ -1264,7 +1337,10 @@
         "summary": "PATCH /api/v1/mobile/sheets/{id}",
         "security": [
           {
-            "bearerAuth": ["read:sheets", "write:sheets"]
+            "bearerAuth": [
+              "read:sheets",
+              "write:sheets"
+            ]
           }
         ],
         "parameters": [
@@ -1318,7 +1394,10 @@
         "summary": "GET /api/v1/mobile/sheets",
         "security": [
           {
-            "bearerAuth": ["read:sheets", "write:sheets"]
+            "bearerAuth": [
+              "read:sheets",
+              "write:sheets"
+            ]
           }
         ],
         "parameters": [],
@@ -1350,7 +1429,10 @@
         "summary": "POST /api/v1/mobile/sheets",
         "security": [
           {
-            "bearerAuth": ["read:sheets", "write:sheets"]
+            "bearerAuth": [
+              "read:sheets",
+              "write:sheets"
+            ]
           }
         ],
         "parameters": [],
@@ -1395,7 +1477,10 @@
         "summary": "GET /api/v1/mobile/trash",
         "security": [
           {
-            "bearerAuth": ["read:trash", "write:trash"]
+            "bearerAuth": [
+              "read:trash",
+              "write:trash"
+            ]
           }
         ],
         "parameters": [],
@@ -1427,7 +1512,10 @@
         "summary": "POST /api/v1/mobile/trash",
         "security": [
           {
-            "bearerAuth": ["read:trash", "write:trash"]
+            "bearerAuth": [
+              "read:trash",
+              "write:trash"
+            ]
           }
         ],
         "parameters": [],
@@ -1472,7 +1560,9 @@
         "summary": "GET /api/v1/mobile/users",
         "security": [
           {
-            "bearerAuth": ["profile:read"]
+            "bearerAuth": [
+              "profile:read"
+            ]
           }
         ],
         "parameters": [],
@@ -1506,7 +1596,9 @@
         "summary": "POST /api/v1/mobile/workspace",
         "security": [
           {
-            "bearerAuth": ["profile:read"]
+            "bearerAuth": [
+              "profile:read"
+            ]
           }
         ],
         "parameters": [],

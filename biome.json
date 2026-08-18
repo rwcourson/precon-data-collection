@@ -21,6 +21,8 @@
       "!**/.data",
       "!**/apps",
       "!**/brand",
+      "!**/contracts",
+      "!**/src/generated",
       "!**/*.css",
       "!**/next-env.d.ts"
     ]
