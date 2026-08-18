@@ -39,7 +39,10 @@ export function OutcomeSelect({
         })
       }
     >
-      <SelectTrigger size="sm" className="w-36">
+      <SelectTrigger
+        size="sm"
+        className="h-7 w-auto gap-1 px-2.5 *:data-[slot=select-value]:flex-none"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

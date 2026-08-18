@@ -1,5 +1,6 @@
 "use client";
 
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -44,9 +45,15 @@ export function CustomColumnFields({
                 ))}
               </SelectContent>
             </Select>
+          ) : col.type === "date" ? (
+            <DatePicker
+              value={values[col.id] ?? ""}
+              onChange={(next) => onChange(col.id, next)}
+              disabled={disabled}
+            />
           ) : (
             <Input
-              type={col.type === "date" ? "date" : "text"}
+              type="text"
               value={values[col.id] ?? ""}
               onChange={(e) => onChange(col.id, e.target.value)}
               disabled={disabled}

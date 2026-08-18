@@ -42,7 +42,6 @@ import { db } from "@/db";
 import { jobRegionVisibility, reportTemplates } from "@/db/schema";
 import type { RoundStatus } from "@/db/schema";
 import { listBidScheduleViews } from "@/actions/bid-schedule-views";
-import { notesService } from "@/services/notes-service";
 import { tablePrefsService } from "@/services/table-prefs-service";
 import { TablePrefsDensitySync } from "@/components/bid-schedule/table-prefs-density-sync";
 
@@ -219,14 +218,6 @@ export default async function BidSchedulePage({
     visibilityByJob.set(row.jobId, list);
   }
 
-  const scopedRoundIds = scoped.map((row) => row.round.id);
-  const [noteCounts, latestNotes] = await Promise.all([
-    notesService.countForRounds(principal, scopedRoundIds),
-    notesService.latestForRounds(principal, scopedRoundIds),
-  ]);
-
-  const canModerateNotes = ["corporate_admin", "rpd", "admin_jsa"].includes(principal.user.role);
-
   const sheetRows = scoped.map(({ round, job, estimateLeadName }) => ({
     id: round.id,
     jobId: job.id,
@@ -255,8 +246,6 @@ export default async function BidSchedulePage({
     isLinked: job.isLinked,
     homeRegion: job.region,
     visibilityRegions: visibilityByJob.get(job.id) ?? [job.region],
-    noteCount: noteCounts.get(round.id) ?? 0,
-    latestNotePreview: latestNotes.get(round.id),
     teamAssignedAt: round.teamAssignedAt?.toISOString() ?? null,
     allowed: canEdit ? allowedTransitions(principal, round) : [],
   }));
@@ -409,7 +398,6 @@ export default async function BidSchedulePage({
         siblingsByJobId={siblingsByJobId}
         views={views}
         currentUserId={user.id}
-        canModerateNotes={canModerateNotes}
         canMarkStaffing={canMarkStaffing}
         activeViewId={activeView?.id}
         defaultViewId={presentation.defaultViewId}

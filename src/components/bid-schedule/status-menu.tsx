@@ -28,16 +28,16 @@ export function StatusMenu({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  if (allowed.length === 0) return <StatusBadge status={status} />;
+  if (allowed.length === 0) return <StatusBadge status={status} className="h-5" />;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="group flex items-center gap-1 rounded-md outline-none disabled:opacity-50"
+        className="group inline-flex h-7 w-fit items-center justify-start gap-0.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
         disabled={pending}
       >
-        <StatusBadge status={status} />
-        <ChevronDown className="size-3 text-muted-foreground group-hover:text-foreground" />
+        <StatusBadge status={status} className="h-5 max-w-full" />
+        <ChevronDown className="size-3 shrink-0 text-muted-foreground group-hover:text-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         <div className="px-2 py-1.5 text-xs text-muted-foreground">Move to…</div>

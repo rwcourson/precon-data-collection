@@ -165,7 +165,7 @@ export function GlobalSearch() {
       <Dialog open={open} onOpenChange={setOpenSafe}>
         <DialogContent
           showCloseButton={false}
-          className="top-[max(1rem,env(safe-area-inset-top))] w-full max-w-[calc(100%-1.5rem)] translate-y-0 gap-0 overflow-hidden rounded-md p-0 sm:top-[18%] sm:max-w-lg"
+          className="top-[max(1rem,env(safe-area-inset-top))] w-full max-w-[calc(100%-1.5rem)] translate-y-0 gap-0 overflow-hidden rounded-md p-0 sm:top-[18%] sm:max-w-xl"
           aria-labelledby={titleId}
         >
           <DialogHeader className="sr-only">

@@ -1,6 +1,6 @@
 "use client";
 
-import { splitNoteBodyTokens } from "@/lib/note-body";
+import { mentionChipClassName, mentionLabel, splitNoteBodyTokens } from "@/lib/note-body";
 
 export function NoteBody({
   body,
@@ -17,9 +17,9 @@ export function NoteBody({
           <span
             key={index}
             data-mention={token.userId}
-            className="rounded-sm bg-primary/15 px-1 py-0.5 font-medium text-primary"
+            className={mentionChipClassName}
           >
-            @{names[token.userId] ?? `user ${token.userId}`}
+            {mentionLabel(token.userId, names)}
           </span>
         ) : (
           <span key={index}>{token.value}</span>

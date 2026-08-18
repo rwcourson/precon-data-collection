@@ -9,6 +9,7 @@ import { Badge, BadgeRemove } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -263,15 +264,23 @@ export function EntryForm({
                         $
                       </span>
                     )}
-                    <Input
-                      type={f.type === "date" ? "date" : "text"}
-                      inputMode={f.type === "dollars" || f.type === "number" ? "decimal" : undefined}
-                      className={f.type === "dollars" ? "pl-6" : ""}
-                      value={values[f.key] ?? ""}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      disabled={disabled}
-                      placeholder={f.type === "dollars" ? "0" : undefined}
-                    />
+                    {f.type === "date" ? (
+                      <DatePicker
+                        value={values[f.key] ?? ""}
+                        onChange={(next) => set(f.key, next)}
+                        disabled={disabled}
+                      />
+                    ) : (
+                      <Input
+                        type="text"
+                        inputMode={f.type === "dollars" || f.type === "number" ? "decimal" : undefined}
+                        className={f.type === "dollars" ? "pl-6" : ""}
+                        value={values[f.key] ?? ""}
+                        onChange={(e) => set(f.key, e.target.value)}
+                        disabled={disabled}
+                        placeholder={f.type === "dollars" ? "0" : undefined}
+                      />
+                    )}
                   </div>
                   {hint && <p className="text-2xs text-info-foreground">{hint}</p>}
                 </div>

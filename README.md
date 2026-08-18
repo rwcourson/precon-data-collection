@@ -60,13 +60,13 @@ npm run db:bootstrap:smartsheet   # → .pglite/data-full
 Start as Brian Meyers in the **Central** workspace. Do not lead with New Pursuit or Admin.
 
 1. Bid schedule — real columns, group by sector or division, open the region → market filter (Georgia is one click or three).
-2. Open an upcoming row’s notes drawer; post a mention. Show the bell deep link.
+2. Open an upcoming round → **Notes** tab; post a mention. Show the bell deep link.
 3. Overview **Needs staffing** → mark team assigned → the count drops.
 4. Submit → post-bid. Lock blocked on blanks; Central extras sit on their own tab and do not block. Lock a complete row.
 5. Change **Outcome** after lock. Audit line appears.
 6. Print the consolidated Central bid schedule PDF (latest note wraps on the right).
-7. Dashboards — Standard set is read-only; Duplicate to personal. Reports → Email schedules (Friday 8am).
-8. `/copilot` — “Which upcoming efforts in my region have no team assigned?”
+7. Dashboards — Standard set is read-only; Duplicate to personal. Reports → run a report (results are full width) and Email schedules (Friday 8am).
+8. `/copilot` — “Which upcoming efforts in my region have no team assigned?” Tables show Job Number / Status, not raw keys.
 
 Salesforce-first New Pursuit is there if asked. Manual tab is **No job number yet (ROM)**. Duplicate names warn; **Show in my region instead** adopts visibility instead of creating a fourth Auburn.
 

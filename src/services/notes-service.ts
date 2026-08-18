@@ -368,7 +368,7 @@ export const notesService = {
   },
 };
 
-/** Phase 8 reports and bid-schedule drawer header. */
+/** Phase 8 reports — latest note on a pricing effort, never a job. */
 export async function getLatestNotesForRounds(principal: Principal, roundIds: number[]) {
   return notesService.latestForRounds(principal, roundIds);
 }

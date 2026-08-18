@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Badge, BadgeRemove } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -41,7 +41,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -50,8 +49,9 @@ import {
 } from "@/components/ui/table";
 import { deleteReport, runReport, saveReport, shareReport } from "@/actions/reports";
 import { formatReportValue, type ReportFieldDef, type ReportResult } from "@/lib/report-engine";
-import { LATEST_NOTE_KEY } from "@/lib/latest-note";
+import { reportColumnMeta, reportColumnWidth } from "@/lib/report-layout";
 import type { SavedReportConfig } from "@/db/schema";
+import { cn } from "@/lib/utils";
 
 type SavedReportRow = {
   id: number;
@@ -148,9 +148,9 @@ export function ReportBuilder({
   const currentReport = saved.find((s) => s.id === reportId);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-4">
-      {/* Saved reports sidebar */}
-      <Card className="h-fit lg:col-span-1">
+    <div className="space-y-4">
+      <div className="grid items-start gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <Card className="h-fit lg:sticky lg:top-20">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Saved Reports</CardTitle>
         </CardHeader>
@@ -214,9 +214,7 @@ export function ReportBuilder({
         </CardContent>
       </Card>
 
-      {/* Builder + results */}
-      <div className="space-y-4 lg:col-span-3">
-        <Card>
+      <Card>
           <CardContent className="space-y-4">
             {/* Fields */}
             <div className="space-y-1.5">
@@ -319,11 +317,10 @@ export function ReportBuilder({
               </Button>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              {/* Group by */}
-              <div className="space-y-1.5">
+            <div className="grid gap-x-6 gap-y-4 border-t border-border/60 pt-4 sm:grid-cols-3">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Group by</Label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex min-h-7 flex-wrap items-center gap-1.5">
                   {config.groupBy.map((g) => (
                     <Badge key={g} variant="secondary">
                       {labelOf(g)}
@@ -352,22 +349,21 @@ export function ReportBuilder({
                     options={catalog
                       .filter((c) => ["dropdown", "text", "number"].includes(c.type))
                       .map((c) => ({ value: c.key, label: c.label }))}
-                    className="w-36"
+                    className="h-7 w-36"
                   />
                 </div>
               </div>
 
-              {/* Aggregations */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Aggregations</Label>
                 {config.groupBy.length === 0 ? (
-                  <p className="text-2xs text-muted-foreground">
-                    Add a grouping to aggregate (sum, average, count…).
+                  <p className="flex min-h-7 items-center text-xs text-muted-foreground">
+                    Add a grouping to aggregate.
                   </p>
                 ) : (
                   <>
                     {config.aggregations.map((a, i) => (
-                      <div key={i} className="flex items-center gap-1.5">
+                      <div key={i} className="flex min-h-7 items-center gap-1.5">
                         <MiniSelect
                           value={a.fn}
                           onChange={(v) =>
@@ -379,7 +375,7 @@ export function ReportBuilder({
                             }))
                           }
                           options={AGG_FNS.map((f) => ({ value: f, label: f.toUpperCase() }))}
-                          className="w-24"
+                          className="h-7 w-24"
                         />
                         <MiniSelect
                           value={a.field}
@@ -395,7 +391,7 @@ export function ReportBuilder({
                             { value: "id", label: "Records" },
                             ...numericFields.map((f) => ({ value: f.key, label: f.label })),
                           ]}
-                          className="w-44"
+                          className="h-7 w-44"
                         />
                         <Button
                           variant="ghost"
@@ -416,7 +412,7 @@ export function ReportBuilder({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-1"
+                      className="h-7 gap-1"
                       onClick={() =>
                         setConfig((c) => ({
                           ...c,
@@ -430,11 +426,10 @@ export function ReportBuilder({
                 )}
               </div>
 
-              {/* Sort */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Sort</Label>
                 {config.sortBy.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
+                  <div key={i} className="flex min-h-7 items-center gap-1.5">
                     <MiniSelect
                       value={s.field}
                       onChange={(v) =>
@@ -444,7 +439,7 @@ export function ReportBuilder({
                         }))
                       }
                       options={catalog.map((c) => ({ value: c.key, label: c.label }))}
-                      className="w-44"
+                      className="h-7 w-44"
                     />
                     <MiniSelect
                       value={s.dir}
@@ -460,7 +455,7 @@ export function ReportBuilder({
                         { value: "asc", label: "Asc" },
                         { value: "desc", label: "Desc" },
                       ]}
-                      className="w-20"
+                      className="h-7 w-20"
                     />
                     <Button
                       variant="ghost"
@@ -478,7 +473,7 @@ export function ReportBuilder({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1"
+                  className="h-7 gap-1"
                   onClick={() =>
                     setConfig((c) => ({
                       ...c,
@@ -534,10 +529,11 @@ export function ReportBuilder({
             </div>
           </CardContent>
         </Card>
+      </div>
 
         {result && (
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="min-w-0">
+            <CardHeader className="border-b pb-3">
               <CardTitle className="text-sm">
                 Results{" "}
                 <span className="font-normal text-muted-foreground">
@@ -545,8 +541,25 @@ export function ReportBuilder({
                   {result.isGrouped ? ", grouped" : ""})
                 </span>
               </CardTitle>
+              {result.rows.length > 0 ? (
+                <CardAction>
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="outline" nativeButton={false} render={<a href={exportUrl("xlsx")} />}>
+                      <FileSpreadsheet className="size-3.5" /> Excel
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      nativeButton={false}
+                      render={<a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />}
+                    >
+                      <FileText className="size-3.5" /> PDF
+                    </Button>
+                  </div>
+                </CardAction>
+              ) : null}
             </CardHeader>
-            <CardContent className="overflow-x-auto px-0 pb-0">
+            <CardContent className="p-0">
               {result.rows.length === 0 ? (
                 <div className="flex h-36 flex-col items-center justify-center gap-1 px-6 text-center">
                   <p className="text-sm font-medium">No rows matched</p>
@@ -555,40 +568,65 @@ export function ReportBuilder({
                   </p>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
+                <div className="max-h-[min(70vh,48rem)] overflow-auto">
+                  <table className="w-full table-fixed caption-bottom text-sm">
+                    <colgroup>
                       {result.columns.map((c) => (
-                        <TableHead key={c.key} className="whitespace-nowrap first:pl-6">
-                          {c.label}
-                        </TableHead>
+                        <col
+                          key={c.key}
+                          style={{ width: reportColumnWidth(c.key, result.columns, catalog) }}
+                        />
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {result.rows.map((r, i) => (
-                      <TableRow key={i}>
-                        {result.columns.map((c) => (
-                          <TableCell
-                            key={c.key}
-                            className={
-                              c.key === LATEST_NOTE_KEY
-                                ? "max-w-xs whitespace-normal break-words text-sm first:pl-6"
-                                : "whitespace-nowrap text-sm tabular-nums first:pl-6"
-                            }
-                          >
-                            {formatReportValue(c.key, r[c.key] ?? null, catalog)}
-                          </TableCell>
-                        ))}
+                    </colgroup>
+                    <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
+                      <TableRow>
+                        {result.columns.map((c) => {
+                          const meta = reportColumnMeta(c.key, catalog);
+                          return (
+                            <TableHead
+                              key={c.key}
+                              className={cn(
+                                "px-3 first:pl-5 last:pr-5",
+                                meta.numeric && "text-right",
+                              )}
+                            >
+                              {c.label}
+                            </TableHead>
+                          );
+                        })}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {result.rows.map((r, i) => (
+                        <TableRow key={i}>
+                          {result.columns.map((c) => {
+                            const meta = reportColumnMeta(c.key, catalog);
+                            const display = formatReportValue(c.key, r[c.key] ?? null, catalog);
+                            return (
+                              <TableCell
+                                key={c.key}
+                                title={display === "—" ? undefined : display}
+                                className={cn(
+                                  "px-3 text-sm first:pl-5 last:pr-5",
+                                  meta.wrap
+                                    ? "whitespace-normal break-words"
+                                    : "truncate",
+                                  meta.numeric && "text-right tabular-nums",
+                                )}
+                              >
+                                {display}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </table>
+                </div>
               )}
             </CardContent>
           </Card>
         )}
-      </div>
 
       {/* Share dialog */}
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
@@ -742,7 +780,7 @@ function FieldPicker({
                   <button
                     key={c.key}
                     type="button"
-                    className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
+                    className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/30"
                     onClick={() => onToggle(c.key)}
                   >
                     <Checkbox checked={selected.includes(c.key)} className="pointer-events-none size-3.5" />
@@ -772,7 +810,7 @@ function MiniSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
-      <SelectTrigger size="sm" className={`text-xs ${className ?? ""}`}>
+      <SelectTrigger size="sm" className={cn("h-7 text-xs", className)}>
         <SelectValue placeholder={placeholder ?? "Select…"} />
       </SelectTrigger>
       <SelectContent>

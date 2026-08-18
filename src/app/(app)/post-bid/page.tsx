@@ -99,7 +99,7 @@ export default async function PostBidPage({
                 <TableHead>Estimate Lead</TableHead>
                 <TableHead className="text-right">Est. Value</TableHead>
                 <TableHead className="w-44">Required Fields</TableHead>
-                <TableHead>Queue</TableHead>
+                <TableHead className="w-56">Queue</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead />
               </TableRow>
@@ -121,7 +121,7 @@ export default async function PostBidPage({
                 const queueRow = postBidQueueRow(round, multiMap.get(round.id) ?? {}, extras);
                 const pct = queueRow.total === 0 ? 100 : Math.round((queueRow.done / queueRow.total) * 100);
                 return (
-                  <TableRow key={round.id}>
+                  <TableRow key={round.id} className="[&_td]:align-top [&_td]:py-2.5">
                     <TableCell className="pl-6">
                       <Link href={`/rounds/${round.id}`} className="font-medium hover:underline">
                         {job.jobName}
@@ -152,7 +152,7 @@ export default async function PostBidPage({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-normal pr-4">
                       {queueRow.state === "ready-to-lock" ? (
                         <Badge variant="success" size="sm">
                           Ready to lock
@@ -162,7 +162,7 @@ export default async function PostBidPage({
                           <Badge variant="warning" size="sm">
                             Awaiting required fields
                           </Badge>
-                          <p className="max-w-48 text-2xs leading-snug text-muted-foreground">
+                          <p className="max-w-52 text-2xs leading-snug text-pretty text-muted-foreground">
                             Missing: {queueRow.missing.slice(0, 3).join(", ")}
                             {queueRow.missing.length > 3
                               ? ` +${queueRow.missing.length - 3} more`

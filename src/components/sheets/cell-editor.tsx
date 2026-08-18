@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -62,6 +63,22 @@ export function CellEditor({
     );
   }
 
+  if (type === "date") {
+    return (
+      <DatePicker
+        value={draft}
+        size="sm"
+        defaultOpen
+        autoFocus
+        className="h-7 w-full px-1.5 py-0 text-[13px]"
+        onChange={(next) => commit(next)}
+        onDismiss={() => {
+          if (!committed.current) onCancel();
+        }}
+      />
+    );
+  }
+
   if (type === "dropdown" && options && options.length > 0) {
     return (
       <Select
@@ -90,7 +107,7 @@ export function CellEditor({
     <Input
       autoFocus
       value={draft}
-      type={type === "date" ? "date" : "text"}
+      type="text"
       inputMode={isNumericType(type) ? "decimal" : undefined}
       className="h-7 w-full px-1.5 py-0 text-[13px]"
       onChange={(e) => setDraft(e.target.value)}

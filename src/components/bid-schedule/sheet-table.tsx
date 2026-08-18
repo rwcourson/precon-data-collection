@@ -32,7 +32,6 @@ import {
 import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
 import { SavedViewsMenu } from "@/components/bid-schedule/saved-views-menu";
 import { StatusMenu } from "@/components/bid-schedule/status-menu";
-import { NotesDrawerTrigger } from "@/components/notes/notes-drawer-trigger";
 import { TeamAssignedButton } from "@/components/bid-schedule/team-assigned-button";
 import { CellEditor } from "@/components/sheets/cell-editor";
 import { updateRoundCell } from "@/actions/post-bid";
@@ -95,11 +94,13 @@ export type BidSheetRow = {
   isLinked: boolean;
   homeRegion?: string;
   visibilityRegions?: string[];
-  noteCount?: number;
-  latestNotePreview?: string;
   teamAssignedAt?: string | null;
   allowed: RoundStatus[];
 };
+
+function actionColumnWidth(canEdit: boolean, canMarkStaffing: boolean) {
+  return (canEdit ? 168 : 0) + (canMarkStaffing ? 28 : 0);
+}
 
 type ColKey =
   | "jobNumber"
@@ -210,8 +211,8 @@ const COLS: ColDef[] = [
   {
     key: "bidDueDate",
     label: "Bid Due",
-    width: 128,
-    minWidth: 88,
+    width: 168,
+    minWidth: 118,
     filter: "text",
     getValue: (r) => r.bidDueDate ?? "",
     getSortValue: (r) => r.bidDueDate ?? "9999",
@@ -310,8 +311,8 @@ const COLS: ColDef[] = [
   {
     key: "status",
     label: "Status",
-    width: 160,
-    minWidth: 110,
+    width: 124,
+    minWidth: 108,
     filter: "values",
     getValue: (r) => r.status,
     getSortValue: (r) => r.status,
@@ -382,7 +383,10 @@ const DEFAULT_COL_WIDTHS = Object.freeze(
 const PREFS_SAVE_MS = 400;
 
 function mergeColWidths(stored?: Record<string, number>): Record<string, number> {
-  return { ...DEFAULT_COL_WIDTHS, ...(stored ?? {}) };
+  const merged = { ...DEFAULT_COL_WIDTHS, ...(stored ?? {}) };
+  // Previous default (160) left the status pill floating in empty cell space.
+  if (stored?.status === 160) merged.status = DEFAULT_COL_WIDTHS.status;
+  return merged;
 }
 
 function keysForDensity(density: "summary" | "detail"): ColKey[] {
@@ -402,7 +406,6 @@ export function BidScheduleSheet({
   siblingsByJobId = {},
   views = [],
   currentUserId,
-  canModerateNotes = false,
   canMarkStaffing = false,
   activeViewId,
   defaultViewId = null,
@@ -422,7 +425,6 @@ export function BidScheduleSheet({
   siblingsByJobId?: Record<number, SiblingRound[]>;
   views?: BidScheduleViewRow[];
   currentUserId: number;
-  canModerateNotes?: boolean;
   canMarkStaffing?: boolean;
   activeViewId?: number;
   defaultViewId?: number | null;
@@ -607,10 +609,11 @@ export function BidScheduleSheet({
 
   const clearFilters = () => setFilters({});
 
-  const actionWidth = (canEdit ? 168 : 40) + (canMarkStaffing ? 32 : 0);
+  const actionWidth = actionColumnWidth(canEdit, canMarkStaffing);
+  const showActions = actionWidth > 0;
   const totalWidth =
     visibleCols.reduce((sum, c) => sum + (widths[c.key] ?? c.width), 0) + actionWidth;
-  const colSpan = visibleCols.length + 1;
+  const colSpan = visibleCols.length + (showActions ? 1 : 0);
 
   const config: BidScheduleViewQuery = {
     ...viewConfig,
@@ -674,7 +677,7 @@ export function BidScheduleSheet({
             {visibleCols.map((col) => (
               <col key={col.key} style={{ width: widths[col.key] ?? col.width }} />
             ))}
-            <col style={{ width: actionWidth }} />
+            {showActions ? <col style={{ width: actionWidth }} /> : null}
           </colgroup>
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm">
             <tr className="border-b">
@@ -692,7 +695,7 @@ export function BidScheduleSheet({
                     onDrop={(e) => onHeaderDrop(col.key, e)}
                     onDragEnd={() => setDragOver(null)}
                     className={cn(
-                      "relative h-9 cursor-grab select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0 active:cursor-grabbing",
+                      "relative h-9 cursor-grab select-none border-r border-border/50 px-2.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0 active:cursor-grabbing",
                       col.align === "right" && "text-right",
                       dragOver?.key === col.key &&
                         dragOver.place === "before" &&
@@ -707,7 +710,7 @@ export function BidScheduleSheet({
                       <button
                         type="button"
                         className={cn(
-                          "flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-0.5 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+                          "flex min-w-0 flex-1 items-center gap-1 rounded py-0.5 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                           col.align === "right" && "justify-end",
                           isSorted && "text-foreground",
                         )}
@@ -777,10 +780,14 @@ export function BidScheduleSheet({
                   </th>
                 );
               })}
-              <th
-                className="h-9 border-r border-border/50 px-2 text-left text-2xs font-medium text-muted-foreground last:border-r-0"
-                style={{ width: actionWidth }}
-              />
+              {showActions ? (
+                <th
+                  className="h-9 border-r border-border/50 px-2.5 text-left align-middle text-2xs font-medium text-muted-foreground last:border-r-0"
+                  style={{ width: actionWidth }}
+                >
+                  Actions
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -800,32 +807,37 @@ export function BidScheduleSheet({
                 (section.rows.length > 0
                   ? [{ key: "_all", label: "", rows: section.rows }]
                   : []);
+              const showSectionHeader = sections.length > 1;
               return (
                 <Fragment key={section.key}>
-                  <tr className="border-b border-border/70 bg-muted/55">
-                    <td
-                      colSpan={colSpan}
-                      className="px-2 py-1.5 text-2xs font-semibold tracking-wide text-foreground"
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        {section.label}
-                        <Badge variant="secondary" size="sm">
-                          {section.rows.length}
-                        </Badge>
-                      </span>
-                    </td>
-                  </tr>
+                  {showSectionHeader ? (
+                    <tr className="border-b border-border/70 bg-muted/55">
+                      <td
+                        colSpan={colSpan}
+                        className="h-7 px-2.5 py-0 text-2xs font-semibold tracking-wide text-foreground"
+                      >
+                        <span className="sticky left-2 inline-flex h-7 items-center gap-1.5">
+                          {section.label}
+                          <Badge variant="secondary" size="sm">
+                            {section.rows.length}
+                          </Badge>
+                        </span>
+                      </td>
+                    </tr>
+                  ) : null}
                   {blocks.map((block) => (
                     <Fragment key={`${section.key}:${block.key}`}>
                       {block.label ? (
                         <tr className="border-b border-border/50 bg-muted/30">
                           <td
                             colSpan={colSpan}
-                            className="px-2 py-1 text-2xs font-medium text-muted-foreground"
+                            className="h-7 px-2.5 py-0 text-2xs font-medium text-muted-foreground"
                           >
-                            {block.label}
-                            <span className="ml-1.5 tabular-nums opacity-70">
-                              ({block.rows.length})
+                            <span className="sticky left-2 inline-flex h-7 items-center">
+                              {block.label}
+                              <span className="ml-1.5 tabular-nums opacity-70">
+                                ({block.rows.length})
+                              </span>
                             </span>
                           </td>
                         </tr>
@@ -840,8 +852,6 @@ export function BidScheduleSheet({
                           widths={widths}
                           actionWidth={actionWidth}
                           siblings={siblingsByJobId[row.jobId] ?? []}
-                          currentUserId={currentUserId}
-                          canModerateNotes={canModerateNotes}
                           canMarkStaffing={canMarkStaffing}
                           onAssignedChange={(next) => {
                             if (!hideOnMark) return;
@@ -875,8 +885,6 @@ function BidScheduleDataRow({
   widths,
   actionWidth,
   siblings,
-  currentUserId,
-  canModerateNotes,
   canMarkStaffing,
   onAssignedChange,
 }: {
@@ -887,8 +895,6 @@ function BidScheduleDataRow({
   widths: Record<string, number>;
   actionWidth: number;
   siblings: SiblingRound[];
-  currentUserId: number;
-  canModerateNotes: boolean;
   canMarkStaffing: boolean;
   onAssignedChange: (assigned: boolean) => void;
 }) {
@@ -906,7 +912,7 @@ function BidScheduleDataRow({
           <td
             key={col.key}
             className={cn(
-              "overflow-hidden border-r border-border/40 px-2 py-1.5 align-top last:border-r-0",
+              "overflow-hidden border-r border-border/40 px-2.5 py-2 align-middle last:border-r-0",
               col.align === "right" && "text-right tabular-nums",
               editable && "cursor-text hover:bg-primary/5",
             )}
@@ -942,46 +948,39 @@ function BidScheduleDataRow({
           </td>
         );
       })}
-      <td className="px-1 py-1" style={{ width: actionWidth }}>
-        <div className="flex items-center gap-0.5">
-          <NotesDrawerTrigger
-            roundId={row.id}
-            jobName={row.jobName}
-            estimatePhase={row.estimatePhase}
-            noteCount={row.noteCount ?? 0}
-            latestPreview={row.latestNotePreview}
-            currentUserId={currentUserId}
-            canModerate={canModerateNotes}
-          />
-          {canMarkStaffing ? (
-            <TeamAssignedButton
-              roundId={row.id}
-              assigned={Boolean(row.teamAssignedAt)}
-              compact
-              onAssignedChange={onAssignedChange}
-            />
-          ) : null}
-          {canEdit ? (
-            <>
-              <AddRoundDialog
-                jobId={row.jobId}
-                jobName={row.jobName}
-                jobNumber={row.jobNumber}
-                lists={lists}
+      {actionWidth > 0 ? (
+        <td className="px-2.5 py-2 align-middle" style={{ width: actionWidth }}>
+          <div className="flex h-7 flex-nowrap items-center justify-start gap-0.5 whitespace-nowrap">
+            {canMarkStaffing ? (
+              <TeamAssignedButton
+                roundId={row.id}
+                assigned={Boolean(row.teamAssignedAt)}
+                compact
+                onAssignedChange={onAssignedChange}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="px-2"
-                nativeButton={false}
-                render={<Link href={`/rounds/${row.id}`} />}
-              >
-                Open
-              </Button>
-            </>
-          ) : null}
-        </div>
-      </td>
+            ) : null}
+            {canEdit ? (
+              <>
+                <AddRoundDialog
+                  jobId={row.jobId}
+                  jobName={row.jobName}
+                  jobNumber={row.jobNumber}
+                  lists={lists}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2"
+                  nativeButton={false}
+                  render={<Link href={`/rounds/${row.id}`} />}
+                >
+                  Open
+                </Button>
+              </>
+            ) : null}
+          </div>
+        </td>
+      ) : null}
     </tr>
   );
 }
@@ -1001,7 +1000,7 @@ function CellDisplay({
 }) {
   if (col.key === "jobNumber") {
     return (
-      <span className="flex items-center gap-1 truncate">
+      <span className="flex h-5 items-center gap-1 truncate">
         <JobLookupPopover row={row} siblings={siblings} />
         {!row.isLinked && (
           <Badge variant="warning" size="sm">
@@ -1024,15 +1023,15 @@ function CellDisplay({
     const home = row.homeRegion ?? row.region;
     const extras = (row.visibilityRegions ?? []).filter((region) => region !== home);
     return (
-      <>
+      <div className="min-w-0">
         <Link
           href={`/jobs/${row.jobId}`}
-          className="block truncate font-medium hover:underline"
+          className="block truncate text-[13px] font-medium leading-5 hover:underline"
           title={row.jobName}
         >
           {row.jobName}
         </Link>
-        <p className="truncate text-2xs text-muted-foreground">
+        <p className="mt-0.5 truncate text-2xs leading-4 text-muted-foreground">
           {row.preconDepartment}
           {row.marketSector ? ` · ${row.marketSector}` : ""} · Round {row.roundNumber}
         </p>
@@ -1042,7 +1041,7 @@ function CellDisplay({
               render={
                 <button
                   type="button"
-                  className="mt-0.5 text-2xs text-primary hover:underline"
+                  className="mt-0.5 text-2xs leading-4 text-primary hover:underline"
                 />
               }
             >
@@ -1058,22 +1057,28 @@ function CellDisplay({
             </PopoverContent>
           </Popover>
         )}
-      </>
+      </div>
     );
   }
 
   if (col.key === "status") {
     return (
-      <StatusMenu
-        roundId={row.id}
-        status={row.status}
-        allowed={canEdit ? row.allowed : []}
-      />
+      <div className="flex items-center justify-start">
+        <StatusMenu
+          roundId={row.id}
+          status={row.status}
+          allowed={canEdit ? row.allowed : []}
+        />
+      </div>
     );
   }
 
   if (col.key === "estimateValue") {
-    return <>{fmtDollars(row.estimateValue, true)}</>;
+    return (
+      <span className="block truncate leading-5">
+        {fmtDollars(row.estimateValue, true)}
+      </span>
+    );
   }
 
   if (
@@ -1085,22 +1090,25 @@ function CellDisplay({
     const shown = display;
     const urgency = col.key === "bidDueDate" ? bidDueUrgency(shown || null) : null;
     return (
-      <span className="flex items-center gap-1 truncate">
-        <span>{fmtDate(shown || null)}</span>
-        {urgency && (
+      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-5">
+        <span className="tabular-nums">{fmtDate(shown || null)}</span>
+        {urgency ? (
           <Badge
             variant={urgency === "overdue" ? "destructive" : urgency === "week" ? "warning" : "info"}
             size="sm"
           >
             {BID_DUE_URGENCY_LABEL[urgency]}
           </Badge>
-        )}
+        ) : null}
       </span>
     );
   }
 
   return (
-    <span className="block truncate" title={display}>
+    <span
+      className={cn("block truncate leading-5", !display && "text-muted-foreground")}
+      title={display || undefined}
+    >
       {display || "—"}
     </span>
   );
@@ -1129,7 +1137,7 @@ function JobLookupPopover({
         render={
           <button
             type="button"
-            className="truncate font-mono text-xs hover:underline"
+            className="truncate font-mono text-xs leading-5 hover:underline"
             title="Other estimate rounds on this job"
           />
         }

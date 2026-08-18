@@ -13,11 +13,12 @@ import {
 } from "@/actions/notes";
 import { addJobUserVisibility } from "@/actions/visibility";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { NoteBody } from "@/components/notes/note-body";
+import { NoteComposer } from "@/components/notes/note-composer";
 import {
+  AnchoredMentionPicker,
+  filterMentionUsers,
   insertMention,
-  MentionPicker,
   mentionTrigger,
 } from "@/components/notes/mention-picker";
 import { formatAttachmentBytes, relativeAge } from "@/lib/note-body";
@@ -61,7 +62,8 @@ export function NotesThread({
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  const [caret, setCaret] = useState(0);
   const [notes, setNotes] = useState(initialNotes);
   const [pending, startTransition] = useTransition();
   const [body, setBody] = useState("");
@@ -85,6 +87,15 @@ export function NotesThread({
   function refreshFrom(next: NotesThreadNote[]) {
     setNotes(next);
     router.refresh();
+  }
+
+  function applyMention(user: NotesDirectoryUser) {
+    if (!picker) return;
+    const next = insertMention(body, caret, picker.start, user);
+    setBody(next.body);
+    setCaret(next.caret);
+    setPicker(null);
+    composerRef.current?.focus();
   }
 
   function onSubmit(formData: FormData) {
@@ -213,10 +224,10 @@ export function NotesThread({
                 </div>
                 {editingId === note.id ? (
                   <div className="mt-2 space-y-2">
-                    <Textarea
+                    <NoteComposer
                       value={editBody}
-                      onChange={(event) => setEditBody(event.target.value)}
-                      rows={3}
+                      names={names}
+                      onValueChange={(next) => setEditBody(next)}
                     />
                     <div className="flex gap-1.5">
                       <Button size="sm" disabled={pending} onClick={() => saveEdit(note.id)}>
@@ -261,35 +272,32 @@ export function NotesThread({
         action={onSubmit}
       >
         <input type="hidden" name="roundId" value={roundId} />
-        <div className="relative">
+        <div>
           {picker ? (
-            <MentionPicker
+            <AnchoredMentionPicker
+              anchorRef={composerRef}
               users={directory}
               query={picker.query}
               activeIndex={activeIndex}
-              onPick={(user) => {
-                const caret = textareaRef.current?.selectionStart ?? body.length;
-                const next = insertMention(body, caret, picker.start, user);
-                setBody(next.body);
-                setPicker(null);
-                requestAnimationFrame(() => {
-                  textareaRef.current?.focus();
-                  textareaRef.current?.setSelectionRange(next.caret, next.caret);
-                });
-              }}
+              onPick={(user) => applyMention(user)}
             />
           ) : null}
-          <Textarea
-            ref={textareaRef}
+          <NoteComposer
             name="body"
             value={body}
-            onChange={(event) => {
-              const value = event.target.value;
-              setBody(value);
-              const caret = event.target.selectionStart ?? value.length;
-              const next = mentionTrigger(value, caret);
-              setPicker(next);
-              setActiveIndex(0);
+            names={names}
+            caret={caret}
+            editorRef={composerRef}
+            placeholder="Add a note — @ to mention someone"
+            testId="note-composer"
+            onValueChange={(next, nextCaret) => {
+              setBody(next);
+              setCaret(nextCaret);
+              const nextPicker = mentionTrigger(next, nextCaret);
+              setPicker(nextPicker);
+              if (nextPicker?.start !== picker?.start || nextPicker?.query !== picker?.query) {
+                setActiveIndex(0);
+              }
             }}
             onKeyDown={(event) => {
               if (!picker) return;
@@ -299,13 +307,15 @@ export function NotesThread({
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 setActiveIndex((index) => Math.max(0, index - 1));
+              } else if (event.key === "Enter") {
+                event.preventDefault();
+                const matches = filterMentionUsers(directory, picker.query);
+                const user = matches[Math.min(activeIndex, Math.max(0, matches.length - 1))];
+                if (user) applyMention(user);
               } else if (event.key === "Escape") {
                 setPicker(null);
               }
             }}
-            placeholder="Add a note — @ to mention someone"
-            rows={3}
-            data-testid="note-composer"
           />
         </div>
         {blockedMentions.length > 0 ? (

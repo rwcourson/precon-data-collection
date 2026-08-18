@@ -68,7 +68,7 @@ export function TeamAssignedButton({
       type="button"
       size="sm"
       variant={shownAssigned ? "outline" : "secondary"}
-      className="gap-1.5"
+      className="h-7 gap-1.5"
       disabled={pending}
       onClick={run}
     >

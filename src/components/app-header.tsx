@@ -40,12 +40,9 @@ export async function AppHeader() {
           <Suspense fallback={null}>
             <MobileNav />
           </Suspense>
-          <div className="hidden items-center gap-2.5 md:flex">
-            <span aria-hidden className="h-4 w-px bg-border" />
-            <p className="text-sm text-muted-foreground">
-              Preconstruction Data Collection
-            </p>
-          </div>
+          <p className="hidden text-sm text-muted-foreground md:block">
+            Preconstruction Data Collection
+          </p>
         </div>
         <div className="flex min-w-0 items-center justify-end gap-0.5 sm:gap-2">
           {user ? (

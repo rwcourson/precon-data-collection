@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -167,10 +168,9 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Expires on</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={expiresOn}
-              onChange={(event) => setExpiresOn(event.target.value)}
+              onChange={setExpiresOn}
               required
             />
           </div>

@@ -19,7 +19,7 @@ This page is the operator and engineer contract for everything that meeting aske
 | Authorization | One `authorize()` kernel; new capabilities registered | `src/lib/authorization/` |
 | Visibility | Extra regions + person pins; Auburn-style duplicate warning | Job **Regions** editor; New Pursuit |
 | Bid schedule | Region → market tree (`preconDepartment`); server column prefs | Filter popover; `?view=` / `?source=prefs` |
-| Notes | Chat thread + attachments on the round | Round **Notes** tab; bid-schedule drawer |
+| Notes | Chat thread + attachments on the round | Round **Notes** tab |
 | Mentions | `@[userId]` tokens, bell + deep link | Composer `@`; `/rounds/{id}?tab=notes&note=` |
 | Staffing | Explicit team-assigned mark; Needs staffing queue | Overview card; `?queue=needs-staffing` |
 | Print / reports | Latest note column; wrap CSS | Bid-schedule / upcoming presets |
@@ -50,6 +50,8 @@ Migrations: `drizzle/0007_job_visibility.sql`. Inserts get a home visibility row
 
 Hierarchical filter is **`preconDepartment`**, not a Georgia special case. Empty selection = all visible rows. Selecting a region equals the union of its departments.
 
+- Rows share one inset and vertical center. Status pills hug a tight column; lifecycle section labels stay sticky when you scroll. Bid Due badges wrap instead of clipping.
+- Date cells use the themed `DatePicker` (popover calendar). Do not put `<input type="date">` back — the OS picker ignores the theme.
 - URL: `regions`, `departments`. Saved views store config v2 (`src/lib/view-config.ts`); legacy JSONB still loads.
 - Per-user show/hide, density, and widths live in `user_table_prefs`. A named view URL (`?view=`) wins. `?source=prefs` skips the starred default. Widths are **not** in `localStorage`.
 - The filter trigger is a native `<button>` (`nativeButton={true}`).
@@ -61,7 +63,8 @@ Chat-shaped history on the pricing effort: author, timestamp, edit marker, soft-
 - Body max **10,000** characters. Markup mentions are `@[userId]`, never a display-name string.
 - Attachments: allowlisted types, **25 MB** inclusive, server-enforced. Download: `GET /api/notes/attachments/:id` (kernel read on the parent round, `Content-Disposition: attachment`).
 - Mentions notify only users who can **read** that round. Re-editing the same mention does not duplicate. Deep link: `/rounds/{id}?tab=notes&note={id}`.
-- Drawer on the bid schedule distinguishes loading / error (`role="alert"`) / empty.
+- Composer is contenteditable chips (`NoteComposer`); storage stays `@[userId]`. The mention list is a portaled picker so it is not clipped by the card.
+- Notes live on the round **Notes** tab only. There is no bid-schedule row drawer.
 
 ## Staffing
 
@@ -72,6 +75,7 @@ Chat-shaped history on the pricing effort: author, timestamp, edit marker, soft-
 
 ## Reports, print, dashboards, schedules
 
+- Custom Report Builder results sit **full width** under the saved-list + builder row. Job Name (and other long text) takes leftover column width; dollars/metrics are right-aligned (`src/lib/report-layout.ts`).
 - Latest note for print/Excel is one `DISTINCT ON (round_id)` query (`round_notes_round_created_idx`). Soft-deletes excluded. Truncated at 300 characters. That query stays **off** the bid-schedule page hot path.
 - Standard dashboards (corporate + one per Destini region) are read-only (`isStandard`). **Duplicate to personal** writes `isStandard: false`.
 - Report owners schedule weekday + hour (Jay’s Friday / Monday 8am). Delivery is idempotent per `periodKey`. HTML is rendered as the **owner**, with the same wrap CSS as print.
@@ -97,9 +101,15 @@ Tools POST `/api/v1/copilot/tools` with HMAC + a **numeric** `x-eve-principal-id
 | `person_history` | Estimate lead + staffing marks for a year |
 | `plan_chart` | Chart spec for the canvas |
 
-UI: `/copilot` — centered prompt, then ~1/3 history + 2/3 canvas. `prefers-reduced-motion` disables the slide. If `/eve/v1/health` is not ok (typical on Vercel production), the page falls back to Magnus `useChat` over `/api/v1/ai/magnus`. Magnus stays for API and mobile and shares `copilotQueryService`.
+UI: `/copilot` — typography-only empty state, then rail + canvas. Assistant replies render markdown (`CopilotMarkdown`). Query tables use product column labels (`columnDisplayLabel`), not raw keys. `prefers-reduced-motion` disables the slide. If `/eve/v1/health` is not ok (typical on Vercel production), the page falls back to Magnus `useChat` over `/api/v1/ai/magnus`. Magnus stays for API and mobile and shares `copilotQueryService`.
 
 Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Next is on). Ignore `.eve/` in git and eslint.
+
+## Chrome
+
+- ⌘K search palette is `sm:max-w-xl`.
+- Collapsed-sidebar hover menus are compact (`p-1`, `py-1` items) so Dashboards → Corporate / Region / Division is a short list.
+- Selects, command items, and mention rows share the same accent hover.
 
 ## File map
 
@@ -108,7 +118,10 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 | Kernel + capabilities | `src/lib/authorization/kernel.ts` |
 | Job visibility SQL | `src/lib/authorization/loaders.ts` |
 | Hierarchy filter | `src/lib/bid-schedule-filter.ts`, `src/lib/region-departments.ts` |
-| Notes / mentions | `src/services/notes-service.ts`, `src/lib/note-body.ts` |
+| Notes / mentions | `src/services/notes-service.ts`, `src/lib/note-body.ts`, `src/components/notes/note-composer.tsx` |
+| Date picker | `src/components/ui/date-picker.tsx`, `src/lib/calendar-grid.ts` |
+| Report results layout | `src/lib/report-layout.ts` |
+| Copilot table labels | `src/lib/column-labels.ts` |
 | Staffing | `src/services/staffing-service.ts` |
 | Latest note (reports) | `src/lib/latest-note.ts`, `src/lib/latest-note-query.ts` |
 | Finalize seam | `src/services/finalize-round.ts` |

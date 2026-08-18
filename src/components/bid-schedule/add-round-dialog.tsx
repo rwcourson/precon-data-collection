@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -74,7 +74,7 @@ export function AddRoundDialog({
         <DialogTrigger render={trigger as React.ReactElement} />
       ) : (
         <DialogTrigger
-          render={<Button variant="ghost" size="sm" className="gap-1 px-2" />}
+          render={<Button variant="ghost" size="sm" className="h-7 gap-1 px-2" />}
         >
           <Layers className="size-3.5" /> Add Round
         </DialogTrigger>
@@ -120,7 +120,7 @@ export function AddRoundDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Bid Due Date</Label>
-            <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+            <DatePicker value={due} onChange={setDue} />
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label className="text-xs">Bid Schedule Section</Label>

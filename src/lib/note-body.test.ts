@@ -7,6 +7,7 @@ import {
   escapeNoteHtml,
   extractMentionUserIds,
   firstLine,
+  mentionLabel,
   previewLatestNote,
   relativeAge,
   splitNoteBodyTokens,
@@ -38,6 +39,8 @@ describe("note body rendering", () => {
       { type: "text", value: " today" },
     ]);
     expect(extractMentionUserIds("@[12] and @[12] and @[9]")).toEqual([12, 9]);
+    expect(mentionLabel(12, { 12: "Sarah Chen" })).toBe("@Sarah Chen");
+    expect(mentionLabel(10, {})).toBe("@user 10");
   });
 
   it("builds latest-note preview as author + age + first line", () => {

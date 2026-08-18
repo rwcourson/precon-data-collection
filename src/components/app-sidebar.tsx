@@ -263,19 +263,19 @@ function CollapsedFlyout({
       <DropdownMenuContent
         side="right"
         align="start"
-        sideOffset={10}
+        sideOffset={8}
         alignOffset={-2}
-        className="w-52 min-w-52 origin-[left_center] p-1.5 shadow-lg"
+        className="w-44 min-w-40 origin-[left_center] p-1 shadow-lg"
       >
         <DropdownMenuItem
-          className="rounded-md px-2.5 py-2 text-sm font-medium"
+          className="rounded-md px-2 py-1 text-[13px] font-medium"
           render={<Link href={href} />}
         >
           {label}
         </DropdownMenuItem>
         {hasChildren && (
           <>
-            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuSeparator className="my-0.5" />
             {children!.map((sub) => {
               const subActive =
                 active &&
@@ -287,7 +287,7 @@ function CollapsedFlyout({
                 <DropdownMenuItem
                   key={sub.href}
                   className={cn(
-                    "rounded-md px-2.5 py-2 text-sm",
+                    "rounded-md px-2 py-1 text-[13px]",
                     subActive && "bg-info-soft font-medium text-primary",
                   )}
                   render={<Link href={sub.href} />}
@@ -355,7 +355,7 @@ function SidebarNav({
     >
       <div
         className={cn(
-          "flex h-14 items-center border-b border-sidebar-border",
+          "-mr-px flex h-14 items-center border-b border-border",
           collapsed ? "justify-center px-2" : "gap-3 px-3",
         )}
       >

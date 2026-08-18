@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -292,10 +293,9 @@ export function NewPursuitDialog({
           <SelectField label="Bid Year *" value={form.bidYear} onChange={(v) => set("bidYear", v)} options={lists.bidYear ?? []} />
           <div className="space-y-1.5">
             <Label className="text-xs">Bid Due Date</Label>
-            <Input
-              type="date"
+            <DatePicker
               value={form.bidDueDate ?? ""}
-              onChange={(e) => set("bidDueDate", e.target.value)}
+              onChange={(next) => set("bidDueDate", next)}
             />
           </div>
           <SelectField label="MLT" value={form.mlt} onChange={(v) => set("mlt", v)} options={lists.mlt ?? []} />
