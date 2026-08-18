@@ -5,15 +5,15 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiTokens, auditLog } from "@/db/schema";
 import { createApiTokenSchema } from "@/domain/contracts";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { generateApiTokenSecret, validateTokenExpiry } from "@/lib/api-tokens";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 export async function createApiToken(raw: unknown) {
-  const user = await getCurrentUser();
-  if (user.role !== "corporate_admin") {
-    throw new Error("Permission denied: only Corporate Admin can mint API tokens.");
-  }
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "tokens", "manage", "API token");
+  const user = principal.user;
   const input = createApiTokenSchema.parse(raw);
   const expiresAt = new Date(input.expiresAt);
   const expiry = validateTokenExpiry(expiresAt, getRuntimeConfig().apiTokenMaxTtlDays);
@@ -45,8 +45,9 @@ export async function createApiToken(raw: unknown) {
 }
 
 export async function revokeApiToken(id: number) {
-  const user = await getCurrentUser();
-  if (user.role !== "corporate_admin") throw new Error("Permission denied.");
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "tokens", "manage", "API token");
+  const user = principal.user;
   await db
     .update(apiTokens)
     .set({ revokedAt: new Date() })

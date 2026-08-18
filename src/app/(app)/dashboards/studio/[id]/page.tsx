@@ -61,12 +61,15 @@ export default async function DashboardStudioDetailPage({
               size="sm"
               className="gap-1.5"
               nativeButton={false}
-              render={<Link href="/dashboards/copilot" />}
+              render={<Link href="/copilot" />}
             >
               <Sparkles className="size-4" />
               AI Copilot
             </Button>
-            <StudioCloneButton dashboardId={id} />
+            <StudioCloneButton
+              dashboardId={id}
+              label={dash.isStandard ? "Duplicate to personal" : "Clone"}
+            />
             <Button
               variant="outline"
               size="sm"
@@ -93,6 +96,11 @@ export default async function DashboardStudioDetailPage({
         <Badge variant="outline" size="sm">
           {dash.scope}
         </Badge>
+        {dash.isStandard && (
+          <Badge variant="secondary" size="sm">
+            Standard · read-only
+          </Badge>
+        )}
         {dash.region && (
           <Badge variant="outline" size="sm">
             {dash.region}
@@ -104,21 +112,27 @@ export default async function DashboardStudioDetailPage({
 
       <WidgetCanvas widgets={resolved} />
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Add widget</CardTitle>
-          <CardDescription>
-            Manual tile — or use{" "}
-            <Link href="/dashboards/copilot" className="underline underline-offset-2">
-              AI Copilot
-            </Link>{" "}
-            to generate a full layout.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StudioWidgetForm dashboardId={id} />
-        </CardContent>
-      </Card>
+      {dash.isStandard ? (
+        <p className="text-sm text-muted-foreground">
+          Standard dashboards are not editable in place. Duplicate to personal to customize.
+        </p>
+      ) : (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Add widget</CardTitle>
+            <CardDescription>
+              Manual tile — or use{" "}
+              <Link href="/copilot" className="underline underline-offset-2">
+                AI Copilot
+              </Link>{" "}
+              to generate a full layout.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StudioWidgetForm dashboardId={id} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

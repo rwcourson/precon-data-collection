@@ -41,6 +41,8 @@
     "apps",
     "apps/**",
     "apps/mobile",
-    "apps/mobile/**"
+    "apps/mobile/**",
+    ".eve",
+    ".eve/**"
   ]
 }

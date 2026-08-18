@@ -98,7 +98,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/dashboards/studio", label: "Studio" },
       { href: "/dashboards/forecast", label: "Forecast" },
       { href: "/dashboards/reconciliation", label: "DMR Reconciliation" },
-      { href: "/dashboards/copilot", label: "AI Copilot" },
+      { href: "/copilot", label: "AI Copilot" },
     ],
   },
 ];
@@ -162,7 +162,7 @@ export function MobileNav() {
                     ? pathname === "/"
                     : pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const expanded = Boolean(active && item.children?.length);
-                const isCopilot = item.href === "/dashboards/copilot";
+                const isCopilot = item.href === "/copilot";
 
                 return (
                   <div key={item.href} className="space-y-0.5">

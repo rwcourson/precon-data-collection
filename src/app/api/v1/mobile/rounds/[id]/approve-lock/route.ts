@@ -2,7 +2,7 @@ import { DomainError } from "@/domain/errors";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { getMultiValues, getRoundWithJob } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
-import { pursuitService } from "@/services/pursuit-service";
+import { finalizeRound } from "@/services/finalize-round";
 
 export async function POST(
   req: Request,
@@ -13,7 +13,7 @@ export async function POST(
     const roundId = Number(id);
     if (!Number.isFinite(roundId)) return jsonError("Invalid round id", 400);
     try {
-      const approval = await pursuitService.approveAndLock(principal.authorization, roundId);
+      const approval = await finalizeRound(roundId, principal.authorization);
       if (!approval.ok) {
         return jsonError(approval.error, 400, {
           code: "BAD_REQUEST",

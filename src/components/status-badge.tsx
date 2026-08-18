@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { RoundStatus } from "@/db/schema";
-import { STATUS_LABELS } from "@/lib/permissions";
+import { STATUS_LABELS } from "@/lib/labels";
 
 const STYLES: Record<RoundStatus, string> = {
   active: "tone-info",

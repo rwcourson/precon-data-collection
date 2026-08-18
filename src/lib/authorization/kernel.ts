@@ -103,7 +103,7 @@ function fieldWriteAllowed(principal: Principal, resource: ResourceDescriptor): 
   // Corporate / platform super admins may correct any field (full visibility + control).
   if (principal.user.role === "corporate_admin") return true;
   if (principal.user.role === "leadership") return false;
-  if (!principalAllowsRegion(principal, round.region)) return false;
+  if (!resource.visibilitySatisfied && !principalAllowsRegion(principal, round.region)) return false;
   if (round.status === "locked") return principal.user.role === "rpd";
   const def = FIELD_DEFS.find((field) => field.key === fieldKey);
   const postBid = fieldKey.startsWith("custom:") || Boolean(def && !def.core);
@@ -165,7 +165,9 @@ export function authorize(
     capability === "permanent-delete" ||
     (capability === "read" && resource.type === "trash");
   if (resource.deleted !== deletedCapability) return deny(capability, "deleted-state");
-  if (!principalAllowsRegion(principal, resource.region)) return deny(capability, "region");
+  if (!resource.visibilitySatisfied && !principalAllowsRegion(principal, resource.region)) {
+    return deny(capability, "region");
+  }
   if (!tokenAllows(principal, capability, resource)) return deny(capability, "token");
   if (capability === "read") return canRead(principal, resource);
   if (capability === "edit") {
@@ -180,10 +182,33 @@ export function authorize(
         ? { allowed: true, capability }
         : deny(capability, "acl");
     }
-    if (["dashboard", "report"].includes(resource.type)) {
+    if (resource.type === "dashboard") {
+      if (resource.isStandard) return deny(capability, "publication");
       return resource.ownerId === principal.user.id || principal.user.role === "corporate_admin"
         ? { allowed: true, capability }
         : deny(capability, "ownership");
+    }
+    if (resource.type === "report") {
+      return resource.ownerId === principal.user.id || principal.user.role === "corporate_admin"
+        ? { allowed: true, capability }
+        : deny(capability, "ownership");
+    }
+    if (resource.type === "admin") {
+      if (principal.user.role === "corporate_admin") return { allowed: true, capability };
+      if (
+        resource.adminSection &&
+        REGIONAL_ADMIN_SECTIONS.has(resource.adminSection) &&
+        ["admin_jsa", "rpd"].includes(principal.user.role)
+      ) {
+        if (
+          ["columns", "promotions", "notifications"].includes(resource.adminSection) &&
+          principal.user.role === "admin_jsa"
+        ) {
+          return deny(capability, "role");
+        }
+        return { allowed: true, capability };
+      }
+      return deny(capability, "role");
     }
     return ["job", "round"].includes(resource.type) && EDIT_ROLES.has(principal.user.role)
       ? { allowed: true, capability }
@@ -205,7 +230,9 @@ export function authorize(
       : deny(capability, "ownership");
   }
   if (capability === "approve") {
-    return resource.type === "round" && resource.round?.status === "post_bid" && principal.user.role === "rpd"
+    return resource.type === "round" &&
+      resource.round?.status === "post_bid" &&
+      (principal.user.role === "rpd" || principal.user.role === "corporate_admin")
       ? { allowed: true, capability }
       : deny(capability, "role");
   }
@@ -228,6 +255,42 @@ export function authorize(
     return principal.user.role === "corporate_admin"
       ? { allowed: true, capability }
       : deny(capability, "role");
+  }
+  if (capability === "notes.write" || capability === "notes.attach") {
+    return ["job", "round"].includes(resource.type)
+      ? { allowed: true, capability }
+      : deny(capability, "unsupported");
+  }
+  if (capability === "visibility.manage-region") {
+    return (
+      ["job", "round"].includes(resource.type) &&
+      (EDIT_ROLES.has(principal.user.role) || principal.user.role === "corporate_admin")
+    )
+      ? { allowed: true, capability }
+      : deny(capability, "role");
+  }
+  if (capability === "visibility.assign-user") {
+    return ["job", "round"].includes(resource.type) && principal.user.role === "corporate_admin"
+      ? { allowed: true, capability }
+      : deny(capability, "role");
+  }
+  if (capability === "staffing.mark") {
+    return (
+      ["job", "round"].includes(resource.type) &&
+      (EDIT_ROLES.has(principal.user.role) || principal.user.role === "corporate_admin")
+    )
+      ? { allowed: true, capability }
+      : deny(capability, "role");
+  }
+  if (capability === "dashboards.manage-standard") {
+    return resource.type === "dashboard" && principal.user.role === "corporate_admin"
+      ? { allowed: true, capability }
+      : deny(capability, "role");
+  }
+  if (capability === "reports.schedule") {
+    return resource.type === "report" && resource.ownerId === principal.user.id
+      ? { allowed: true, capability }
+      : deny(capability, resource.type === "report" ? "ownership" : "unsupported");
   }
   return deny(capability, "unsupported");
 }

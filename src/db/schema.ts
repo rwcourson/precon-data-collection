@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 
 export const roundStatusEnum = pgEnum("round_status", [
@@ -85,6 +86,47 @@ export const jobs = pgTable("jobs", {
   deletionBatchId: integer("deletion_batch_id"),
 });
 
+/**
+ * Extra regions a job is visible in. `jobs.region` is the HOME region only —
+ * access uses this table ∪ `job_user_visibility`, never the home column alone.
+ */
+export const jobRegionVisibility = pgTable(
+  "job_region_visibility",
+  {
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    region: text("region").notNull(),
+    addedById: integer("added_by_id").references(() => users.id, { onDelete: "set null" }),
+    addedAt: timestamp("added_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("job_region_visibility_job_region_unique").on(table.jobId, table.region),
+    index("job_region_visibility_region_idx").on(table.region),
+  ],
+);
+
+/** Per-person pins: the job is visible to this user even outside their region. */
+export const jobUserVisibility = pgTable(
+  "job_user_visibility",
+  {
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    addedById: integer("added_by_id").references(() => users.id, { onDelete: "set null" }),
+    addedAt: timestamp("added_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("job_user_visibility_job_user_unique").on(table.jobId, table.userId),
+    index("job_user_visibility_user_idx").on(table.userId),
+  ],
+);
+
 export const estimateRounds = pgTable("estimate_rounds", {
   id: serial("id").primaryKey(),
   jobId: integer("job_id")
@@ -108,6 +150,9 @@ export const estimateRounds = pgTable("estimate_rounds", {
   city: text("city"),
   state: text("state"),
   estimateLeadId: integer("estimate_lead_id").references(() => users.id),
+  /** Explicit progress mark — not inferred from estimateLeadId. */
+  teamAssignedAt: timestamp("team_assigned_at"),
+  teamAssignedById: integer("team_assigned_by_id").references(() => users.id),
   mlt: text("mlt"),
   marketSector: text("market_sector"),
   contractType: text("contract_type"),
@@ -164,6 +209,55 @@ export const estimateRounds = pgTable("estimate_rounds", {
   deletedById: integer("deleted_by_id").references(() => users.id),
   deletionBatchId: integer("deletion_batch_id"),
 });
+
+/** Chat-shaped notes on a pricing effort. Never project-level; never private. */
+export const roundNotes = pgTable(
+  "round_notes",
+  {
+    id: serial("id").primaryKey(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id, { onDelete: "cascade" }),
+    authorUserId: integer("author_user_id")
+      .notNull()
+      .references(() => users.id),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    editedAt: timestamp("edited_at"),
+    deletedAt: timestamp("deleted_at"),
+    deletedById: integer("deleted_by_id").references(() => users.id),
+    deletionBatchId: integer("deletion_batch_id"),
+  },
+  (table) => [index("round_notes_round_created_idx").on(table.roundId, table.createdAt)],
+);
+
+export const roundNoteAttachments = pgTable("round_note_attachments", {
+  id: serial("id").primaryKey(),
+  noteId: integer("note_id")
+    .notNull()
+    .references(() => roundNotes.id, { onDelete: "cascade" }),
+  storageKey: text("storage_key").notNull(),
+  filename: text("filename").notNull(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  uploadedById: integer("uploaded_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const roundNoteMentions = pgTable(
+  "round_note_mentions",
+  {
+    id: serial("id").primaryKey(),
+    noteId: integer("note_id")
+      .notNull()
+      .references(() => roundNotes.id, { onDelete: "cascade" }),
+    mentionedUserId: integer("mentioned_user_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("round_note_mentions_note_user_unique").on(table.noteId, table.mentionedUserId)],
+);
 
 /** Repeatable one-to-many fields (Self-Perform Work Type, Utilized Support Services). */
 export const roundMultiValues = pgTable("round_multi_values", {
@@ -251,6 +345,7 @@ export const notifications = pgTable("notifications", {
   title: text("title").notNull(),
   body: text("body"),
   roundId: integer("round_id"),
+  noteId: integer("note_id").references(() => roundNotes.id, { onDelete: "set null" }),
   readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -357,11 +452,14 @@ export const reportTemplates = pgTable("report_templates", {
 
 /** Named Bid Schedule views — company equivalent of working groups (not ATL OR-filters). */
 export type BidScheduleViewConfig = {
+  version?: 1 | 2;
   section?: string;
   group?: string;
   sort?: string;
   dir?: "asc" | "desc";
   region?: string;
+  regions?: string[];
+  departments?: string[];
   queue?: string;
   columns?: string[];
   density?: "summary" | "detail";
@@ -379,6 +477,29 @@ export const bidScheduleViews = pgTable("bid_schedule_views", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+/** Per-user table chrome (columns, density, widths, default named view). Not a named view. */
+export type UserTablePrefsConfig = {
+  version?: 1;
+  columns?: string[];
+  density?: "summary" | "detail";
+  columnWidths?: Record<string, number>;
+  defaultViewId?: number | null;
+};
+
+export const userTablePrefs = pgTable(
+  "user_table_prefs",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    surface: text("surface").notNull(),
+    config: jsonb("config").$type<UserTablePrefsConfig>().notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("user_table_prefs_user_surface_unique").on(table.userId, table.surface)],
+);
 
 export type SavedReportConfig = {
   fields: string[]; // field keys, metric keys (metric:*), custom columns (custom:*)
@@ -586,6 +707,12 @@ export const distributionLists = pgTable("distribution_lists", {
   ownerId: integer("owner_id")
     .notNull()
     .references(() => users.id),
+  savedReportId: integer("saved_report_id").references(() => savedReports.id, {
+    onDelete: "set null",
+  }),
+  weekday: integer("weekday"),
+  hour: integer("hour"),
+  paused: boolean("paused").notNull().default(false),
   lastSentAt: timestamp("last_sent_at"),
   lastPeriodKey: text("last_period_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -779,6 +906,7 @@ export const dashboards = pgTable("dashboards", {
     .notNull()
     .references(() => users.id),
   published: boolean("published").notNull().default(false),
+  isStandard: boolean("is_standard").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
@@ -823,7 +951,12 @@ export type User = typeof users.$inferSelect;
 export type DataQualityFlag = typeof dataQualityFlags.$inferSelect;
 export type EmailOutboxRow = typeof emailOutbox.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
+export type JobRegionVisibility = typeof jobRegionVisibility.$inferSelect;
+export type JobUserVisibility = typeof jobUserVisibility.$inferSelect;
 export type EstimateRound = typeof estimateRounds.$inferSelect;
+export type RoundNote = typeof roundNotes.$inferSelect;
+export type RoundNoteAttachment = typeof roundNoteAttachments.$inferSelect;
+export type RoundNoteMention = typeof roundNoteMentions.$inferSelect;
 export type CustomColumn = typeof customColumns.$inferSelect;
 export type RoundStatus = EstimateRound["status"];
 export type Role = User["role"];
@@ -836,6 +969,7 @@ export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
 export type DmrImport = typeof dmrImports.$inferSelect;
 export type DmrLine = typeof dmrLines.$inferSelect;
 export type BidScheduleView = typeof bidScheduleViews.$inferSelect;
+export type UserTablePrefs = typeof userTablePrefs.$inferSelect;
 
 /** Better Auth OAuth tables (string IDs) — do not confuse with app `users`. */
 export {

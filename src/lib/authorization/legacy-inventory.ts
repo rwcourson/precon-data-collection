@@ -1,29 +1,13 @@
 /**
  * Frozen inventory of residual legacy callers. Architecture tests reject any new
  * caller. Later phases remove entries as admin/UI paths migrate fully.
+ *
+ * Phase 1 (Jay McDaniel roadmap) migrated permission helpers to `authorize()`
+ * and display labels to `src/lib/labels.ts`. The policy-caller list is empty.
+ * Direct-by-ID loaders remain where a scoped loader is not yet the right
+ * primitive (see docs/security/legacy-authorization-inventory.md).
  */
-export const LEGACY_POLICY_CALLERS = [
-  "src/actions/data-quality.ts",
-  "src/actions/governance.ts",
-  "src/actions/people.ts",
-  "src/actions/sheets.ts",
-  "src/app/(app)/admin/page.tsx",
-  "src/app/(app)/bid-schedule/page.tsx",
-  "src/app/(app)/jobs/[id]/page.tsx",
-  "src/app/(app)/page.tsx",
-  "src/app/(app)/rounds/[id]/page.tsx",
-  "src/app/(app)/sheets/page.tsx",
-  "src/app/api/v1/mobile/admin/route.ts",
-  "src/app/api/v1/mobile/overview/route.ts",
-  "src/components/app-header.tsx",
-  "src/components/bid-schedule/status-menu.tsx",
-  "src/components/role-switcher.tsx",
-  "src/components/status-badge.tsx",
-  "src/lib/auth.ts",
-  "src/lib/bid-schedule.ts",
-  "src/lib/outcome.ts",
-  "src/services/pursuit-service.ts",
-] as const;
+export const LEGACY_POLICY_CALLERS: readonly string[] = [];
 
 export const LEGACY_DIRECT_ID_LOADERS = [
   "src/actions/admin.ts",

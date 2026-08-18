@@ -119,6 +119,43 @@ function boundedInteger(
   return undefined;
 }
 
+/** Preview hosts change per branch. Production must keep an explicit APP_ORIGIN. */
+function hostedHttpsOrigin(env: RuntimeEnvironment, hostKey: "VERCEL_BRANCH_URL" | "VERCEL_URL"): string | undefined {
+  const host = env[hostKey]?.trim().replace(/\/$/, "");
+  if (!host) return undefined;
+  const url = host.includes("://") ? host : `https://${host}`;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" ? parsed.origin : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function withDerivedPreviewOrigins(env: RuntimeEnvironment): RuntimeEnvironment {
+  if (env.APP_ENV?.trim() === "production") return env;
+  const resolved: RuntimeEnvironment = { ...env };
+  const branchOrigin = hostedHttpsOrigin(env, "VERCEL_BRANCH_URL");
+  const deployOrigin = hostedHttpsOrigin(env, "VERCEL_URL");
+  if (!resolved.APP_ORIGIN?.trim() && (branchOrigin || deployOrigin)) {
+    resolved.APP_ORIGIN = branchOrigin ?? deployOrigin;
+  }
+  if (!resolved.ALLOWED_ORIGINS?.trim() && resolved.APP_ORIGIN) {
+    try {
+      resolved.ALLOWED_ORIGINS = [
+        ...new Set(
+          [new URL(resolved.APP_ORIGIN).origin, branchOrigin, deployOrigin].filter(
+            (value): value is string => Boolean(value),
+          ),
+        ),
+      ].join(",");
+    } catch {
+      /* parsedUrl will report APP_ORIGIN */
+    }
+  }
+  return resolved;
+}
+
 function originList(
   env: RuntimeEnvironment,
   appOrigin: string | undefined,
@@ -152,6 +189,7 @@ function originList(
 export function inspectRuntimeConfig(
   env: RuntimeEnvironment = process.env,
 ): RuntimeConfigStatus {
+  env = withDerivedPreviewOrigins(env);
   const issues: RuntimeConfigIssue[] = [];
   const appEnv = oneOf(env, "APP_ENV", ["local", "demo", "production"] as const, issues);
   const production = appEnv === "production";

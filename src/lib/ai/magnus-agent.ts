@@ -13,11 +13,13 @@ import {
   createMagnusTools,
   type MagnusToolContext,
 } from "@/lib/ai/magnus-tools";
+import type { Principal } from "@/lib/authorization/types";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
 
 export type MagnusAgentOptions = {
   rounds: EstimateRound[];
   previousPlan?: CopilotPlan | null;
+  principal?: Principal;
 };
 
 export function createMagnusAgent(options: MagnusAgentOptions) {
@@ -30,6 +32,7 @@ export function createMagnusAgent(options: MagnusAgentOptions) {
   const ctx: MagnusToolContext = {
     rounds: options.rounds,
     previousPlan: options.previousPlan ?? null,
+    principal: options.principal,
   };
 
   const tools = createMagnusTools(ctx);

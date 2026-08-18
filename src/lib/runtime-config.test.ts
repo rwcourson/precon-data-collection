@@ -98,6 +98,50 @@ describe("runtime-config environment matrix", () => {
     if (status.ok) expect(status.config.appEnv).toBe("local");
   });
 
+  it("derives Preview APP_ORIGIN from VERCEL_BRANCH_URL when unset", () => {
+    const status = inspectRuntimeConfig({
+      APP_ENV: "demo",
+      AUTH_MODE: "demo",
+      DATABASE_MODE: "postgres",
+      DATABASE_URL: "postgresql://app:secret@db.example.com/app",
+      EMAIL_MODE: "stub",
+      PRIVATE_STORAGE_MODE: "local",
+      CONNECT_MODE: "mock",
+      SMARTSHEET_MODE: "disabled",
+      DATABRICKS_MODE: "disabled",
+      API_TOKEN_MAX_TTL_DAYS: "90",
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      VERCEL_BRANCH_URL: "precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
+      VERCEL_URL: "precon-data-abc123.magnus.brasfieldgorrie.app",
+    });
+    expect(status.ok).toBe(true);
+    if (status.ok) {
+      expect(status.config.appOrigin).toBe(
+        "https://precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
+      );
+      expect(status.config.allowedOrigins).toEqual([
+        "https://precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
+        "https://precon-data-abc123.magnus.brasfieldgorrie.app",
+      ]);
+    }
+  });
+
+  it("does not infer production APP_ORIGIN from Vercel hosts", () => {
+    const status = inspectRuntimeConfig({
+      ...productionEnv,
+      APP_ORIGIN: undefined,
+      ALLOWED_ORIGINS: undefined,
+      VERCEL: "1",
+      VERCEL_ENV: "production",
+      VERCEL_URL: "precon-data-abc123.magnus.brasfieldgorrie.app",
+    });
+    expect(status.ok).toBe(false);
+    if (!status.ok) {
+      expect(status.issues.some((issue) => issue.key === "APP_ORIGIN")).toBe(true);
+    }
+  });
+
   it("returns redacted diagnostics without URLs or secrets", () => {
     const diagnostics = JSON.stringify(runtimeDiagnostics(inspectRuntimeConfig(productionEnv)));
     expect(diagnostics).not.toContain("secret");

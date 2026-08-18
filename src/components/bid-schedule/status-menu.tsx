@@ -14,7 +14,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { transitionStatus } from "@/actions/pursuits";
 import type { RoundStatus } from "@/db/schema";
-import { STATUS_LABELS } from "@/lib/permissions";
+import { STATUS_LABELS } from "@/lib/labels";
 
 export function StatusMenu({
   roundId,

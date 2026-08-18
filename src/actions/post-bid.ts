@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { OutcomeValue } from "@/lib/outcome";
+import { finalizeRound } from "@/services/finalize-round";
 import {
   pursuitService,
   type SavePostBidInput,
@@ -32,10 +33,10 @@ export async function updateRoundCell(roundId: number, key: string, value: strin
   return result;
 }
 
-/** RPD approval: validates required completeness, then locks the record. */
+/** RPD approval: validates required completeness, then locks via the finalize seam. */
 export async function approveAndLock(roundId: number) {
   const principal = await getWebPrincipal();
-  const result = await pursuitService.approveAndLock(principal, roundId);
+  const result = await finalizeRound(roundId, principal);
   revalidatePath(`/rounds/${roundId}`);
   revalidatePath("/post-bid");
   return result;

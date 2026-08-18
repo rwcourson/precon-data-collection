@@ -4,6 +4,7 @@ on:
   push:
     branches: [master, main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   web:
@@ -25,6 +26,7 @@ jobs:
       - run: npm run security:check
       - run: npm run perf:check
       - run: npm run release:check
+      - run: npm run docs:check
       - run: npm run verify:web
         env:
           APP_ENV: demo
@@ -51,6 +53,7 @@ jobs:
 
   ios:
     runs-on: macos-15
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

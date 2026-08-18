@@ -10,6 +10,8 @@ import {
 } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { principalRegionPredicate } from "@/lib/authorization/loaders";
+import { parseBidScheduleViewConfig } from "@/lib/view-config";
+import { tablePrefsService } from "@/services/table-prefs-service";
 
 export type BidScheduleViewRow = Pick<
   BidScheduleView,
@@ -59,7 +61,7 @@ export async function saveBidScheduleView(
     ownerId: principal.user.id,
     region,
     shared,
-    config,
+    config: parseBidScheduleViewConfig(config),
   });
   revalidatePath("/bid-schedule");
 }
@@ -78,5 +80,6 @@ export async function deleteBidScheduleView(id: number) {
   await db
     .delete(bidScheduleViews)
     .where(and(eq(bidScheduleViews.id, id), eq(bidScheduleViews.ownerId, principal.user.id)));
+  await tablePrefsService.clearDefaultViewIf(principal, id);
   revalidatePath("/bid-schedule");
 }

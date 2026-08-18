@@ -11,7 +11,7 @@ import { GlobalSearch } from "./global-search";
 import { ThemeToggle } from "./theme-toggle";
 import { authMode } from "@/lib/auth";
 import { fmtDateTime } from "@/lib/format";
-import { ROLE_LABELS } from "@/lib/permissions";
+import { ROLE_LABELS } from "@/lib/labels";
 import type { User } from "@/db/schema";
 export async function AppHeader() {
   let user: User | null = null;

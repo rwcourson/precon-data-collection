@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { appSettings, auditLog, type Role } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   ACCESS_SETTINGS_KEY,
   DEFAULT_ACCESS,
   getAccessSettings,
   type AccessSettings,
 } from "@/lib/auth";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 const ROLES: Role[] = [
   "pcm",
@@ -21,11 +22,9 @@ const ROLES: Role[] = [
 ];
 
 async function assertCorporateAdmin() {
-  const user = await getCurrentUser();
-  const { isCorporateAdmin } = await import("@/lib/super-admin");
-  if (!isCorporateAdmin(user))
-    throw new Error("Only the Corporate Precon Admin can change identity mappings.");
-  return user;
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "access", "manage", "Access mapping");
+  return principal.user;
 }
 
 /**

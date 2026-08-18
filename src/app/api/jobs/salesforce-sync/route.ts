@@ -3,6 +3,10 @@ import { authorizeCron } from "@/lib/cron-auth";
 import { createServicePrincipal } from "@/services/distribution-service";
 import { salesforceSyncService } from "@/services/salesforce-sync-service";
 
+export async function GET(req: Request) {
+  return POST(req);
+}
+
 export async function POST(req: Request) {
   const denied = authorizeCron(req);
   if (denied) return denied;

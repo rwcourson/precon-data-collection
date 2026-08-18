@@ -59,13 +59,13 @@ import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
 import { getWorkspace } from "@/lib/workspace-server";
 import {
-  canManageCompanyColumns,
-  canManagePeople,
-  canManageReferenceLists,
-  canManageRegionColumns,
-  canViewAudit,
-  ROLE_LABELS,
-} from "@/lib/permissions";
+  principalCanManageCompanyColumns,
+  principalCanManagePeople,
+  principalCanManageReferenceLists,
+  principalCanManageRegionColumns,
+  principalCanViewAudit,
+} from "@/lib/authorization/decisions";
+import { ROLE_LABELS } from "@/lib/labels";
 import { isSuperAdmin } from "@/lib/super-admin";
 import { listPeople } from "@/actions/people";
 import { PeoplePanel } from "@/components/admin/people-panel";
@@ -172,8 +172,8 @@ export default async function AdminPage({
       allowedSections.has("salesforce") ? db.select().from(jobs) : Promise.resolve([]),
     ]);
 
-  const showAudit = canViewAudit(user);
-  const managePeople = canManagePeople(user);
+  const showAudit = principalCanViewAudit(principal);
+  const managePeople = principalCanManagePeople(principal);
   const people =
     managePeople && allowedSections.has("people")
       ? await listPeople()
@@ -316,8 +316,8 @@ export default async function AdminPage({
             userRegion={user.region}
             regions={regionValues}
             departments={deptValues}
-            canCompany={canManageCompanyColumns(user)}
-            canRegion={canManageRegionColumns(user)}
+            canCompany={principalCanManageCompanyColumns(principal)}
+            canRegion={principalCanManageRegionColumns(principal)}
           />
         </TabsContent>
 
@@ -412,7 +412,7 @@ export default async function AdminPage({
         </TabsContent>
 
         <TabsContent value="lists" className="pt-3">
-          <ReferenceListsManager lists={listData} canEdit={canManageReferenceLists(user)} />
+          <ReferenceListsManager lists={listData} canEdit={principalCanManageReferenceLists(principal)} />
         </TabsContent>
 
         <TabsContent value="review" className="pt-3">

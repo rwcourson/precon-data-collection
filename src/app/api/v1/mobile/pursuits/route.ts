@@ -14,7 +14,10 @@ export async function POST(req: Request) {
         principal.authorization,
         body as CreatePursuitInput,
       );
-      return jsonOk({ data: result }, { status: 201 });
+      if (result.kind === "duplicates") {
+        return jsonError("Possible duplicate jobs", 409, { matches: result.matches });
+      }
+      return jsonOk({ data: { jobId: result.jobId, roundId: result.roundId } }, { status: 201 });
     } catch (err) {
       return mapError(err);
     }

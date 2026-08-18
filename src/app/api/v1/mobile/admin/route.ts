@@ -36,7 +36,7 @@ import {
 import { saveNotificationSettings } from "@/actions/notifications-settings";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
 import { isMobileAdminRole, readMobileAdminSection } from "@/lib/mobile-admin";
-import { canManageReferenceLists } from "@/lib/permissions";
+import { principalCanManageReferenceLists } from "@/lib/authorization/decisions";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:admin" }, async (principal) => {
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
 
       switch (action) {
         case "add-reference": {
-          if (!canManageReferenceLists(principal.user)) {
+          if (!principalCanManageReferenceLists(principal.authorization)) {
             return jsonError(
               "Only the Corporate Precon Admin manages company-wide reference lists",
               403,

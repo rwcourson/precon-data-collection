@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withEve } from "eve/next";
 
 const nextConfig: NextConfig = {
   // PGlite loads WASM assets from disk at runtime; keep it out of the bundle.
@@ -13,4 +14,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
 };
 
-export default nextConfig;
+// withEve() starts the local Eve sibling during `next dev` and would also
+// rewrite the Vercel build to `eve build` (Node >=24). Production copilot
+// falls back to Magnus; skip the wrapper on Vercel so `next build` stays.
+export default process.env.VERCEL ? nextConfig : withEve(nextConfig);

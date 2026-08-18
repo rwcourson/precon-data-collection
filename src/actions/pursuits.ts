@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createPursuitSchema } from "@/domain/contracts";
 import { db } from "@/db";
 import { jobs, type RoundStatus } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
@@ -19,9 +20,10 @@ export async function searchSalesforceJobs(query: string) {
 }
 
 export async function createPursuit(input: CreatePursuitInput) {
+  const parsed = createPursuitSchema.parse(input);
   const principal = await getWebPrincipal();
-  const result = await pursuitService.createPursuit(principal, input);
-  revalidatePath("/bid-schedule");
+  const result = await pursuitService.createPursuit(principal, parsed);
+  if (result.kind === "created") revalidatePath("/bid-schedule");
   return result;
 }
 

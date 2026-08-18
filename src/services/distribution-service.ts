@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { db } from "@/db";
 import { distributionLists, distributionRuns } from "@/db/schema";
@@ -9,7 +9,9 @@ import { createPrincipal } from "@/lib/authorization/principal";
 import { deliverQueued, emailProvider, queueEmails } from "@/lib/email";
 import { recordReportArtifact } from "@/lib/recovery";
 import { CONSOLIDATED_REGIONAL_PRESET_KEY, weekPeriodKey } from "@/lib/report-presets";
+import { isScheduleDue, schedulePeriodKey } from "@/lib/distribution-schedule";
 import { assertPrincipalCanDistribute } from "@/services/mutation-policy";
+import { reportScheduleService } from "@/services/report-schedule-service";
 import { withTransaction } from "@/lib/transactions";
 
 /** Minimal PDF artifact used when Chromium is unavailable in CI/tests. */
@@ -122,7 +124,12 @@ export const distributionService = {
     const lists = await db
       .select()
       .from(distributionLists)
-      .where(and(eq(distributionLists.cadence, "weekly"), isNull(distributionLists.deletedAt)));
+      .where(
+        and(
+          or(eq(distributionLists.cadence, "weekly"), eq(distributionLists.cadence, "scheduled")),
+          isNull(distributionLists.deletedAt),
+        ),
+      );
 
     const results: {
       listId: number;
@@ -132,7 +139,14 @@ export const distributionService = {
     }[] = [];
 
     for (const list of lists) {
-      const periodKey = weekPeriodKey(now, list.timezone);
+      if (list.cadence === "scheduled") {
+        if (list.paused || list.weekday == null || list.hour == null) continue;
+        if (!isScheduleDue(now, list.timezone, list.weekday, list.hour)) continue;
+      }
+      const periodKey =
+        list.cadence === "scheduled" && list.weekday != null && list.hour != null
+          ? schedulePeriodKey(now, list.timezone, list.weekday, list.hour)
+          : weekPeriodKey(now, list.timezone);
       if (list.lastPeriodKey === periodKey) {
         results.push({ listId: list.id, periodKey, skipped: true });
         continue;
@@ -168,7 +182,10 @@ export const distributionService = {
       }
 
       try {
-        const { outboxIds, delivery } = await distributionService.sendListNow(service, list.id);
+        const { outboxIds, delivery } =
+          list.cadence === "scheduled"
+            ? await reportScheduleService.sendNow(list.id, now)
+            : await distributionService.sendListNow(service, list.id);
         const status =
           delivery.failed > 0 && delivery.sent === 0 && delivery.previewed === 0
             ? "failed"

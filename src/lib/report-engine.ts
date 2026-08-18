@@ -1,5 +1,6 @@
 import type { CustomColumn, EstimateRound, Job, SavedReportConfig } from "@/db/schema";
 import { FIELD_DEFS, type FieldType } from "./fields";
+import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "./latest-note";
 import { METRIC_DEFS } from "./metrics";
 import { STATUS_LABELS } from "./permissions";
 
@@ -33,6 +34,7 @@ export function buildFieldCatalog(customCols: CustomColumn[]): ReportFieldDef[] 
     { key: "status", label: "Lifecycle Status", type: "dropdown", category: "Lifecycle" },
     { key: "outcome", label: "Outcome", type: "dropdown", category: "Lifecycle" },
     { key: "roundNumber", label: "Round #", type: "number", category: "Lifecycle" },
+    { key: LATEST_NOTE_KEY, label: LATEST_NOTE_LABEL, type: "text", category: "Notes" },
   );
   for (const m of METRIC_DEFS) {
     catalog.push({
@@ -59,6 +61,7 @@ export function flattenRound(
   estimateLeadName: string | null,
   multi: Record<string, string[]>,
   customValues: Record<number, string | null>,
+  latestNote: string | null = null,
 ): FlatRow {
   const row: FlatRow = {
     id: round.id,
@@ -68,6 +71,7 @@ export function flattenRound(
     status: STATUS_LABELS[round.status],
     outcome: round.outcome,
     roundNumber: round.roundNumber,
+    [LATEST_NOTE_KEY]: latestNote,
   };
   for (const f of FIELD_DEFS) {
     if (f.key in row) continue;
@@ -212,6 +216,7 @@ export function formatReportValue(
   value: string | number | null,
   catalog: ReportFieldDef[],
 ): string {
+  if (key === LATEST_NOTE_KEY && (value == null || value === "")) return "";
   if (value == null || value === "") return "—";
   const baseKey = key.includes(":") && !key.startsWith("metric:") && !key.startsWith("custom:")
     ? key.split(":")[1]

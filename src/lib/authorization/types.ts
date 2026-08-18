@@ -10,7 +10,14 @@ export type Capability =
   | "distribute"
   | "integrate"
   | "restore"
-  | "permanent-delete";
+  | "permanent-delete"
+  | "notes.write"
+  | "notes.attach"
+  | "visibility.manage-region"
+  | "visibility.assign-user"
+  | "staffing.mark"
+  | "dashboards.manage-standard"
+  | "reports.schedule";
 export type ResourceType =
   | "job"
   | "round"
@@ -60,8 +67,15 @@ export type ResourceDescriptor = {
   ownerId: number | null;
   published: boolean;
   deleted: boolean;
+  /**
+   * Set by SQL visibility loaders after the union predicate already matched.
+   * Skips the home-region gate so a Georgia-visible Alabama-home job authorizes.
+   * Create-time descriptors omit this and still use `region`.
+   */
+  visibilitySatisfied?: boolean;
   parent?: Pick<ResourceDescriptor, "type" | "id" | "region" | "ownerId" | "published" | "deleted">;
   dashboardScope?: "personal" | "region" | "corporate";
+  isStandard?: boolean;
   sharedWithUserIds?: readonly number[];
   sharedWithRegions?: readonly string[];
   sheetAcls?: readonly SheetAclGrant[];

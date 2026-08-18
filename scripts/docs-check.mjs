@@ -34,6 +34,27 @@ if (!fs.existsSync(path.join(root, ".env.example"))) {
   process.exit(1);
 }
 
+const requiredDocs = [
+  "docs/README.md",
+  "docs/jay-mcdaniel-upgrades.md",
+  "docs/github-and-vercel.md",
+  "docs/adr/002-post-bid-finalize-seam.md",
+  "docs/security/role-capability-matrix.md",
+  "vercel.json",
+];
+const missingDocs = requiredDocs.filter((rel) => !fs.existsSync(path.join(root, rel)));
+if (missingDocs.length) {
+  process.stderr.write(`docs:check missing files: ${missingDocs.join(", ")}\n`);
+  process.exit(1);
+}
+
+for (const needle of ["docs/jay-mcdaniel-upgrades.md", "docs/github-and-vercel.md", "docs/README.md"]) {
+  if (!readme.includes(needle) && !roadmap.includes(needle)) {
+    process.stderr.write(`docs:check README or ROADMAP must link ${needle}\n`);
+    process.exit(1);
+  }
+}
+
 process.stdout.write(
   `docs:check passed (scripts=${requiredScripts.length}, missing=${missing.filter((s) => !pkg.scripts?.[s]).length})\n`,
 );

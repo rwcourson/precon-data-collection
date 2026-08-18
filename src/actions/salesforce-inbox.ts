@@ -11,16 +11,15 @@ import {
   salesforceMatchSuppressions,
   salesforceSyncRuns,
 } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { connectProvider } from "@/lib/integrations/connect";
 import { proposeMatches } from "@/lib/salesforce-match";
 import { planSalesforceLink } from "@/lib/salesforce-link";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 export async function runSalesforceSync() {
-  const user = await getCurrentUser();
-  if (!["rpd", "corporate_admin", "admin_jsa"].includes(user.role)) {
-    throw new Error("Permission denied: Salesforce sync requires regional/corporate admin.");
-  }
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "salesforce", "edit", "Salesforce sync");
 
   const [run] = await db
     .insert(salesforceSyncRuns)
@@ -113,10 +112,9 @@ export async function decideMatchCandidate(
   decision: "approve" | "reject" | "dismiss",
   note?: string,
 ) {
-  const user = await getCurrentUser();
-  if (!["rpd", "corporate_admin", "admin_jsa"].includes(user.role)) {
-    throw new Error("Permission denied.");
-  }
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "salesforce", "edit", "Salesforce match");
+  const user = principal.user;
   const [c] = await db
     .select()
     .from(salesforceMatchCandidates)

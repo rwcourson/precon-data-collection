@@ -6,7 +6,8 @@ import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { authMode } from "@/lib/auth";
 import { getRuntimeConfig } from "@/lib/runtime-config";
-import { DEMO_USER_COOKIE, getCurrentUser } from "@/lib/current-user";
+import { DEMO_USER_COOKIE } from "@/lib/current-user";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
   canViewCorporate,
   CORPORATE,
@@ -28,7 +29,8 @@ export async function switchUser(userId: number) {
 
 /** Switch the active Region workspace; `corporate` means all Regions. */
 export async function switchWorkspace(region: string) {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
+  const user = principal.user;
   const allowed =
     region === CORPORATE
       ? canViewCorporate(user)
@@ -41,7 +43,8 @@ export async function switchWorkspace(region: string) {
 }
 
 export async function markAllNotificationsRead() {
-  const user = await getCurrentUser();
+  const principal = await getWebPrincipal();
+  const user = principal.user;
   await db
     .update(notifications)
     .set({ readAt: new Date() })

@@ -2,7 +2,11 @@
  * Overview action queues. Company-wide — flags and filters, never new statuses.
  */
 
+import { EMPTY_HIERARCHY, type HierarchySelection } from "@/lib/bid-schedule-filter";
+import { filterNeedsStaffing, needsStaffingHref } from "@/lib/staffing";
+
 export type OverviewQueueId =
+  | "needs-staffing"
   | "incomplete-post-bid"
   | "past-bid-due"
   | "unlinked"
@@ -17,6 +21,8 @@ export type OverviewQueueInput = {
   bidDueDate: string | null;
   isLinked: boolean;
   missingRequiredCount: number;
+  preconDepartment: string;
+  teamAssignedAt: Date | string | null;
 };
 
 export type OverviewQueuePreview = {
@@ -54,8 +60,10 @@ function preview(rows: OverviewQueueInput[], limit = 4): OverviewQueuePreview[] 
 export function buildOverviewQueues(
   rows: OverviewQueueInput[],
   today = new Date(),
+  hierarchy: HierarchySelection = EMPTY_HIERARCHY,
 ): OverviewQueue[] {
   const todayKey = calendarDate(today);
+  const needsStaffing = filterNeedsStaffing(rows, hierarchy);
 
   const incomplete = rows.filter(
     (r) => ["submitted", "post_bid"].includes(r.status) && r.missingRequiredCount > 0,
@@ -67,6 +75,14 @@ export function buildOverviewQueues(
   const awaitingLock = rows.filter((r) => r.status === "post_bid");
 
   return [
+    {
+      id: "needs-staffing",
+      title: "Needs staffing",
+      description: "Upcoming rounds in this workspace with no team assigned yet.",
+      href: needsStaffingHref(hierarchy),
+      count: needsStaffing.length,
+      preview: preview(needsStaffing),
+    },
     {
       id: "incomplete-post-bid",
       title: "Incomplete post-bid",

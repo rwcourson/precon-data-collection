@@ -32,21 +32,27 @@ try {
   await page.goto(`${baseUrl}/post-bid`);
   await page.waitForLoadState("networkidle");
 
-  const rows = await page.$$eval("table tbody tr", (elements) =>
+  const rows = await page.locator("table").first().locator("tbody tr").evaluateAll((elements) =>
     elements
       .map((row) => {
         const link = row.querySelector("td a");
+        const text = row.textContent ?? "";
         return link
           ? {
               href: link.getAttribute("href"),
               progress: row.querySelector("td:nth-child(6)")?.textContent ?? "",
-              status: row.querySelector("td:nth-child(7)")?.textContent ?? "",
+              text,
             }
           : null;
       })
       .filter(Boolean),
   );
-  const postBidRows = rows.filter((row) => row.status.includes("Post-Bid"));
+  const postBidRows = rows.filter(
+    (row) =>
+      row.text.includes("Post-Bid") ||
+      row.text.includes("Ready to lock") ||
+      row.text.includes("Awaiting required"),
+  );
   const incomplete = postBidRows.find((row) => {
     const progress = row.progress.match(/(\d+)\/(\d+)/);
     return progress && Number(progress[1]) < Number(progress[2]);

@@ -1,7 +1,6 @@
 "use server";
 
 import { createDashboard } from "@/actions/dashboards";
-import { getCurrentUser } from "@/lib/current-user";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
@@ -52,7 +51,7 @@ export async function generateDashboardPreview(prompt: string): Promise<CopilotP
 }
 
 export async function saveCopilotDashboard(plan: CopilotPlan): Promise<number> {
-  await getCurrentUser();
+  await getWebPrincipal();
   return createDashboard({
     name: plan.name,
     description: plan.description,

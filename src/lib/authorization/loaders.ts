@@ -19,7 +19,9 @@ import {
   customColumns,
   estimateRounds,
   fieldWritePolicies,
+  jobRegionVisibility,
   jobs,
+  jobUserVisibility,
   savedReports,
   sheetAcls,
   sheets,
@@ -64,7 +66,7 @@ function statePredicate(column: AnyPgColumn, state: ResourceState): SQL {
   return state === "active" ? isNull(column) : isNotNull(column);
 }
 
-/** Reusable Region predicate included in every region-bearing resource query. */
+/** Reusable Region predicate for non-job resources (sheets, dashboards, users, …). */
 export function principalRegionPredicate(
   column: AnyPgColumn,
   principal: Principal,
@@ -86,6 +88,40 @@ export function principalRegionPredicate(
   return regional ? or(isNull(column), regional) : undefined;
 }
 
+/**
+ * Job/round access: visible if (a) a region-visibility row ∩ allowedRegions,
+ * (b) a user-visibility pin for this principal, or (c) the principal sees all
+ * regions. `jobs.region` / `estimate_rounds.region` are home/grouping only.
+ */
+export function principalJobVisibilityPredicate(
+  jobIdColumn: AnyPgColumn,
+  principal: Principal,
+): SQL | undefined {
+  const scoped =
+    principal.workspace.kind === "region"
+      ? [principal.workspace.region]
+      : principal.allowedRegions;
+  if (scoped === "all") return undefined;
+
+  const userPin = sql<boolean>`exists (
+    select 1 from ${jobUserVisibility}
+    where ${eq(jobUserVisibility.jobId, jobIdColumn)}
+      and ${eq(jobUserVisibility.userId, principal.user.id)}
+  )`;
+  if (scoped.length === 0) return userPin;
+
+  const regionMatch =
+    scoped.length === 1
+      ? eq(jobRegionVisibility.region, scoped[0]!)
+      : inArray(jobRegionVisibility.region, [...scoped]);
+  const regionVis = sql<boolean>`exists (
+    select 1 from ${jobRegionVisibility}
+    where ${eq(jobRegionVisibility.jobId, jobIdColumn)}
+      and ${regionMatch}
+  )`;
+  return or(regionVis, userPin);
+}
+
 export async function loadJobForPrincipal(
   principal: Principal,
   id: number,
@@ -95,7 +131,13 @@ export async function loadJobForPrincipal(
   const [value] = await db
     .select()
     .from(jobs)
-    .where(and(eq(jobs.id, id), statePredicate(jobs.deletedAt, state), principalRegionPredicate(jobs.region, principal)));
+    .where(
+      and(
+        eq(jobs.id, id),
+        statePredicate(jobs.deletedAt, state),
+        principalJobVisibilityPredicate(jobs.id, principal),
+      ),
+    );
   if (!value) return null;
   const descriptor: ResourceDescriptor = {
     type: "job",
@@ -104,6 +146,7 @@ export async function loadJobForPrincipal(
     ownerId: value.createdById,
     published: true,
     deleted: value.deletedAt != null,
+    visibilitySatisfied: true,
   };
   return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
 }
@@ -121,7 +164,7 @@ export async function listRoundsWithJobsForPrincipal(
       and(
         isNull(estimateRounds.deletedAt),
         isNull(jobs.deletedAt),
-        principalRegionPredicate(estimateRounds.region, principal),
+        principalJobVisibilityPredicate(jobs.id, principal),
       ),
     );
 }
@@ -148,7 +191,7 @@ export async function countPreBidStatusesForPrincipal(
         isNull(estimateRounds.deletedAt),
         isNull(jobs.deletedAt),
         inArray(estimateRounds.status, ["active", "upcoming", "outstanding"]),
-        principalRegionPredicate(estimateRounds.region, principal),
+        principalJobVisibilityPredicate(jobs.id, principal),
       ),
     )
     .groupBy(estimateRounds.status);
@@ -208,7 +251,7 @@ export async function loadRoundForPrincipal(
         eq(estimateRounds.id, id),
         statePredicate(estimateRounds.deletedAt, state),
         state === "active" ? isNull(jobs.deletedAt) : undefined,
-        principalRegionPredicate(estimateRounds.region, principal),
+        principalJobVisibilityPredicate(jobs.id, principal),
       ),
     );
   if (!value) return null;
@@ -231,6 +274,7 @@ export async function loadRoundForPrincipal(
     ownerId: value.round.createdById,
     published: true,
     deleted: value.round.deletedAt != null,
+    visibilitySatisfied: true,
     parent: {
       type: "job",
       id: value.job.id,
@@ -420,6 +464,7 @@ export async function loadDashboardForPrincipal(
     published: value.published,
     deleted: value.deletedAt != null,
     dashboardScope: value.scope,
+    isStandard: value.isStandard,
   };
   return authorize(principal, capability, descriptor).allowed ? { value, descriptor } : null;
 }
@@ -550,6 +595,7 @@ export async function loadTrashForPrincipal(
     ownerId: loaded.descriptor.ownerId,
     published: false,
     deleted: true,
+    visibilitySatisfied: loaded.descriptor.visibilitySatisfied,
     parent: loaded.descriptor,
   };
   return authorize(principal, capability, descriptor).allowed

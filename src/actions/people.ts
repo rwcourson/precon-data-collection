@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, users, type Role, type User } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import { canManagePeople, ROLE_LABELS } from "@/lib/permissions";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { ROLE_LABELS } from "@/lib/labels";
 import { isSuperAdmin, isSuperAdminEmail } from "@/lib/super-admin";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 import { REFERENCE_LISTS } from "@/lib/reference-data";
 
 const ROLES: Role[] = [
@@ -29,8 +30,8 @@ export type PeopleRow = {
 };
 
 export async function listPeople(): Promise<PeopleRow[]> {
-  const me = await getCurrentUser();
-  if (!canManagePeople(me)) throw new Error("Permission denied.");
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "people", "manage", "People");
 
   const rows = await db.select().from(users).orderBy(users.name);
   return rows.map((u) => ({
@@ -49,8 +50,9 @@ export async function updatePersonRole(input: {
   role: Role;
   region: string | null;
 }): Promise<User> {
-  const me = await getCurrentUser();
-  if (!canManagePeople(me)) throw new Error("Permission denied.");
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "people", "manage", "People");
+  const me = principal.user;
   if (!ROLES.includes(input.role)) throw new Error("Invalid role.");
 
   const regions = REFERENCE_LISTS.region.values;

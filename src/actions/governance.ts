@@ -10,19 +10,13 @@ import {
   fieldPromotions,
   sheetAcls,
 } from "@/db/schema";
-import { getCurrentUser } from "@/lib/current-user";
-import {
-  canManageCompanyColumns,
-  canManageRegionColumns,
-} from "@/lib/permissions";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { assertPrincipalAdmin } from "@/services/mutation-policy";
 
 export async function proposeFieldPromotion(columnId: number, note?: string) {
-  const user = await getCurrentUser();
-  if (!canManageRegionColumns(user)) {
-    throw new Error(
-      "Permission denied: only an RPD/SPD (or Corporate Admin) can propose promotion.",
-    );
-  }
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "promotions", "edit", "Field promotion");
+  const user = principal.user;
   const [col] = await db.select().from(customColumns).where(eq(customColumns.id, columnId));
   if (!col) throw new Error("Column not found");
   if (col.scope !== "region") throw new Error("Only region columns can be promoted");
@@ -73,12 +67,9 @@ export async function reviewFieldPromotion(
   decision: "promote" | "reject",
   reviewNote?: string,
 ) {
-  const user = await getCurrentUser();
-  if (!canManageCompanyColumns(user)) {
-    throw new Error(
-      "Permission denied: only the Corporate Precon Admin can confirm promotion.",
-    );
-  }
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "promotions", "manage", "Field promotion");
+  const user = principal.user;
   const [promo] = await db
     .select()
     .from(fieldPromotions)
@@ -175,10 +166,8 @@ export async function setSheetAcl(input: {
   acl: "viewer" | "editor" | "manager";
   regionAllowlist?: string[];
 }) {
-  const user = await getCurrentUser();
-  if (user.role !== "corporate_admin" && user.role !== "rpd") {
-    throw new Error("Permission denied: sheet ACL requires manager rights.");
-  }
+  const principal = await getWebPrincipal();
+  assertPrincipalAdmin(principal, "promotions", "edit", "Sheet ACL");
   await db.insert(sheetAcls).values({
     sheetId: input.sheetId,
     userId: input.userId ?? null,
