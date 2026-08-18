@@ -52,7 +52,7 @@ jobs:
       - run: npm run verify:expo
 
   ios:
-    runs-on: macos-14
+    runs-on: macos-15
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
