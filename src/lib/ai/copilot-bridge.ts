@@ -15,11 +15,17 @@ export function isCopilotToolName(value: string): value is CopilotToolName {
 }
 
 export function copilotToolSecret(): string {
-  return (
-    process.env.BETTER_AUTH_SECRET?.trim() ||
-    process.env.AI_GATEWAY_API_KEY?.trim() ||
-    "precon-demo-copilot"
-  );
+  const configured =
+    process.env.BETTER_AUTH_SECRET?.trim() || process.env.AI_GATEWAY_API_KEY?.trim();
+  if (configured) return configured;
+  // A well-known fallback would let anyone forge tool-call HMACs on a hosted
+  // deployment, so it is only acceptable on a developer machine.
+  if (process.env.VERCEL || process.env.APP_ENV === "production") {
+    throw new Error(
+      "Copilot tool signing requires BETTER_AUTH_SECRET or AI_GATEWAY_API_KEY on hosted deployments.",
+    );
+  }
+  return "precon-demo-copilot";
 }
 
 export function signCopilotToolRequest(principalId: string, tool: string): string {
@@ -32,7 +38,12 @@ export function verifyCopilotToolRequest(
   hmac: string | null,
 ): boolean {
   if (!hmac) return false;
-  const expected = signCopilotToolRequest(principalId, tool);
+  let expected: string;
+  try {
+    expected = signCopilotToolRequest(principalId, tool);
+  } catch {
+    return false;
+  }
   const left = Buffer.from(expected);
   const right = Buffer.from(hmac);
   return left.length === right.length && timingSafeEqual(left, right);

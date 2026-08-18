@@ -1,11 +1,17 @@
 import { createHmac } from "node:crypto";
 
 function secret(): string {
-  return (
-    process.env.BETTER_AUTH_SECRET?.trim() ||
-    process.env.AI_GATEWAY_API_KEY?.trim() ||
-    "precon-demo-copilot"
-  );
+  const configured =
+    process.env.BETTER_AUTH_SECRET?.trim() || process.env.AI_GATEWAY_API_KEY?.trim();
+  if (configured) return configured;
+  // Must match copilot-bridge.ts: the well-known dev fallback is only
+  // acceptable on a developer machine, never on a hosted deployment.
+  if (process.env.VERCEL || process.env.APP_ENV === "production") {
+    throw new Error(
+      "Copilot tool signing requires BETTER_AUTH_SECRET or AI_GATEWAY_API_KEY on hosted deployments.",
+    );
+  }
+  return "precon-demo-copilot";
 }
 
 function origin(): string {
