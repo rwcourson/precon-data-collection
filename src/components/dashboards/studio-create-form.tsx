@@ -23,7 +23,7 @@ export function StudioCreateForm() {
 
   return (
     <form
-      className="flex flex-wrap items-end gap-2"
+      className="grid items-end gap-3 sm:grid-cols-[minmax(12rem,1fr)_11rem_auto]"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -44,18 +44,22 @@ export function StudioCreateForm() {
         });
       }}
     >
-      <div className="min-w-[12rem] flex-1 space-y-1.5">
+      <div className="grid gap-1.5">
         <Label htmlFor="dash-name">Name</Label>
-        <Input id="dash-name" name="name" placeholder="My dashboard" required className="h-7" />
+        <Input id="dash-name" name="name" placeholder="My dashboard" required className="h-8" />
       </div>
-      <div className="space-y-1.5">
+      <div className="grid gap-1.5">
         <Label htmlFor="dash-scope">Scope</Label>
-        <Select value={scope} onValueChange={(v) => setScope(v as typeof scope)}>
-          <SelectTrigger
-            id="dash-scope"
-            size="sm"
-            className="h-7 w-auto gap-1 px-2.5 *:data-[slot=select-value]:flex-none"
-          >
+        <Select
+          items={[
+            { value: "personal", label: "Personal" },
+            { value: "region", label: "Region" },
+            { value: "corporate", label: "Corporate" },
+          ]}
+          value={scope}
+          onValueChange={(v) => setScope(v as typeof scope)}
+        >
+          <SelectTrigger id="dash-scope" className="h-8 w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -65,7 +69,7 @@ export function StudioCreateForm() {
           </SelectContent>
         </Select>
       </div>
-      <Button type="submit" size="sm" className="h-7 gap-1.5" disabled={pending}>
+      <Button type="submit" className="h-8 gap-1.5" disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
         Create
       </Button>

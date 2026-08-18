@@ -41,6 +41,50 @@ export function fmtDateTime(v: Date | null | undefined): string {
   });
 }
 
+/** Strip grouping so a typed or pasted money string stays numeric. */
+export function parseNumericInput(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const negative = /^-/.test(trimmed.replace(/[$,\s]/g, ""));
+  const cleaned = trimmed.replace(/[^\d.]/g, "");
+  const dot = cleaned.indexOf(".");
+  const intDigits = (dot === -1 ? cleaned : cleaned.slice(0, dot)).replace(/\D/g, "");
+  const frac = dot === -1 ? null : cleaned.slice(dot + 1).replace(/\D/g, "");
+  const intPart = intDigits.replace(/^0+(?=\d)/, "");
+  const next = frac == null ? intPart : `${intPart || (cleaned.startsWith(".") ? "0" : "")}.${frac}`;
+  if (!next || next === ".") return negative ? "-" : "";
+  return `${negative ? "-" : ""}${next}`;
+}
+
+/** Group thousands for the input the user is typing. Keeps a trailing decimal. */
+export function formatNumericInput(raw: string): string {
+  const parsed = parseNumericInput(raw);
+  if (!parsed) return "";
+  if (parsed === "-") return "-";
+  const negative = parsed.startsWith("-");
+  const unsigned = negative ? parsed.slice(1) : parsed;
+  const [intPart = "", fracPart] = unsigned.split(".");
+  const hasDot = unsigned.includes(".");
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${negative ? "-" : ""}${grouped}${hasDot ? `.${fracPart ?? ""}` : ""}`;
+}
+
+export function significantNumericCount(value: string): number {
+  return (value.match(/[\d.]/g) ?? []).length;
+}
+
+export function caretAfterSignificant(formatted: string, count: number): number {
+  if (count <= 0) return formatted.startsWith("-") ? 1 : 0;
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (/[\d.]/.test(formatted[i]!)) {
+      seen += 1;
+      if (seen >= count) return i + 1;
+    }
+  }
+  return formatted.length;
+}
+
 /** Format a raw field value according to its field type. */
 export function fmtFieldValue(
   value: unknown,

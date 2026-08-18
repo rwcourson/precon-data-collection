@@ -403,7 +403,7 @@
   .copilot-shell[data-state="open"] {
     --copilot-rail: minmax(20rem, 24rem);
     --copilot-stage: minmax(0, 1fr);
-    column-gap: 0;
+    column-gap: 1.75rem;
   }
 
   .copilot-hero {
@@ -453,7 +453,7 @@
       color-mix(in oklch, var(--muted) 88%, transparent) 100%
     );
     background-size: 200% 100%;
-    animation: copilot-shimmer 1.15s ease-in-out infinite;
+    animation: copilot-shimmer 2.2s ease-in-out infinite;
   }
 
   .copilot-result-enter {
@@ -466,7 +466,7 @@
     height: 0.3rem;
     border-radius: 999px;
     background: var(--muted-foreground);
-    animation: copilot-dot 1s ease-in-out infinite;
+    animation: copilot-dot 1.6s ease-in-out infinite;
   }
 
   .copilot-dot:nth-child(2) {
@@ -481,16 +481,16 @@
     height: 2px;
     overflow: hidden;
     border-radius: 999px;
-    background: color-mix(in oklch, var(--primary) 16%, transparent);
+    background: color-mix(in oklch, var(--muted-foreground) 12%, transparent);
   }
 
   .copilot-progress > span {
     display: block;
     height: 100%;
-    width: 36%;
+    width: 28%;
     border-radius: inherit;
-    background: var(--primary);
-    animation: copilot-progress 1s ease-in-out infinite;
+    background: color-mix(in oklch, var(--muted-foreground) 35%, transparent);
+    animation: copilot-progress 2s ease-in-out infinite;
   }
 
   @keyframes copilot-shimmer {
@@ -532,13 +532,6 @@
     }
     100% {
       transform: translateX(340%);
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .copilot-shell[data-state="open"] .copilot-stage {
-      border-left: 1px solid var(--border);
-      padding-left: 1.75rem;
     }
   }
 

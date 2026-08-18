@@ -102,17 +102,16 @@ function extractActivity(messages: ChatMessage[]): { label: string; done: boolea
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (message.role !== "assistant") continue;
-    const steps: { label: string; done: boolean }[] = [];
+    const steps = new Map<string, { label: string; done: boolean }>();
     for (const part of message.parts) {
       const name = toolName(part);
       if (!name) continue;
-      const state = String(part.state ?? "");
-      steps.push({
-        label: TOOL_LABELS[name] ?? name.replaceAll("_", " "),
-        done: ["output-available", "result", "done"].includes(state),
-      });
+      const label = TOOL_LABELS[name] ?? name.replaceAll("_", " ");
+      const done = ["output-available", "result", "done"].includes(String(part.state ?? ""));
+      const previous = steps.get(label);
+      steps.set(label, { label, done: previous ? previous.done && done : done });
     }
-    return steps;
+    return [...steps.values()];
   }
   return [];
 }
@@ -128,6 +127,16 @@ function pendingHint(messages: ChatMessage[]): string {
   return "Working on your question";
 }
 
+function CopilotDots() {
+  return (
+    <span className="inline-flex items-center gap-1" aria-hidden>
+      <span className="copilot-dot" />
+      <span className="copilot-dot" />
+      <span className="copilot-dot" />
+    </span>
+  );
+}
+
 function CopilotStreamingStage({
   hint,
   steps,
@@ -138,36 +147,13 @@ function CopilotStreamingStage({
   const active = steps.find((step) => !step.done)?.label ?? hint;
   return (
     <div className="space-y-4" aria-live="polite" aria-busy="true">
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">{active}…</p>
-        <div className="copilot-progress">
-          <span />
-        </div>
-        {steps.length > 0 ? (
-          <ul className="space-y-1">
-            {steps.map((step, index) => (
-              <li
-                key={`${step.label}-${index}`}
-                className={cn(
-                  "text-2xs",
-                  step.done ? "text-muted-foreground" : "text-foreground",
-                )}
-              >
-                {step.done ? "Done · " : "Now · "}
-                {step.label}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
-        <div className="copilot-shimmer h-7 rounded-md lg:col-span-5" />
-        <div className="hidden lg:col-span-7 lg:block" />
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="copilot-shimmer h-24 rounded-lg lg:col-span-3" />
-        ))}
-        <div className="copilot-shimmer h-52 rounded-lg lg:col-span-6" />
-        <div className="copilot-shimmer h-52 rounded-lg lg:col-span-6" />
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <CopilotDots />
+        {active}
+      </p>
+      <div className="space-y-3">
+        <div className="copilot-shimmer h-14 rounded-lg" />
+        <div className="copilot-shimmer h-28 rounded-lg" />
       </div>
     </div>
   );
@@ -207,20 +193,12 @@ function CopilotResultTable({
   const columns = tableColumnKeys(rows[0] ?? {});
   return (
     <div className="copilot-result-enter overflow-x-auto rounded-lg border bg-card">
-      <table className="w-full table-fixed text-left text-sm">
+      <table className="w-full min-w-[28rem] text-left text-sm">
         <caption className="sr-only">{title}</caption>
-        <colgroup>
-          {columns.map((key) => (
-            <col
-              key={key}
-              style={{ width: key === "jobName" ? "36%" : `${Math.round(64 / Math.max(columns.length - 1, 1))}%` }}
-            />
-          ))}
-        </colgroup>
-        <thead className="bg-muted/40 text-2xs tracking-wide text-muted-foreground">
+        <thead className="bg-muted/40 text-xs text-muted-foreground">
           <tr>
             {columns.map((key) => (
-              <th key={key} className="px-3 py-2 font-medium">
+              <th key={key} className="px-3 py-2.5 font-medium">
                 {columnDisplayLabel(key)}
               </th>
             ))}
@@ -233,8 +211,8 @@ function CopilotResultTable({
                 <td
                   key={key}
                   className={cn(
-                    "px-3 py-2 align-top",
-                    key === "jobName" ? "truncate" : "whitespace-nowrap",
+                    "px-3 py-2.5 align-top text-sm leading-snug break-words",
+                    key === "jobName" ? "min-w-48" : "min-w-28",
                   )}
                   title={formatColumnValue(key, row[key])}
                 >
@@ -315,7 +293,7 @@ function CopilotShell({
         )}
       >
         {!open ? (
-          <p className="mb-2 text-center text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">
+          <p className="mb-2 text-center text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
             Copilot
           </p>
         ) : null}
@@ -344,11 +322,11 @@ function CopilotShell({
                     onClick={() => run(suggestion.prompt)}
                     className="rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-info-border hover:bg-info-soft/70 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
                   >
-                    <span className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    <span className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                       <Icon className="size-3.5 text-primary" />
                       {suggestion.label}
                     </span>
-                    <span className="mt-1 block text-[13px] leading-snug text-foreground">
+                    <span className="mt-1 block text-sm leading-snug text-foreground">
                       {suggestion.prompt}
                     </span>
                   </button>
@@ -367,7 +345,7 @@ function CopilotShell({
               el.scrollHeight - el.scrollTop - el.clientHeight < 56;
           }}
           className={cn(
-            "copilot-thread min-h-0 space-y-2.5 overflow-y-auto overscroll-contain pr-0.5",
+            "copilot-thread min-h-0 space-y-3 overflow-y-auto overscroll-contain pr-1",
             open ? "mb-3 max-h-[42vh] flex-1 lg:max-h-none" : "hidden",
           )}
         >
@@ -378,25 +356,21 @@ function CopilotShell({
               return (
                 <div
                   key={message.id}
-                  className="ml-auto max-w-[92%] rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground"
+                  className="ml-auto w-fit max-w-[min(20rem,85%)] rounded-2xl bg-primary px-3 py-2 text-sm leading-relaxed break-words text-primary-foreground"
                 >
                   {text}
                 </div>
               );
             }
             return (
-              <div key={message.id} className="rounded-lg bg-muted/40 px-3 py-2.5">
+              <div key={message.id} className="max-w-prose px-0.5 py-0.5">
                 <CopilotMarkdown text={text} />
               </div>
             );
           })}
           {pending ? (
-            <p className="flex items-center gap-2 px-0.5 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1" aria-hidden>
-                <span className="copilot-dot" />
-                <span className="copilot-dot" />
-                <span className="copilot-dot" />
-              </span>
+            <p className="flex items-center gap-2 px-0.5 text-sm text-muted-foreground">
+              <CopilotDots />
               {pendingHint(messages)}
             </p>
           ) : null}
@@ -447,13 +421,14 @@ function CopilotShell({
         ) : chart ? (
           <div className="copilot-result-enter space-y-3" data-testid="copilot-chart">
             {pending ? (
-              <div className="copilot-progress mb-1">
-                <span />
-              </div>
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CopilotDots />
+                Updating the chart
+              </p>
             ) : null}
             <div>
               <h2 className="font-heading text-lg font-semibold tracking-tight">{chart.plan.name}</h2>
-              <p className="text-xs text-muted-foreground">{chart.plan.description}</p>
+              <p className="text-sm text-muted-foreground">{chart.plan.description}</p>
             </div>
             <WidgetCanvas widgets={chart.widgets} loading={pending && !chart.widgets.length} />
           </div>

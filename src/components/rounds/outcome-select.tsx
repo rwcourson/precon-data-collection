@@ -25,6 +25,11 @@ export function OutcomeSelect({
   const router = useRouter();
   return (
     <Select
+      items={[
+        { value: "pending", label: "Pending" },
+        { value: "successful", label: "Successful" },
+        { value: "unsuccessful", label: "Unsuccessful" },
+      ]}
       value={outcome}
       disabled={disabled || pending}
       onValueChange={(v) =>

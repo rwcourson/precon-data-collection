@@ -428,6 +428,7 @@ describe("scoped-read migration inventory", () => {
     expect(source("src/app/api/export/bid-schedule/route.ts")).toContain("resolveRegionParam");
     expect(source("src/app/api/export/annual/route.ts")).toContain("resolveRegionParam");
     expect(source("src/app/api/export/pptx/route.ts")).toContain("getWebPrincipal");
+    expect(source("src/app/api/export/pptx/route.ts")).toContain("loadDashboardForPrincipal");
     expect(source("src/app/api/export/report/route.ts")).toContain("getFlatDataset");
     expect(source("src/app/api/v1/ai/magnus/route.ts")).toContain("listRoundsWithJobsForPrincipal");
   });

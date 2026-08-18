@@ -227,7 +227,17 @@ export function ExportDialog({
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Group rows by</Label>
-              <Select value={groupBy} onValueChange={(v) => setGroupBy(v ?? "none")}>
+              <Select
+                items={[
+                  { value: "none", label: "No grouping" },
+                  ...GROUPABLE.map((g) => ({
+                    value: g,
+                    label: available.find((f) => f.key === g)?.label ?? g,
+                  })),
+                ]}
+                value={groupBy}
+                onValueChange={(v) => setGroupBy(v ?? "none")}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -244,7 +254,11 @@ export function ExportDialog({
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Sort by</Label>
-                <Select value={sortField} onValueChange={(v) => setSortField(v ?? "bidDueDate")}>
+                <Select
+                  items={available.map((f) => ({ value: f.key, label: f.label }))}
+                  value={sortField}
+                  onValueChange={(v) => setSortField(v ?? "bidDueDate")}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -259,7 +273,14 @@ export function ExportDialog({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Direction</Label>
-                <Select value={sortDir} onValueChange={(v) => setSortDir((v ?? "asc") as "asc" | "desc")}>
+                <Select
+                  items={[
+                    { value: "asc", label: "Ascending" },
+                    { value: "desc", label: "Descending" },
+                  ]}
+                  value={sortDir}
+                  onValueChange={(v) => setSortDir((v ?? "asc") as "asc" | "desc")}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>

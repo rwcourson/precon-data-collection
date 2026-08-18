@@ -12,7 +12,6 @@ import {
   VerticalBarChart,
   WaterfallMetricChart,
 } from "@/components/dashboards/ce-charts";
-import { Badge } from "@/components/ui/badge";
 import type { WidgetResolved } from "@/lib/dashboard-query";
 import { cn } from "@/lib/utils";
 
@@ -28,10 +27,6 @@ function spanClass(w?: number) {
 
 function isPercentMetric(metricKey?: string | null) {
   return metricKey === "winRate" || metricKey === "feeExpectedPct";
-}
-
-function kindLabel(kind: string) {
-  return kind.replaceAll("_", " ");
 }
 
 function metricSubtitle(metricKey?: string | null, groupBy?: string | null) {
@@ -111,7 +106,7 @@ export function WidgetCanvas({
               wide ? "sm:col-span-1 lg:col-span-3" : spanClass(w.config.layout?.w),
             )}
           >
-            <header className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3">
+            <header className="border-b border-border/70 px-4 py-3">
               <div className="min-w-0 space-y-0.5">
                 <h3 className="truncate text-[13px] font-semibold leading-snug tracking-tight text-foreground">
                   {w.config.title}
@@ -120,13 +115,6 @@ export function WidgetCanvas({
                   <p className="truncate text-2xs text-muted-foreground">{subtitle}</p>
                 )}
               </div>
-              <Badge
-                variant="secondary"
-                size="sm"
-                className="shrink-0 capitalize text-2xs font-medium"
-              >
-                {kindLabel(kind)}
-              </Badge>
             </header>
             <div className={cn("min-h-0 flex-1", kind === "kpi" ? "p-3" : "p-3.5 pt-3")}>
               {w.empty ? (

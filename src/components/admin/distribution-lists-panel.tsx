@@ -308,6 +308,10 @@ function ListFormDialog({
             <div className="space-y-1.5">
               <Label className="text-xs">Cadence</Label>
               <Select
+                items={[
+                  { value: "manual", label: "Manual" },
+                  { value: "weekly", label: "Weekly" },
+                ]}
                 value={cadence}
                 onValueChange={(v) =>
                   setCadence((v ?? "manual") as "manual" | "weekly")

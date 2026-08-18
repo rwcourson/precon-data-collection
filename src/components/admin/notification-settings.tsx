@@ -91,6 +91,11 @@ export function NotificationSettingsPanel({
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Cadence</Label>
               <Select
+                items={[
+                  { value: "off", label: "Off" },
+                  { value: "daily", label: "Daily" },
+                  { value: "weekly", label: "Weekly" },
+                ]}
                 value={draft.cadence}
                 onValueChange={(v) => patch({ cadence: (v ?? "weekly") as NotificationSettings["cadence"] })}
                 disabled={!canEdit}

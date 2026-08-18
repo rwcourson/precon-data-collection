@@ -110,6 +110,24 @@ describe("buildCanvasPptx", () => {
     // ZIP magic (pptx is a zip)
     expect(buffer[0]).toBe(0x50); // P
     expect(buffer[1]).toBe(0x4b); // K
+
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(buffer);
+    const slideXml = Object.keys(zip.files).filter((n) =>
+      /^ppt\/slides\/slide\d+\.xml$/.test(n),
+    );
+    const texts: string[] = [];
+    let themeXml = "";
+    for (const name of slideXml) {
+      const xml = await zip.file(name)!.async("string");
+      themeXml += xml;
+      for (const m of xml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)) {
+        texts.push(m[1]!);
+      }
+    }
+    expect(texts.some((t) => t.includes("Brasfield") && t.includes("Gorrie"))).toBe(true);
+    expect(themeXml).toContain("002070");
+    expect(themeXml).toMatch(/Sharp Grotesk|Verdana/);
   });
 
   it("still produces ≥2 slides for empty widgets", async () => {

@@ -4,26 +4,12 @@ import { getArtifactStorage } from "@/lib/artifact-storage";
 
 export const NOTE_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 
-const ALLOWED_TYPES: Record<string, string[]> = {
-  "application/pdf": [".pdf"],
-  "image/png": [".png"],
-  "image/jpeg": [".jpg", ".jpeg"],
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-  "text/csv": [".csv"],
-  "application/vnd.ms-outlook": [".msg"],
-  "message/rfc822": [".eml"],
-};
-
-export function assertAllowedNoteAttachment(filename: string, contentType: string, sizeBytes: number): void {
+export function assertAllowedNoteAttachment(filename: string, _contentType: string, sizeBytes: number): void {
+  if (!filename.trim()) {
+    throw DomainError.badRequest("Attachment is missing a file name");
+  }
   if (sizeBytes > NOTE_ATTACHMENT_MAX_BYTES) {
     throw DomainError.badRequest("Attachments must be 25 MB or smaller");
-  }
-  const lower = filename.toLowerCase();
-  const type = contentType.toLowerCase().split(";")[0]!.trim();
-  const exts = ALLOWED_TYPES[type];
-  if (!exts || !exts.some((ext) => lower.endsWith(ext))) {
-    throw DomainError.badRequest("That file type is not allowed on effort notes");
   }
 }
 

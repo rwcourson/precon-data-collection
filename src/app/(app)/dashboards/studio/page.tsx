@@ -29,7 +29,7 @@ export default async function DashboardStudioPage() {
     <div className="space-y-5">
       <PageHeader
         title="Dashboard Studio"
-        description="Build custom dashboards with KPIs, charts, and tables. Clone and share across personal, region, or corporate scopes."
+        description="Build custom dashboards with KPIs, charts, and tables across personal, region, or corporate scopes."
       />
 
       <Card>

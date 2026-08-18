@@ -1,0 +1,220 @@
+/* ============================================================================
+   Brasfield & Gorrie — Brand Stylesheet (2026)
+   Drop-in CSS for websites, HTML reports, and HTML->PDF output.
+
+   Tokens + components encode the brand's visual foundations: blue-led palette,
+   Sharp Grotesk type scale, hard corners, hairline rules, opacity-only states.
+   See references/design-system.md for the reasoning behind these choices.
+
+   USAGE
+   - Self-hosted / local HTML: <link rel="stylesheet" href="assets/css/brand.css">
+     Keep brand.css next to ../fonts/ so the @font-face url()s resolve.
+   - Sandboxed / in-browser preview (no filesystem): a url() to a .ttf will NOT
+     load. Base64-embed the few faces you need, or accept the Verdana fallback
+     (Verdana is the installed B&G fallback family; plain "Arial" is NOT present —
+     the installed Arial is Arial Narrow Bold, condensed/bold-only, for large display).
+     Colors, scale, and components work regardless of font loading.
+   - Two ways to call the fonts:
+       (a) the unified family  font-family:"Sharp Grotesk"  + font-weight (web only)
+       (b) the exact per-file names ("Sharp Grotesk PE SmBold 15", ...) — required
+           for Word/PowerPoint. Both are defined below. See references/typography.md.
+   ============================================================================ */
+
+/* ---- Unified family: weight-mapped (nice for web authoring) -------------- */
+@font-face{font-family:"Sharp Grotesk";src:url("../fonts/SharpGroteskPEThin-15.ttf") format("truetype");font-weight:200;font-style:normal;font-display:swap;}
+@font-face{font-family:"Sharp Grotesk";src:url("../fonts/SharpGroteskPEBook-20.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap;}
+@font-face{font-family:"Sharp Grotesk";src:url("../fonts/SharpGroteskPEBookItl-20.ttf") format("truetype");font-weight:400;font-style:italic;font-display:swap;}
+@font-face{font-family:"Sharp Grotesk";src:url("../fonts/SharpGroteskPEMedium-20.ttf") format("truetype");font-weight:500;font-style:normal;font-display:swap;}
+@font-face{font-family:"Sharp Grotesk";src:url("../fonts/SharpGroteskPESmBold-15.ttf") format("truetype");font-weight:600;font-style:normal;font-display:swap;}
+/* Eyebrow / button width (PE Medium 22) and the wide display cut (PE SmBold 20) */
+@font-face{font-family:"Sharp Grotesk Caps";src:url("../fonts/SharpGroteskPEMedium-22.ttf") format("truetype");font-weight:500;font-style:normal;font-display:swap;}
+@font-face{font-family:"Sharp Grotesk Wide";src:url("../fonts/SharpGroteskPESmBold-20.ttf") format("truetype");font-weight:600;font-style:normal;font-display:swap;}
+
+/* ---- Exact per-file names (required for Office; precise width control) ---- */
+@font-face{font-family:"Sharp Grotesk PE SmBold 15";src:url("../fonts/SharpGroteskPESmBold-15.ttf") format("truetype");font-display:swap;}
+@font-face{font-family:"Sharp Grotesk PE SmBold 20";src:url("../fonts/SharpGroteskPESmBold-20.ttf") format("truetype");font-display:swap;}
+@font-face{font-family:"Sharp Grotesk PE Medium 22";src:url("../fonts/SharpGroteskPEMedium-22.ttf") format("truetype");font-display:swap;}
+@font-face{font-family:"Sharp Grotesk PE Medium 20";src:url("../fonts/SharpGroteskPEMedium-20.ttf") format("truetype");font-display:swap;}
+@font-face{font-family:"Sharp Grotesk PE Book 20";src:url("../fonts/SharpGroteskPEBook-20.ttf") format("truetype");font-display:swap;}
+@font-face{font-family:"Sharp Grotesk PE Book Itl 20";src:url("../fonts/SharpGroteskPEBookItl-20.ttf") format("truetype");font-style:italic;font-display:swap;}
+@font-face{font-family:"Sharp Grotesk PE Thin 15";src:url("../fonts/SharpGroteskPEThin-15.ttf") format("truetype");font-display:swap;}
+
+/* ---- Design tokens -------------------------------------------------------- */
+:root{
+  /* Palette (2026 — Green removed; Blue 5 corrected to #00143C) */
+  --bg-blue-1:#B0FFFF;   /* OPT-IN pale-cyan tint — never a casual accent */
+  --bg-blue-2:#3888FF;   /* bright accent */
+  --bg-blue-3:#0028F0;   /* signature / electric — primary CTA, key data */
+  --bg-blue-4:#002070;   /* primary brand navy — logo, headings */
+  --bg-blue-5:#00143C;   /* deep anchor — full-bleed dark surfaces, footers */
+  --bg-white:#FFFFFF;
+  --bg-gray-1:#E8E8EC;   /* light neutral */
+  --bg-black:#000000;
+
+  /* Semantic roles */
+  --bg-primary:var(--bg-blue-4);
+  --bg-signature:var(--bg-blue-3);     /* the one CTA / key-data blue — LIGHT SURFACES ONLY; never on navy (~1.8:1) */
+  --bg-anchor:var(--bg-blue-5);        /* dark hero / footer surface */
+  --bg-accent-on-dark:var(--bg-white); /* the accent/figure color on navy — white (or Blue 2 for a large display figure); NOT Blue 3 */
+  --bg-tint:var(--bg-blue-1);
+  --bg-surface:var(--bg-white);
+  --bg-surface-muted:var(--bg-gray-1);
+  --bg-ink:#11131A;                    /* body ink on light */
+  --bg-ink-muted:#4B556B;
+  --bg-ink-on-dark:var(--bg-white);
+  --bg-link:var(--bg-blue-3);
+  --bg-hairline:rgba(0,20,60,.14);
+  --bg-hairline-on-dark:rgba(255,255,255,.18);
+
+  /* Type families — Verdana leads the fallback (installed B&G family, complete
+     with bold/italic); plain Arial is not on B&G machines, so it sits deeper. */
+  --bg-font:"Sharp Grotesk","Helvetica Neue",Verdana,Arial,sans-serif;
+  --bg-font-caps:"Sharp Grotesk Caps","Sharp Grotesk",Verdana,Arial,sans-serif;   /* eyebrows/buttons */
+  --bg-font-wide:"Sharp Grotesk Wide","Sharp Grotesk",Verdana,Arial,sans-serif;
+  /* exact-name stacks (also usable directly) */
+  --bg-font-display:"Sharp Grotesk PE SmBold 15","Sharp Grotesk",Verdana,Arial,sans-serif;
+  --bg-font-body:"Sharp Grotesk PE Book 20","Sharp Grotesk",Verdana,Arial,sans-serif;
+
+  /* Type scale (responsive) */
+  --bg-fs-display-xl:clamp(64px,9vw,144px);
+  --bg-fs-display-l:clamp(48px,6vw,96px);
+  --bg-fs-display-m:44px;
+  --bg-fs-h1:clamp(40px,5vw,56px);
+  --bg-fs-h2:clamp(30px,3.4vw,40px);
+  --bg-fs-h3:28px;
+  --bg-fs-h4:22px;
+  --bg-fs-lead:20px;
+  --bg-fs-body:17px;
+  --bg-fs-body-s:15px;
+  --bg-fs-eyebrow:13px;
+  --bg-fs-caption:13px;
+  --bg-fs-bignum:clamp(64px,8vw,112px);
+
+  /* Leading / tracking (per the official type spec) */
+  --bg-lh-headline:.9;     /* spec says 85%; .9 is safer for descenders on web */
+  --bg-lh-subhead:1.1;
+  --bg-lh-body:1.55;
+  --bg-ls-headline:-.005em;
+  --bg-ls-subhead:-.003em;
+  --bg-ls-eyebrow:.075em;
+  --bg-ls-bignum:-.04em;
+
+  /* Spacing (4px base; the rhythm is generous on purpose) */
+  --bg-sp-1:4px; --bg-sp-2:8px; --bg-sp-3:12px; --bg-sp-4:16px; --bg-sp-5:24px;
+  --bg-sp-6:32px; --bg-sp-7:48px; --bg-sp-8:64px; --bg-sp-9:96px; --bg-sp-10:128px; --bg-sp-11:192px;
+
+  /* Radii — hard corners; this is a construction brand */
+  --bg-radius:0;        /* default for cards/buttons/surfaces */
+  --bg-radius-input:2px;
+  --bg-radius-pill:999px;  /* status badges only */
+
+  /* Motion — restrained, engineered */
+  --bg-ease:cubic-bezier(.22,1,.36,1);
+  --bg-dur-fast:140ms; --bg-dur:220ms; --bg-dur-slow:480ms;
+
+  /* Shadows — used rarely; prefer borders */
+  --bg-shadow-float:0 8px 24px -8px rgba(0,20,60,.18);
+
+  --bg-container:1200px;
+}
+
+/* ---- Base ---------------------------------------------------------------- */
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--bg-font);font-weight:400;font-size:var(--bg-fs-body);
+  line-height:var(--bg-lh-body);color:var(--bg-ink);background:var(--bg-surface);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-wrap:pretty;}
+h1,h2,h3,h4{font-family:var(--bg-font);font-weight:600;line-height:var(--bg-lh-headline);
+  letter-spacing:var(--bg-ls-headline);color:var(--bg-primary);margin:0 0 .4em;text-transform:none;}
+h1{font-size:var(--bg-fs-h1)} h2{font-size:var(--bg-fs-h2)}
+h3{font-size:var(--bg-fs-h3);font-weight:500;letter-spacing:var(--bg-ls-subhead)}
+h4{font-size:var(--bg-fs-h4);font-weight:500;letter-spacing:var(--bg-ls-subhead)}
+p{margin:0 0 1em}
+a{color:var(--bg-link);text-decoration:none;border-bottom:1px solid currentColor;
+  transition:opacity var(--bg-dur-fast) var(--bg-ease)}
+a:hover{opacity:.7}
+em,i{font-style:italic}
+
+/* ---- Semantic type classes (bg- prefixed to be safe as a drop-in) -------- */
+.bg-display-xl,.bg-display-l,.bg-display-m{font-family:var(--bg-font);font-weight:600;
+  line-height:var(--bg-lh-headline);letter-spacing:var(--bg-ls-headline);color:inherit;margin:0;text-transform:none;}
+.bg-display-xl{font-size:var(--bg-fs-display-xl)}
+.bg-display-l{font-size:var(--bg-fs-display-l)}
+.bg-display-m{font-size:var(--bg-fs-display-m)}
+.bg-eyebrow{font-family:var(--bg-font-caps);font-weight:500;font-size:var(--bg-fs-eyebrow);
+  text-transform:uppercase;letter-spacing:var(--bg-ls-eyebrow);line-height:1.2;color:var(--bg-signature);
+  display:inline-flex;align-items:center;gap:12px}
+.bg-eyebrow::before{content:"";width:32px;height:1px;background:currentColor;display:inline-block}
+.bg-eyebrow--plain::before{display:none}
+.bg-lead{font-family:var(--bg-font);font-weight:500;font-size:var(--bg-fs-lead);
+  line-height:var(--bg-lh-subhead);letter-spacing:var(--bg-ls-subhead);max-width:62ch}
+.bg-body{font-size:var(--bg-fs-body);line-height:var(--bg-lh-body)}
+.bg-body-s{font-size:var(--bg-fs-body-s);line-height:var(--bg-lh-body)}
+.bg-caption{font-size:var(--bg-fs-caption);line-height:1.5;color:var(--bg-ink-muted)}
+.bg-bignum{font-family:var(--bg-font);font-weight:200;font-size:var(--bg-fs-bignum);
+  line-height:.9;letter-spacing:var(--bg-ls-bignum);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.bg-num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+/* ---- Surfaces ------------------------------------------------------------ */
+.bg-on-dark{background:var(--bg-anchor);color:var(--bg-ink-on-dark)}
+.bg-on-blue{background:var(--bg-signature);color:#fff}
+.bg-on-muted{background:var(--bg-surface-muted);color:var(--bg-ink)}
+.bg-on-dark h1,.bg-on-dark h2,.bg-on-dark h3,.bg-on-dark h4,
+.bg-on-blue h1,.bg-on-blue h2,.bg-on-blue h3,.bg-on-blue h4{color:#fff}
+.bg-on-dark .bg-eyebrow,.bg-on-blue .bg-eyebrow{color:rgba(255,255,255,.7)}
+
+/* ---- Layout helpers ------------------------------------------------------ */
+.bg-section{max-width:var(--bg-container);margin:0 auto;padding:var(--bg-sp-9) var(--bg-sp-7)}
+.bg-rule{height:1px;width:100%;background:var(--bg-hairline);border:0;margin:var(--bg-sp-6) 0}
+.bg-rule--accent{height:3px;width:56px;background:var(--bg-signature);border:0;margin:var(--bg-sp-3) 0 var(--bg-sp-5)}
+
+/* ---- Header -------------------------------------------------------------- */
+.bg-header{background:var(--bg-primary);color:#fff;padding:var(--bg-sp-4) var(--bg-sp-7);
+  display:flex;align-items:center;justify-content:space-between}
+.bg-header h1,.bg-header h2{color:#fff}
+
+/* ---- Buttons (0 radius, uppercase, opacity-only states) ------------------ */
+.bg-btn{display:inline-block;font-family:var(--bg-font-caps);font-weight:500;font-size:var(--bg-fs-eyebrow);
+  text-transform:uppercase;letter-spacing:var(--bg-ls-eyebrow);background:var(--bg-signature);color:#fff;
+  padding:16px 28px;border:0;border-radius:var(--bg-radius);cursor:pointer;text-decoration:none;
+  transition:opacity var(--bg-dur-fast) var(--bg-ease)}
+.bg-btn:hover{opacity:.85} .bg-btn:active{opacity:.7}
+.bg-btn--ghost{background:transparent;color:var(--bg-anchor);border:1px solid var(--bg-anchor)}
+.bg-on-dark .bg-btn--ghost,.bg-on-blue .bg-btn--ghost{color:#fff;border-color:rgba(255,255,255,.5)}
+
+/* ---- Badge (the only pill) ----------------------------------------------- */
+.bg-badge{display:inline-block;font-family:var(--bg-font-caps);font-weight:500;font-size:11px;
+  text-transform:uppercase;letter-spacing:.1em;padding:4px 12px;border-radius:var(--bg-radius-pill);
+  background:var(--bg-surface-muted);color:var(--bg-primary)}
+.bg-badge--blue{background:var(--bg-signature);color:#fff}
+
+/* ---- Cards (bordered, hard corners, no shadow) --------------------------- */
+.bg-card{background:var(--bg-surface);border:1px solid var(--bg-hairline);border-radius:var(--bg-radius);
+  padding:var(--bg-sp-6)}
+.bg-card--tint{background:var(--bg-surface-muted);border-color:transparent}
+.bg-card--navy,.bg-card--anchor{background:var(--bg-anchor);color:#fff;border-color:transparent}
+.bg-card--navy h1,.bg-card--navy h2,.bg-card--navy h3,
+.bg-card--anchor h1,.bg-card--anchor h2,.bg-card--anchor h3{color:#fff}
+
+/* ---- Stat block / band --------------------------------------------------- */
+.bg-statband{background:var(--bg-anchor);color:#fff;padding:var(--bg-sp-8) var(--bg-sp-7)}
+.bg-statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0}
+.bg-stat{padding:4px 36px;border-left:1px solid var(--bg-hairline-on-dark);display:flex;flex-direction:column;gap:10px}
+.bg-stat:first-child{padding-left:0;border-left:0}
+.bg-stat__n{font-family:var(--bg-font);font-weight:200;font-size:clamp(48px,5vw,80px);line-height:.9;
+  letter-spacing:var(--bg-ls-bignum);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.bg-stat__unit{font-family:var(--bg-font-caps);font-weight:500;font-size:12px;text-transform:uppercase;
+  letter-spacing:.075em;opacity:.9}
+.bg-stat__label{font-family:var(--bg-font);font-size:var(--bg-fs-body-s);opacity:.7;
+  border-top:1px solid var(--bg-hairline-on-dark);padding-top:12px;margin-top:4px}
+
+/* ---- Table --------------------------------------------------------------- */
+table.bg-table{border-collapse:collapse;width:100%}
+table.bg-table th{background:var(--bg-primary);color:#fff;font-family:var(--bg-font-caps);font-weight:500;
+  text-transform:uppercase;letter-spacing:.06em;font-size:var(--bg-fs-body-s);text-align:left;padding:12px 14px}
+table.bg-table td{padding:11px 14px;border-bottom:1px solid var(--bg-hairline)}
+table.bg-table tr:nth-child(even) td{background:var(--bg-surface-muted)}
+
+/* ---- Inputs -------------------------------------------------------------- */
+.bg-input{font-family:var(--bg-font);font-size:var(--bg-fs-body);padding:12px 14px;
+  border:1px solid var(--bg-hairline);border-radius:var(--bg-radius-input);background:#fff;color:var(--bg-ink)}
+.bg-input:focus{outline:2px solid var(--bg-signature);outline-offset:0}

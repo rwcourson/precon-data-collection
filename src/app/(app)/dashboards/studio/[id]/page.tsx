@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
-import { Download, Sparkles } from "lucide-react";
-import { StudioCloneButton } from "@/components/dashboards/studio-clone-button";
+import { Download } from "lucide-react";
 import { StudioWidgetForm } from "@/components/dashboards/studio-widget-form";
 import { WidgetCanvas } from "@/components/dashboards/widget-canvas";
 import { PageHeader } from "@/components/page-header";
@@ -61,21 +60,7 @@ export default async function DashboardStudioDetailPage({
               size="sm"
               className="gap-1.5"
               nativeButton={false}
-              render={<Link href="/copilot" />}
-            >
-              <Sparkles className="size-4" />
-              AI Copilot
-            </Button>
-            <StudioCloneButton
-              dashboardId={id}
-              label={dash.isStandard ? "Duplicate to personal" : "Clone"}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              nativeButton={false}
-              render={<a href="/api/export/pptx" />}
+              render={<a href={`/api/export/pptx?dashboardId=${id}`} />}
             >
               <Download className="size-4" />
               Export PPTX
@@ -114,19 +99,13 @@ export default async function DashboardStudioDetailPage({
 
       {dash.isStandard ? (
         <p className="text-sm text-muted-foreground">
-          Standard dashboards are not editable in place. Duplicate to personal to customize.
+          Standard dashboards are not editable in place.
         </p>
       ) : (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Add widget</CardTitle>
-            <CardDescription>
-              Manual tile — or use{" "}
-              <Link href="/copilot" className="underline underline-offset-2">
-                AI Copilot
-              </Link>{" "}
-              to generate a full layout.
-            </CardDescription>
+            <CardDescription>Add a KPI, chart, or table to this canvas.</CardDescription>
           </CardHeader>
           <CardContent>
             <StudioWidgetForm dashboardId={id} />

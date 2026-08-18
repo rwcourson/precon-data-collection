@@ -170,8 +170,8 @@ export default async function RoundPage({
             Bid Year {round.bidYear} · {round.region} / {round.preconDepartment}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <OutcomeSelect
               roundId={round.id}
               outcome={round.outcome}
@@ -187,21 +187,25 @@ export default async function RoundPage({
               />
             )}
           </div>
-          {round.teamAssignedAt && (
-            <p className="max-w-xs text-right text-2xs text-muted-foreground">
-              Team assigned {fmtDateTime(round.teamAssignedAt)}
-              {round.teamAssignedById
-                ? ` by ${userMap.get(round.teamAssignedById) ?? "a teammate"}`
-                : ""}
-              . Independent of Estimate Lead.
-            </p>
-          )}
-          {locked && (
-            <p className="max-w-xs text-right text-2xs text-muted-foreground">
-              {principalCanEditAfterLock(principal, round)
-                ? "Post-lock outcome correction (RPD/SPD) — changes are audited."
-                : "Outcome is locked. Ask the regional RPD/SPD to correct it."}
-            </p>
+          {(round.teamAssignedAt || locked) && (
+            <div className="max-w-sm space-y-1 text-left text-sm leading-5 text-muted-foreground">
+              {round.teamAssignedAt ? (
+                <p>
+                  Team assigned {fmtDateTime(round.teamAssignedAt)}
+                  {round.teamAssignedById
+                    ? ` by ${userMap.get(round.teamAssignedById) ?? "a teammate"}`
+                    : ""}
+                </p>
+              ) : null}
+              {round.teamAssignedAt ? <p>Separate from Estimate Lead</p> : null}
+              {locked ? (
+                <p>
+                  {principalCanEditAfterLock(principal, round)
+                    ? "Post-lock outcome changes are audited"
+                    : "Outcome is locked — ask the regional RPD/SPD to correct it"}
+                </p>
+              ) : null}
+            </div>
           )}
         </div>
       </div>

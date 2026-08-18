@@ -809,7 +809,7 @@ function MiniSelect({
   placeholder?: string;
 }) {
   return (
-    <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
+    <Select items={options} value={value} onValueChange={(v) => onChange(v ?? "")}>
       <SelectTrigger size="sm" className={cn("h-7 text-xs", className)}>
         <SelectValue placeholder={placeholder ?? "Select…"} />
       </SelectTrigger>

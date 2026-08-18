@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { NoteBody } from "@/components/notes/note-body";
-import { MentionPicker } from "@/components/notes/mention-picker";
+import { filterMentionUsers, MentionPicker } from "@/components/notes/mention-picker";
 import {
   escapeNoteHtml,
   extractMentionUserIds,
@@ -58,16 +58,31 @@ describe("note body rendering", () => {
 });
 
 describe("note attachments", () => {
-  it("rejects files over 25 MB and disallowed types", () => {
+  it("rejects files over 25 MB and accepts any type under the cap", () => {
     expect(() =>
       assertAllowedNoteAttachment("big.pdf", "application/pdf", NOTE_ATTACHMENT_MAX_BYTES + 1),
     ).toThrow(/25 MB/);
     expect(() =>
       assertAllowedNoteAttachment("payload.exe", "application/x-msdownload", 12),
-    ).toThrow(/not allowed/);
+    ).not.toThrow();
+    expect(() =>
+      assertAllowedNoteAttachment("notes.zip", "application/zip", 2_000),
+    ).not.toThrow();
     expect(() =>
       assertAllowedNoteAttachment("edge.pdf", "application/pdf", NOTE_ATTACHMENT_MAX_BYTES),
     ).not.toThrow();
+  });
+
+  it("waits for a letter and ranks name prefix matches first", () => {
+    const people = [
+      { id: 1, name: "Sarah Chen", title: "PCM", region: "Central" },
+      { id: 2, name: "Marcus Webb", title: "Estimate Lead", region: "Central" },
+      { id: 3, name: "Dana Ortiz", title: "JSA", region: "Texas" },
+    ];
+    expect(filterMentionUsers(people, "")).toEqual([]);
+    expect(filterMentionUsers(people, "@")).toEqual([]);
+    expect(filterMentionUsers(people, "s").map((user) => user.name)).toEqual(["Sarah Chen"]);
+    expect(filterMentionUsers(people, "we").map((user) => user.name)).toEqual(["Marcus Webb"]);
   });
 
   it("mention picker shows an empty state when nobody matches", () => {

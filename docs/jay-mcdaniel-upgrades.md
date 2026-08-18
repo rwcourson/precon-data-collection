@@ -61,9 +61,9 @@ Hierarchical filter is **`preconDepartment`**, not a Georgia special case. Empty
 Chat-shaped history on the pricing effort: author, timestamp, edit marker, soft-delete, attachments.
 
 - Body max **10,000** characters. Markup mentions are `@[userId]`, never a display-name string.
-- Attachments: allowlisted types, **25 MB** inclusive, server-enforced. Download: `GET /api/notes/attachments/:id` (kernel read on the parent round, `Content-Disposition: attachment`).
+- Attachments: any file type, **25 MB** inclusive, server-enforced. Download: `GET /api/notes/attachments/:id` (kernel read on the parent round, `Content-Disposition: attachment`).
 - Mentions notify only users who can **read** that round. Re-editing the same mention does not duplicate. Deep link: `/rounds/{id}?tab=notes&note={id}`.
-- Composer is contenteditable chips (`NoteComposer`); storage stays `@[userId]`. The mention list is a portaled picker so it is not clipped by the card.
+- Composer is contenteditable chips (`NoteComposer`); storage stays `@[userId]`. The mention picker opens only after the first letter, ranks matches, and portals above the composer so it is not clipped.
 - Notes live on the round **Notes** tab only. There is no bid-schedule row drawer.
 
 ## Staffing
@@ -77,7 +77,9 @@ Chat-shaped history on the pricing effort: author, timestamp, edit marker, soft-
 
 - Custom Report Builder results sit **full width** under the saved-list + builder row. Job Name (and other long text) takes leftover column width; dollars/metrics are right-aligned (`src/lib/report-layout.ts`).
 - Latest note for print/Excel is one `DISTINCT ON (round_id)` query (`round_notes_round_created_idx`). Soft-deletes excluded. Truncated at 300 characters. That query stays **off** the bid-schedule page hot path.
-- Standard dashboards (corporate + one per Destini region) are read-only (`isStandard`). **Duplicate to personal** writes `isStandard: false`.
+- Standard dashboards (corporate + one per Destini region) are read-only (`isStandard`). Studio does not expose Clone or Copilot in the header; `cloneDashboard` remains for the mobile API.
+- Studio **Export PPTX** downloads that canvas (`GET /api/export/pptx?dashboardId=`). Forecast **Export PPTX** stays the volume-projection deck. Both use the 2026 B&G slideshow kit — see [generated-documents.md](generated-documents.md).
+- Widget cards show title + metric subtitle only. Do not put chart-type badges (Donut, Horizontal Bar) back on the canvas.
 - Report owners schedule weekday + hour (Jay’s Friday / Monday 8am). Delivery is idempotent per `periodKey`. HTML is rendered as the **owner**, with the same wrap CSS as print.
 - Seed CLIs must not import `server-only` services. Demo standards are inserted from `allStandardDashboardDefs()` in `src/db/seed.ts`.
 
@@ -110,6 +112,10 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 - ⌘K search palette is `sm:max-w-xl`.
 - Collapsed-sidebar hover menus are compact (`p-1`, `py-1` items) so Dashboards → Corporate / Region / Division is a short list.
 - Selects, command items, and mention rows share the same accent hover.
+- Pass `items={[{ value, label }]}` to `Select` / `UrlSelect` whenever the stored value is an id or key — the trigger must show the name.
+- Dollar and count fields use `NumericInput` so commas appear while typing; stored values stay numeric.
+- Select and dropdown menus size to `--available-height` and wrap labels so they are not clipped.
+- Job **Access** lists visibility regions and the team for those regions; people outside the selected regions sit under **Added individually**.
 
 ## File map
 
@@ -130,6 +136,7 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 | Schedule periodKey | `src/lib/distribution-schedule.ts` |
 | Copilot tools | `src/services/copilot-query-service.ts`, `agent/` |
 | HMAC bridge | `src/lib/ai/copilot-bridge.ts` |
+| Generated PPTX / brand | `brand/`, `src/lib/brand/`, `src/lib/pptx-canvas.ts`, `src/lib/pptx-forecast.ts` |
 
 ## Verify
 
@@ -143,6 +150,7 @@ Typecheck **after** `next build` on a clean tree (Next 16 generates `LayoutProps
 
 ## Related
 
+- [generated-documents.md](generated-documents.md) — branded PPTX / future Word and PDF
 - [github-and-vercel.md](github-and-vercel.md) — how this ships
 - [security/role-capability-matrix.md](security/role-capability-matrix.md) — who can do what
 - [magnus-api.md](magnus-api.md) — Magnus + Eve HTTP contract

@@ -65,7 +65,7 @@ Start as Brian Meyers in the **Central** workspace. Do not lead with New Pursuit
 4. Submit → post-bid. Lock blocked on blanks; Central extras sit on their own tab and do not block. Lock a complete row.
 5. Change **Outcome** after lock. Audit line appears.
 6. Print the consolidated Central bid schedule PDF (latest note wraps on the right).
-7. Dashboards — Standard set is read-only; Duplicate to personal. Reports → run a report (results are full width) and Email schedules (Friday 8am).
+7. Dashboards — Standard set is read-only. Open a Studio canvas and Export PPTX (B&G deck of the widgets, not the forecast file). Reports → run a report (results are full width) and Email schedules (Friday 8am).
 8. `/copilot` — “Which upcoming efforts in my region have no team assigned?” Tables show Job Number / Status, not raw keys.
 
 Salesforce-first New Pursuit is there if asked. Manual tab is **No job number yet (ROM)**. Duplicate names warn; **Show in my region instead** adopts visibility instead of creating a fourth Auburn.
@@ -132,3 +132,5 @@ If you run Eve outside Next (`npx eve dev`), set `APP_ORIGIN` to the Next origin
 - `src/lib/authorization/` — kernel, loaders, visibility SQL
 - `src/lib/demo-identity.ts` — default Central RPD **Brian Meyers**
 - `docs/README.md` — documentation index
+- `brand/` + `src/lib/brand/` — 2026 slideshow kit and PPTX theme
+- `docs/generated-documents.md` — how generated decks stay on brand

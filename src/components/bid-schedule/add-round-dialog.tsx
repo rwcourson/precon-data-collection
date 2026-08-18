@@ -124,7 +124,15 @@ export function AddRoundDialog({
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label className="text-xs">Bid Schedule Section</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v ?? "upcoming")}>
+            <Select
+              items={[
+                { value: "active", label: "Active" },
+                { value: "upcoming", label: "Upcoming" },
+                { value: "outstanding", label: "Outstanding" },
+              ]}
+              value={status}
+              onValueChange={(v) => setStatus(v ?? "upcoming")}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

@@ -212,6 +212,12 @@ export function ViewSheet({
         <div className="flex items-center gap-1.5">
           <Group className="size-4 text-muted-foreground" />
           <Select
+            items={[
+              { value: "", label: "No grouping" },
+              ...columns
+                .filter((c) => !["metric", "dollars", "number"].includes(c.type))
+                .map((c) => ({ value: c.key, label: c.label })),
+            ]}
             value={groupBy}
             onValueChange={(v) => {
               setGroupBy(v ?? "");
@@ -221,7 +227,7 @@ export function ViewSheet({
             <SelectTrigger size="sm" className="h-8 w-44 text-[13px]">
               <SelectValue placeholder="No grouping" />
             </SelectTrigger>
-            <SelectContent className="max-h-72">
+            <SelectContent>
               <SelectItem value="">No grouping</SelectItem>
               {columns
                 .filter((c) => !["metric", "dollars", "number"].includes(c.type))
@@ -447,13 +453,14 @@ function FilterBuilder({
           <div className="space-y-1">
             <Label className="text-2xs">Column</Label>
             <Select
+              items={catalog.map((c) => ({ value: c.key, label: c.label }))}
               value={draft.field}
               onValueChange={(v) => setDraft({ ...draft, field: v ?? "" })}
             >
               <SelectTrigger size="sm" className="h-8 w-full text-[13px]">
                 <SelectValue placeholder="Choose a column…" />
               </SelectTrigger>
-              <SelectContent className="max-h-72">
+              <SelectContent>
                 {catalog.map((c) => (
                   <SelectItem key={c.key} value={c.key}>
                     {c.label}
@@ -463,7 +470,11 @@ function FilterBuilder({
             </Select>
           </div>
           <div className="grid grid-cols-[7rem_1fr] gap-2">
-            <Select value={draft.op} onValueChange={(v) => setDraft({ ...draft, op: v ?? "eq" })}>
+            <Select
+              items={FILTER_OPS}
+              value={draft.op}
+              onValueChange={(v) => setDraft({ ...draft, op: v ?? "eq" })}
+            >
               <SelectTrigger size="sm" className="h-8 text-[13px]">
                 <SelectValue />
               </SelectTrigger>

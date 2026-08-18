@@ -104,10 +104,10 @@ export default async function JobPage({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Regions</CardTitle>
+          <CardTitle className="text-base">Access</CardTitle>
           <CardDescription>
-            Home region is {job.region}. Directors can add their own region so this
-            job shows in their view; Corporate Admin can pin individual people.
+            Home region is {job.region}. Turn on a region so everyone there can see
+            this job, then add anyone from outside those regions.
           </CardDescription>
         </CardHeader>
         <CardContent>

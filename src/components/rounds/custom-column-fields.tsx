@@ -2,6 +2,7 @@
 
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -51,6 +52,21 @@ export function CustomColumnFields({
               onChange={(next) => onChange(col.id, next)}
               disabled={disabled}
             />
+          ) : col.type === "dollars" || col.type === "number" ? (
+            <div className="relative">
+              {col.type === "dollars" ? (
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  $
+                </span>
+              ) : null}
+              <NumericInput
+                className={col.type === "dollars" ? "pl-6" : ""}
+                value={values[col.id] ?? ""}
+                onChange={(next) => onChange(col.id, next)}
+                disabled={disabled}
+                placeholder={col.type === "dollars" ? "0" : undefined}
+              />
+            </div>
           ) : (
             <Input
               type="text"

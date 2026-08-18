@@ -187,6 +187,7 @@ function PersonRow({
       <TableCell>
         {canEdit && !locked ? (
           <Select
+            items={roleOptions.map((r) => ({ value: r, label: roleLabels[r] ?? r }))}
             value={role}
             onValueChange={(v) => {
               if (v) setRole(v as Role);
@@ -210,6 +211,10 @@ function PersonRow({
       <TableCell>
         {canEdit && !locked ? (
           <Select
+            items={[
+              { value: "__corp__", label: "Corporate (all)" },
+              ...regions.map((r) => ({ value: r, label: r })),
+            ]}
             value={region}
             onValueChange={(v) => {
               if (v) setRegion(v);

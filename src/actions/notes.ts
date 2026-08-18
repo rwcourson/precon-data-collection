@@ -67,12 +67,27 @@ export async function createRoundNote(input: {
   return note;
 }
 
+function isUploadedFile(value: FormDataEntryValue): value is File {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "arrayBuffer" in value &&
+    typeof value.arrayBuffer === "function" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    value.name.length > 0 &&
+    "size" in value &&
+    typeof value.size === "number" &&
+    value.size > 0
+  );
+}
+
 export async function createRoundNoteFromForm(formData: FormData) {
   const roundId = Number(formData.get("roundId"));
   const body = String(formData.get("body") ?? "");
   const files: { filename: string; contentType: string; bytes: Uint8Array }[] = [];
   for (const value of formData.getAll("files")) {
-    if (!(value instanceof File) || value.size === 0) continue;
+    if (!isUploadedFile(value)) continue;
     files.push({
       filename: value.name,
       contentType: value.type || "application/octet-stream",

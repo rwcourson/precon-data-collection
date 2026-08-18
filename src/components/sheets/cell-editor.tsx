@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { parseNumericInput } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -103,12 +105,33 @@ export function CellEditor({
     );
   }
 
+  if (isNumericType(type)) {
+    return (
+      <NumericInput
+        autoFocus
+        value={draft}
+        className="h-7 w-full px-1.5 py-0 text-[13px]"
+        onChange={setDraft}
+        onBlur={() => commit(parseNumericInput(draft))}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit(parseNumericInput(draft));
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            committed.current = true;
+            onCancel();
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <Input
       autoFocus
       value={draft}
       type="text"
-      inputMode={isNumericType(type) ? "decimal" : undefined}
       className="h-7 w-full px-1.5 py-0 text-[13px]"
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => commit(draft)}

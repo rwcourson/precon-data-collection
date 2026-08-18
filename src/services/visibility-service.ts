@@ -56,7 +56,17 @@ export const visibilityService = {
     const job = loaded.value;
     const [regions, pins] = await Promise.all([
       db.select().from(jobRegionVisibility).where(eq(jobRegionVisibility.jobId, jobId)),
-      db.select().from(jobUserVisibility).where(eq(jobUserVisibility.jobId, jobId)),
+      db
+        .select({
+          userId: jobUserVisibility.userId,
+          addedAt: jobUserVisibility.addedAt,
+          name: users.name,
+          title: users.title,
+          region: users.region,
+        })
+        .from(jobUserVisibility)
+        .innerJoin(users, eq(jobUserVisibility.userId, users.id))
+        .where(eq(jobUserVisibility.jobId, jobId)),
     ]);
     return { job, homeRegion: job.region, regions, pins };
   },

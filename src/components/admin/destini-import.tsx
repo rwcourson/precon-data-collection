@@ -116,6 +116,10 @@ function PreviewBlock({
         {row.rounds.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <Select
+              items={row.rounds.map((r) => ({
+                value: String(r.id),
+                label: `${r.estimatePhase ?? `Round ${r.roundNumber}`} · ${r.status}`,
+              }))}
               value={roundId != null ? String(roundId) : ""}
               onValueChange={(v) => {
                 if (v) onRoundChange(Number(v));

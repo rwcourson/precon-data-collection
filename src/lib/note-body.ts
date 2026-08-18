@@ -45,7 +45,7 @@ export function mentionLabel(userId: number, names: Record<number, string>): str
 }
 
 export const mentionChipClassName =
-  "inline-flex align-baseline whitespace-nowrap rounded-sm bg-primary/15 px-1.5 py-0.5 font-medium text-primary";
+  "inline-flex align-baseline whitespace-nowrap rounded-sm bg-primary/15 px-1.5 py-0.5 text-sm font-medium text-primary";
 
 export function formatAttachmentBytes(sizeBytes: number): string {
   if (sizeBytes < 1024) return `${sizeBytes} B`;

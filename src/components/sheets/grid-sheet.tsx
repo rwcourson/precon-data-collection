@@ -146,11 +146,20 @@ export function GridSheet({
         )}
         <div className="flex items-center gap-1.5">
           <Group className="size-4 text-muted-foreground" />
-          <Select value={groupBy} onValueChange={(v) => setGroupBy(v ?? "")}>
+          <Select
+            items={[
+              { value: "", label: "No grouping" },
+              ...columns
+                .filter((c) => ["text", "dropdown", "date", "contact"].includes(c.type))
+                .map((c) => ({ value: c.key, label: c.label })),
+            ]}
+            value={groupBy}
+            onValueChange={(v) => setGroupBy(v ?? "")}
+          >
             <SelectTrigger size="sm" className="h-8 w-44 text-[13px]">
               <SelectValue placeholder="No grouping" />
             </SelectTrigger>
-            <SelectContent className="max-h-72">
+            <SelectContent>
               <SelectItem value="">No grouping</SelectItem>
               {columns
                 .filter((c) => ["text", "dropdown", "date", "contact"].includes(c.type))
@@ -298,7 +307,11 @@ function AddColumnDialog({ sheetId }: { sheetId: number }) {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Type</Label>
-            <Select value={type} onValueChange={(v) => setType((v as SheetColumnType) ?? "text")}>
+            <Select
+              items={SHEET_COLUMN_TYPES}
+              value={type}
+              onValueChange={(v) => setType((v as SheetColumnType) ?? "text")}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

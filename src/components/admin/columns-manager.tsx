@@ -355,7 +355,17 @@ function AddColumnDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Data type</Label>
-            <Select value={type} onValueChange={(v) => setType((v ?? "text") as AddColumnInput["type"])}>
+            <Select
+              items={[
+                { value: "text", label: "Text" },
+                { value: "number", label: "Number" },
+                { value: "dollars", label: "Dollars" },
+                { value: "date", label: "Date" },
+                { value: "dropdown", label: "Dropdown" },
+              ]}
+              value={type}
+              onValueChange={(v) => setType((v ?? "text") as AddColumnInput["type"])}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

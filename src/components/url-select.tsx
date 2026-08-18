@@ -54,13 +54,13 @@ export function UrlSelect({
       <SelectTrigger
         size="sm"
         className={cn(
-          "h-8 max-w-48 min-w-[8.5rem] border-border/80 bg-card text-[13px]",
+          "h-8 min-w-[8.5rem] max-w-[min(22rem,100%)] border-border/80 bg-card text-[13px] *:data-[slot=select-value]:line-clamp-none",
           className,
         )}
       >
         <SelectValue placeholder={current?.label} />
       </SelectTrigger>
-      <SelectContent align="start" className="min-w-44">
+      <SelectContent align="start">
         {options.map((o) => (
           <SelectItem key={o.value} value={o.value} className="text-[13px]">
             {o.label}

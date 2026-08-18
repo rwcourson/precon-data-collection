@@ -24,14 +24,15 @@ function revalidateJob(jobId: number) {
 export async function getJobVisibility(jobId: number) {
   const principal = await getWebPrincipal();
   const listed = await visibilityService.listForJob(principal, jobId);
-  const directory = principalCanAssignJobUser(principal)
-    ? await listDirectoryUsersForPrincipal(principal)
-    : [];
+  const directory = await listDirectoryUsersForPrincipal(principal);
   return {
     homeRegion: listed.homeRegion,
     regions: listed.regions.map((row) => row.region),
     pins: listed.pins.map((row) => ({
       userId: row.userId,
+      name: row.name,
+      title: row.title,
+      region: row.region,
       addedAt: row.addedAt.toISOString(),
     })),
     allRegions: REFERENCE_LISTS.region.values,
@@ -43,6 +44,7 @@ export async function getJobVisibility(jobId: number) {
     directory: directory.map((user) => ({
       id: user.id,
       name: user.name,
+      title: user.title,
       region: user.region,
       role: user.role,
     })),

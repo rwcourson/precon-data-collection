@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Paperclip, Pencil, Trash2 } from "lucide-react";
+import { Paperclip, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   createRoundNoteFromForm,
@@ -23,6 +23,8 @@ import {
 } from "@/components/notes/mention-picker";
 import { formatAttachmentBytes, relativeAge } from "@/lib/note-body";
 import { fmtDateTime } from "@/lib/format";
+
+const NOTE_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 
 export type NotesThreadNote = {
   id: number;
@@ -72,6 +74,9 @@ export function NotesThread({
   const [picker, setPicker] = useState<{ start: number; query: string } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [blockedMentions, setBlockedMentions] = useState<{ userId: number; name: string }[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const mentionMatches = picker ? filterMentionUsers(directory, picker.query) : [];
+  const showMentionPicker = Boolean(picker && picker.query.trim().length > 0);
   const names = useMemo(
     () => Object.fromEntries(directory.map((user) => [user.id, user.name])),
     [directory],
@@ -101,30 +106,46 @@ export function NotesThread({
   function onSubmit(formData: FormData) {
     const trimmed = String(formData.get("body") ?? "").trim();
     if (!trimmed) return;
+    const oversized = attachments.find((file) => file.size > NOTE_ATTACHMENT_MAX_BYTES);
+    if (oversized) {
+      toast.error(`${oversized.name} is larger than 25 MB`);
+      return;
+    }
+    const pendingFiles = attachments;
+    formData.delete("files");
+    for (const file of pendingFiles) formData.append("files", file);
     startTransition(async () => {
+      const optimistic: NotesThreadNote = {
+        id: -Date.now(),
+        roundId,
+        body: trimmed,
+        createdAt: new Date(),
+        editedAt: null,
+        authorUserId: currentUserId,
+        authorName: "You",
+        authorTitle: null,
+        attachments: pendingFiles.map((file, index) => ({
+          id: -(index + 1),
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+        })),
+      };
       try {
         const preview = await previewRoundNoteMentions(roundId, trimmed);
         const blocked = preview.mentions.filter((row) => !row.canRead);
         setBlockedMentions(blocked.map((row) => ({ userId: row.userId, name: row.name })));
-        const optimistic: NotesThreadNote = {
-          id: -Date.now(),
-          roundId,
-          body: trimmed,
-          createdAt: new Date(),
-          editedAt: null,
-          authorUserId: currentUserId,
-          authorName: "You",
-          authorTitle: null,
-          attachments: [],
-        };
         setNotes((prev) => [...prev, optimistic]);
         setBody("");
+        setAttachments([]);
         const created = await createRoundNoteFromForm(formData);
         setNotes((prev) => [...prev.filter((note) => note.id !== optimistic.id), created]);
         formRef.current?.reset();
         router.refresh();
       } catch (err) {
+        setNotes((prev) => prev.filter((note) => note.id !== optimistic.id));
         setBody(trimmed);
+        setAttachments(pendingFiles);
         toast.error(err instanceof Error ? err.message : "Could not post the note");
       }
     });
@@ -182,12 +203,12 @@ export function NotesThread({
                     <p className="text-sm font-medium">
                       {note.authorName}
                       {note.authorTitle ? (
-                        <span className="ml-1.5 font-normal text-muted-foreground">
+                        <span className="ml-1.5 text-sm font-normal text-muted-foreground">
                           {note.authorTitle}
                         </span>
                       ) : null}
                     </p>
-                    <p className="text-2xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {fmtDateTime(created)} · {relativeAge(created)}
                       {note.editedAt ? " (edited)" : ""}
                     </p>
@@ -245,20 +266,33 @@ export function NotesThread({
                 )}
                 {note.attachments.length > 0 ? (
                   <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {note.attachments.map((file) => (
-                      <li key={file.id}>
-                        <a
-                          href={`/api/notes/attachments/${file.id}`}
-                          className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-0.5 text-2xs hover:bg-muted"
-                        >
-                          <Paperclip className="size-3" />
+                    {note.attachments.map((file) => {
+                      const chip = (
+                        <>
+                          <Paperclip className="size-3.5" />
                           {file.filename}
                           <span className="text-muted-foreground">
                             {formatAttachmentBytes(file.sizeBytes)}
                           </span>
-                        </a>
-                      </li>
-                    ))}
+                        </>
+                      );
+                      return (
+                        <li key={file.id}>
+                          {file.id > 0 ? (
+                            <a
+                              href={`/api/notes/attachments/${file.id}`}
+                              className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-1 text-xs hover:bg-muted"
+                            >
+                              {chip}
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-md border bg-muted/50 px-2 py-1 text-xs">
+                              {chip}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : null}
               </article>
@@ -273,11 +307,11 @@ export function NotesThread({
       >
         <input type="hidden" name="roundId" value={roundId} />
         <div>
-          {picker ? (
+          {showMentionPicker ? (
             <AnchoredMentionPicker
               anchorRef={composerRef}
               users={directory}
-              query={picker.query}
+              query={picker!.query}
               activeIndex={activeIndex}
               onPick={(user) => applyMention(user)}
             />
@@ -288,7 +322,7 @@ export function NotesThread({
             names={names}
             caret={caret}
             editorRef={composerRef}
-            placeholder="Add a note — @ to mention someone"
+            placeholder="Add a note — type @ then a name"
             testId="note-composer"
             onValueChange={(next, nextCaret) => {
               setBody(next);
@@ -300,17 +334,23 @@ export function NotesThread({
               }
             }}
             onKeyDown={(event) => {
-              if (!picker) return;
+              if (!showMentionPicker) return;
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                setActiveIndex((index) => index + 1);
+                setActiveIndex((index) =>
+                  mentionMatches.length === 0 ? 0 : (index + 1) % mentionMatches.length,
+                );
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
-                setActiveIndex((index) => Math.max(0, index - 1));
+                setActiveIndex((index) =>
+                  mentionMatches.length === 0
+                    ? 0
+                    : (index - 1 + mentionMatches.length) % mentionMatches.length,
+                );
               } else if (event.key === "Enter") {
                 event.preventDefault();
-                const matches = filterMentionUsers(directory, picker.query);
-                const user = matches[Math.min(activeIndex, Math.max(0, matches.length - 1))];
+                const user =
+                  mentionMatches[Math.min(activeIndex, Math.max(0, mentionMatches.length - 1))];
                 if (user) applyMention(user);
               } else if (event.key === "Escape") {
                 setPicker(null);
@@ -333,29 +373,85 @@ export function NotesThread({
                     onClick={() =>
                       startTransition(async () => {
                         await addJobUserVisibility({ jobId, userId: row.userId });
-                        toast.success(`Pinned ${row.name} to this job`);
+                        toast.success(`Added ${row.name} to this job`);
                       })
                     }
                   >
-                    Pin {row.name}
+                    Add {row.name}
                   </Button>
                 ))
               : null}
           </p>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <input
-            type="file"
-            name="files"
-            multiple
-            accept=".pdf,.png,.jpg,.jpeg,.xlsx,.docx,.csv,.msg,.eml"
-            className="max-w-[16rem] text-xs text-muted-foreground"
-          />
+          <NoteAttachControl files={attachments} onChange={setAttachments} />
           <Button type="submit" size="sm" disabled={pending || !body.trim()}>
             {pending ? "Posting…" : "Post note"}
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function NoteAttachControl({
+  files,
+  onChange,
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="sr-only"
+        aria-hidden
+        tabIndex={-1}
+        onChange={(event) => {
+          const added = Array.from(event.target.files ?? []);
+          event.target.value = "";
+          const oversized = added.find((file) => file.size > NOTE_ATTACHMENT_MAX_BYTES);
+          if (oversized) {
+            toast.error(`${oversized.name} is larger than 25 MB`);
+            return;
+          }
+          if (added.length > 0) onChange([...files, ...added]);
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="gap-1.5"
+        onClick={() => inputRef.current?.click()}
+      >
+        <Paperclip className="size-3.5" />
+        Attach
+      </Button>
+      {files.map((file, index) => (
+        <span
+          key={`${file.name}-${file.size}-${index}`}
+          className="inline-flex max-w-52 items-center gap-1 rounded-md border bg-muted/50 px-2 py-1 text-xs"
+        >
+          <span className="truncate" title={file.name}>
+            {file.name}
+          </span>
+          <span className="shrink-0 text-muted-foreground">{formatAttachmentBytes(file.size)}</span>
+          <button
+            type="button"
+            aria-label={`Remove ${file.name}`}
+            className="rounded-sm text-muted-foreground hover:text-foreground"
+            onClick={() => onChange(files.filter((_, i) => i !== index))}
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
     </div>
   );
 }

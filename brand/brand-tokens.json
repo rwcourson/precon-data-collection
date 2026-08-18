@@ -1,0 +1,138 @@
+{
+  "$comment": "Canonical Brasfield & Gorrie brand tokens. 2026 Brand Update. Single source of truth — read this rather than hardcoding values. Verified against the official '2026 Brand Update FINAL' guide (44 pp), the Q1 2026 one-pager, and the supplied logo/font assets.",
+  "version": "2026.2",
+  "updated": "2026 Brand Update (Q1 2026). Change vs. prior system: GREEN 1 removed from the PRIMARY palette (green survives in the secondary palette for site logistics / pursuit materials).",
+  "colors": {
+    "white":     { "name": "White",  "hex": "#FFFFFF", "rgb": [255, 255, 255], "cmyk": [0, 0, 0, 0], "role": "Primary background; text/logo on dark." },
+    "blue_1":    { "name": "Blue 1", "hex": "#B0FFFF", "rgb": [176, 255, 255], "cmyk": [25, 0, 0, 0], "pms": "290 C/U", "role": "Pale highlight / tint accent. Use sparingly." },
+    "blue_2":    { "name": "Blue 2", "hex": "#3888FF", "rgb": [56, 136, 255], "cmyk": [85, 19, 0, 0], "pms": "299 C/U", "role": "Bright accent blue; links, highlights, accents on dark." },
+    "blue_3":    { "name": "Blue 3", "hex": "#0028F0", "rgb": [0, 40, 240], "cmyk": [100, 44, 0, 0], "pms": "300 C/U", "role": "Vivid mid blue; secondary accent, data viz." },
+    "blue_4":    { "name": "Blue 4", "hex": "#002070", "rgb": [0, 32, 112], "cmyk": [100, 57, 0, 2], "pms": "293 C/U", "role": "PRIMARY brand navy. Default logo color, headings, primary surfaces. This is THE brand color." },
+    "blue_5":    { "name": "Blue 5", "hex": "#00143C", "rgb": [0, 20, 60], "cmyk": [100, 57, 0, 40], "pms": "295 C/U", "role": "Darkest navy; deep backgrounds, footers, near-black surfaces.", "$note": "The 2026 Brand Update PDFs misprint the Blue 5 hex as #00003C. Brand team confirmed (July 2026): correct value is RGB 0/20/60 = #00143C — also what the one-pager's vector art uses. Do not 'fix' this to match the printed label." },
+    "gray_1":    { "name": "Gray 1", "hex": "#E8E8EC", "rgb": [232, 232, 236], "cmyk": [4, 2, 4, 8], "pms": "Cool Gray 1 C/U", "role": "Light neutral; subtle backgrounds, panels, dividers, table stripes." },
+    "black":     { "name": "Black",  "hex": "#000000", "rgb": [0, 0, 0], "cmyk": [30, 20, 20, 100], "pms": "Black 6 C/U", "role": "Single-color print, body text where navy is too light, hard contrast." }
+  },
+  "color_roles": {
+    "primary": "blue_4",
+    "primary_dark": "blue_5",
+    "accent": "blue_2",
+    "accent_vivid": "blue_3",
+    "tint": "blue_1",
+    "neutral_light": "gray_1",
+    "surface_light": "white",
+    "ink": "black"
+  },
+  "color_strategy": {
+    "print": "Toned down and simple: avoid layering many colors, rely on high contrast. (2026 guide p.16)",
+    "digital": "Vivid and bold: the full palette used generously, colors layered for rich layouts. (2026 guide p.16)"
+  },
+  "secondary_colors": {
+    "$comment": "Expanded SECONDARY palette (2026 guide p.17) for charts/graphs and utility graphics — internal documents, UI, presentations, proposals. Use monochromatically (e.g. five greens differentiating pie slices), not as brand surfaces or accents. Green was removed from the PRIMARY palette only — these greens remain sanctioned for site logistics and pursuit materials. Values transcribed from the official palette page (image-only in the PDF).",
+    "green": [
+      { "name": "Green 1",  "hex": "#D0FF90", "rgb": [208, 255, 144], "cmyk": [15, 0, 53, 0],   "pms": "372 C/U" },
+      { "name": "Green 2",  "hex": "#A8E048", "rgb": [168, 224, 72],  "cmyk": [46, 0, 90, 0],   "pms": "375 C/U" },
+      { "name": "Green 3",  "hex": "#80C000", "rgb": [128, 192, 0],   "cmyk": [68, 0, 100, 0],  "pms": "369 C/U" },
+      { "name": "Green 4",  "hex": "#407000", "rgb": [64, 112, 0],    "cmyk": [50, 9, 98, 61],  "pms": "371 C/U" },
+      { "name": "Green 5",  "hex": "#082800", "rgb": [8, 40, 0],      "cmyk": [56, 0, 58, 78],  "pms": "7736 C/U" }
+    ],
+    "yellow": [
+      { "name": "Yellow 1", "hex": "#FFF880", "rgb": [255, 248, 128], "cmyk": [4, 0, 47, 0],    "pms": "601 C/U" },
+      { "name": "Yellow 2", "hex": "#FFE068", "rgb": [255, 224, 104], "cmyk": [0, 11, 80, 0],   "pms": "121 C/U" },
+      { "name": "Yellow 3", "hex": "#FFC850", "rgb": [255, 200, 80],  "cmyk": [0, 19, 89, 0],   "pms": "123 C/U" },
+      { "name": "Yellow 4", "hex": "#988028", "rgb": [152, 128, 40],  "cmyk": [7, 28, 100, 30], "pms": "118 C/U" },
+      { "name": "Yellow 5", "hex": "#303000", "rgb": [48, 48, 0],     "cmyk": [37, 53, 68, 81], "pms": "7554 C/U" }
+    ],
+    "orange": [
+      { "name": "Orange 1", "hex": "#FFB880", "rgb": [255, 184, 128], "cmyk": [0, 17, 43, 0],   "pms": "148 C/U" },
+      { "name": "Orange 2", "hex": "#F8A050", "rgb": [248, 160, 80],  "cmyk": [0, 41, 78, 0],   "pms": "150 C/U" },
+      { "name": "Orange 3", "hex": "#F08018", "rgb": [240, 128, 24],  "cmyk": [0, 60, 100, 0],  "pms": "151 C/U" },
+      { "name": "Orange 4", "hex": "#905010", "rgb": [144, 80, 16],   "cmyk": [5, 64, 100, 17], "pms": "153 C/U" },
+      { "name": "Orange 5", "hex": "#382000", "rgb": [56, 32, 0],     "cmyk": [20, 76, 100, 70],"pms": "1545 C/U" }
+    ],
+    "red": [
+      { "name": "Red 1",    "hex": "#FFA080", "rgb": [255, 160, 128], "cmyk": [0, 30, 26, 0],   "pms": "169 C/U" },
+      { "name": "Red 2",    "hex": "#F07050", "rgb": [240, 112, 80],  "cmyk": [0, 61, 72, 0],   "pms": "171 C/U" },
+      { "name": "Red 3",    "hex": "#E04820", "rgb": [224, 72, 32],   "cmyk": [0, 95, 100, 0],  "pms": "485 C/U" },
+      { "name": "Red 4",    "hex": "#882010", "rgb": [136, 32, 16],   "cmyk": [8, 92, 100, 33], "pms": "484 C/U" },
+      { "name": "Red 5",    "hex": "#380000", "rgb": [56, 0, 0],      "cmyk": [29, 82, 50, 73], "pms": "7631 C/U" }
+    ],
+    "purple": [
+      { "name": "Purple 1", "hex": "#FFB8F0", "rgb": [255, 184, 240], "cmyk": [1, 32, 0, 0],    "pms": "217 C/U" },
+      { "name": "Purple 2", "hex": "#D070B8", "rgb": [208, 112, 184], "cmyk": [16, 56, 0, 0],   "pms": "245 C/U" },
+      { "name": "Purple 3", "hex": "#A03080", "rgb": [160, 48, 128],  "cmyk": [42, 100, 0, 0],  "pms": "247 C/U" },
+      { "name": "Purple 4", "hex": "#681858", "rgb": [104, 24, 88],   "cmyk": [42, 95, 10, 31], "pms": "249 C/U" },
+      { "name": "Purple 5", "hex": "#300028", "rgb": [48, 0, 40],     "cmyk": [51, 91, 21, 70], "pms": "5115 C/U" }
+    ],
+    "gray": [
+      { "name": "Gray 1",   "hex": "#E8E8EC", "rgb": [232, 232, 236], "cmyk": [4, 2, 4, 8],     "pms": "Cool Gray 1 C/U" },
+      { "name": "Gray 2",   "hex": "#B2B2B8", "rgb": [178, 178, 184], "cmyk": [12, 8, 9, 23],   "pms": "Cool Gray 4 C/U" },
+      { "name": "Gray 3",   "hex": "#7C7C84", "rgb": [124, 124, 132], "cmyk": [23, 16, 13, 46], "pms": "Cool Gray 8 C/U" },
+      { "name": "Gray 4",   "hex": "#4C4C56", "rgb": [76, 76, 86],    "cmyk": [40, 30, 20, 66], "pms": "Cool Gray 10 C/U" },
+      { "name": "Gray 5",   "hex": "#1C1C28", "rgb": [28, 28, 40],    "cmyk": [65, 43, 26, 78], "pms": "432 C/U" }
+    ]
+  },
+  "magnus": {
+    "$comment": "Magnus platform sub-brand (2026 guide section 4.4). The wordmark is lowercase 'magnus' when it appears with the 'm' icon; the icon may stand alone where context exists. Never affix a version designation ('2.0') outside a launch phase, and NEVER affix 'AI' to the wordmark.",
+    "colors": {
+      "magnus_blue": { "name": "Magnus Blue", "hex": "#1DFFFF", "rgb": [29, 255, 255], "role": "Digital-only vibrant variant of Blue 1. Will NOT reproduce accurately in traditional CMYK print — use Blue 1 #B0FFFF for print." },
+      "pairs_with": ["blue_3", "blue_5"]
+    },
+    "assets_supplied": "symbol_only",
+    "logo": {
+      "$comment": "The 'm' symbol IS supplied (product artwork, vector-exact). The 'magnus' WORDMARK and the full icon+wordmark lockup are NOT — ask for that artwork rather than typesetting the wordmark yourself.",
+      "dir": "assets/logos-magnus",
+      "file_pattern": "magnus-symbol-<color>.<svg|png>",
+      "types": {
+        "symbol": "The Magnus 'm' icon alone. Supplied. Use where Magnus context already exists, or as an app icon/avatar/favicon.",
+        "wordmark": "Lowercase 'magnus' wordmark. NOT supplied — ask for the artwork; never typeset it in Sharp Grotesk or any other face.",
+        "lockup": "'m' icon + lowercase 'magnus' wordmark — the full Magnus logo. NOT supplied — ask for the artwork."
+      },
+      "colors": {
+        "magnusblue": "#1DFFFF — Magnus Blue. The signature digital treatment, on dark/navy surfaces only. Not for CMYK print.",
+        "blue3": "#0028F0 — Blue 3. Default on light surfaces.",
+        "blue5": "#00143C — Blue 5. Deep alternative on light surfaces; quieter than Blue 3.",
+        "white": "#FFFFFF — dark, navy, or photographic backgrounds.",
+        "black": "#000000 — single-color/mono print, including CMYK where Magnus Blue can't reproduce."
+      },
+      "formats": ["svg", "png"],
+      "png_size_px": [1024, 657],
+      "aspect_ratio": 1.5576,
+      "viewbox": "45.8 124.2 420.4 269.9",
+      "artwork_note": "SVGs are cropped tight to the mark with no built-in padding — add clear space yourself.",
+      "clear_space": "Clear space on all sides = the height of the 'm' symbol's left stem. Scales with the mark.",
+      "min_width_px": { "symbol": 24 }
+    }
+  },
+  "fonts": {
+    "$comment": "Sharp Grotesk PE. Each weight+width is its own named family (the trailing number is the WIDTH axis baked into the family name; subfamily is always 'Regular', so reference by full family name, not by CSS font-weight). Family names below are the exact internal names — use verbatim in CSS font-family, python-pptx font.name, and docx-js font.",
+    "primary":            { "family": "Sharp Grotesk PE SmBold 15", "file": "SharpGroteskPESmBold-15.ttf", "role": "PRIMARY typeface. Titles, headlines, large high-level text.", "supplied": true },
+    "headline_impact":    { "family": "Sharp Grotesk Bold 10",      "file": null,                          "role": "Bold high-impact titles, 1-3 words ALL CAPS (up to 6 words, all caps or title case; never sentence case). Ads, covers, banners. Tracking 10-25 when all caps.", "supplied": false, "fallback_family": "Sharp Grotesk PE SmBold 15" },
+    "subhead_book":       { "family": "Sharp Grotesk Book 15",       "file": null,                          "role": "High-impact subheaders, org-chart hierarchy, numeric infographics. All caps (tracking 10-25) for short headers, or title case as subheader.", "supplied": false, "fallback_family": "Sharp Grotesk PE Book 20" },
+    "subhead_smbold_20":  { "family": "Sharp Grotesk PE SmBold 20",  "file": "SharpGroteskPESmBold-20.ttf", "role": "Subheaders, numbers, table emphasis.", "supplied": true },
+    "subhead_medium_22":  { "family": "Sharp Grotesk PE Medium 22",  "file": "SharpGroteskPEMedium-22.ttf", "role": "Subheads.", "supplied": true },
+    "subhead_medium_20":  { "family": "Sharp Grotesk PE Medium 20",  "file": "SharpGroteskPEMedium-20.ttf", "role": "Subheads, labels.", "supplied": true },
+    "body":               { "family": "Sharp Grotesk PE Book 20",    "file": "SharpGroteskPEBook-20.ttf",   "role": "Body copy, paragraphs, tables.", "supplied": true },
+    "body_italic":        { "family": "Sharp Grotesk PE Book Itl 20","file": "SharpGroteskPEBookItl-20.ttf","role": "Body emphasis / italic.", "supplied": true },
+    "display_thin":       { "family": "Sharp Grotesk PE Thin 15",    "file": "SharpGroteskPEThin-15.ttf",   "role": "Large light display only; never body.", "supplied": true }
+  },
+  "font_fallback_stack": "'Sharp Grotesk PE Book 20', 'Sharp Grotesk PE SmBold 15', Verdana, Arial, 'Helvetica Neue', Helvetica, sans-serif",
+  "logo": {
+    "default_color_token": "blue_4",
+    "exclusion_zone": "Clear space on all sides = the height of the capital 'B' in 'Brasfield'. Scales proportionally with the mark.",
+    "min_width_px": { "stacked": 100, "horizontal": 200, "stacked_gc": 200, "symbol": 24 },
+    "min_width_in": { "stacked": 0.75, "horizontal": 1.25, "stacked_gc": 1.5 },
+    "$min_size_note": "Official minimums per the 2026 guide p.8: stacked 0.75 in / 100 px; horizontal 1.25 in / 200 px; stacked-with-'General Contractors' 1.5 in / 200 px. The symbol's minimum isn't specified in the guide — 24 px is this skill's practical floor.",
+    "types": {
+      "stacked": "Two-line wordmark. For square/portrait space or when horizontal space is limited.",
+      "horizontal": "Single-line wordmark. PREFERRED when space permits. Wide formats: nav bars, headers, signage, email headers. Never carries 'General Contractors'.",
+      "stacked_gc": "Stacked wordmark WITH the 'General Contractors' descriptor. Official variant, but use ONLY when further context is demanded. Asset not supplied in this skill — ask for the artwork rather than typesetting the descriptor.",
+      "symbol": "The ampersand mark alone. Use where space is tight or brand context is already established (favicons, avatars, app icons, watermark crops)."
+    },
+    "colors": {
+      "navy": "blue_4 #002070 — default, for light backgrounds",
+      "white": "#FFFFFF — for dark/navy backgrounds and busy photography",
+      "black": "#000000 — single-color/mono print or where navy lacks contrast",
+      "brightblue": "blue_2 #3888FF — accent treatment on very dark navy only; never the default"
+    }
+  }
+}

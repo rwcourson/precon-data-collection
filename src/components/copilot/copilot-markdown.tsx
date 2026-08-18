@@ -75,7 +75,7 @@ function CopilotInline({ text }: { text: string }) {
     }
     if (chunk.startsWith("`") && chunk.endsWith("`") && chunk.length > 2) {
       return (
-        <code key={index} className="rounded-sm bg-muted px-1 py-0.5 font-mono text-[12px]">
+        <code key={index} className="rounded-sm bg-muted px-1 py-0.5 font-mono text-sm">
           {chunk.slice(1, -1)}
         </code>
       );
@@ -86,7 +86,7 @@ function CopilotInline({ text }: { text: string }) {
 
 function headingClass(level: 1 | 2 | 3) {
   if (level === 1) return "font-heading text-base font-semibold tracking-tight";
-  if (level === 2) return "font-heading text-[15px] font-semibold tracking-tight";
+  if (level === 2) return "font-heading text-sm font-semibold tracking-tight";
   return "font-heading text-sm font-semibold tracking-tight";
 }
 
@@ -103,7 +103,7 @@ export function CopilotMarkdown({
 }) {
   const blocks = parseCopilotMarkdown(text);
   return (
-    <div className={cn("space-y-2.5 text-sm leading-relaxed text-pretty", className)}>
+    <div className={cn("space-y-3 text-sm leading-6 break-words text-pretty", className)}>
       {blocks.map((block, index) => {
         if (block.type === "h") {
           const Tag = (`h${block.level}` as "h1" | "h2" | "h3");
@@ -115,7 +115,7 @@ export function CopilotMarkdown({
         }
         if (block.type === "ul") {
           return (
-            <ul key={index} className="list-disc space-y-1 pl-4">
+            <ul key={index} className="list-disc space-y-2 pl-5">
               {block.items.map((item, itemIndex) => (
                 <li key={itemIndex}>
                   <CopilotInline text={item} />
@@ -126,7 +126,7 @@ export function CopilotMarkdown({
         }
         if (block.type === "ol") {
           return (
-            <ol key={index} className="list-decimal space-y-1.5 pl-4">
+            <ol key={index} className="list-decimal space-y-2 pl-5">
               {block.items.map((item, itemIndex) => (
                 <li key={itemIndex}>
                   <CopilotInline text={item} />

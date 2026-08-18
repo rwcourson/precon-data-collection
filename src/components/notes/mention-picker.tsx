@@ -29,12 +29,28 @@ type MentionPickerProps = {
 };
 
 export function filterMentionUsers(users: NotesDirectoryUser[], query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
   return users
-    .filter((user) => {
-      const hay = `${user.name} ${user.title ?? ""} ${user.region ?? ""}`.toLowerCase();
-      return hay.includes(query);
+    .map((user) => {
+      const name = user.name.toLowerCase();
+      const words = name.split(/\s+/);
+      const title = (user.title ?? "").toLowerCase();
+      const region = (user.region ?? "").toLowerCase();
+      let score = 0;
+      if (name.startsWith(q)) score = 300;
+      else if (words.some((word) => word.startsWith(q))) score = 200;
+      else if (q.length >= 2 && name.includes(q)) score = 100;
+      else if (q.length >= 2 && title.split(/\s+/).some((word) => word.startsWith(q))) score = 40;
+      else if (q.length >= 2 && region.startsWith(q)) score = 20;
+      else return null;
+      return { user, score, name };
     })
-    .slice(0, 8);
+    .filter((row): row is { user: NotesDirectoryUser; score: number; name: string } => row != null)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .slice(0, 6)
+    .map((row) => row.user);
 }
 
 export function MentionPicker({
@@ -51,7 +67,7 @@ export function MentionPicker({
         role="status"
         data-testid="mention-picker"
         className={cn(
-          "w-full rounded-md border bg-popover px-2.5 py-2 text-sm text-muted-foreground shadow-md",
+          "w-full rounded-md border bg-popover px-2 py-1.5 text-xs text-muted-foreground shadow-md",
           className,
         )}
       >
@@ -64,7 +80,7 @@ export function MentionPicker({
       role="listbox"
       data-testid="mention-picker"
       className={cn(
-        "max-h-56 w-full overflow-y-auto overscroll-contain rounded-md border bg-popover p-1 shadow-md",
+        "max-h-44 w-full overflow-y-auto overscroll-contain rounded-md border bg-popover p-1 shadow-md",
         className,
       )}
     >
@@ -73,7 +89,7 @@ export function MentionPicker({
           <button
             type="button"
             aria-label={`Mention ${user.name}`}
-            className={`flex w-full flex-col items-start rounded-md px-1.5 py-1.5 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 ${
+            className={`flex w-full flex-col items-start rounded-md px-1.5 py-1 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 ${
               index === activeIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/70"
             }`}
             onMouseDown={(event) => {
@@ -82,7 +98,7 @@ export function MentionPicker({
             }}
           >
             <span className="font-medium">{user.name}</span>
-            <span className="text-2xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {[user.title, user.region].filter(Boolean).join(" · ")}
             </span>
           </button>
@@ -92,9 +108,10 @@ export function MentionPicker({
   );
 }
 
-const PICKER_MAX_HEIGHT = 224;
-const PICKER_MIN_HEIGHT = 96;
+const PICKER_MAX_HEIGHT = 176;
+const PICKER_MIN_HEIGHT = 72;
 const PICKER_GAP = 6;
+const PICKER_WIDTH = 288;
 
 export function AnchoredMentionPicker({
   anchorRef,
@@ -106,15 +123,17 @@ export function AnchoredMentionPicker({
     const anchor = anchorRef.current;
     if (!anchor) return;
     const rect = anchor.getBoundingClientRect();
-    const spaceAbove = rect.top - PICKER_GAP;
-    const spaceBelow = window.innerHeight - rect.bottom - PICKER_GAP;
+    const spaceAbove = Math.max(0, rect.top - PICKER_GAP);
+    const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - PICKER_GAP);
+    // Stay above the composer so the list never covers the note you are typing.
     const openAbove = spaceAbove >= PICKER_MIN_HEIGHT || spaceAbove >= spaceBelow;
     const available = openAbove ? spaceAbove : spaceBelow;
-    const maxHeight = Math.max(PICKER_MIN_HEIGHT, Math.min(PICKER_MAX_HEIGHT, available));
+    const maxHeight = Math.min(PICKER_MAX_HEIGHT, Math.max(PICKER_MIN_HEIGHT, available));
+    const width = Math.min(PICKER_WIDTH, Math.max(220, rect.width));
     setStyle({
       position: "fixed",
-      left: rect.left,
-      width: rect.width,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      width,
       maxHeight,
       zIndex: 50,
       ...(openAbove
@@ -131,7 +150,7 @@ export function AnchoredMentionPicker({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [update]);
+  }, [pickerProps.query, pickerProps.users, update]);
 
   if (!style || typeof document === "undefined") return null;
 

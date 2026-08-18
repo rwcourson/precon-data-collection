@@ -37,7 +37,10 @@ if (!fs.existsSync(path.join(root, ".env.example"))) {
 const requiredDocs = [
   "docs/README.md",
   "docs/jay-mcdaniel-upgrades.md",
+  "docs/generated-documents.md",
   "docs/github-and-vercel.md",
+  "brand/README-SLIDESHOW.md",
+  "brand/brand-tokens.json",
   "docs/adr/002-post-bid-finalize-seam.md",
   "docs/security/role-capability-matrix.md",
   "vercel.json",

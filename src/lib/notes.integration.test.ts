@@ -102,7 +102,7 @@ describe("effort notes", () => {
     });
   });
 
-  it("rejects oversized and disallowed attachments, and downloads accepted files with attachment disposition", async () => {
+  it("rejects oversized attachments, accepts any type, and downloads with attachment disposition", async () => {
     const [pcm] = await db.select().from(users).where(eq(users.role, "pcm")).limit(1);
     const [round] = await db
       .select({ id: estimateRounds.id })
@@ -124,11 +124,11 @@ describe("effort notes", () => {
       ]),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
-    await expect(
-      notesService.create(actor, round.id, "bad type", [
-        { filename: "payload.exe", contentType: "application/x-msdownload", bytes: new Uint8Array([1, 2, 3]) },
-      ]),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const binary = await notesService.create(actor, round.id, "any type is fine", [
+      { filename: "payload.exe", contentType: "application/x-msdownload", bytes: new Uint8Array([1, 2, 3]) },
+    ]);
+    createdNoteIds.push(binary.id);
+    expect(binary.attachments[0]?.filename).toBe("payload.exe");
 
     const created = await notesService.create(actor, round.id, "see attached plan", [
       { filename: "plan.png", contentType: "image/png", bytes: PNG },

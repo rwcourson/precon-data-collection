@@ -89,14 +89,18 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
         });
       }}
     >
-      <div className="min-w-[160px] flex-1 space-y-1.5">
+      <div className="grid min-w-[12rem] flex-1 gap-1.5">
         <Label htmlFor="widget-title">Title</Label>
-        <Input id="widget-title" name="title" placeholder="Pursuit volume" required />
+        <Input id="widget-title" name="title" placeholder="Pursuit volume" required className="h-8" />
       </div>
-      <div className="space-y-1.5">
+      <div className="grid gap-1.5">
         <Label>Kind</Label>
-        <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
-          <SelectTrigger className="w-40">
+        <Select
+          items={WIDGET_KINDS.map((k) => ({ value: k, label: k.replaceAll("_", " ") }))}
+          value={kind}
+          onValueChange={(v) => setKind(v as typeof kind)}
+        >
+          <SelectTrigger className="h-8 w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -108,10 +112,10 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-1.5">
+      <div className="grid gap-1.5">
         <Label>Metric</Label>
         <Select value={metricKey} onValueChange={(v) => v && setMetricKey(v)}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="h-8 w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -124,10 +128,10 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
         </Select>
       </div>
       {kind !== "kpi" && (
-        <div className="space-y-1.5">
+        <div className="grid gap-1.5">
           <Label>Group by</Label>
           <Select value={groupBy} onValueChange={(v) => v && setGroupBy(v)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="h-8 w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -140,7 +144,7 @@ export function StudioWidgetForm({ dashboardId }: { dashboardId: number }) {
           </Select>
         </div>
       )}
-      <Button type="submit" size="sm" className="gap-1.5" disabled={pending}>
+      <Button type="submit" className="h-8 gap-1.5" disabled={pending}>
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
         Add widget
       </Button>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="assets/css/brand.css">
+  <link rel="icon" href="assets/logos/symbol/bg-symbol-navy.svg">
+  <title>Brasfield &amp; Gorrie — Example surface</title>
+  <style>
+    /* page-only layout glue; brand.css carries the brand itself */
+    .nav{display:flex;gap:28px;align-items:center}
+    .nav a{color:#fff;border:0;font-family:var(--bg-font-caps);text-transform:uppercase;
+      letter-spacing:.06em;font-size:12px;opacity:.85}
+    .hero{position:relative;overflow:hidden;padding:var(--bg-sp-9) var(--bg-sp-7) var(--bg-sp-8)}
+    .hero__amp{position:absolute;right:-60px;bottom:-90px;width:460px;opacity:.05;pointer-events:none}
+    .hero__row{display:flex;gap:var(--bg-sp-8);align-items:flex-end;flex-wrap:wrap;
+      border-top:1px solid var(--bg-hairline);padding-top:var(--bg-sp-6);margin-top:var(--bg-sp-7)}
+    .hero__row .bg-lead{flex:1 1 420px;margin:0}
+    .actions{display:flex;gap:var(--bg-sp-4);align-items:center}
+    .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--bg-sp-5)}
+    .cta{display:flex;justify-content:space-between;align-items:center;gap:var(--bg-sp-6);flex-wrap:wrap}
+    .foot{display:flex;justify-content:space-between;gap:var(--bg-sp-6);flex-wrap:wrap;align-items:center}
+    .foot a{color:#fff;border:0;opacity:.8;font-size:14px;margin-right:20px}
+    .markets{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--bg-sp-4)}
+  </style>
+</head>
+<body>
+
+  <!-- Header: Blue 4 navy, white horizontal logo -->
+  <header class="bg-header">
+    <img src="assets/logos/horizontal/bg-horizontal-white.svg" alt="Brasfield & Gorrie" height="26">
+    <nav class="nav">
+      <a href="#">Work</a><a href="#">Markets</a><a href="#">About</a>
+      <a class="bg-btn" href="#">Contact</a>
+    </nav>
+  </header>
+
+  <!-- Hero: white surface, sentence-case display headline, signature CTA, ampersand watermark -->
+  <section class="hero">
+    <img class="hero__amp" src="assets/logos/symbol/bg-symbol-navy.svg" alt="" aria-hidden="true">
+    <span class="bg-eyebrow">Privately held since 1964</span>
+    <h1 class="bg-display-l" style="max-width:15ch;margin-top:var(--bg-sp-4)">We build what matters.</h1>
+    <div class="hero__row">
+      <p class="bg-lead">Hospitals, microchip fabs, water treatment plants, hyperscale data centers. The infrastructure that runs the Southeast — engineered, self-performed, delivered on schedule.</p>
+      <div class="actions">
+        <a class="bg-btn" href="#">See our work</a>
+        <a class="bg-btn bg-btn--ghost" href="#">2024 report</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stat band: Blue 5 anchor, thin numerals, unit on its own line -->
+  <section class="bg-statband">
+    <span class="bg-eyebrow">By the numbers — 2024</span>
+    <div class="bg-statgrid" style="margin-top:var(--bg-sp-6)">
+      <div class="bg-stat"><span class="bg-stat__n">4.5</span><span class="bg-stat__unit">Billion USD</span><span class="bg-stat__label">2024 revenue</span></div>
+      <div class="bg-stat"><span class="bg-stat__n">1,500</span><span class="bg-stat__unit">Projects</span><span class="bg-stat__label">Delivered to date</span></div>
+      <div class="bg-stat"><span class="bg-stat__n">8.4</span><span class="bg-stat__unit">Million sq ft</span><span class="bg-stat__label">Built last year</span></div>
+      <div class="bg-stat"><span class="bg-stat__n">60</span><span class="bg-stat__unit">Years</span><span class="bg-stat__label">Privately held</span></div>
+    </div>
+  </section>
+
+  <!-- Markets: bordered cards + one anchor card -->
+  <section class="bg-section">
+    <span class="bg-eyebrow">What we build</span>
+    <h2 style="margin-top:var(--bg-sp-3)">Markets we know cold.</h2>
+    <hr class="bg-rule--accent">
+    <div class="grid3" style="margin-top:var(--bg-sp-5)">
+      <div class="bg-card">
+        <h3>Healthcare</h3>
+        <p class="bg-body">Patient towers, surgical suites, and research labs delivered around live operations.</p>
+        <div class="markets"><span class="bg-badge">Self-perform</span><span class="bg-badge">CM at-risk</span></div>
+      </div>
+      <div class="bg-card">
+        <h3>Mission critical</h3>
+        <p class="bg-body">Hyperscale data centers and microchip fabs built to schedule and to spec.</p>
+        <div class="markets"><span class="bg-badge">Design-build</span></div>
+      </div>
+      <div class="bg-card bg-card--anchor">
+        <h3>Water &amp; industrial</h3>
+        <p class="bg-body" style="opacity:.85">Treatment plants and heavy-industrial facilities — the infrastructure that runs a region.</p>
+        <div class="markets"><span class="bg-badge bg-badge--blue">Preconstruction</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA band: Blue 3 signature -->
+  <section class="bg-on-blue" style="padding:var(--bg-sp-8) var(--bg-sp-7)">
+    <div class="bg-section" style="padding:0">
+      <div class="cta">
+        <h2 style="max-width:20ch">Have a project that has to be right?</h2>
+        <a class="bg-btn bg-btn--ghost" href="#">Start a conversation</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer: Blue 5 anchor -->
+  <footer class="bg-on-dark" style="padding:var(--bg-sp-8) var(--bg-sp-7)">
+    <div class="foot">
+      <img src="assets/logos/horizontal/bg-horizontal-white.svg" alt="Brasfield & Gorrie" height="22">
+      <div>
+        <a href="#">Work</a><a href="#">Markets</a><a href="#">Careers</a><a href="#">Contact</a>
+      </div>
+    </div>
+    <hr class="bg-rule" style="background:var(--bg-hairline-on-dark);margin:var(--bg-sp-5) 0">
+    <p class="bg-caption" style="color:rgba(255,255,255,.55);margin:0">Birmingham, Alabama. Privately held since 1964. Example surface — not an official page.</p>
+  </footer>
+
+</body>
+</html>
