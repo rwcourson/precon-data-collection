@@ -10,6 +10,9 @@ const EXEMPT_EXACT = new Set([
   "/sign-in",
   "/api/health/live",
   "/api/health/ready",
+  // MCP clients probe without credentials expecting the RFC 9728
+  // WWW-Authenticate challenge; requireMcpAuth owns auth and fails closed.
+  "/api/mcp",
 ]);
 const EXEMPT_PREFIXES = ["/api/auth", "/api/jobs/", "/.well-known/"];
 

@@ -54,6 +54,17 @@ describe("SSO proxy gate for MCP discovery", () => {
     }
   });
 
+  it("lets a credential-less POST reach /api/mcp so requireMcpAuth can issue the RFC 9728 challenge", () => {
+    stubSso();
+    const response = proxy(
+      new NextRequest("https://precon.example.com/api/mcp", {
+        method: "POST",
+      })
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("still 401s unrelated API routes without a session in SSO mode", async () => {
     stubSso();
     const response = proxy(
