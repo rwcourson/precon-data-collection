@@ -1,6 +1,11 @@
 import type { ApiToken, User } from "@/db/schema";
 import type { ApiTokenScope } from "@/domain/contracts";
-import type { AuthSource, EffectiveWorkspace, Principal } from "./types";
+import type {
+  AuthSource,
+  EffectiveWorkspace,
+  Principal,
+  TokenConstraints,
+} from "./types";
 
 const TOKEN_SCOPES = new Set<ApiTokenScope>([
   "profile:read",
@@ -36,9 +41,39 @@ export function createPrincipal(input: {
   authSource: AuthSource;
   workspaceRegion?: string | null;
   token?: ApiToken | null;
+  tokenConstraints?: TokenConstraints | null;
 }): Principal {
-  if (input.authSource === "api_token" && !input.token) {
-    throw new Error("API-token principals require token constraints.");
+  const constraints: TokenConstraints | null = input.tokenConstraints
+    ? {
+        tokenId: input.tokenConstraints.tokenId,
+        scopes: input.tokenConstraints.scopes.filter(
+          (scope): scope is ApiTokenScope =>
+            TOKEN_SCOPES.has(scope as ApiTokenScope)
+        ),
+        regionAllowlist: input.tokenConstraints.regionAllowlist,
+        expiresAt: input.tokenConstraints.expiresAt,
+      }
+    : input.token
+      ? {
+          tokenId: input.token.id,
+          scopes: (input.token.scopes ?? []).filter(
+            (scope): scope is ApiTokenScope =>
+              TOKEN_SCOPES.has(scope as ApiTokenScope)
+          ),
+          regionAllowlist: input.token.regionAllowlist,
+          expiresAt: input.token.expiresAt,
+        }
+      : null;
+
+  if (
+    (input.authSource === "api_token" || input.authSource === "mcp") &&
+    !constraints
+  ) {
+    throw new Error(
+      input.authSource === "mcp"
+        ? "MCP principals require token constraints."
+        : "API-token principals require token constraints."
+    );
   }
   const workspace: EffectiveWorkspace = input.workspaceRegion
     ? { kind: "region", region: input.workspaceRegion }
@@ -57,7 +92,7 @@ export function createPrincipal(input: {
         ? [workspace.region]
         : [];
   }
-  const tokenRegions = input.token?.regionAllowlist ?? [];
+  const tokenRegions = constraints?.regionAllowlist ?? [];
   if (tokenRegions.length > 0) {
     allowedRegions =
       allowedRegions === "all"
@@ -65,23 +100,42 @@ export function createPrincipal(input: {
         : intersection(allowedRegions, tokenRegions);
   }
 
-  const scopes = (input.token?.scopes ?? []).filter(
-    (scope): scope is ApiTokenScope => TOKEN_SCOPES.has(scope as ApiTokenScope)
-  );
   return {
     authSource: input.authSource,
     user: input.user,
     workspace,
     allowedRegions,
-    token: input.token
-      ? {
-          tokenId: input.token.id,
-          scopes,
-          regionAllowlist: input.token.regionAllowlist,
-          expiresAt: input.token.expiresAt,
-        }
-      : null,
+    token: constraints,
   };
+}
+
+/**
+ * MCP principals always carry a non-null token so `tokenAllows` enforces scopes.
+ * `authSource` is `"mcp"` (not `"api_token"`) so audit logs can tell OAuth MCP
+ * grants apart from `pcn_` API tokens. `tokenId` is the OAuth access-token or
+ * consent id string.
+ */
+export function createMcpPrincipal(input: {
+  user: User;
+  tokenRef: string;
+  scopes: readonly string[];
+  expiresAt?: Date | null;
+  workspaceRegion?: string | null;
+}): Principal {
+  const scopes = input.scopes.filter((scope): scope is ApiTokenScope =>
+    TOKEN_SCOPES.has(scope as ApiTokenScope)
+  );
+  return createPrincipal({
+    user: input.user,
+    authSource: "mcp",
+    workspaceRegion: input.workspaceRegion,
+    tokenConstraints: {
+      tokenId: input.tokenRef,
+      scopes,
+      regionAllowlist: [],
+      expiresAt: input.expiresAt ?? null,
+    },
+  });
 }
 
 export function principalAllowsRegion(

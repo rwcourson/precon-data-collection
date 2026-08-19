@@ -11,7 +11,7 @@ const EXEMPT_EXACT = new Set([
   "/api/health/live",
   "/api/health/ready",
 ]);
-const EXEMPT_PREFIXES = ["/api/auth", "/api/jobs/"];
+const EXEMPT_PREFIXES = ["/api/auth", "/api/jobs/", "/.well-known/"];
 
 function isExempt(pathname: string): boolean {
   if (EXEMPT_EXACT.has(pathname)) return true;

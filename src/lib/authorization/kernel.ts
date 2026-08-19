@@ -19,6 +19,7 @@ const CORPORATE_ADMIN_SECTIONS = new Set([
   "people",
   "migration",
   "status",
+  "mcp",
 ]);
 const REGIONAL_ADMIN_SECTIONS = new Set([
   "columns",

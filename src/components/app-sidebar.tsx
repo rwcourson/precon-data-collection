@@ -162,6 +162,11 @@ const NAV_SECTIONS: NavSection[] = [
             match: (_, s) => s.includes("tab=audit"),
           },
           {
+            href: "/admin?tab=mcp",
+            label: "MCP Access",
+            match: (_, s) => s.includes("tab=mcp"),
+          },
+          {
             href: "/admin?tab=integrations",
             label: "Integrations",
             match: (_, s) => s.includes("tab=integrations"),

@@ -100,6 +100,16 @@ const PAGES = [
     keywords: ["audit", "log"],
   },
   {
+    href: "/admin?tab=mcp",
+    label: "Admin · MCP Access",
+    keywords: ["mcp", "oauth", "ai", "claude", "cursor"],
+  },
+  {
+    href: "/settings/connections",
+    label: "AI connections",
+    keywords: ["mcp", "ai", "claude", "cursor", "connections", "oauth"],
+  },
+  {
     href: "/admin?tab=integrations",
     label: "Admin · Integrations",
     keywords: ["integrations", "databricks", "salesforce"],

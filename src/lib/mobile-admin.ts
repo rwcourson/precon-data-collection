@@ -43,6 +43,7 @@ export const MOBILE_ADMIN_SECTION_LABELS: Record<AdminSection, string> = {
   quality: "Data quality",
   trash: "Trash",
   status: "Status",
+  mcp: "MCP access",
 };
 
 export type MobileAdminQueries = {

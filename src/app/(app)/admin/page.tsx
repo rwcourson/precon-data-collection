@@ -9,6 +9,7 @@ import { ColumnsManager } from "@/components/admin/columns-manager";
 import { DestiniImport } from "@/components/admin/destini-import";
 import { DistributionListsPanel } from "@/components/admin/distribution-lists-panel";
 import { FieldPromotionsPanel } from "@/components/admin/field-promotions";
+import { McpAccessPanel } from "@/components/admin/mcp-access-panel";
 import { MigrationPanel } from "@/components/admin/migration-panel";
 import { NeedsReview } from "@/components/admin/needs-review";
 import { NotificationSettingsPanel } from "@/components/admin/notification-settings";
@@ -64,6 +65,11 @@ import {
   listAdminSectionsForPrincipal,
   listRoundsWithJobsForPrincipal,
 } from "@/lib/authorization/loaders";
+import { MCP_ROLES } from "@/lib/authorization/mcp-policy";
+import {
+  listMcpUserOverrides,
+  loadMcpAdminConfig,
+} from "@/lib/authorization/mcp-settings";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { type FlagKind, fieldLabel } from "@/lib/data-quality";
 import { emailProvider } from "@/lib/email";
@@ -74,6 +80,7 @@ import { getFeedState } from "@/lib/integrations/databricks/feed";
 import { databricksWritesAllowed } from "@/lib/integrations/databricks/read";
 import { smartsheetConfig } from "@/lib/integrations/smartsheet/client";
 import { ROLE_LABELS } from "@/lib/labels";
+import { listMcpConnections } from "@/lib/mcp/connections";
 import {
   buildMigrationReport,
   cutoverChecklist,
@@ -92,6 +99,7 @@ const VALID_TABS = new Set([
   "distribution",
   "salesforce",
   "tokens",
+  "mcp",
   "people",
   "access",
   "audit",
@@ -201,6 +209,15 @@ export default async function AdminPage({
   const managePeople = principalCanManagePeople(principal);
   const people =
     managePeople && allowedSections.has("people") ? await listPeople() : [];
+  const mcpConfig = allowedSections.has("mcp")
+    ? await loadMcpAdminConfig()
+    : null;
+  const mcpOverrides = allowedSections.has("mcp")
+    ? await listMcpUserOverrides()
+    : [];
+  const mcpConnections = allowedSections.has("mcp")
+    ? await listMcpConnections()
+    : [];
   let tab = VALID_TABS.has(params.tab ?? "")
     ? (params.tab as string)
     : "columns";
@@ -454,6 +471,40 @@ export default async function AdminPage({
           ) : (
             <p className="text-sm text-muted-foreground">
               Permission denied: API tokens require Corporate Precon Admin.
+            </p>
+          )}
+        </TabsContent>
+
+        <TabsContent value="mcp" className="pt-3">
+          {user.role === "corporate_admin" && mcpConfig ? (
+            <McpAccessPanel
+              config={mcpConfig}
+              roles={MCP_ROLES}
+              people={allUsers.map((row) => ({
+                id: row.id,
+                name: row.name,
+                email: row.email,
+                role: row.role,
+              }))}
+              overrides={mcpOverrides.map((row) => ({
+                userId: row.userId,
+                enabled: row.enabled,
+                scopeCeiling: row.scopeCeiling,
+              }))}
+              connections={mcpConnections.map((row) => ({
+                consentId: row.consentId,
+                clientName: row.clientName,
+                userEmail: row.userEmail,
+                scopes: row.scopes,
+                createdAtLabel: fmtDateTime(row.createdAt),
+                lastUsedAtLabel: row.lastUsedAt
+                  ? fmtDateTime(row.lastUsedAt)
+                  : "never",
+              }))}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Permission denied: MCP access requires Corporate Precon Admin.
             </p>
           )}
         </TabsContent>

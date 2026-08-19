@@ -61,6 +61,7 @@ export const ADMIN_SECTIONS = [
   "quality",
   "trash",
   "status",
+  "mcp",
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];

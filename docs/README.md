@@ -32,6 +32,7 @@ Canonical guides for the B&G Precon data-collection app. Start here; do not trea
 | Doc | What it is |
 | --- | --- |
 | [magnus-api.md](magnus-api.md) | Bearer tokens, Magnus stream, Eve copilot tools |
+| [mcp.md](mcp.md) | Remote MCP server, OAuth scopes, admin runbook, client setup |
 | [mobile-api.md](mobile-api.md) | `/api/v1/mobile` contract |
 
 ## Architecture decisions

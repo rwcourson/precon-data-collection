@@ -29,4 +29,8 @@ region, every capability is denied.
 Florida. The region gate enforces that. `admin_jsa` regional-admin `edit` covers
 salesforce and quality, not columns/promotions/notifications.
 
+`manage` company admin includes **Admin → MCP Access** (kill switch, role
+defaults, per-user overrides, OAuth consent revoke). MCP tool traffic uses the
+same job/round capabilities plus the grant ceiling in [mcp.md](../mcp.md).
+
 See also `docs/security/legacy-authorization-inventory.md`.

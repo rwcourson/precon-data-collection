@@ -53,6 +53,10 @@ const nextConfig: NextConfig = {
     "@electric-sql/pglite",
     "@sparticuz/chromium",
     "playwright-core",
+    "@better-auth/cimd",
+    "@better-auth/mcp",
+    "@better-auth/oauth-provider",
+    "@modelcontextprotocol/server",
   ],
   // Local file: vendor package — ensure Next transpiles ESM chart-elements.
   transpilePackages: ["@rwcourson/chart-elements"],

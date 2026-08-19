@@ -590,6 +590,31 @@ export const userTablePrefs = pgTable(
   ]
 );
 
+/**
+ * Per-user MCP grant ceiling. Null `enabled` / `scopeCeiling` inherit the
+ * `app_settings.mcp` role default. Modeled on `user_table_prefs`.
+ */
+export type McpUserAccessRow = {
+  enabled: boolean | null;
+  scopeCeiling: string[] | null;
+};
+
+export const mcpUserAccess = pgTable(
+  "mcp_user_access",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled"),
+    scopeCeiling: jsonb("scope_ceiling").$type<string[] | null>(),
+    updatedById: integer("updated_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("mcp_user_access_user_id_unique").on(table.userId)]
+);
+
 export type SavedReportConfig = {
   fields: string[]; // field keys, metric keys (metric:*), custom columns (custom:*)
   filters: { field: string; op: string; value: string }[];

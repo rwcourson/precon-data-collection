@@ -22,6 +22,8 @@ Authorization: Bearer pcn_<secret>
 
 Default recommendation for Magnus: **read scopes only**.
 
+MCP clients (Claude, Cursor, Inspector) do **not** use `pcn_` tokens. They use Entra OAuth against `POST /api/mcp`. See [mcp.md](mcp.md).
+
 ## Endpoints
 
 - `GET /api/v1/pursuits` — region-filtered pursuits (`read:pursuits`)

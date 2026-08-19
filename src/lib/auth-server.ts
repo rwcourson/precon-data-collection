@@ -1,8 +1,13 @@
 import "server-only";
+import { cimd } from "@better-auth/cimd";
+import { fetchClientMetadataResource } from "@better-auth/cimd/node";
+import { mcp } from "@better-auth/mcp";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { jwt } from "better-auth/plugins";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
+import { MCP_ADVERTISED_SCOPES } from "@/lib/authorization/mcp-scopes";
 
 function env(name: string): string {
   return process.env[name]?.trim() ?? "";
@@ -114,6 +119,24 @@ export const auth = betterAuth({
     useSecureCookies:
       process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL),
   },
+  plugins: [
+    jwt(),
+    mcp({
+      loginPage: "/sign-in",
+      consentPage: "/consent",
+      resource: mcpResourceIdentifier(),
+      scopes: [...MCP_ADVERTISED_SCOPES],
+    }),
+    cimd({
+      fetchClientMetadataResource,
+      metadataProfile: "mcp-2026-07-28",
+    }),
+  ],
 });
 
 export type AuthSession = typeof auth.$Infer.Session;
+
+/** Canonical MCP resource identifier — must match `mcp({ resource })` and `requireMcpAuth`. */
+export function mcpResourceIdentifier(): string {
+  return `${baseURL()}/api/mcp`;
+}

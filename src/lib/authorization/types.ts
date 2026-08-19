@@ -1,7 +1,12 @@
 import type { Role, RoundStatus, User } from "@/db/schema";
 import type { ApiTokenScope } from "@/domain/contracts";
 
-export type AuthSource = "demo_session" | "sso" | "api_token" | "service";
+export type AuthSource =
+  | "demo_session"
+  | "sso"
+  | "api_token"
+  | "mcp"
+  | "service";
 export type Capability =
   | "read"
   | "edit"
@@ -32,7 +37,8 @@ export type EffectiveWorkspace =
   | { kind: "region"; region: string };
 
 export type TokenConstraints = {
-  tokenId: number;
+  /** API-token row id (number) or OAuth access-token/consent id (string). */
+  tokenId: string | number;
   scopes: readonly ApiTokenScope[];
   regionAllowlist: readonly string[];
   expiresAt: Date | null;

@@ -84,6 +84,12 @@ function SignedInUser({ user }: { user: User }) {
         {ROLE_LABELS[user.role]}
         {user.region ? ` · ${user.region}` : ""}
       </span>
+      <Link
+        href="/settings/connections"
+        className="hidden text-xs font-medium text-primary underline-offset-2 hover:underline sm:inline"
+      >
+        AI connections
+      </Link>
     </div>
   );
 }
