@@ -1,10 +1,25 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth-server";
-import { rewriteLoopbackDcrBody } from "@/lib/mcp/dcr-native";
+import {
+  rewriteLoopbackAuthorizeUrl,
+  rewriteLoopbackDcrBody,
+} from "@/lib/mcp/dcr-native";
 
 const handler = toNextJsHandler(auth);
 
-export const GET = handler.GET;
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  if (url.pathname.endsWith("/oauth2/authorize")) {
+    const next = rewriteLoopbackAuthorizeUrl(url);
+    if (next.toString() !== url.toString()) {
+      request = new Request(next.toString(), {
+        method: "GET",
+        headers: request.headers,
+      });
+    }
+  }
+  return handler.GET(request);
+}
 
 export async function POST(request: Request) {
   const path = new URL(request.url).pathname;

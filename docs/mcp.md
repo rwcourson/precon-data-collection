@@ -133,11 +133,20 @@ Server-side work already in production for that handshake (SSO exemption, DCR, n
 | `mcp-remote` stdio wrapper (below) | You need tools **inside the Grok TUI** |
 | Cursor / Claude / Inspector | Other clients; their OAuth flows do open a browser |
 
-Stdio wrapper (opens a browser on first connect; Grok talks to a local process, not HTTP OAuth):
+Stdio wrapper (opens a browser on first connect; Grok talks to a local process, not HTTP OAuth). **Do not run `grok mcp remove` / `add` every time** — that starts a new login. Authenticate once, then just launch `grok`.
+
+Pin the callback port and give Microsoft sign-in ten minutes (the default 30-second timeout is why the browser lands on a dead `localhost:27523` tab):
 
 ```bash
-grok mcp remove precon
-grok mcp add precon -- npx -y mcp-remote {APP_ORIGIN}/api/mcp
+# Quit every other grok session first (multiple grok processes steal the callback port).
+
+npx -y mcp-remote https://precon-data.magnus.brasfieldgorrie.app/api/mcp 27523 --host localhost --auth-timeout 600
+# Complete Entra + Approve in the browser that this command opens.
+# Wait until the terminal prints "Connected" / "Proxy established".
+# Ctrl+C that process, then:
+
+grok mcp remove precon-data
+grok mcp add precon-data -- npx -y mcp-remote https://precon-data.magnus.brasfieldgorrie.app/api/mcp 27523 --host localhost --auth-timeout 600
 grok
 ```
 
@@ -168,6 +177,7 @@ Inspector will follow protected-resource metadata, open the browser for SSO, the
 | JSON-RPC error `Missing MCP grant: write:pursuits` | Write tool called without a write ceiling and consent. |
 | HTTP 400 `missing: ["_meta"]` | Client sent `MCP-Protocol-Version: 2026-07-28` without the per-request envelope. Omit the header (2025) or send `_meta`. |
 | Grok CLI `[authenticating]` with no browser | **Known limitation in Grok CLI 1.0.5.** Native `--transport http` discovers OAuth then never registers a client or opens a login URL. Use [grok.com/connectors](https://grok.com/connectors) or `npx mcp-remote {APP_ORIGIN}/api/mcp` as a stdio server. Restarting and pressing `i` will not help. |
+| Browser opens `http://localhost:27523/oauth/callback` and the tab never finishes | The callback is correct. `mcp-remote` died before Entra finished (default 30s timeout, or a second `grok` stole the port). Quit every `grok`, run `npx -y mcp-remote {APP_ORIGIN}/api/mcp 27523 --host localhost --auth-timeout 600`, complete sign-in in **that** browser, then start a single `grok`. |
 | Build log `relation "oauth_resource" does not exist` | Apply drizzle migration 0016 (`pnpm run db:migrate:deploy`) before first SSO runtime on Postgres. CI uses PGlite and is clean. |
 
 ## Rate limiting
