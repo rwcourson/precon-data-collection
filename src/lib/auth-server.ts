@@ -27,6 +27,7 @@ function trustedOrigins(): string[] {
       /* ignore */
     }
   }
+  fromList.push("https://grok.com", "https://www.grok.com");
   // Local dev conveniences — never trusted on production/hosted runs.
   const production =
     process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
@@ -126,6 +127,11 @@ export const auth = betterAuth({
       consentPage: "/consent",
       resource: mcpResourceIdentifier(),
       scopes: [...MCP_ADVERTISED_SCOPES],
+      // CIMD is preferred (Grok web / Claude / Cursor). Local CLIs such as
+      // `grok mcp` still register a public loopback client via RFC 7591 before
+      // they can open the browser — without DCR they hang on [authenticating].
+      allowDynamicClientRegistration: true,
+      allowUnauthenticatedClientRegistration: true,
     }),
     cimd({
       fetchClientMetadataResource,

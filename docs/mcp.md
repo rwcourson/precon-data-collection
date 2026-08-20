@@ -104,6 +104,23 @@ OAuth discovery (no cookies required):
 2. Same Entra + consent flow.
 3. After connecting, `whoami` should list your role and effective scopes.
 
+### Grok (web)
+
+1. Open [grok.com/connectors](https://grok.com/connectors) → **New Connector** → **Custom**.
+2. URL: `{APP_ORIGIN}/api/mcp`.
+3. Complete Microsoft sign-in and Precon consent.
+
+### Grok CLI
+
+```bash
+grok mcp add --transport http precon {APP_ORIGIN}/api/mcp
+grok
+```
+
+In the TUI: `/mcps`, highlight **precon**, press **`i`**. A browser should open. `grok mcp doctor` does **not** start OAuth; it only checks connectivity.
+
+If the TUI stays on `[authenticating]` with no browser, the server must advertise Dynamic Client Registration (`allowDynamicClientRegistration`). CIMD alone is enough for grok.com / Cursor, not for the local CLI loopback client.
+
 ### MCP Inspector
 
 ```bash
