@@ -65,6 +65,17 @@ describe("SSO proxy gate for MCP discovery", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("lets a credential-less GET reach /api/mcp so Grok can probe WWW-Authenticate", () => {
+    stubSso();
+    const response = proxy(
+      new NextRequest("https://precon.example.com/api/mcp", {
+        method: "GET",
+      })
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("still 401s unrelated API routes without a session in SSO mode", async () => {
     stubSso();
     const response = proxy(

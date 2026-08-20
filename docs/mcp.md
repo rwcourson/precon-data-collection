@@ -20,7 +20,7 @@ MCP client
 - Better Auth 1.7 `mcp()` **is** the OAuth 2.1 provider. Do not also register `oauthProvider()`.
 - Dynamic Client Registration (RFC 7591) is advertised; CIMD is **not**. Grok CLI hangs on `[authenticating]` if metadata claims `client_id_metadata_document_supported` without a HTTPS client-metadata URL. Loopback DCR bodies are rewritten to `application_type: native`.
 - Resource identifier is `${APP_ORIGIN}/api/mcp` (`mcpResourceIdentifier()`).
-- The handler uses MCP SDK v2 `createMcpHandler(..., { legacy: "stateless" })`. 2025 clients that POST JSON-RPC without a 2026 `_meta` envelope still work. GET/DELETE are 405.
+- The handler uses MCP SDK v2 `createMcpHandler(..., { legacy: "stateless" })`. 2025 clients that POST JSON-RPC without a 2026 `_meta` envelope still work. Unauthenticated GET/HEAD return RFC 9728 `401` + `WWW-Authenticate` (Grok CLI probes GET before it will open a browser). DELETE is 405.
 - Identity: OAuth claims email → app `users` row (case-insensitive). No roster row → 403. MCP does not auto-provision. Demo mode (`AUTH_MODE=demo`) has no OAuth flow.
 
 ## Permission model (four layers)
@@ -139,7 +139,7 @@ Inspector will follow protected-resource metadata, open the browser for SSO, the
 | Tool missing from `tools/list` | Scope not in the effective intersection (ceiling ∩ consent). |
 | JSON-RPC error `Missing MCP grant: write:pursuits` | Write tool called without a write ceiling and consent. |
 | HTTP 400 `missing: ["_meta"]` | Client sent `MCP-Protocol-Version: 2026-07-28` without the per-request envelope. Omit the header (2025) or send `_meta`. |
-| Grok CLI `[authenticating]` with no browser | CIMD advertised, or DCR rejected loopback as a web client. Metadata must omit `client_id_metadata_document_supported` and accept `http://127.0.0.1` via native DCR. Quit the TUI and press `i` again. |
+| Grok CLI `[authenticating]` with no browser | GET `/api/mcp` must be `401` + `WWW-Authenticate` (not `405`). Then metadata must omit CIMD and accept loopback DCR as native. Quit the TUI and press `i` again. |
 | Build log `relation "oauth_resource" does not exist` | Apply drizzle migration 0016 (`pnpm run db:migrate:deploy`) before first SSO runtime on Postgres. CI uses PGlite and is clean. |
 
 ## Rate limiting
