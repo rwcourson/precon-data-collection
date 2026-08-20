@@ -18,7 +18,8 @@ MCP client
 ```
 
 - Better Auth 1.7 `mcp()` **is** the OAuth 2.1 provider. Do not also register `oauthProvider()`.
-- Dynamic Client Registration (RFC 7591) is advertised; CIMD is **not** (Grok CLI 1.0.5 hangs if `client_id_metadata_document_supported` is true). Loopback DCR bodies are rewritten to `application_type: native`.
+- Client ID Metadata Documents (CIMD, MCP 2026-07-28) are preferred and Dynamic Client Registration (RFC 7591) remains advertised for older/native clients. Loopback DCR bodies are rewritten to `application_type: native`.
+- OAuth Device Authorization (RFC 8628) powers the repo-local stdio fallback. It uses a stable HTTPS verification page and never binds a localhost callback.
 - Resource identifier is `${APP_ORIGIN}/api/mcp` (`mcpResourceIdentifier()`).
 - The handler uses MCP SDK v2 `createMcpHandler(..., { legacy: "stateless" })`. 2025 clients that POST JSON-RPC without a 2026 `_meta` envelope still work. Unauthenticated GET/HEAD return RFC 9728 `401` + `WWW-Authenticate`. JSON-RPC is POST-only; DELETE is 405.
 - Identity: OAuth claims email → app `users` row (case-insensitive). No roster row → 403. MCP does not auto-provision. Demo mode (`AUTH_MODE=demo`) has no OAuth flow.
@@ -112,9 +113,9 @@ OAuth discovery (no cookies required):
 
 This is the supported Grok path. It uses HTTPS Dynamic Client Registration (same as Cursor/Claude), not the local CLI loopback client.
 
-### Grok CLI — known limitation (no browser)
+### Grok CLI — repo-local fallback
 
-**Do not expect native HTTP OAuth to work in Grok CLI 1.0.5.** After `grok mcp add --transport http`, the TUI stays on **`precon [authenticating]` / no tools** and **never opens a browser**, including after remove/re-add and a full restart. `/mcps` then **`i`** retries the same handshake. `grok mcp doctor precon` reports `Auth(AuthorizationRequired)` — that command never starts OAuth; it only probes connectivity.
+Grok CLI 1.0.5 does not complete native HTTP MCP OAuth against this server. It discovers the OAuth endpoints and stops before registration/authorization. Use the repo-local companion until xAI fixes that client flow.
 
 What the CLI does against this server (verified in production logs):
 
@@ -123,17 +124,15 @@ What the CLI does against this server (verified in production logs):
 3. `GET /.well-known/oauth-authorization-server/api/auth`
 4. Stop. No `POST /oauth2/register`, no `GET /oauth2/authorize`, no browser.
 
-Server-side work already in production for that handshake (SSO exemption, DCR, native loopback rewrite, CIMD not advertised, GET challenge matching Linear/Sentry) is not enough: Grok CLI never starts the authorize step. Treat this as a **Grok CLI bug / missing interactive OAuth**, not a missing Precon endpoint.
+Server-side discovery cannot finish a flow the client never starts. This is a Grok CLI limitation, not a reason to weaken the hosted OAuth server.
 
-**Grok CLI** (stdio, no browser after first login):
-
-Grok cannot complete native HTTP OAuth (1.0.5). Point it at the local stdio proxy in this repo — same pattern as Keel. It uses the refresh token on disk and **never opens a tab**.
-
-One-time login (spare terminal, wait for `Connected`, then Ctrl+C):
+One-time device login:
 
 ```bash
 pnpm mcp:login
 ```
+
+The command prints `https://.../device?...` and a short code. Open that URL, sign in with Microsoft, review the requested scopes, and approve. The terminal finishes automatically. It does not open a browser or use localhost.
 
 Then in `~/.grok/config.toml`:
 
@@ -144,7 +143,9 @@ args = ["/ABS/PATH/TO/precon-data-collection/scripts/mcp-stdio-proxy.mjs"]
 enabled = true
 ```
 
-Do not use `npx mcp-remote` as the Grok server command. Grok respawns it on every tool call; `mcp-remote` then opens a browser and waits up to ten minutes.
+Quit and restart Grok after changing the config; a running process keeps its old MCP command. The companion emits MCP-standard NDJSON, refreshes tokens under a file lock, and never starts interactive authorization from a chat.
+
+Do not use `npx mcp-remote` as the Grok server command. Grok can respawn it on tool calls, causing repeated browser windows and dead localhost callbacks.
 
 Cursor / Claude / Inspector / grok.com still use the HTTPS URL directly.
 
@@ -166,8 +167,9 @@ Inspector will follow protected-resource metadata, open the browser for SSO, the
 | Tool missing from `tools/list` | Scope not in the effective intersection (ceiling ∩ consent). |
 | JSON-RPC error `Missing MCP grant: write:pursuits` | Write tool called without a write ceiling and consent. |
 | HTTP 400 `missing: ["_meta"]` | Client sent `MCP-Protocol-Version: 2026-07-28` without the per-request envelope. Omit the header (2025) or send `_meta`. |
-| Grok CLI `[authenticating]` with no browser | **Known limitation in Grok CLI 1.0.5.** Native `--transport http` discovers OAuth then never registers a client or opens a login URL. Use [grok.com/connectors](https://grok.com/connectors) or `npx mcp-remote {APP_ORIGIN}/api/mcp` as a stdio server. Restarting and pressing `i` will not help. |
-| Browser opens `http://localhost:27523/oauth/callback` during a Grok chat | Grok is still spawning `mcp-remote`. Point `[mcp_servers.precon-data]` at `scripts/mcp-stdio-proxy.mjs` instead. |
+| Grok CLI `[authenticating]` with no browser | **Known limitation in Grok CLI 1.0.5.** Use [grok.com/connectors](https://grok.com/connectors) or run `pnpm mcp:login` once and configure `scripts/mcp-stdio-proxy.mjs`. |
+| Browser opens a localhost OAuth callback during a Grok chat | Grok is still running an old `mcp-remote` command. Point `[mcp_servers.precon-data]` at the repo companion, quit Grok fully, and restart it. |
+| Device login says the code is invalid/expired | Run `pnpm mcp:login` again and approve the new code within 30 minutes. |
 | Build log `relation "oauth_resource" does not exist` | Apply drizzle migration 0016 (`pnpm run db:migrate:deploy`) before first SSO runtime on Postgres. CI uses PGlite and is clean. |
 
 ## Rate limiting

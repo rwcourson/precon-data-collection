@@ -1,288 +1,399 @@
 #!/usr/bin/env node
 /**
- * Local stdio MCP proxy for Grok / other stdio hosts.
- * Never opens a browser. Uses mcp-remote token files + refresh_token.
- * First login: `pnpm mcp:login` (or the mcp-remote one-shot in docs/mcp.md).
+ * Repo-local Precon MCP companion.
+ *
+ * `login` uses RFC 8628 Device Authorization: it prints one stable HTTPS URL
+ * and never opens a browser or binds a localhost callback.
+ * `serve` bridges spec-compliant NDJSON stdio to the remote Streamable HTTP
+ * MCP endpoint and silently refreshes the stored access token.
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-const MCP_URL =
-  process.env.PRECON_MCP_URL?.trim() ||
+export const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
+export const DEFAULT_MCP_URL =
   "https://precon-data.magnus.brasfieldgorrie.app/api/mcp";
-const AUTH_DIR =
-  process.env.MCP_REMOTE_CONFIG_DIR?.trim() ||
-  path.join(os.homedir(), ".mcp-auth");
-const DURABLE_DIR =
-  process.env.PRECON_MCP_HOME?.trim() || path.join(os.homedir(), ".precon-mcp");
-const REQUEST_TIMEOUT_MS = Number(process.env.PRECON_MCP_TIMEOUT_MS || 25_000);
+export const DEFAULT_SCOPES = [
+  "offline_access",
+  "profile:read",
+  "read:pursuits",
+  "read:reports",
+  "read:dashboards",
+  "read:sheets",
+].join(" ");
 
-function log(message) {
-  process.stderr.write(`precon-mcp: ${message}\n`);
-}
-
-function send(obj) {
-  if (obj == null) return;
-  const body = Buffer.from(JSON.stringify(obj), "utf8");
-  process.stdout.write(`Content-Length: ${body.length}\r\n\r\n`);
-  process.stdout.write(body);
-}
-
-function walkFiles(dir, acc = []) {
-  if (!fs.existsSync(dir)) return acc;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkFiles(full, acc);
-    else acc.push(full);
-  }
-  return acc;
-}
-
-function durablePaths() {
+function config(env = process.env) {
+  const mcpUrl = env.PRECON_MCP_URL?.trim() || DEFAULT_MCP_URL;
+  const home =
+    env.PRECON_MCP_HOME?.trim() || path.join(os.homedir(), ".precon-mcp");
+  const origin = new URL(mcpUrl).origin;
   return {
-    tokenPath: path.join(DURABLE_DIR, "tokens.json"),
-    clientPath: path.join(DURABLE_DIR, "client.json"),
+    mcpUrl,
+    home,
+    clientPath: path.join(home, "client.json"),
+    tokenPath: path.join(home, "tokens.json"),
+    lockPath: path.join(home, "tokens.lock"),
+    registerUrl: `${origin}/api/auth/oauth2/register`,
+    deviceUrl: `${origin}/api/auth/device/code`,
+    tokenUrl: `${origin}/api/auth/oauth2/token`,
+    timeoutMs: Number(env.PRECON_MCP_TIMEOUT_MS || 25_000),
   };
 }
 
-function writeJson(filePath, data) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, {
+export function writeJsonAtomic(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
+  const temporary = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
     mode: 0o600,
   });
+  fs.renameSync(temporary, filePath);
+  fs.chmodSync(filePath, 0o600);
 }
 
-function loadFrom(tokenPath, clientPath) {
-  if (!fs.existsSync(tokenPath)) return null;
-  const tokens = JSON.parse(fs.readFileSync(tokenPath, "utf8"));
-  if (!tokens?.access_token) return null;
-  const client = fs.existsSync(clientPath)
-    ? JSON.parse(fs.readFileSync(clientPath, "utf8"))
-    : {};
-  return { tokenPath, clientPath, tokens, client };
+function readJson(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function loadFromMcpAuth() {
-  const files = walkFiles(AUTH_DIR).filter((f) => f.endsWith("_tokens.json"));
-  files.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-  const tokenPath = files[0];
-  if (!tokenPath) return null;
-  const clientPath = tokenPath.replace(/_tokens\.json$/, "_client_info.json");
-  return loadFrom(tokenPath, clientPath);
-}
-
-function persistDurable(pair) {
-  const paths = durablePaths();
-  writeJson(paths.tokenPath, pair.tokens);
-  if (pair.client && Object.keys(pair.client).length) {
-    writeJson(paths.clientPath, pair.client);
-  }
-  return { ...pair, tokenPath: paths.tokenPath, clientPath: paths.clientPath };
-}
-
-function loadPair() {
-  const durable = loadFrom(durablePaths().tokenPath, durablePaths().clientPath);
-  if (durable) return durable;
-  const imported = loadFromMcpAuth();
-  if (!imported) return null;
-  log("imported tokens from mcp-remote cache into ~/.precon-mcp");
-  return persistDurable(imported);
-}
-
-function saveTokens(tokenPath, tokens) {
-  writeJson(tokenPath, tokens);
-  writeJson(durablePaths().tokenPath, tokens);
-}
-
-function tokenEndpoint() {
-  const origin = new URL(MCP_URL).origin;
-  return `${origin}/api/auth/oauth2/token`;
-}
-
-async function refresh(pair) {
-  const refreshToken = pair.tokens.refresh_token;
-  const clientId = pair.client.client_id;
-  if (!refreshToken || !clientId) {
-    throw new Error(
-      "No refresh token on disk. Run `pnpm mcp:login` once, then retry."
-    );
-  }
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
-    client_id: clientId,
-    resource: MCP_URL,
+async function fetchJson(url, init, timeoutMs) {
+  const response = await fetch(url, {
+    ...init,
+    signal: AbortSignal.timeout(timeoutMs),
   });
-  const response = await fetch(tokenEndpoint(), {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  const json = await response.json().catch(() => null);
-  if (!response.ok || !json?.access_token) {
-    throw new Error(
-      json?.error_description ||
-        json?.error ||
-        `Token refresh failed (${response.status}). Run \`pnpm mcp:login\`.`
-    );
-  }
-  const next = {
-    ...pair.tokens,
-    access_token: json.access_token,
-    token_type: json.token_type || pair.tokens.token_type || "Bearer",
-    expires_in: json.expires_in,
-    scope: json.scope || pair.tokens.scope,
-    ...(json.refresh_token ? { refresh_token: json.refresh_token } : {}),
+  const body = await response.json().catch(() => null);
+  return { response, body };
+}
+
+export async function registerDeviceClient(options = {}) {
+  const cfg = config(options.env);
+  const existing = readJson(cfg.clientPath);
+  if (existing?.client_id) return existing;
+
+  const payload = {
+    client_name: "Precon MCP repo companion",
+    application_type: "native",
+    token_endpoint_auth_method: "none",
+    redirect_uris: ["http://127.0.0.1/oauth/callback"],
+    grant_types: ["authorization_code", DEVICE_GRANT_TYPE, "refresh_token"],
+    response_types: ["code"],
+    scope: DEFAULT_SCOPES,
   };
-  saveTokens(pair.tokenPath, next);
-  pair.tokens = next;
-  log("refreshed access token");
-}
-
-function parseRpcBody(text, contentType) {
-  const type = contentType || "";
-  if (type.includes("text/event-stream")) {
-    const lines = text.split("\n");
-    let last = null;
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("data:")) {
-        const payload = trimmed.slice(5).trim();
-        if (payload && payload !== "[DONE]") last = JSON.parse(payload);
-      }
-    }
-    if (!last) throw new Error("Empty SSE body from MCP server.");
-    return last;
+  const { response, body } = await fetchJson(
+    cfg.registerUrl,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    cfg.timeoutMs
+  );
+  if (!response.ok || !body?.client_id) {
+    throw new Error(
+      body?.error_description ||
+        body?.error ||
+        `Client registration failed (${response.status}).`
+    );
   }
-  return JSON.parse(text);
+  writeJsonAtomic(cfg.clientPath, body);
+  return body;
 }
 
-async function postOnce(pair, message) {
-  const response = await fetch(MCP_URL, {
+export async function requestDeviceCode(client, options = {}) {
+  const cfg = config(options.env);
+  const form = new URLSearchParams({
+    client_id: client.client_id,
+    scope: DEFAULT_SCOPES,
+    resource: cfg.mcpUrl,
+  });
+  const { response, body } = await fetchJson(
+    cfg.deviceUrl,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: form,
+    },
+    cfg.timeoutMs
+  );
+  if (!response.ok || !body?.device_code || !body?.user_code) {
+    throw new Error(
+      body?.error_description ||
+        body?.error ||
+        `Device authorization failed (${response.status}).`
+    );
+  }
+  return body;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function pollDeviceToken(client, device, options = {}) {
+  const cfg = config(options.env);
+  const deadline =
+    Date.now() + Math.max(1, Number(device.expires_in || 1800)) * 1000;
+  let intervalMs = Math.max(1, Number(device.interval || 5)) * 1000;
+  while (Date.now() < deadline) {
+    await (options.sleep ?? sleep)(intervalMs);
+    const form = new URLSearchParams({
+      grant_type: DEVICE_GRANT_TYPE,
+      device_code: device.device_code,
+      client_id: client.client_id,
+      resource: cfg.mcpUrl,
+    });
+    const { response, body } = await fetchJson(
+      cfg.tokenUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      },
+      cfg.timeoutMs
+    );
+    if (response.ok && body?.access_token) {
+      const tokens = { ...body, obtained_at: Date.now() };
+      writeJsonAtomic(cfg.tokenPath, tokens);
+      return tokens;
+    }
+    if (body?.error === "authorization_pending") continue;
+    if (body?.error === "slow_down") {
+      intervalMs += 5_000;
+      continue;
+    }
+    throw new Error(
+      body?.error_description ||
+        body?.error ||
+        `Token exchange failed (${response.status}).`
+    );
+  }
+  throw new Error(
+    "Device code expired before it was approved. Run login again."
+  );
+}
+
+export async function login(options = {}) {
+  const output =
+    options.output ?? ((line) => process.stderr.write(`${line}\n`));
+  const client = await registerDeviceClient(options);
+  const device = await requestDeviceCode(client, options);
+  output("Authorize the Precon MCP connection:");
+  output(device.verification_uri_complete || device.verification_uri);
+  if (!device.verification_uri_complete) output(`Code: ${device.user_code}`);
+  output("Waiting for approval…");
+  await pollDeviceToken(client, device, options);
+  output("Connected. The companion can now run without opening a browser.");
+}
+
+async function withFileLock(cfg, callback) {
+  fs.mkdirSync(cfg.home, { recursive: true, mode: 0o700 });
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      const fd = fs.openSync(cfg.lockPath, "wx", 0o600);
+      try {
+        return await callback();
+      } finally {
+        fs.closeSync(fd);
+        fs.rmSync(cfg.lockPath, { force: true });
+      }
+    } catch (error) {
+      if (error?.code !== "EEXIST") throw error;
+      const age = Date.now() - fs.statSync(cfg.lockPath).mtimeMs;
+      if (age > 30_000) fs.rmSync(cfg.lockPath, { force: true });
+      else await sleep(50);
+    }
+  }
+  throw new Error("Timed out waiting for the token refresh lock.");
+}
+
+export async function refreshAccessToken(options = {}) {
+  const cfg = config(options.env);
+  return withFileLock(cfg, async () => {
+    const current = readJson(cfg.tokenPath);
+    const client = readJson(cfg.clientPath);
+    if (!current?.refresh_token || !client?.client_id) {
+      throw new Error("No refresh grant is available. Run `pnpm mcp:login`.");
+    }
+    const form = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: current.refresh_token,
+      client_id: client.client_id,
+      resource: cfg.mcpUrl,
+    });
+    const { response, body } = await fetchJson(
+      cfg.tokenUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: form,
+      },
+      cfg.timeoutMs
+    );
+    if (!response.ok || !body?.access_token) {
+      throw new Error(
+        body?.error_description ||
+          body?.error ||
+          `Token refresh failed (${response.status}). Run \`pnpm mcp:login\`.`
+      );
+    }
+    const next = {
+      ...current,
+      ...body,
+      refresh_token: body.refresh_token || current.refresh_token,
+      obtained_at: Date.now(),
+    };
+    writeJsonAtomic(cfg.tokenPath, next);
+    return next;
+  });
+}
+
+export function parseRemoteMessages(text, contentType = "") {
+  if (contentType.includes("text/event-stream")) {
+    return text
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim())
+      .filter((line) => line && line !== "[DONE]")
+      .map((line) => JSON.parse(line));
+  }
+  if (!text.trim()) return [];
+  return [JSON.parse(text)];
+}
+
+async function postMessage(message, tokens, cfg) {
+  return fetch(cfg.mcpUrl, {
     method: "POST",
     headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
-      Authorization: `Bearer ${pair.tokens.access_token}`,
       "MCP-Protocol-Version": "2025-03-26",
     },
     body: JSON.stringify(message),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(cfg.timeoutMs),
   });
-  const text = await response.text();
-  let parsed = null;
-  try {
-    parsed = parseRpcBody(text, response.headers.get("content-type"));
-  } catch {
-    parsed = {
-      error: { message: text.slice(0, 300) || `HTTP ${response.status}` },
-    };
-  }
-  return { response, parsed };
 }
 
-async function forward(message) {
-  const pair = loadPair();
-  if (!pair?.tokens?.access_token) {
+export async function forwardMessage(message, options = {}) {
+  const cfg = config(options.env);
+  let tokens = readJson(cfg.tokenPath);
+  if (!tokens?.access_token) {
+    throw new Error("Not signed in. Run `pnpm mcp:login` once.");
+  }
+  const expiresAt =
+    Number(tokens.obtained_at || 0) + Number(tokens.expires_in || 0) * 1000;
+  if (expiresAt && expiresAt <= Date.now() + 30_000) {
+    tokens = await refreshAccessToken(options);
+  }
+
+  let response = await postMessage(message, tokens, cfg);
+  if (response.status === 401) {
+    tokens = await refreshAccessToken(options);
+    response = await postMessage(message, tokens, cfg);
+  }
+  const text = await response.text();
+  if (!response.ok) {
+    let detail = text.slice(0, 500);
+    try {
+      const parsed = JSON.parse(text);
+      detail =
+        parsed?.error?.message ||
+        parsed?.error_description ||
+        parsed?.error ||
+        detail;
+    } catch {
+      // Keep the bounded text response.
+    }
     throw new Error(
-      "Not signed in. In a spare terminal run `pnpm mcp:login`, complete Microsoft + Approve, wait for Connected, then Ctrl+C."
+      typeof detail === "string" ? detail : JSON.stringify(detail)
     );
   }
-  let { response, parsed } = await postOnce(pair, message);
-  if (response.status === 401) {
-    await refresh(pair);
-    ({ response, parsed } = await postOnce(pair, message));
-  }
-  if (!response.ok) {
-    const err =
-      parsed?.error?.message ||
-      parsed?.error_description ||
-      parsed?.error ||
-      `MCP HTTP ${response.status}`;
-    throw new Error(typeof err === "string" ? err : JSON.stringify(err));
-  }
-  return parsed;
+  return parseRemoteMessages(text, response.headers.get("content-type") || "");
 }
 
-function rpcError(id, message) {
-  send({
-    jsonrpc: "2.0",
-    id: id ?? null,
-    error: { code: -32003, message },
+export function encodeStdioMessage(message) {
+  return `${JSON.stringify(message)}\n`;
+}
+
+export function createNdjsonParser(onMessage, onError = () => {}) {
+  let buffer = "";
+  return (chunk) => {
+    buffer += chunk.toString("utf8");
+    while (true) {
+      const newline = buffer.indexOf("\n");
+      if (newline < 0) return;
+      const line = buffer.slice(0, newline).trim();
+      buffer = buffer.slice(newline + 1);
+      if (!line) continue;
+      try {
+        onMessage(JSON.parse(line));
+      } catch (error) {
+        onError(error);
+      }
+    }
+  };
+}
+
+export function serve(options = {}) {
+  const input = options.input ?? process.stdin;
+  const output = options.output ?? process.stdout;
+  const errors = options.errors ?? process.stderr;
+  let queue = Promise.resolve();
+  const parser = createNdjsonParser(
+    (message) => {
+      queue = queue
+        .then(async () => {
+          const responses = await forwardMessage(message, options);
+          for (const response of responses) {
+            output.write(encodeStdioMessage(response));
+          }
+        })
+        .catch((error) => {
+          if (message.id !== undefined) {
+            output.write(
+              encodeStdioMessage({
+                jsonrpc: "2.0",
+                id: message.id ?? null,
+                error: {
+                  code: -32003,
+                  message:
+                    error instanceof Error ? error.message : String(error),
+                },
+              })
+            );
+          } else {
+            errors.write(
+              `precon-mcp: ${error instanceof Error ? error.message : String(error)}\n`
+            );
+          }
+        });
+    },
+    (error) => errors.write(`precon-mcp: invalid JSON: ${error.message}\n`)
+  );
+  input.on("data", parser);
+  input.on("error", (error) =>
+    errors.write(`precon-mcp: stdin error: ${error.message}\n`)
+  );
+}
+
+async function main() {
+  const command = process.argv[2] || "serve";
+  if (command === "login") await login();
+  else if (command === "serve") serve();
+  else {
+    throw new Error("Usage: mcp-stdio-proxy.mjs [login|serve]");
+  }
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  main().catch((error) => {
+    process.stderr.write(
+      `precon-mcp: ${error instanceof Error ? error.message : String(error)}\n`
+    );
+    process.exitCode = 1;
   });
 }
-
-async function handleMessage(msg) {
-  if (!msg || typeof msg !== "object") return;
-  const method = msg.method;
-  const id = msg.id;
-  if (
-    method === "notifications/initialized" ||
-    method === "initialized" ||
-    method === "notifications/cancelled" ||
-    (id === undefined && method && String(method).startsWith("notifications/"))
-  ) {
-    return;
-  }
-  if (method === "ping") {
-    send({ jsonrpc: "2.0", id, result: {} });
-    return;
-  }
-  if (id === undefined) return;
-  try {
-    const result = await forward(msg);
-    if (result && typeof result === "object" && "jsonrpc" in result) {
-      send(result);
-      return;
-    }
-    send({ jsonrpc: "2.0", id, result });
-  } catch (error) {
-    rpcError(id, error instanceof Error ? error.message : String(error));
-  }
-}
-
-let buf = Buffer.alloc(0);
-
-function consume() {
-  while (true) {
-    const headerEnd = buf.indexOf("\r\n\r\n");
-    if (headerEnd !== -1) {
-      const header = buf.slice(0, headerEnd).toString("utf8");
-      const match = /Content-Length:\s*(\d+)/i.exec(header);
-      if (!match) {
-        buf = buf.slice(headerEnd + 4);
-        continue;
-      }
-      const len = Number(match[1]);
-      const start = headerEnd + 4;
-      if (buf.length < start + len) return;
-      const json = buf.slice(start, start + len).toString("utf8");
-      buf = buf.slice(start + len);
-      try {
-        void handleMessage(JSON.parse(json));
-      } catch {
-        /* skip */
-      }
-      continue;
-    }
-    const nl = buf.indexOf("\n");
-    if (nl === -1) return;
-    const line = buf.slice(0, nl).toString("utf8").trim();
-    buf = buf.slice(nl + 1);
-    if (!line || line.startsWith("Content-Length")) continue;
-    try {
-      void handleMessage(JSON.parse(line));
-    } catch {
-      /* incomplete */
-    }
-  }
-}
-
-process.stdin.on("data", (chunk) => {
-  buf = Buffer.concat([buf, chunk]);
-  consume();
-});
-process.stdin.on("end", () => process.exit(0));
-process.stdin.on("error", () => process.exit(0));

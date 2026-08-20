@@ -1,6 +1,6 @@
 /**
  * Better Auth tables — separate from app `users` (serial PK + role/region).
- * Regenerated against better-auth 1.7.1 with jwt + mcp + cimd plugins
+ * Regenerated against better-auth 1.7.1 with jwt + mcp + cimd + device plugins
  * (`auth generate --adapter drizzle`).
  */
 import { relations } from "drizzle-orm";
@@ -294,6 +294,35 @@ export const oauthClientAssertion = pgTable("oauth_client_assertion", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
+export const deviceCode = pgTable(
+  "device_code",
+  {
+    id: text("id").primaryKey(),
+    deviceCode: text("device_code").notNull(),
+    userCode: text("user_code").notNull(),
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
+    clientId: text("client_id"),
+    scope: text("scope"),
+    status: text("status").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    lastPolledAt: timestamp("last_polled_at"),
+    pollingInterval: integer("polling_interval"),
+    oauthClientId: text("oauth_client_id").references(
+      () => oauthClient.clientId,
+      { onDelete: "cascade" }
+    ),
+    resources: text("resources").array(),
+  },
+  (table) => [
+    uniqueIndex("deviceCode_deviceCode_uidx").on(table.deviceCode),
+    uniqueIndex("deviceCode_userCode_uidx").on(table.userCode),
+    index("deviceCode_userId_idx").on(table.userId),
+    index("deviceCode_oauthClientId_idx").on(table.oauthClientId),
+  ]
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -301,6 +330,7 @@ export const userRelations = relations(user, ({ many }) => ({
   oauthRefreshTokens: many(oauthRefreshToken),
   oauthAccessTokens: many(oauthAccessToken),
   oauthConsents: many(oauthConsent),
+  deviceCodes: many(deviceCode),
 }));
 
 export const sessionRelations = relations(session, ({ one, many }) => ({
@@ -328,6 +358,7 @@ export const oauthClientRelations = relations(oauthClient, ({ one, many }) => ({
   oauthRefreshTokens: many(oauthRefreshToken),
   oauthAccessTokens: many(oauthAccessToken),
   oauthConsents: many(oauthConsent),
+  deviceCodes: many(deviceCode),
 }));
 
 export const oauthResourceRelations = relations(oauthResource, ({ many }) => ({
@@ -397,5 +428,16 @@ export const oauthConsentRelations = relations(oauthConsent, ({ one }) => ({
   user: one(user, {
     fields: [oauthConsent.userId],
     references: [user.id],
+  }),
+}));
+
+export const deviceCodeRelations = relations(deviceCode, ({ one }) => ({
+  user: one(user, {
+    fields: [deviceCode.userId],
+    references: [user.id],
+  }),
+  oauthClient: one(oauthClient, {
+    fields: [deviceCode.oauthClientId],
+    references: [oauthClient.clientId],
   }),
 }));

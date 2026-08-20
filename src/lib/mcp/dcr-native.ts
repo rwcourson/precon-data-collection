@@ -23,20 +23,19 @@ export function rewriteLoopbackDcrBody(body: unknown): unknown {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
   const rec = body as Record<string, unknown>;
   const uris = rec.redirect_uris;
-  if (!Array.isArray(uris) || uris.length === 0) return rec;
-  const allLoopback = uris.every(
-    (uri) => typeof uri === "string" && isLoopbackRedirect(uri)
-  );
-  if (!allLoopback) return rec;
-  const next: Record<string, unknown> = {
-    ...rec,
-    application_type: rec.application_type ?? "native",
-    token_endpoint_auth_method: rec.token_endpoint_auth_method ?? "none",
-  };
+  const next: Record<string, unknown> = { ...rec };
   if (typeof rec.scope === "string") {
     next.scope = ensureOfflineAccessScope(rec.scope);
   } else if (rec.scope == null) {
     next.scope = OFFLINE_ACCESS_SCOPE;
+  }
+  if (!Array.isArray(uris) || uris.length === 0) return next;
+  const allLoopback = uris.every(
+    (uri) => typeof uri === "string" && isLoopbackRedirect(uri)
+  );
+  if (allLoopback) {
+    next.application_type = rec.application_type ?? "native";
+    next.token_endpoint_auth_method = rec.token_endpoint_auth_method ?? "none";
   }
   return next;
 }
@@ -48,14 +47,12 @@ function ensureOfflineAccessScope(scope: string): string {
 }
 
 /**
- * mcp-remote builds the authorize `scope` from resource metadata, which does
- * not advertise OIDC `offline_access`. Without it, Better Auth issues a 1-hour
- * access token and no refresh token, so Grok re-opens a browser every hour and
- * dies on a dead localhost callback. Native loopback clients always get it.
+ * MCP clients commonly build authorize scope from protected-resource metadata,
+ * which correctly omits the OAuth protocol scope `offline_access`. Add it at
+ * the authorization server so both native and HTTPS clients receive a refresh
+ * token instead of opening a browser again after the one-hour access token.
  */
 export function rewriteLoopbackAuthorizeUrl(url: URL): URL {
-  const redirect = url.searchParams.get("redirect_uri") ?? "";
-  if (!isLoopbackRedirect(redirect)) return url;
   const next = new URL(url.toString());
   const current = next.searchParams.get("scope") ?? "";
   const withOffline = ensureOfflineAccessScope(current);

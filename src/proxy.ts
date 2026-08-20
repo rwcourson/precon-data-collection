@@ -85,7 +85,9 @@ export function proxy(req: NextRequest) {
     signIn.pathname = "/sign-in";
     signIn.search = "";
     if (pathname !== "/") {
-      signIn.searchParams.set("next", pathname);
+      // Keep signed OAuth/consent parameters intact across the SSO gate.
+      // `next` remains a same-origin path and is validated again by /sign-in.
+      signIn.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
     }
     return NextResponse.redirect(signIn);
   }

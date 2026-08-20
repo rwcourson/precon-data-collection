@@ -2,6 +2,7 @@ import { and, eq, isNull, ne } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { POST as mcpPost } from "@/app/api/mcp/route";
 import { db } from "@/db";
+import { user as authUser } from "@/db/auth-schema";
 import {
   appSettings,
   estimateRounds,
@@ -143,6 +144,23 @@ describe("MCP endpoint", () => {
     expect(response.headers.get("www-authenticate")?.toLowerCase()).toContain(
       "bearer"
     );
+  });
+
+  it("negotiates the legacy stateless protocol during initialize", async () => {
+    const [appUser] = await db.select().from(users).limit(1);
+    const response = await rpc(
+      claimsFor(appUser, ["profile:read"]),
+      "initialize",
+      {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: { name: "vitest", version: "1.0.0" },
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(
+      (response.body.result as { protocolVersion?: string })?.protocolVersion
+    ).toBeTruthy();
   });
 
   it("tools/list is filtered by effective scopes: profile-only sees whoami; read-only sees no write tools", async () => {
@@ -299,6 +317,33 @@ describe("MCP endpoint", () => {
     );
     expect(response.status).toBe(403);
     expect(JSON.stringify(response.body)).toMatch(/roster/i);
+  });
+
+  it("resolves an email-less access token through its Better Auth subject", async () => {
+    const [appUser] = await db.select().from(users).limit(1);
+    const subject = `mcp-subject-${appUser.id}`;
+    await db.insert(authUser).values({
+      id: subject,
+      name: appUser.name,
+      email: appUser.email,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    try {
+      const response = await rpc(
+        {
+          sub: subject,
+          scope: "profile:read",
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        },
+        "tools/list"
+      );
+      expect(response.status).toBe(200);
+      expect(toolNames(response.body)).toEqual(["whoami"]);
+    } finally {
+      await db.delete(authUser).where(eq(authUser.id, subject));
+    }
   });
 });
 

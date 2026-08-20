@@ -156,12 +156,14 @@ export function McpConnectionsClient({
             >
               grok.com/connectors
             </a>{" "}
-            → Custom. Grok CLI native HTTP (
+            → Custom. Grok CLI 1.0.5 native HTTP (
             <code className="text-xs">grok mcp add --transport http</code>)
             stays on <code className="text-xs">[authenticating]</code> and does
-            not open a browser — wrap with{" "}
-            <code className="text-xs">npx -y mcp-remote</code> or use the web
-            connector. Full steps: <code>docs/mcp.md</code>.
+            not finish OAuth. Internal developers can run{" "}
+            <code className="text-xs">pnpm mcp:login</code> once, then use the
+            repo&apos;s <code className="text-xs">mcp-stdio-proxy.mjs</code>. It
+            uses device authorization and never opens localhost callbacks. Full
+            steps: <code>docs/mcp.md</code>.
           </p>
         </CardContent>
       </Card>

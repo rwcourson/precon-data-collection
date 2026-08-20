@@ -86,4 +86,19 @@ describe("SSO proxy gate for MCP discovery", () => {
       error: "Not signed in. Sign in with Microsoft.",
     });
   });
+
+  it("preserves signed consent parameters across the SSO redirect", () => {
+    stubSso();
+    const response = proxy(
+      new NextRequest(
+        "https://precon.example.com/consent?client_id=client&sig=signed&ba_iat=123"
+      )
+    );
+    expect(response.status).toBe(307);
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/sign-in");
+    expect(location.searchParams.get("next")).toBe(
+      "/consent?client_id=client&sig=signed&ba_iat=123"
+    );
+  });
 });

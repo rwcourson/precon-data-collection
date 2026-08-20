@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GET, HEAD } from "@/app/api/mcp/route";
+import { GET, HEAD, OPTIONS } from "@/app/api/mcp/route";
 import {
   mcpOAuthChallengeResponse,
   mcpProtectedResourceMetadataUrl,
@@ -13,7 +13,7 @@ describe("mcp OAuth GET challenge", () => {
   });
 
   it("GET /api/mcp is 401 with resource_metadata, not 405", () => {
-    const response = GET();
+    const response = GET(new Request("https://precon.example.com/api/mcp"));
     expect(response.status).toBe(401);
     const challenge = response.headers.get("www-authenticate") ?? "";
     expect(challenge).toContain("Bearer");
@@ -21,13 +21,34 @@ describe("mcp OAuth GET challenge", () => {
     expect(challenge).toContain(
       "/.well-known/oauth-protected-resource/api/mcp"
     );
+    expect(challenge).not.toContain("invalid_token");
   });
 
   it("HEAD carries the same challenge without a body", () => {
-    const response = HEAD();
+    const response = HEAD(
+      new Request("https://precon.example.com/api/mcp", { method: "HEAD" })
+    );
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toBe(
       mcpOAuthChallengeResponse(true).headers.get("www-authenticate")
     );
+  });
+
+  it("allows only configured browser origins", () => {
+    const allowed = GET(
+      new Request("https://precon.example.com/api/mcp", {
+        headers: { Origin: "https://grok.com" },
+      })
+    );
+    expect(allowed.headers.get("access-control-allow-origin")).toBe(
+      "https://grok.com"
+    );
+    const denied = OPTIONS(
+      new Request("https://precon.example.com/api/mcp", {
+        method: "OPTIONS",
+        headers: { Origin: "https://evil.example" },
+      })
+    );
+    expect(denied.status).toBe(403);
   });
 });

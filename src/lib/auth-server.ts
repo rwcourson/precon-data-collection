@@ -1,5 +1,8 @@
 import "server-only";
+import { cimd } from "@better-auth/cimd";
+import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
+import { oauthDeviceAuthorization } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { jwt } from "better-auth/plugins";
@@ -125,11 +128,21 @@ export const auth = betterAuth({
       consentPage: "/consent",
       resource: mcpResourceIdentifier(),
       scopes: [...MCP_ADVERTISED_SCOPES],
-      // Advertise DCR, not CIMD. Grok CLI sees CIMD support, has no HTTPS
-      // client-metadata URL, and hangs on [authenticating] instead of
-      // falling back to RFC 7591. Cursor/Claude/Grok web use DCR too.
+      // Keep DCR as the compatibility path for clients without a public CIMD
+      // URL. The cimd() plugin below advertises the modern identity path too.
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
+    }),
+    // Modern MCP clients identify themselves with a public HTTPS metadata
+    // document. DCR remains enabled above for legacy and native clients.
+    cimd({
+      fetchClientMetadataResource,
+      metadataProfile: "mcp-2026-07-28",
+    }),
+    // Repo-local/stdio clients use RFC 8628 so authorization never depends on
+    // a transient localhost callback listener.
+    oauthDeviceAuthorization({
+      verificationUri: "/device",
     }),
   ],
 });

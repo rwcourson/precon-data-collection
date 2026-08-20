@@ -1,5 +1,6 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth-server";
+import { mcpCorsPreflight, withMcpCors } from "@/lib/mcp/cors";
 import {
   rewriteLoopbackAuthorizeUrl,
   rewriteLoopbackDcrBody,
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
       });
     }
   }
-  return handler.GET(request);
+  return withMcpCors(await handler.GET(request), request);
 }
 
 export async function POST(request: Request) {
@@ -36,5 +37,9 @@ export async function POST(request: Request) {
       duplex: "half",
     } as RequestInit);
   }
-  return handler.POST(request);
+  return withMcpCors(await handler.POST(request), request);
+}
+
+export function OPTIONS(request: Request) {
+  return mcpCorsPreflight(request);
 }

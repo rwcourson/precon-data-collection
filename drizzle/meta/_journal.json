@@ -176,6 +176,13 @@
       "when": 1788321600000,
       "tag": "0024_publication_outbox_nullable_revision",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1788408000000,
+      "tag": "0025_mcp_device_authorization",
+      "breakpoints": true
     }
   ]
 }

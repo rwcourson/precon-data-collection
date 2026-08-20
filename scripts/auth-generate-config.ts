@@ -5,6 +5,7 @@
 import { cimd } from "@better-auth/cimd";
 import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
+import { oauthDeviceAuthorization } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
 import { jwt } from "better-auth/plugins";
 import { MCP_ADVERTISED_SCOPES } from "../src/lib/authorization/mcp-scopes";
@@ -23,6 +24,9 @@ export const auth = betterAuth({
     cimd({
       fetchClientMetadataResource,
       metadataProfile: "mcp-2026-07-28",
+    }),
+    oauthDeviceAuthorization({
+      verificationUri: "/device",
     }),
   ],
 });

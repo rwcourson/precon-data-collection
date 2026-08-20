@@ -17,15 +17,18 @@ export function mcpOAuthChallengeResponse(body: boolean): Response {
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "no-store",
-    "WWW-Authenticate": `Bearer realm="OAuth", resource_metadata="${metadata}", error="invalid_token", error_description="Missing or invalid access token"`,
+    // This route is a credential-less discovery probe. Do not report
+    // `invalid_token`: some clients interpret that as an instruction to erase a
+    // perfectly reusable cached token before they have attempted an auth POST.
+    "WWW-Authenticate": `Bearer realm="OAuth", resource_metadata="${metadata}"`,
   };
   if (!body) {
     return new Response(null, { status: 401, headers });
   }
   return new Response(
     JSON.stringify({
-      error: "invalid_token",
-      error_description: "Missing or invalid access token",
+      error: "authorization_required",
+      error_description: "A bearer access token is required",
     }),
     { status: 401, headers }
   );

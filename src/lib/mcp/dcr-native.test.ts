@@ -17,22 +17,28 @@ describe("rewriteLoopbackDcrBody", () => {
     });
   });
 
-  it("does not rewrite https web callbacks", () => {
+  it("adds refresh scope without changing https web client type", () => {
     const body = {
       client_name: "grok-web",
       redirect_uris: ["https://grok.com/oauth/callback"],
     };
-    expect(rewriteLoopbackDcrBody(body)).toEqual(body);
+    expect(rewriteLoopbackDcrBody(body)).toEqual({
+      ...body,
+      scope: "offline_access",
+    });
   });
 
-  it("does not rewrite mixed loopback and https redirects", () => {
+  it("adds refresh scope without marking mixed redirects native", () => {
     const body = {
       redirect_uris: [
         "http://127.0.0.1:54321/callback",
         "https://grok.com/oauth/callback",
       ],
     };
-    expect(rewriteLoopbackDcrBody(body)).toEqual(body);
+    expect(rewriteLoopbackDcrBody(body)).toEqual({
+      ...body,
+      scope: "offline_access",
+    });
   });
 
   it("adds offline_access to native DCR scope so refresh tokens can issue", () => {
@@ -56,10 +62,12 @@ describe("rewriteLoopbackDcrBody", () => {
     );
   });
 
-  it("leaves https authorize scopes untouched", () => {
+  it("adds offline_access to https authorize scopes", () => {
     const url = new URL(
       "https://precon.example/api/auth/oauth2/authorize?redirect_uri=https%3A%2F%2Fgrok.com%2Fcb&scope=profile:read"
     );
-    expect(rewriteLoopbackAuthorizeUrl(url)).toEqual(url);
+    expect(rewriteLoopbackAuthorizeUrl(url).searchParams.get("scope")).toBe(
+      "profile:read offline_access"
+    );
   });
 });
