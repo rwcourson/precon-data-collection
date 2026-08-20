@@ -62,3 +62,4 @@ apps/**/.expo/
 
 # vendored packages — install deps via root pnpm install
 vendor/**/node_modules/
+/*.pdf
