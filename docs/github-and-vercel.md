@@ -6,7 +6,7 @@ How this repo is hosted. Update this file when the project name, domain, or env 
 
 | | |
 | --- | --- |
-| Repo | [rwcourson/precon-data-collection](https://github.com/rwcourson/precon-data-collection) (private) |
+| Repo | [rwcourson/precon-data-collection](https://github.com/rwcourson/precon-data-collection) (public — made public 2026-08-20 so Actions runs on the free tier; a transfer to the `BG-Innovation` org awaits an org owner since members cannot create repos there) |
 | Default branch | `master` |
 | Production URL | https://precon-data.magnus.brasfieldgorrie.app |
 
