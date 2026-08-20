@@ -107,7 +107,10 @@ export const copilotQueryService = {
       bidYear?: number;
     } = {}
   ): Promise<CopilotEffortRow[]> {
-    const listed = await listRoundsWithJobsForPrincipal(principal);
+    const listed = lockedScope(
+      principal,
+      await listRoundsWithJobsForPrincipal(principal)
+    );
     return listed
       .map(toEffort)
       .filter((row) => (filters.status ? row.status === filters.status : true))
@@ -126,7 +129,10 @@ export const copilotQueryService = {
     principal: Principal,
     hierarchy: HierarchySelection = EMPTY_HIERARCHY
   ): Promise<CopilotEffortRow[]> {
-    const listed = await listRoundsWithJobsForPrincipal(principal);
+    const listed = lockedScope(
+      principal,
+      await listRoundsWithJobsForPrincipal(principal)
+    );
     const rows = listed.map(toEffort);
     return filterNeedsStaffing(rows, hierarchy);
   },
@@ -197,7 +203,10 @@ export const copilotQueryService = {
     efforts: CopilotEffortRow[];
   }> {
     const directory = await listDirectoryUsersForPrincipal(principal);
-    const listed = await listRoundsWithJobsForPrincipal(principal);
+    const listed = lockedScope(
+      principal,
+      await listRoundsWithJobsForPrincipal(principal)
+    );
     const person = matchDirectoryUser(directory, input);
     if (!person) return { person: null, efforts: [] };
 
@@ -212,7 +221,10 @@ export const copilotQueryService = {
   },
 
   async planChart(principal: Principal, intent: string) {
-    const listed = await listRoundsWithJobsForPrincipal(principal);
+    const listed = lockedScope(
+      principal,
+      await listRoundsWithJobsForPrincipal(principal)
+    );
     const rounds = listed.map((row) => row.round);
     const plan = planDashboardFromPrompt(intent);
     const widgets = resolveWidgets(plan.widgets, rounds);
@@ -235,6 +247,15 @@ export const copilotQueryService = {
     return dispatchTool(principal, tool, input);
   },
 };
+
+function lockedScope<T extends { round: { status: string } }>(
+  principal: Principal,
+  rows: T[]
+): T[] {
+  return principal.authSource === "api_token" || principal.authSource === "mcp"
+    ? rows.filter((row) => row.round.status === "locked")
+    : rows;
+}
 
 function matchDirectoryUser(
   directory: User[],

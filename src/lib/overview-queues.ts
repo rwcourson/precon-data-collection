@@ -13,7 +13,8 @@ export type OverviewQueueId =
   | "incomplete-post-bid"
   | "past-bid-due"
   | "unlinked"
-  | "awaiting-lock";
+  | "awaiting-lock"
+  | "you-owe-post-bid";
 
 export type OverviewQueueInput = {
   roundId: number;
@@ -26,6 +27,7 @@ export type OverviewQueueInput = {
   missingRequiredCount: number;
   preconDepartment: string;
   teamAssignedAt: Date | string | null;
+  estimateLeadId?: number | null;
 };
 
 export type OverviewQueuePreview = {
@@ -63,26 +65,43 @@ function preview(
   }));
 }
 
+function uniqueByJob(rows: OverviewQueueInput[]): OverviewQueueInput[] {
+  const seen = new Set<number>();
+  return rows.filter((row) => {
+    if (seen.has(row.jobId)) return false;
+    seen.add(row.jobId);
+    return true;
+  });
+}
+
 export function buildOverviewQueues(
   rows: OverviewQueueInput[],
   today = new Date(),
-  hierarchy: HierarchySelection = EMPTY_HIERARCHY
+  hierarchy: HierarchySelection = EMPTY_HIERARCHY,
+  options: { uniqueJobs?: boolean; owedLeadId?: number } = {}
 ): OverviewQueue[] {
   const todayKey = calendarDate(today);
-  const needsStaffing = filterNeedsStaffing(rows, hierarchy);
+  const collapse = options.uniqueJobs
+    ? uniqueByJob
+    : (value: OverviewQueueInput[]) => value;
+  const needsStaffing = collapse(filterNeedsStaffing(rows, hierarchy));
 
-  const incomplete = rows.filter(
-    (r) =>
-      ["submitted", "post_bid"].includes(r.status) && r.missingRequiredCount > 0
+  const incomplete = collapse(
+    rows.filter(
+      (r) =>
+        ["submitted", "post_bid"].includes(r.status) &&
+        r.missingRequiredCount > 0
+    )
   );
-  const pastDue = rows.filter(
-    (r) =>
-      r.status === "active" && r.bidDueDate != null && r.bidDueDate < todayKey
+  const pastDue = collapse(
+    rows.filter(
+      (r) =>
+        r.status === "active" && r.bidDueDate != null && r.bidDueDate < todayKey
+    )
   );
-  const unlinked = rows.filter((r) => !r.isLinked);
-  const awaitingLock = rows.filter((r) => r.status === "post_bid");
-
-  return [
+  const unlinked = collapse(rows.filter((r) => !r.isLinked));
+  const awaitingLock = collapse(rows.filter((r) => r.status === "post_bid"));
+  const queues: OverviewQueue[] = [
     {
       id: "needs-staffing",
       title: "Needs staffing",
@@ -127,4 +146,22 @@ export function buildOverviewQueues(
       preview: preview(awaitingLock),
     },
   ];
+  if (options.owedLeadId) {
+    const owed = collapse(
+      rows.filter(
+        (r) =>
+          r.estimateLeadId === options.owedLeadId &&
+          ["submitted", "post_bid"].includes(r.status)
+      )
+    );
+    queues.push({
+      id: "you-owe-post-bid",
+      title: "You owe post-bid",
+      description: "Submitted efforts assigned to you that still need data.",
+      href: "/post-bid?mine=1",
+      count: owed.length,
+      preview: preview(owed),
+    });
+  }
+  return queues;
 }

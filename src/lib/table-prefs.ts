@@ -4,9 +4,10 @@ import { parseBidScheduleViewConfig } from "@/lib/view-config";
 export const BID_SCHEDULE_SURFACE = "bid-schedule";
 
 export type UserTablePrefsConfig = {
-  version: 1;
+  version: 2;
   columns?: string[];
   density?: "summary" | "detail";
+  viewMode?: "table" | "cards" | "gantt";
   columnWidths?: Record<string, number>;
   defaultViewId?: number | null;
 };
@@ -28,9 +29,10 @@ export function parseUserTablePrefsConfig(raw: unknown): UserTablePrefsConfig {
     ? (extras.data.defaultViewId ?? null)
     : null;
   return {
-    version: 1,
+    version: 2,
     columns: viewish.columns,
     density: viewish.density,
+    viewMode: viewish.viewMode,
     columnWidths,
     defaultViewId,
   };
@@ -44,6 +46,7 @@ export type ResolvedBidScheduleTableState = {
   activeViewId?: number;
   columns?: string[];
   density: "summary" | "detail";
+  viewMode: "table" | "cards" | "gantt";
   columnWidths: Record<string, number>;
   defaultViewId: number | null;
 };
@@ -63,10 +66,16 @@ export function resolveBidScheduleTableState(input: {
   urlViewId?: number;
   skipDefaultView?: boolean;
   urlDensity?: "summary" | "detail";
+  urlViewMode?: "table" | "cards" | "gantt";
+  urlColumns?: string[];
   prefs: UserTablePrefsConfig;
   views: {
     id: number;
-    config: { columns?: string[]; density?: "summary" | "detail" };
+    config: {
+      columns?: string[];
+      density?: "summary" | "detail";
+      viewMode?: "table" | "cards" | "gantt";
+    };
   }[];
 }): ResolvedBidScheduleTableState {
   const viewsById = new Map(input.views.map((view) => [view.id, view]));
@@ -75,6 +84,10 @@ export function resolveBidScheduleTableState(input: {
       ? input.prefs.defaultViewId
       : null;
   const columnWidths = input.prefs.columnWidths ?? {};
+  const urlColumns =
+    input.urlColumns && input.urlColumns.length > 0
+      ? input.urlColumns
+      : undefined;
 
   const namedId =
     input.urlViewId && viewsById.has(input.urlViewId)
@@ -88,8 +101,9 @@ export function resolveBidScheduleTableState(input: {
     return {
       source: "view",
       activeViewId: namedId,
-      columns: named.config.columns,
+      columns: urlColumns ?? named.config.columns,
       density: input.urlDensity ?? named.config.density ?? "summary",
+      viewMode: input.urlViewMode ?? named.config.viewMode ?? "table",
       columnWidths,
       defaultViewId,
     };
@@ -98,8 +112,9 @@ export function resolveBidScheduleTableState(input: {
   if (input.prefs.columns?.length || input.prefs.density) {
     return {
       source: "prefs",
-      columns: input.prefs.columns,
+      columns: urlColumns ?? input.prefs.columns,
       density: input.urlDensity ?? input.prefs.density ?? "summary",
+      viewMode: input.urlViewMode ?? input.prefs.viewMode ?? "table",
       columnWidths,
       defaultViewId,
     };
@@ -107,7 +122,9 @@ export function resolveBidScheduleTableState(input: {
 
   return {
     source: "defaults",
+    columns: urlColumns,
     density: input.urlDensity ?? "summary",
+    viewMode: input.urlViewMode ?? "table",
     columnWidths,
     defaultViewId,
   };

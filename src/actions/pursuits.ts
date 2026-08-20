@@ -6,11 +6,13 @@ import { jobs, type RoundStatus } from "@/db/schema";
 import { createPursuitSchema } from "@/domain/contracts";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { connectProvider } from "@/lib/integrations/connect";
+import { approvalService } from "@/services/approval-service";
 import {
   type AddRoundInput,
   type CreatePursuitInput,
   pursuitService,
 } from "@/services/pursuit-service";
+import { roundtableFeatureEnabled } from "@/services/rollout-service";
 
 export type { AddRoundInput, CreatePursuitInput };
 
@@ -22,7 +24,17 @@ export async function searchSalesforceJobs(query: string) {
 export async function createPursuit(input: CreatePursuitInput) {
   const parsed = createPursuitSchema.parse(input);
   const principal = await getWebPrincipal();
-  const result = await pursuitService.createPursuit(principal, parsed);
+  const approvalEnabled = await roundtableFeatureEnabled(
+    principal,
+    "approvalWorkflow"
+  );
+  const mode = approvalEnabled
+    ? await approvalService.writeMode(principal)
+    : "direct";
+  const result =
+    mode === "propose"
+      ? await approvalService.requestCreate(principal, parsed)
+      : await pursuitService.createPursuit(principal, parsed);
   if (result.kind === "created") revalidatePath("/bid-schedule");
   return result;
 }
@@ -61,6 +73,14 @@ export async function linkJobToSalesforce(jobId: number, sfId: string) {
     jobId,
     sfId
   );
+  revalidatePath(`/jobs/${result.jobId}`);
+  revalidatePath("/bid-schedule");
+  return result;
+}
+
+export async function unlinkJobFromSalesforce(jobId: number) {
+  const principal = await getWebPrincipal();
+  const result = await pursuitService.unlinkJobFromSalesforce(principal, jobId);
   revalidatePath(`/jobs/${result.jobId}`);
   revalidatePath("/bid-schedule");
   return result;

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import type { Role } from "@/db/schema";
 import type { AccessSettings } from "@/lib/auth";
+import { previewIdentityMapping } from "@/lib/title-mapping-adapter";
 
 type Pair = { group: string; value: string };
 
@@ -55,6 +56,30 @@ export function AccessSettingsPanel({
       value,
     }))
   );
+  const [titleRoles, setTitleRoles] = useState<Pair[]>(
+    Object.entries(settings.titleRoles).map(([group, value]) => ({
+      group,
+      value,
+    }))
+  );
+  const [managerRoles, setManagerRoles] = useState<Pair[]>(
+    Object.entries(settings.managerRoles).map(([group, value]) => ({
+      group,
+      value,
+    }))
+  );
+  const [emailRoles, setEmailRoles] = useState<Pair[]>(
+    Object.entries(settings.emailRoles).map(([group, value]) => ({
+      group,
+      value,
+    }))
+  );
+  const [emailRegions, setEmailRegions] = useState<Pair[]>(
+    Object.entries(settings.emailRegions).map(([group, value]) => ({
+      group,
+      value,
+    }))
+  );
   const [defaultRole, setDefaultRole] = useState<string>(settings.defaultRole);
   const [dirty, setDirty] = useState(false);
   const [saving, startSave] = useTransition();
@@ -75,6 +100,26 @@ export function AccessSettingsPanel({
             regionPairs
               .filter((r) => r.group.trim())
               .map((r) => [r.group, r.value])
+          ),
+          titleRoles: Object.fromEntries(
+            titleRoles
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value as Role])
+          ),
+          managerRoles: Object.fromEntries(
+            managerRoles
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value as Role])
+          ),
+          emailRoles: Object.fromEntries(
+            emailRoles
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value as Role])
+          ),
+          emailRegions: Object.fromEntries(
+            emailRegions
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value])
           ),
           defaultRole: defaultRole as Role,
         });
@@ -171,6 +216,70 @@ export function AccessSettingsPanel({
           />
 
           <PairEditor
+            title="Governed title → Role"
+            pairs={titleRoles}
+            setPairs={(pairs) => {
+              setTitleRoles(pairs);
+              touch();
+            }}
+            options={Object.entries(roleLabels).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            fallback="pcm"
+            canEdit={canEdit}
+            keyPlaceholder="Exact job title"
+          />
+
+          <PairEditor
+            title="Reporting manager email → Role"
+            pairs={managerRoles}
+            setPairs={(pairs) => {
+              setManagerRoles(pairs);
+              touch();
+            }}
+            options={Object.entries(roleLabels).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            fallback="pcm"
+            canEdit={canEdit}
+            keyPlaceholder="manager@brasfieldgorrie.com"
+          />
+
+          <PairEditor
+            title="Person email → Role override"
+            pairs={emailRoles}
+            setPairs={(pairs) => {
+              setEmailRoles(pairs);
+              touch();
+            }}
+            options={Object.entries(roleLabels).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            fallback="pcm"
+            canEdit={canEdit}
+            keyPlaceholder="person@brasfieldgorrie.com"
+          />
+
+          <PairEditor
+            title="Person email → Region override"
+            pairs={emailRegions}
+            setPairs={(pairs) => {
+              setEmailRegions(pairs);
+              touch();
+            }}
+            options={regions.map((region) => ({
+              value: region,
+              label: region,
+            }))}
+            fallback={regions[0] ?? ""}
+            canEdit={canEdit}
+            keyPlaceholder="person@brasfieldgorrie.com"
+          />
+
+          <PairEditor
             title="Group → Region"
             pairs={regionPairs}
             setPairs={(p) => {
@@ -229,7 +338,140 @@ export function AccessSettingsPanel({
           </div>
         </CardContent>
       </Card>
+
+      <IdentityMappingPreview
+        access={{
+          groupRoles: Object.fromEntries(
+            roles
+              .filter((r) => r.group.trim())
+              .map((r) => [r.group, r.value as Role])
+          ),
+          groupRegions: Object.fromEntries(
+            regionPairs
+              .filter((r) => r.group.trim())
+              .map((r) => [r.group, r.value])
+          ),
+          titleRoles: Object.fromEntries(
+            titleRoles
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value as Role])
+          ),
+          managerRoles: Object.fromEntries(
+            managerRoles
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value as Role])
+          ),
+          emailRoles: Object.fromEntries(
+            emailRoles
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value as Role])
+          ),
+          emailRegions: Object.fromEntries(
+            emailRegions
+              .filter((item) => item.group.trim())
+              .map((item) => [item.group, item.value])
+          ),
+          defaultRole: defaultRole as Role,
+        }}
+        roleLabels={roleLabels}
+      />
     </div>
+  );
+}
+
+function IdentityMappingPreview({
+  access,
+  roleLabels,
+}: {
+  access: AccessSettings;
+  roleLabels: Record<string, string>;
+}) {
+  const [email, setEmail] = useState("");
+  const [title, setTitle] = useState("");
+  const [managerEmail, setManagerEmail] = useState("");
+  const [groups, setGroups] = useState("");
+  const preview = previewIdentityMapping(
+    {
+      email,
+      name: email,
+      title,
+      managerEmail,
+      groups: groups
+        .split(",")
+        .map((group) => group.trim())
+        .filter(Boolean),
+    },
+    access
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Mapping preview</CardTitle>
+        <CardDescription>
+          Fail-closed title and reporting-chain lookup. Unmapped identities do
+          not inherit a default role in production.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Email</Label>
+            <Input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="person@brasfieldgorrie.com"
+              className="h-8 font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Title</Label>
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Preconstruction Manager"
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Manager email</Label>
+            <Input
+              value={managerEmail}
+              onChange={(event) => setManagerEmail(event.target.value)}
+              placeholder="director@brasfieldgorrie.com"
+              className="h-8 font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Entra groups</Label>
+            <Input
+              value={groups}
+              onChange={(event) => setGroups(event.target.value)}
+              placeholder="BG-Precon-PCM, BG-Region-Central"
+              className="h-8 font-mono text-xs"
+            />
+          </div>
+        </div>
+        <p className="text-sm">
+          {preview.role ? (
+            <>
+              Maps to{" "}
+              <span className="font-medium">
+                {roleLabels[preview.role] ?? preview.role}
+              </span>{" "}
+              via {preview.source}
+              {preview.matchedKey ? ` (${preview.matchedKey})` : ""}.
+              {preview.region ? ` Region ${preview.region}.` : ""}
+            </>
+          ) : (
+            <span className="text-muted-foreground">
+              Unmapped — production SSO will deny this identity until a title,
+              manager, group, or email override matches.
+            </span>
+          )}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -240,6 +482,7 @@ function PairEditor({
   options,
   fallback,
   canEdit,
+  keyPlaceholder = "IdP group name",
 }: {
   title: string;
   pairs: Pair[];
@@ -247,6 +490,7 @@ function PairEditor({
   options: { value: string; label: string }[];
   fallback: string;
   canEdit: boolean;
+  keyPlaceholder?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -263,7 +507,7 @@ function PairEditor({
                   )
                 )
               }
-              placeholder="IdP group name"
+              placeholder={keyPlaceholder}
               className="h-8 max-w-72 font-mono text-xs"
               disabled={!canEdit}
             />

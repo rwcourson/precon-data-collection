@@ -27,7 +27,9 @@ export const bidScheduleGroupBySchema = z.enum([
   "preconDepartment",
   "marketSector",
   "estimatePhase",
+  "estimateLead",
   "bidDueDate",
+  "bidDueMonth",
   "drawingsDueDate",
   "bidReviewDate",
 ]);

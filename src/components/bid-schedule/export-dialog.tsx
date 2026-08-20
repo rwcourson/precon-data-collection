@@ -142,14 +142,14 @@ export function ExportDialog({
       <DialogTrigger
         render={<Button variant="outline" size="sm" className="gap-1.5" />}
       >
-        <Download className="size-4" /> Export
+        <Download className="size-4" /> PDF / templates
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Export Bid Schedule</DialogTitle>
+          <DialogTitle>PDF and saved export templates</DialogTitle>
           <DialogDescription>
-            Choose columns, order, grouping, and sorting. Save the configuration
-            as a reusable template.
+            Build the Monday packet or a reusable custom export. Use Download
+            Excel on the schedule for an immediate copy of the current view.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,19 +1,32 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
-import { appSettings } from "@/db/schema";
-import { METRIC_DEFS } from "@/lib/metrics";
+import {
+  appSettings,
+  publicationOutbox,
+  roundLockRevisions,
+} from "@/db/schema";
+import { calcMetric, METRIC_DEFS } from "@/lib/metrics";
 import {
   getAllCustomColumns,
   getCustomValuesForRounds,
   getMultiValuesForRounds,
   getRoundsWithJobs,
 } from "@/lib/queries";
+import { loadNotApplicableKeysByRound } from "@/services/field-exceptions-service";
+import { recordProductEvent } from "@/services/product-events-service";
+import { warehousePublicationEnabled } from "@/services/rollout-service";
 import { databricksConfig, runStatement } from "./client";
+import {
+  mergeOnRoundAndRevisionSql,
+  publicationRevisionFromPayload,
+  retractLockedRevisionSql,
+  warehouseProductEventName,
+} from "./publication-sql";
 import { databricksWritesAllowed } from "./read";
 
 /**
- * Outbound feed of locked and in-flight rounds to the warehouse (BRD Section 12), so
+ * Outbound feed of current locked revisions to the warehouse, so
  * Power BI reads Precon data from the same place as everything else at B&G.
  *
  * The payload is deliberately one wide row per estimate round — the shape the
@@ -21,8 +34,8 @@ import { databricksWritesAllowed } from "./read";
  * carried as a JSON map so a Region adding a column never requires a schema
  * change on the warehouse side.
  *
- * Writes are OFF by default. Set DATABRICKS_ALLOW_WRITE=true to enable
- * CREATE/TRUNCATE/INSERT. Production should pull from Databricks only.
+ * Writes are OFF by default. Set DATABRICKS_ALLOW_WRITE=true only after shadow
+ * reconciliation. Publication is idempotent and never truncates the target.
  */
 
 export const FEED_STATE_KEY = "databricksFeed";
@@ -64,15 +77,36 @@ export type FeedRow = Record<string, string | number | boolean | null>;
 
 /** Builds the full outbound row set. Read-only — safe to call for a preview. */
 export async function buildFeedRows(): Promise<FeedRow[]> {
-  const [rounds, customCols] = await Promise.all([
+  const [allRounds, customCols] = await Promise.all([
     getRoundsWithJobs(),
     getAllCustomColumns(),
   ]);
+  const rounds = allRounds.filter((item) => item.round.status === "locked");
   const ids = rounds.map((r) => r.round.id);
-  const [multiMap, customMap] = await Promise.all([
+  const [multiMap, customMap, naMap] = await Promise.all([
     getMultiValuesForRounds(ids),
     getCustomValuesForRounds(ids),
+    loadNotApplicableKeysByRound(ids),
   ]);
+  const revisions =
+    ids.length > 0
+      ? await db
+          .select({
+            id: roundLockRevisions.id,
+            roundId: roundLockRevisions.roundId,
+            revision: roundLockRevisions.revision,
+          })
+          .from(roundLockRevisions)
+          .where(
+            and(
+              inArray(roundLockRevisions.roundId, ids),
+              isNull(roundLockRevisions.unlockedAt)
+            )
+          )
+      : [];
+  const revisionByRound = new Map(
+    revisions.map((revision) => [revision.roundId, revision])
+  );
   const colById = new Map(customCols.map((c) => [c.id, c]));
 
   return rounds.map(({ round, job, estimateLeadName }) => {
@@ -87,6 +121,8 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
 
     const row: FeedRow = {
       round_id: round.id,
+      job_id: job.id,
+      lock_revision: revisionByRound.get(round.id)?.revision ?? 1,
       job_number: job.jobNumber,
       job_name: job.jobName,
       salesforce_id: job.salesforceId,
@@ -98,6 +134,8 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
       bid_due_date: round.bidDueDate,
       drawings_due_date: round.drawingsDueDate,
       bid_review_date: round.bidReviewDate,
+      interview_date: round.interviewDate,
+      project_start_month: round.projectStartMonth,
       status: round.status,
       outcome: round.outcome,
       market_sector: round.marketSector,
@@ -105,6 +143,8 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
       procurement: round.procurement,
       estimate_lead: estimateLeadName,
       estimate_value: round.estimateValue,
+      awardable_amount: round.awardableAmount,
+      contract_amount_signed: round.contractAmountSigned,
       fee_expected: round.feeExpected,
       contingency_total: round.contingencyTotal,
       submitted_at: round.submittedAt?.toISOString() ?? null,
@@ -112,13 +152,14 @@ export async function buildFeedRows(): Promise<FeedRow[]> {
       updated_at: round.updatedAt.toISOString(),
       self_perform_work_types:
         (multi.selfPerformWorkType ?? []).join("; ") || null,
+      self_perform_intent: (multi.selfPerformIntent ?? []).join("; ") || null,
       utilized_support_services:
         (multi.utilizedSupportServices ?? []).join("; ") || null,
       custom_columns: JSON.stringify(custom),
     };
 
     for (const def of METRIC_DEFS) {
-      const value = def.calc(round);
+      const value = calcMetric(def, round, naMap.get(round.id));
       row[`metric_${toSnake(def.key)}`] =
         value == null || !Number.isFinite(value) ? null : value;
     }
@@ -139,17 +180,30 @@ export type FeedResult = {
   preview?: FeedRow[];
 };
 
-/**
- * Replaces the target table's contents with the current row set. A full
- * replace rather than an upsert: the volume is small and it removes any
- * chance of the warehouse drifting from the system of record.
- */
+/** Processes versioned publication events, with a safe locked-only bootstrap. */
 export async function runDatabricksFeed(
   opts: { previewOnly?: boolean } = {}
 ): Promise<FeedResult> {
   const rows = await buildFeedRows();
   const cfg = databricksConfig();
-  const allowWrite = databricksWritesAllowed();
+  const allowWrite =
+    databricksWritesAllowed() && (await warehousePublicationEnabled());
+  const pendingEvents = await db
+    .select()
+    .from(publicationOutbox)
+    .where(
+      and(
+        eq(publicationOutbox.destination, "databricks"),
+        or(
+          eq(publicationOutbox.status, "queued"),
+          and(
+            eq(publicationOutbox.status, "failed"),
+            lt(publicationOutbox.attemptCount, 5)
+          )
+        )
+      )
+    )
+    .orderBy(asc(publicationOutbox.createdAt));
 
   if (!cfg || opts.previewOnly || !allowWrite) {
     const state: FeedState = {
@@ -169,28 +223,93 @@ export async function runDatabricksFeed(
       status: "preview",
       table: cfg?.table,
       preview: rows.slice(0, 3),
-      error: state.lastError ?? undefined,
+      error:
+        state.lastError ??
+        (pendingEvents.length
+          ? `${pendingEvents.length} publication event(s) waiting`
+          : undefined),
     };
   }
 
   try {
     const columns = Object.keys(rows[0] ?? {});
-    await runStatement(
-      cfg,
-      `CREATE TABLE IF NOT EXISTS ${cfg.table} (${ddl(columns)})`
-    );
-    await runStatement(cfg, `TRUNCATE TABLE ${cfg.table}`);
-
-    // Chunked so a large year does not blow past the statement size limit.
-    for (let i = 0; i < rows.length; i += 200) {
-      const chunk = rows.slice(i, i + 200);
-      const values = chunk.map(
-        (r) => `(${columns.map((c) => sqlLiteral(r[c])).join(",")})`
-      );
+    if (columns.length > 0) {
       await runStatement(
         cfg,
-        `INSERT INTO ${cfg.table} (${columns.join(",")}) VALUES ${values.join(",")}`
+        `CREATE TABLE IF NOT EXISTS ${cfg.table} (${ddl(columns)})`
       );
+    }
+    if (pendingEvents.length === 0) {
+      // Safe bootstrap/reconciliation: upsert current locked rows, never delete
+      // records merely because an in-flight round is absent.
+      await mergeRows(cfg, rows);
+    } else {
+      const byRound = new Map(rows.map((row) => [Number(row.round_id), row]));
+      for (const event of pendingEvents) {
+        try {
+          if (event.eventType === "retract") {
+            const revisionNumber = publicationRevisionFromPayload(
+              event.payload as { revision?: number } | null
+            );
+            if (revisionNumber == null) {
+              throw new Error(
+                `Retract event ${event.id} is missing payload.revision.`
+              );
+            }
+            await runStatement(
+              cfg,
+              retractLockedRevisionSql(cfg.table, event.roundId, revisionNumber)
+            );
+          } else {
+            const row = byRound.get(event.roundId);
+            if (!row) {
+              throw new Error(
+                `Locked row ${event.roundId} is not available for publication.`
+              );
+            }
+            await mergeRows(cfg, [row]);
+          }
+          await db
+            .update(publicationOutbox)
+            .set({
+              status: "processed",
+              processedAt: new Date(),
+              error: null,
+            })
+            .where(
+              and(
+                eq(publicationOutbox.id, event.id),
+                eq(publicationOutbox.destination, "databricks")
+              )
+            );
+          const warehouseEvent = warehouseProductEventName(event.eventType);
+          if (warehouseEvent) {
+            await recordProductEvent(null, warehouseEvent, {
+              roundId: event.roundId,
+              outboxId: event.id,
+              eventType: event.eventType,
+            });
+          }
+        } catch (error) {
+          await db
+            .update(publicationOutbox)
+            .set({
+              status: "failed",
+              attemptCount: event.attemptCount + 1,
+              error:
+                error instanceof Error
+                  ? error.message.slice(0, 2_000)
+                  : "Publication failed",
+            })
+            .where(
+              and(
+                eq(publicationOutbox.id, event.id),
+                eq(publicationOutbox.destination, "databricks")
+              )
+            );
+          throw error;
+        }
+      }
     }
 
     const state: FeedState = {
@@ -224,6 +343,29 @@ export async function runDatabricksFeed(
   }
 }
 
+async function mergeRows(
+  cfg: NonNullable<ReturnType<typeof databricksConfig>>,
+  rows: FeedRow[]
+) {
+  if (rows.length === 0) return;
+  const columns = Object.keys(rows[0]!);
+  for (let i = 0; i < rows.length; i += 100) {
+    const chunk = rows.slice(i, i + 100);
+    const source = chunk
+      .map(
+        (row) =>
+          `SELECT ${columns
+            .map((column) => `${sqlLiteral(row[column])} AS ${column}`)
+            .join(", ")}`
+      )
+      .join(" UNION ALL ");
+    await runStatement(
+      cfg,
+      mergeOnRoundAndRevisionSql(cfg.table, columns, source)
+    );
+  }
+}
+
 /** Everything lands as STRING or DOUBLE; the warehouse casts downstream. */
 function ddl(columns: string[]): string {
   return columns
@@ -236,8 +378,12 @@ function ddl(columns: string[]): string {
 
 const NUMERIC = new Set([
   "round_id",
+  "job_id",
+  "lock_revision",
   "bid_year",
   "estimate_value",
+  "awardable_amount",
+  "contract_amount_signed",
   "fee_expected",
   "contingency_total",
 ]);

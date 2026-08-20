@@ -5,6 +5,7 @@ import path from "node:path";
 import readline from "node:readline";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+const approvalOnly = process.argv.includes("--approval-only");
 if (!fs.existsSync(path.join(repoRoot, ".next", "BUILD_ID"))) {
   process.stderr.write(
     "Isolated smoke requires a completed production build.\n"
@@ -72,7 +73,9 @@ Object.assign(env, {
 process.stdout.write(`Smoke database: isolated PGlite at ${databaseDir}\n`);
 process.stdout.write(`Smoke project directory: ${isolatedProject}\n`);
 process.stdout.write(
-  "Smoke environment files: none (sanitized project root)\n"
+  approvalOnly
+    ? "Isolated flow: approval only\n"
+    : "Smoke environment files: none (sanitized project root)\n"
 );
 
 await new Promise((resolve, reject) => {
@@ -159,8 +162,12 @@ try {
   process.stdout.write(
     `Readiness healthy response: ${readyResponse.status} ${readyBody}\n`
   );
-  await runFlow("scripts/smoke.mjs");
-  await runFlow("scripts/verify-approval.mjs");
+  if (approvalOnly) {
+    await runFlow("scripts/verify-approval.mjs");
+  } else {
+    await runFlow("scripts/smoke.mjs");
+    await runFlow("scripts/verify-approval.mjs");
+  }
 } finally {
   lines.close();
   if (server.exitCode == null) {

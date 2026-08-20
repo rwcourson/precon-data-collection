@@ -151,8 +151,28 @@ describe("runtime-config environment matrix", () => {
       PGLITE_DATA_DIR: undefined,
       VERCEL: "1",
       VERCEL_ENV: "preview",
+      PRODUCTION_DATABASE_URL: "postgresql://prod:secret@prod.example.com/app",
     });
     expect(status.ok).toBe(true);
+  });
+
+  it("rejects a Preview deploy that shares Production Neon", () => {
+    const status = inspectRuntimeConfig({
+      ...demoEnv,
+      DATABASE_MODE: "postgres",
+      DATABASE_URL: "postgresql://app:secret@prod.example.com/app",
+      DATABASE_URL_UNPOOLED: "postgresql://app:secret@prod.example.com/app",
+      PGLITE_DATA_DIR: undefined,
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      PRODUCTION_DATABASE_URL: "postgresql://app:secret@prod.example.com/app",
+    });
+    expect(status.ok).toBe(false);
+    if (!status.ok) {
+      expect(status.issues.some((issue) => issue.key === "DATABASE_URL")).toBe(
+        true
+      );
+    }
   });
 
   it("still accepts demo auth locally with no Vercel markers", () => {
@@ -177,6 +197,7 @@ describe("runtime-config environment matrix", () => {
       VERCEL_BRANCH_URL:
         "precon-data-git-jay-mcdaniel-upgrades.magnus.brasfieldgorrie.app",
       VERCEL_URL: "precon-data-abc123.magnus.brasfieldgorrie.app",
+      PRODUCTION_DATABASE_URL: "postgresql://prod:secret@prod.example.com/app",
     });
     expect(status.ok).toBe(true);
     if (status.ok) {

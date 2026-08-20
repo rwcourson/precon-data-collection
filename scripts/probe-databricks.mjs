@@ -24,8 +24,8 @@ if (!host || !token || !warehouseId) {
   process.exit(1);
 }
 
-console.log(`Host: ${host}`);
-console.log(`Warehouse: ${warehouseId}`);
+console.log(`Host configured: ${Boolean(host)}`);
+console.log(`Warehouse ID configured: ${Boolean(warehouseId)}`);
 console.log(`Writes allowed: ${process.env.DATABRICKS_ALLOW_WRITE === "true"}`);
 
 for (const table of TABLES) {

@@ -6,6 +6,7 @@
  */
 
 import ExcelJS from "exceljs";
+import { FIELD_MAP } from "@/lib/fields";
 
 /** Round column keys Destini is allowed to write. */
 export const DESTINI_WRITABLE_KEYS = [
@@ -29,6 +30,18 @@ export const DESTINI_WRITABLE_KEYS = [
 ] as const;
 
 export type DestiniWritableKey = (typeof DESTINI_WRITABLE_KEYS)[number];
+
+export function destiniChecksumIsApplied(
+  batches: { source: string; checksum: string; status: string }[],
+  checksum: string
+): boolean {
+  return batches.some(
+    (batch) =>
+      batch.source === "destini" &&
+      batch.checksum === checksum &&
+      batch.status === "applied"
+  );
+}
 
 export type DestiniMappedRow = {
   jobNumber: string | null;
@@ -443,4 +456,27 @@ export function filterWritableValues(
     }
   }
   return out;
+}
+
+export function buildDestiniFieldDiffs(
+  current: Partial<Record<DestiniWritableKey, number | string | null>>,
+  incoming: Partial<Record<DestiniWritableKey, number | string | null>>
+): {
+  key: DestiniWritableKey;
+  label: string;
+  current: number | string | null;
+  incoming: number | string | null;
+  changed: boolean;
+}[] {
+  return DESTINI_WRITABLE_KEYS.filter((key) => key in incoming).map((key) => {
+    const from = current[key] ?? null;
+    const to = incoming[key] ?? null;
+    return {
+      key,
+      label: FIELD_MAP[key]?.label ?? key,
+      current: from,
+      incoming: to,
+      changed: String(from ?? "") !== String(to ?? ""),
+    };
+  });
 }

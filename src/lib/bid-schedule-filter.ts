@@ -162,21 +162,38 @@ export function parseHierarchyFromSearchParams(
   return constrainHierarchy(selected, opts?.allowedRegions ?? "all");
 }
 
-export function matchesHierarchy<T extends { preconDepartment: string }>(
-  row: T,
-  selection: HierarchySelection
-): boolean {
+export function matchesHierarchy<
+  T extends { preconDepartment: string; preconDepartments?: string[] },
+>(row: T, selection: HierarchySelection): boolean {
   if (isHierarchyEmpty(selection)) return true;
-  return expandHierarchy(selection).includes(row.preconDepartment);
+  const allowed = new Set(expandHierarchy(selection));
+  return [row.preconDepartment, ...(row.preconDepartments ?? [])].some(
+    (department) => allowed.has(department)
+  );
 }
 
-export function filterByHierarchy<T extends { preconDepartment: string }>(
-  rows: T[],
-  selection: HierarchySelection
-): T[] {
+export function filterByHierarchy<
+  T extends { preconDepartment: string; preconDepartments?: string[] },
+>(rows: T[], selection: HierarchySelection): T[] {
   if (isHierarchyEmpty(selection)) return rows;
   const allowed = new Set(expandHierarchy(selection));
-  return rows.filter((row) => allowed.has(row.preconDepartment));
+  return rows.filter((row) =>
+    [row.preconDepartment, ...(row.preconDepartments ?? [])].some(
+      (department) => allowed.has(department)
+    )
+  );
+}
+
+export function filterBySelfPerformIntent<T extends { round: { id: number } }>(
+  rows: T[],
+  intent: string | undefined,
+  intentByRound: Map<number, { selfPerformIntent?: string[] }>
+): T[] {
+  const wanted = intent?.trim();
+  if (!wanted) return rows;
+  return rows.filter((row) =>
+    (intentByRound.get(row.round.id)?.selfPerformIntent ?? []).includes(wanted)
+  );
 }
 
 export function hierarchySummary(selection: HierarchySelection): string {

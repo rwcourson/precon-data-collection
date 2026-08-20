@@ -27,6 +27,7 @@ jobs:
       - run: pnpm perf:check
       - run: pnpm release:check
       - run: pnpm docs:check
+      - run: pnpm roundtable:phase-status
       - run: pnpm verify:web
         env:
           APP_ENV: demo
@@ -34,6 +35,22 @@ jobs:
           DATABASE_MODE: pglite
           EMAIL_MODE: stub
           PRIVATE_STORAGE_MODE: local
+      - run: pnpm smoke:approval
+        env:
+          APP_ENV: demo
+          AUTH_MODE: demo
+          DATABASE_MODE: pglite
+          EMAIL_MODE: stub
+          PRIVATE_STORAGE_MODE: local
+      - run: pnpm audit:ui
+        env:
+          APP_ENV: demo
+          AUTH_MODE: demo
+          DATABASE_MODE: pglite
+          EMAIL_MODE: stub
+          PRIVATE_STORAGE_MODE: local
+      - run: pnpm verify:restore
+      - run: pnpm verify:artifacts
 
   expo:
     runs-on: ubuntu-latest

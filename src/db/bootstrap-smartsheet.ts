@@ -59,26 +59,21 @@ async function main(): Promise<void> {
 
   const { closeDatabase } = await import("./index");
   const { migrateCurrentDatabase } = await import("./migrations");
-  try {
-    await migrateCurrentDatabase();
-    process.stdout.write("Migrations applied. Importing Smartsheet JSON…\n");
-    // seed-from-smartsheet runs as main; import its work by spawning would re-init env.
-    // Invoke the file's entry via dynamic child to keep process isolation clean.
-    const { spawnSync } = await import("node:child_process");
-    const result = spawnSync(
-      process.execPath,
-      ["--import", "tsx", "src/db/seed-from-smartsheet.ts"],
-      {
-        cwd: process.cwd(),
-        env: { ...process.env },
-        stdio: "inherit",
-      }
-    );
-    if (result.status !== 0) {
-      throw new Error(`seed-from-smartsheet exited ${result.status ?? 1}`);
+  await migrateCurrentDatabase();
+  await closeDatabase();
+  process.stdout.write("Migrations applied. Importing Smartsheet JSON…\n");
+  const { spawnSync } = await import("node:child_process");
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "src/db/seed-from-smartsheet.ts"],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env },
+      stdio: "inherit",
     }
-  } finally {
-    await closeDatabase();
+  );
+  if (result.status !== 0) {
+    throw new Error(`seed-from-smartsheet exited ${result.status ?? 1}`);
   }
 
   process.stdout.write("\nFull Smartsheet bootstrap complete.\n");

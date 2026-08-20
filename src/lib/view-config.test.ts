@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseBidScheduleViewConfig } from "@/lib/view-config";
 
-describe("BidScheduleViewConfig v2", () => {
+describe("BidScheduleViewConfig v3", () => {
   it("loads a pre-v2 saved-view JSONB fixture without error and keeps prior behavior", () => {
     const legacy = {
       section: "upcoming",
@@ -13,7 +13,7 @@ describe("BidScheduleViewConfig v2", () => {
       columns: ["jobNumber", "jobName", "status"],
     };
     const parsed = parseBidScheduleViewConfig(legacy);
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.section).toBe("upcoming");
     expect(parsed.group).toBe("preconDepartment");
     expect(parsed.region).toBe("Florida");
@@ -24,7 +24,7 @@ describe("BidScheduleViewConfig v2", () => {
 
   it("falls back to defaults for garbage JSONB", () => {
     const parsed = parseBidScheduleViewConfig({ nope: true, columns: "bad" });
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(3);
     expect(parsed.regions).toEqual([]);
     expect(parsed.departments).toEqual([]);
     expect(parsed.columns).toBeUndefined();
@@ -50,5 +50,13 @@ describe("BidScheduleViewConfig v2", () => {
     expect(parsed.queue).toBe("needs-staffing");
     expect(parsed.section).toBe("upcoming");
     expect(parsed.regions).toEqual(["Central"]);
+  });
+
+  it("keeps a v3 viewMode", () => {
+    const parsed = parseBidScheduleViewConfig({
+      version: 3,
+      viewMode: "gantt",
+    });
+    expect(parsed.viewMode).toBe("gantt");
   });
 });

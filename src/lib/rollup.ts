@@ -78,6 +78,11 @@ export function parseLeadershipRoundMode(
   return raw === "all" ? "all" : "latest";
 }
 
+/** Leadership and corporate dashboards default to locked revisions. */
+export function defaultDashboardStatus(role: string): "locked" | "all" {
+  return ["leadership", "corporate_admin"].includes(role) ? "locked" : "all";
+}
+
 export type DashboardScopeRound = LeadershipRound & {
   region: string;
   preconDepartment: string;

@@ -44,3 +44,19 @@ export async function latestNoteCellsForRounds(
   }
   return out;
 }
+
+export type LatestNoteBoardLoad = {
+  failed: boolean;
+  cells: Map<number, string>;
+};
+
+/** Board path: a notes-join failure must not take down the schedule. */
+export async function latestNoteBoardLoadForRounds(
+  roundIds: number[]
+): Promise<LatestNoteBoardLoad> {
+  try {
+    return { failed: false, cells: await latestNoteCellsForRounds(roundIds) };
+  } catch {
+    return { failed: true, cells: new Map() };
+  }
+}

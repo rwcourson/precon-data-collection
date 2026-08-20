@@ -32,24 +32,25 @@ describe("post-lock outcome correction", () => {
       entity: "round",
       entityId: 9,
       roundId: 9,
-      action: "post_lock_edit",
+      action: "field_changed",
       field: "outcome",
       oldValue: "pending",
       newValue: "successful",
     });
   });
 
-  it("rejects unauthorized post-lock outcome changes", () => {
+  it("rejects an in-place outcome change when lock revisions are enabled", () => {
     expect(() =>
       planOutcomeUpdate(
-        user("estimate_lead"),
+        user("rpd"),
         {
           id: 9,
           status: "locked",
           region: "Central",
           outcome: "pending",
         },
-        "unsuccessful"
+        "unsuccessful",
+        { lockImmutable: true }
       )
     ).toThrow(DomainError);
   });

@@ -6,6 +6,7 @@ import type { FlatRow } from "@/lib/report-engine";
 import { rollup, scopeRoundsForDashboardExport } from "@/lib/rollup";
 import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 export const dynamic = "force-dynamic";
 // Synchronous xlsx workbook build over the full scoped dataset.
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest) {
   );
   if ("error" in scoped) return new Response(scoped.error, { status: 403 });
 
-  const data = await listRoundsWithJobsForPrincipal(principal);
+  const listed = await listRoundsWithJobsForPrincipal(principal);
+  const data = await maskRoundRowsForMetrics(listed);
   const rounds = scopeRoundsForDashboardExport(
     data.map((r) => r.round),
     {

@@ -96,6 +96,57 @@ describe("export builders and scope", () => {
     expect(byYear[0]!.jobNumber).toBe("24103");
   });
 
+  it("applyBidScheduleExportScope honors queues and hides nested children", () => {
+    const rows = [
+      {
+        status: STATUS_LABELS.active,
+        region: "Central",
+        jobName: "Overdue",
+        jobNumber: "24101",
+        jobId: 1,
+        bidDueDate: "2026-01-01",
+        isLinked: 1,
+        teamAssignedAt: null,
+      },
+      {
+        status: STATUS_LABELS.active,
+        region: "Central",
+        jobName: "Child TI",
+        jobNumber: "24101-TI",
+        jobId: 2,
+        bidDueDate: "2026-01-01",
+        isLinked: 1,
+        teamAssignedAt: null,
+      },
+      {
+        status: STATUS_LABELS.upcoming,
+        region: "Central",
+        jobName: "Unlinked",
+        jobNumber: "TBD-9",
+        jobId: 3,
+        bidDueDate: null,
+        isLinked: 0,
+        teamAssignedAt: null,
+      },
+    ];
+    const pastDue = applyBidScheduleExportScope(rows, {
+      queue: "past-due",
+      today: "2026-08-01",
+    });
+    expect(pastDue.map((row) => row.jobName)).toEqual(["Overdue", "Child TI"]);
+    const withoutChildren = applyBidScheduleExportScope(rows, {
+      queue: "past-due",
+      today: "2026-08-01",
+      childJobIds: [2],
+    });
+    expect(withoutChildren.map((row) => row.jobName)).toEqual(["Overdue"]);
+    expect(
+      applyBidScheduleExportScope(rows, { queue: "unlinked" }).map(
+        (row) => row.jobName
+      )
+    ).toEqual(["Unlinked"]);
+  });
+
   it("resolveRegionParam is 403-shaped for a scoped workspace asking another region", () => {
     const scoped = resolveRegionParam(workspace("Central"), "Florida");
     expect("error" in scoped).toBe(true);

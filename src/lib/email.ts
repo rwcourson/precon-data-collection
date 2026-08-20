@@ -16,7 +16,12 @@ export type QueuedEmail = {
   toUserId?: number | null;
   subject: string;
   body: string;
-  kind: "submitted" | "reminder" | "report_pdf" | "report_schedule";
+  kind:
+    | "submitted"
+    | "reminder"
+    | "report_pdf"
+    | "report_schedule"
+    | "date_shift";
   roundId?: number | null;
   distributionListId?: number | null;
   reportKey?: string | null;

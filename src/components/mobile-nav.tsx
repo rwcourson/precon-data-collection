@@ -1,6 +1,18 @@
 "use client";
 
-import { ChevronDown, Menu, Sparkles, X } from "lucide-react";
+import {
+  CalendarRange,
+  ChevronDown,
+  ClipboardList,
+  FileBarChart2,
+  LayoutDashboard,
+  Menu,
+  Settings2,
+  Sheet as SheetIcon,
+  Sparkles,
+  Table2,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -13,169 +25,33 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { Role } from "@/db/schema";
+import {
+  isNavigationItemActive,
+  type NavigationIcon,
+  navigationForRole,
+} from "@/lib/navigation";
+import { PRODUCT_SHORT_NAME, PRODUCT_TAGLINE } from "@/lib/product";
 import { cn } from "@/lib/utils";
 
-type SubItem = {
-  href: string;
-  label: string;
-  match?: (search: string, pathname: string) => boolean;
+const ICONS: Record<NavigationIcon, typeof LayoutDashboard> = {
+  overview: LayoutDashboard,
+  schedule: CalendarRange,
+  postBid: ClipboardList,
+  dashboard: FileBarChart2,
+  reports: Table2,
+  admin: Settings2,
+  sheets: SheetIcon,
+  copilot: Sparkles,
 };
 
-type NavItem = {
-  href: string;
-  label: string;
-  exact?: boolean;
-  children?: SubItem[];
-};
-
-type NavSection = {
-  label: string;
-  items: NavItem[];
-};
-
-const NAV_SECTIONS: NavSection[] = [
-  {
-    label: "Pipeline",
-    items: [
-      { href: "/", label: "Overview", exact: true },
-      {
-        href: "/bid-schedule",
-        label: "Bid Schedule",
-        children: [
-          {
-            href: "/bid-schedule?section=all",
-            label: "All",
-            match: (s) => !s.includes("section=") || s.includes("section=all"),
-          },
-          {
-            href: "/bid-schedule?section=active",
-            label: "Active",
-            match: (s) => s.includes("section=active"),
-          },
-          {
-            href: "/bid-schedule?section=upcoming",
-            label: "Upcoming",
-            match: (s) => s.includes("section=upcoming"),
-          },
-          {
-            href: "/bid-schedule?section=outstanding",
-            label: "Outstanding",
-            match: (s) => s.includes("section=outstanding"),
-          },
-        ],
-      },
-      { href: "/post-bid", label: "Post-Bid Entry" },
-    ],
-  },
-  {
-    label: "Tools",
-    items: [
-      {
-        href: "/dashboards",
-        label: "Dashboards",
-        children: [
-          {
-            href: "/dashboards?level=corporate",
-            label: "Corporate",
-            match: (s, p) =>
-              p === "/dashboards" &&
-              (!s.includes("level=") || s.includes("level=corporate")),
-          },
-          {
-            href: "/dashboards?level=region",
-            label: "Region",
-            match: (s, p) => p === "/dashboards" && s.includes("level=region"),
-          },
-          {
-            href: "/dashboards?level=division",
-            label: "Division",
-            match: (s, p) =>
-              p === "/dashboards" && s.includes("level=division"),
-          },
-        ],
-      },
-      {
-        href: "/reports",
-        label: "Reports",
-        children: [
-          {
-            href: "/reports",
-            label: "Report Builder",
-            match: (_, p) => p === "/reports",
-          },
-          {
-            href: "/reports/annual",
-            label: "Annual Regional Report",
-            match: (_, p) => p.startsWith("/reports/annual"),
-          },
-        ],
-      },
-      {
-        href: "/admin",
-        label: "Admin",
-        children: [
-          {
-            href: "/admin?tab=columns",
-            label: "Data Columns",
-            match: (s) => !s.includes("tab=") || s.includes("tab=columns"),
-          },
-          {
-            href: "/admin?tab=lists",
-            label: "Reference Lists",
-            match: (s) => s.includes("tab=lists"),
-          },
-          {
-            href: "/admin?tab=audit",
-            label: "Audit Log",
-            match: (s) => s.includes("tab=audit"),
-          },
-          {
-            href: "/admin?tab=mcp",
-            label: "MCP Access",
-            match: (s) => s.includes("tab=mcp"),
-          },
-          {
-            href: "/admin?tab=integrations",
-            label: "Integrations",
-            match: (s) => s.includes("tab=integrations"),
-          },
-          {
-            href: "/admin?tab=salesforce",
-            label: "Salesforce Inbox",
-            match: (s) => s.includes("tab=salesforce"),
-          },
-          {
-            href: "/admin?tab=distribution",
-            label: "Distribution",
-            match: (s) => s.includes("tab=distribution"),
-          },
-          {
-            href: "/admin/destini",
-            label: "Destini import",
-            match: (_, p) => p.startsWith("/admin/destini"),
-          },
-          {
-            href: "/trash",
-            label: "Trash",
-            match: (_, p) => p.startsWith("/trash"),
-          },
-        ],
-      },
-    ],
-  },
-  {
-    label: "More",
-    items: [
-      { href: "/sheets", label: "Sheets" },
-      { href: "/dashboards/studio", label: "Studio" },
-      { href: "/dashboards/forecast", label: "Forecast" },
-      { href: "/dashboards/reconciliation", label: "DMR Reconciliation" },
-      { href: "/copilot", label: "AI Copilot" },
-    ],
-  },
-];
-
-export function MobileNav() {
+export function MobileNav({
+  role,
+  roleChrome = true,
+}: {
+  role: Role;
+  roleChrome?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const search = useSearchParams().toString();
@@ -206,10 +82,10 @@ export function MobileNav() {
             <BrandMark className="size-7" />
             <div className="min-w-0 leading-tight">
               <p className="truncate text-sm font-semibold tracking-tight">
-                B&amp;G Precon
+                {PRODUCT_SHORT_NAME}
               </p>
               <p className="truncate text-2xs text-muted-foreground">
-                Pursuits &amp; Data
+                {PRODUCT_TAGLINE}
               </p>
             </div>
           </div>
@@ -227,20 +103,15 @@ export function MobileNav() {
           </SheetClose>
         </div>
         <nav className="flex-1 overflow-y-auto overscroll-contain p-2">
-          {NAV_SECTIONS.map((section) => (
+          {navigationForRole(role, { roleChrome }).map((section) => (
             <div key={section.label} className="space-y-0.5 pb-3">
               <p className="px-2.5 pb-1 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                 {section.label}
               </p>
               {section.items.map((item) => {
-                const active = item.exact
-                  ? pathname === item.href
-                  : item.href === "/"
-                    ? pathname === "/"
-                    : pathname === item.href ||
-                      pathname.startsWith(`${item.href}/`);
+                const active = isNavigationItemActive(item, pathname);
                 const expanded = Boolean(active && item.children?.length);
-                const isCopilot = item.href === "/copilot";
+                const Icon = ICONS[item.icon];
 
                 return (
                   <div key={item.href} className="space-y-0.5">
@@ -255,9 +126,7 @@ export function MobileNav() {
                           "border-l-primary bg-info-soft font-medium text-primary"
                       )}
                     >
-                      {isCopilot && (
-                        <Sparkles className="size-[18px] shrink-0 stroke-[1.75]" />
-                      )}
+                      <Icon className="size-[18px] shrink-0 stroke-[1.75]" />
                       <span className="flex-1 truncate">{item.label}</span>
                       {item.children && (
                         <ChevronDown
@@ -281,7 +150,7 @@ export function MobileNav() {
                               const subActive =
                                 active &&
                                 (sub.match
-                                  ? sub.match(search, pathname)
+                                  ? sub.match(pathname, search)
                                   : false);
                               return (
                                 <Link

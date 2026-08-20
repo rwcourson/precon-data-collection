@@ -151,4 +151,49 @@ describe("per-user bid-schedule table prefs", () => {
     expect(cleared.source).toBe("prefs");
     expect(cleared.columns).toEqual(["jobNumber", "jobName"]);
   });
+
+  it("starring a shared view never writes another user's default", async () => {
+    const [pcm] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "pcm"))
+      .limit(1);
+    const [lead] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "estimate_lead"))
+      .limit(1);
+    touchedUserIds.push(pcm.id, lead.id);
+    const pcmPrincipal = principalFor(pcm, "Central");
+    const leadPrincipal = principalFor(lead, "Central");
+    await tablePrefsService.setDefaultView(pcmPrincipal, null);
+
+    const [shared] = await db
+      .insert(bidScheduleViews)
+      .values({
+        name: "shared-does-not-steal-default",
+        ownerId: pcm.id,
+        region: "Central",
+        shared: true,
+        config: parseBidScheduleViewConfig({
+          columns: ["jobName"],
+          density: "summary",
+          section: "active",
+        }),
+      })
+      .returning({ id: bidScheduleViews.id });
+    createdViewIds.push(shared.id);
+
+    await tablePrefsService.setDefaultView(leadPrincipal, shared.id);
+    const pcmPrefs = await tablePrefsService.load(
+      pcmPrincipal,
+      BID_SCHEDULE_SURFACE
+    );
+    const leadPrefs = await tablePrefsService.load(
+      leadPrincipal,
+      BID_SCHEDULE_SURFACE
+    );
+    expect(leadPrefs.defaultViewId).toBe(shared.id);
+    expect(pcmPrefs.defaultViewId ?? null).not.toBe(shared.id);
+  });
 });

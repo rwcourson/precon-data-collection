@@ -272,6 +272,7 @@ export async function loadRoundForPrincipal(
     capability?: Capability;
     state?: ResourceState;
     fieldKey?: string;
+    lockImmutable?: boolean;
   } = {}
 ): Promise<AuthorizedResource<AuthorizedRound> | null> {
   const capability = options.capability ?? "read";
@@ -320,6 +321,7 @@ export async function loadRoundForPrincipal(
     },
     round: { status: value.round.status, region: value.round.region },
     fieldKey: options.fieldKey,
+    lockImmutable: options.lockImmutable,
     fieldPolicy: fieldPolicy
       ? {
           role: fieldPolicy.role,

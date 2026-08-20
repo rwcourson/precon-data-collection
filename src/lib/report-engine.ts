@@ -4,9 +4,10 @@ import type {
   Job,
   SavedReportConfig,
 } from "@/db/schema";
+import { awardableExportFooter } from "./awardable-reporting";
 import { FIELD_DEFS, type FieldType } from "./fields";
 import { LATEST_NOTE_KEY, LATEST_NOTE_LABEL } from "./latest-note";
-import { METRIC_DEFS } from "./metrics";
+import { calcMetric, METRIC_DEFS, roundForMetrics } from "./metrics";
 import { STATUS_LABELS } from "./permissions";
 
 /**
@@ -88,16 +89,23 @@ export function flattenRound(
   estimateLeadName: string | null,
   multi: Record<string, string[]>,
   customValues: Record<number, string | null>,
-  latestNote: string | null = null
+  latestNote: string | null = null,
+  notApplicable?: ReadonlySet<string>
 ): FlatRow {
+  const values = roundForMetrics(round, notApplicable);
   const row: FlatRow = {
     id: round.id,
+    jobId: job.id,
     jobNumber: job.jobNumber,
     jobName: job.jobName,
     estimateLead: estimateLeadName,
     status: STATUS_LABELS[round.status],
     outcome: round.outcome,
     roundNumber: round.roundNumber,
+    isLinked: job.isLinked ? 1 : 0,
+    teamAssignedAt: round.teamAssignedAt
+      ? round.teamAssignedAt.toISOString()
+      : null,
     [LATEST_NOTE_KEY]: latestNote,
   };
   for (const f of FIELD_DEFS) {
@@ -105,12 +113,12 @@ export function flattenRound(
     if (f.type === "multi") {
       row[f.key] = (multi[f.key] ?? []).join(", ") || null;
     } else {
-      const v = (round as unknown as Record<string, unknown>)[f.key];
+      const v = (values as unknown as Record<string, unknown>)[f.key];
       row[f.key] = (v as string | number | null) ?? null;
     }
   }
   for (const m of METRIC_DEFS) {
-    row[`metric:${m.key}`] = m.calc(round);
+    row[`metric:${m.key}`] = calcMetric(m, values);
   }
   for (const [colId, v] of Object.entries(customValues)) {
     row[`custom:${colId}`] = v ?? null;
@@ -155,7 +163,15 @@ export type ReportResult = {
   columns: { key: string; label: string }[];
   rows: FlatRow[];
   isGrouped: boolean;
+  grainFooter: string | null;
 };
+
+function grainFooterForConfig(config: SavedReportConfig): string | null {
+  return awardableExportFooter([
+    ...config.fields,
+    ...(config.aggregations ?? []).map((a) => a.field),
+  ]);
+}
 
 export function runReportEngine(
   flatRows: FlatRow[],
@@ -177,7 +193,12 @@ export function runReportEngine(
       }
       return 0;
     });
-    return { columns: cols, rows: sorted, isGrouped: false };
+    return {
+      columns: cols,
+      rows: sorted,
+      isGrouped: false,
+      grainFooter: grainFooterForConfig(config),
+    };
   }
 
   // Grouped: group key columns + aggregation columns
@@ -246,7 +267,12 @@ export function runReportEngine(
     return 0;
   });
 
-  return { columns, rows: sorted, isGrouped: true };
+  return {
+    columns,
+    rows: sorted,
+    isGrouped: true,
+    grainFooter: grainFooterForConfig(config),
+  };
 }
 
 /** Formats a report cell based on the field definition it references. */

@@ -52,7 +52,17 @@ export async function getAccessSettings(): Promise<AccessSettings> {
     .from(appSettings)
     .where(eq(appSettings.key, ACCESS_SETTINGS_KEY));
   if (!row) return DEFAULT_ACCESS;
-  return { ...DEFAULT_ACCESS, ...(row.value as Partial<AccessSettings>) };
+  const saved = row.value as Partial<AccessSettings>;
+  return {
+    ...DEFAULT_ACCESS,
+    ...saved,
+    groupRoles: { ...DEFAULT_ACCESS.groupRoles, ...saved.groupRoles },
+    groupRegions: { ...DEFAULT_ACCESS.groupRegions, ...saved.groupRegions },
+    titleRoles: { ...DEFAULT_ACCESS.titleRoles, ...saved.titleRoles },
+    managerRoles: { ...DEFAULT_ACCESS.managerRoles, ...saved.managerRoles },
+    emailRoles: { ...DEFAULT_ACCESS.emailRoles, ...saved.emailRoles },
+    emailRegions: { ...DEFAULT_ACCESS.emailRegions, ...saved.emailRegions },
+  };
 }
 
 const PLACEHOLDER_TITLES = new Set([

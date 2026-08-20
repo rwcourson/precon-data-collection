@@ -32,6 +32,12 @@ export async function GET(req: NextRequest) {
   const principal = await getWebPrincipal();
   const { rows, catalog } = await getFlatDataset(principal);
   const result = runReportEngine(rows, config, catalog);
+  const footer = [
+    "Brasfield & Gorrie Preconstruction — Confidential",
+    result.grainFooter,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const columns: ExportColumn[] = result.columns.map((c) => {
     const baseKey =
@@ -50,9 +56,10 @@ export async function GET(req: NextRequest) {
       title: name,
       columns,
       rows: result.rows,
+      footer,
       formatValue: (key, value) => formatReportValue(key, value, catalog),
     });
-    return pdfResponse(html, name);
+    return pdfResponse(html, name, { footer });
   }
 
   const buffer = await buildWorkbook({
@@ -60,6 +67,7 @@ export async function GET(req: NextRequest) {
     sheetName: "Report",
     columns,
     rows: result.rows,
+    footer,
   });
   return new Response(new Uint8Array(buffer), {
     headers: {

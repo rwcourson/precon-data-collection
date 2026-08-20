@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Structural performance budget checks for phase 11.
+ * Structural performance budget checks plus optional full-dump schedule timing.
  * Validates page size caps, export thresholds, and index presence evidence from migrations.
  */
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +21,7 @@ const migration = fs.readFileSync(
   path.join(root, "drizzle/0002_atomic_persistence.sql"),
   "utf8"
 );
+const schema = fs.readFileSync(path.join(root, "src/db/schema.ts"), "utf8");
 
 const checks = [];
 function check(name, ok, detail) {
@@ -52,6 +54,17 @@ check(
     migration.includes("round_multi_values_round_field_idx"),
   "migration 0002 indexes"
 );
+check(
+  "roundtable hot indexes present",
+  [
+    "round_notes_round_created_idx",
+    "job_group_memberships_group_idx",
+    "approval_requests_region_status_idx",
+    "round_lock_revisions_active_idx",
+    "publication_outbox_status_available_idx",
+  ].every((name) => schema.includes(name)),
+  "schema.ts notes, groups, approvals, lock revisions, outbox"
+);
 
 const failed = checks.filter((c) => !c.ok);
 for (const c of checks) {
@@ -61,4 +74,17 @@ if (failed.length) {
   process.stderr.write(`perf:check failed (${failed.length})\n`);
   process.exit(1);
 }
+
+const fullDump = spawnSync(
+  path.join(root, "node_modules", ".bin", "tsx"),
+  ["scripts/schedule-full-perf.ts"],
+  { cwd: root, encoding: "utf8" }
+);
+if (fullDump.stdout) process.stdout.write(fullDump.stdout);
+if (fullDump.status !== 0) {
+  if (fullDump.stderr) process.stderr.write(fullDump.stderr);
+  process.stderr.write("perf:check full-dump schedule timing failed\n");
+  process.exit(fullDump.status ?? 1);
+}
+
 process.stdout.write("perf:check passed\n");

@@ -1,4 +1,5 @@
 import type { EstimateRound } from "@/db/schema";
+import { maskNotApplicableValues } from "@/lib/fields";
 
 /**
  * Server-side calculated metrics (the Project Estimate Summary formula set).
@@ -557,6 +558,24 @@ export const METRIC_DEFS: MetricDef[] = [
     calc: (r) => div(r.estimateValue, r.hotelKeysUnits),
   },
   {
+    key: "awardableShare",
+    label: "Awardable % of Estimate",
+    format: "percent",
+    group: "Project Attributes",
+    headline: true,
+    note: "Provisional until the early-release aggregation policy is approved",
+    calc: (r) => div(r.awardableAmount, r.estimateValue),
+  },
+  {
+    key: "contractConversion",
+    label: "Signed Contract % of Awardable",
+    format: "percent",
+    group: "Project Attributes",
+    headline: true,
+    note: "Uses explicit signed contract and awardable amounts",
+    calc: (r) => div(r.contractAmountSigned, r.awardableAmount),
+  },
+  {
     key: "gsfPerUnit",
     label: "GSF per Key / Unit / Bed",
     format: "number",
@@ -664,4 +683,37 @@ export function formatMetricValue(
     default:
       return value.toLocaleString("en-US", { maximumFractionDigits: 1 });
   }
+}
+
+/** Null N/A fields so they cannot enter a metric numerator or denominator. */
+export function roundForMetrics(
+  round: EstimateRound,
+  notApplicable?: ReadonlySet<string>
+): EstimateRound {
+  if (!notApplicable || notApplicable.size === 0) return round;
+  return maskNotApplicableValues(
+    round as unknown as Record<string, unknown>,
+    notApplicable
+  ) as unknown as EstimateRound;
+}
+
+export function calcMetric(
+  def: MetricDef,
+  round: EstimateRound,
+  notApplicable?: ReadonlySet<string>
+): number | null {
+  return def.calc(roundForMetrics(round, notApplicable));
+}
+
+/** Null N/A fields on every round before rollups or Magnus briefs. */
+export function applyNotApplicableByRound<T extends EstimateRound>(
+  rounds: readonly T[],
+  notApplicableByRound?: ReadonlyMap<number, ReadonlySet<string>>
+): T[] {
+  if (!notApplicableByRound || notApplicableByRound.size === 0) {
+    return [...rounds];
+  }
+  return rounds.map(
+    (round) => roundForMetrics(round, notApplicableByRound.get(round.id)) as T
+  );
 }

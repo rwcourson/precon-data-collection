@@ -138,4 +138,42 @@ describe("overview queues", () => {
     );
     expect(queues.find((q) => q.id === "needs-staffing")?.count).toBe(1);
   });
+
+  it("optionally counts one job even when two rounds match", () => {
+    const queues = buildOverviewQueues(
+      [
+        row({ roundId: 1, jobId: 10, status: "post_bid" }),
+        row({ roundId: 2, jobId: 10, status: "post_bid" }),
+      ],
+      today,
+      undefined,
+      { uniqueJobs: true }
+    );
+    expect(queues.find((q) => q.id === "awaiting-lock")?.count).toBe(1);
+  });
+
+  it("adds a lead-owed post-bid queue without replacing the five company queues", () => {
+    const queues = buildOverviewQueues(
+      [
+        row({
+          roundId: 1,
+          status: "submitted",
+          estimateLeadId: 9,
+        }),
+        row({
+          roundId: 2,
+          status: "post_bid",
+          estimateLeadId: 8,
+        }),
+      ],
+      today,
+      undefined,
+      { owedLeadId: 9 }
+    );
+    expect(queues.map((q) => q.id)).toContain("you-owe-post-bid");
+    expect(queues.find((q) => q.id === "you-owe-post-bid")?.count).toBe(1);
+    expect(queues.find((q) => q.id === "you-owe-post-bid")?.href).toBe(
+      "/post-bid?mine=1"
+    );
+  });
 });

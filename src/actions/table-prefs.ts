@@ -9,6 +9,7 @@ import { tablePrefsService } from "@/services/table-prefs-service";
 const prefsPatchSchema = z.object({
   columns: z.array(z.string()).optional(),
   density: z.enum(["summary", "detail"]).optional(),
+  viewMode: z.enum(["table", "cards", "gantt"]).optional(),
   columnWidths: z.record(z.string(), z.number()).optional(),
   defaultViewId: z.number().int().positive().nullable().optional(),
 });

@@ -92,7 +92,8 @@ Names only — values live in the Vercel dashboard. Production has the live set.
 
 | Variable | Production | Preview | Development (Vercel) | Local |
 | --- | --- | --- | --- | --- |
-| `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | yes | yes | yes | `.env.local` or PGlite |
+| `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | yes | yes (Neon **branch**, not Production) | yes | `.env.local` or PGlite |
+| `PRODUCTION_DATABASE_URL` | — | yes (comparison only; must differ from Preview `DATABASE_URL`) | — | unused |
 | `DATABASE_MODE` | yes | yes (`postgres`) | yes | `.env.development` = `pglite` |
 | `AUTH_MODE` | yes (`sso`) | yes (`demo`) | yes | `demo` |
 | `APP_ENV` | yes | yes (`demo`) | yes | `demo` |
@@ -102,19 +103,20 @@ Names only — values live in the Vercel dashboard. Production has the live set.
 | `AI_GATEWAY_API_KEY` / `AI_MODEL` | yes | yes | yes | `.env.local` |
 | `EMAIL_MODE` | yes (`stub` until Resend) | yes (`stub`) | yes | stub |
 | `RESEND_API_KEY` / `EMAIL_FROM` | **not set** | — | — | stub outbox |
-| `PRIVATE_STORAGE_MODE` | yes | yes (`local`) | yes | `local` |
-| `BLOB_READ_WRITE_TOKEN` | **not set** | — | — | local disk |
+| `PRIVATE_STORAGE_MODE` | yes (`vercel-blob`) | yes (`local`) | yes | `local` |
+| `BLOB_READ_WRITE_TOKEN` | yes | yes | yes | local disk |
 | `CONNECT_MODE` / `SMARTSHEET_MODE` / `DATABRICKS_MODE` | yes | yes (mock / disabled) | yes | mock / disabled |
 | `API_TOKEN_MAX_TTL_DAYS` | yes | yes (`90`) | yes | `90` |
 | `DATABRICKS_*` + `DATABRICKS_ALLOW_WRITE` | yes (write stays false) | yes | yes | disabled |
 
-Preview uses **demo personas + Neon** (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=postgres`). Production stays Entra SSO. `APP_ORIGIN` / `ALLOWED_ORIGINS` are derived from `VERCEL_BRANCH_URL` when unset so each branch alias works without a per-branch env row.
+Preview uses **demo personas + a Neon branch isolated from Production** (`APP_ENV=demo`, `AUTH_MODE=demo`, `DATABASE_MODE=postgres`, `PRODUCTION_DATABASE_URL` set for the isolation check). Production stays Entra SSO. `APP_ORIGIN` / `ALLOWED_ORIGINS` are derived from `VERCEL_BRANCH_URL` when unset so each branch alias works without a per-branch env row.
 
 Gaps still open:
 
 1. Add Entra redirect URIs and copy Microsoft / `BETTER_AUTH_*` to Preview only if Preview should use SSO instead of personas.
 2. Add `RESEND_API_KEY` + `EMAIL_FROM` when scheduled report mail should leave the outbox.
-3. Add `BLOB_READ_WRITE_TOKEN` and set `PRIVATE_STORAGE_MODE=vercel-blob` when note attachments must survive serverless.
+
+Blob is provisioned (2026-08-20): private store `precon-data-artifacts` (`store_8GkmizxOsVzkjcaf`, iad1) is linked to the project. `BLOB_READ_WRITE_TOKEN` exists on all three environments and Production runs `PRIVATE_STORAGE_MODE=vercel-blob` (`@vercel/blob` is a direct dependency; private put/get live in `src/lib/artifact-storage.ts`).
 
 Neon marketplace vars (`POSTGRES_*`, `PGHOST`, …) are present on all three environments. App code reads `DATABASE_URL` / `DATABASE_URL_UNPOOLED`.
 

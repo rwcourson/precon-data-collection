@@ -3,6 +3,7 @@ import {
   canonicalizeHierarchy,
   expandHierarchy,
   filterByHierarchy,
+  filterBySelfPerformIntent,
   hierarchyEquals,
   parseHierarchyFromSearchParams,
   serializeHierarchy,
@@ -108,5 +109,25 @@ describe("hierarchical region-market filter", () => {
     expect(on).toEqual({ regions: ["Georgia"], departments: [] });
     const off = toggleRegion(on, "Georgia");
     expect(off).toEqual({ regions: [], departments: [] });
+  });
+
+  it("filters pre-bid rows by self-perform intent without changing unfiltered rows", () => {
+    const rows = [
+      { round: { id: 1 }, jobName: "Steel job" },
+      { round: { id: 2 }, jobName: "Concrete job" },
+      { round: { id: 3 }, jobName: "No intent" },
+    ];
+    const intentByRound = new Map([
+      [1, { selfPerformIntent: ["Steel"] }],
+      [2, { selfPerformIntent: ["Concrete", "Steel"] }],
+    ]);
+    expect(filterBySelfPerformIntent(rows, undefined, intentByRound)).toEqual(
+      rows
+    );
+    expect(
+      filterBySelfPerformIntent(rows, "Steel", intentByRound).map(
+        (row) => row.round.id
+      )
+    ).toEqual([1, 2]);
   });
 });

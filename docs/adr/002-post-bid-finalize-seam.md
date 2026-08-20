@@ -1,8 +1,15 @@
-# ADR-002: Post-bid finalize seam (flip destination undecided)
+# ADR-002: Post-bid finalize seam (historical interim decision)
 
-**Status:** Proposed  
-**Date:** 2026-08-17  
+**Status:** Superseded in part
+**Date:** 2026-08-17
 **Decision owner:** Wednesday meeting (Jay / Robert / Bryan)
+
+**2026-08-19 update:** The shipped `finalizeRound()` lock-passthrough remains
+the current implementation. The destination is no longer undecided:
+[ADR-006](006-versioned-lock-revisions-and-publication-outbox.md) decides
+versioned local lock revisions plus an asynchronous outbox, and
+[ADR-007](007-locked-only-databricks-publication.md) decides locked-only
+Databricks publication. Those behaviors are planned, not yet shipped.
 
 ## Context
 

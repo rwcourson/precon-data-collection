@@ -2,6 +2,10 @@ import "server-only";
 import { and, desc, eq, gte } from "drizzle-orm";
 import { type AppDb, db } from "@/db";
 import { appSettings, notifications } from "@/db/schema";
+import {
+  type DateShiftRecipientRules,
+  normalizeDateShiftRecipients,
+} from "./date-shift-recipients";
 import { type QueuedEmail, sendEmails } from "./email";
 import { fmtDate } from "./format";
 import { getMultiValuesForRounds, getRoundsWithJobs } from "./queries";
@@ -25,6 +29,10 @@ export type NotificationSettings = {
   escalateAfterDays: number;
   email: boolean;
   inApp: boolean;
+  /** Date-shift notices go to the estimate lead when true. */
+  dateShiftNotifyLead: boolean;
+  /** Date-shift notices go to the home-region RPD/SPD when true. */
+  dateShiftNotifyRegionalRpd: boolean;
 };
 
 export const DEFAULT_SETTINGS: NotificationSettings = {
@@ -33,7 +41,18 @@ export const DEFAULT_SETTINGS: NotificationSettings = {
   escalateAfterDays: 14,
   email: true,
   inApp: true,
+  dateShiftNotifyLead: true,
+  dateShiftNotifyRegionalRpd: true,
 };
+
+export function dateShiftRecipientRulesFrom(
+  settings: NotificationSettings
+): DateShiftRecipientRules {
+  return normalizeDateShiftRecipients({
+    estimateLead: settings.dateShiftNotifyLead,
+    regionalRpd: settings.dateShiftNotifyRegionalRpd,
+  });
+}
 
 /** Accepts an optional db/tx handle so callers inside a transaction reuse it. */
 export async function getNotificationSettings(
@@ -44,9 +63,12 @@ export async function getNotificationSettings(
     .from(appSettings)
     .where(eq(appSettings.key, SETTINGS_KEY));
   if (!row) return DEFAULT_SETTINGS;
+  const saved = row.value as Partial<NotificationSettings>;
   return {
     ...DEFAULT_SETTINGS,
-    ...(row.value as Partial<NotificationSettings>),
+    ...saved,
+    dateShiftNotifyLead: saved.dateShiftNotifyLead !== false,
+    dateShiftNotifyRegionalRpd: saved.dateShiftNotifyRegionalRpd !== false,
   };
 }
 

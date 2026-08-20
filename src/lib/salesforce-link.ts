@@ -13,15 +13,37 @@ export type SalesforceJobRecord = {
   sfId: string;
   jobNumber: string;
   jobName: string;
+  region?: string | null;
+  marketSector?: string | null;
+  city?: string | null;
+  state?: string | null;
 };
+
+export type SalesforceShadow = {
+  jobName: string | null;
+  region: string | null;
+  marketSector: string | null;
+  city: string | null;
+  state: string | null;
+};
+
+function shadowFrom(sf: SalesforceJobRecord): SalesforceShadow {
+  return {
+    jobName: sf.jobName,
+    region: sf.region ?? null,
+    marketSector: sf.marketSector ?? null,
+    city: sf.city ?? null,
+    state: sf.state ?? null,
+  };
+}
 
 export type SalesforceLinkPlan = {
   /** Always the original job primary key — rounds stay attached. */
   jobId: number;
   patch: {
     jobNumber: string;
-    jobName: string;
     salesforceId: string;
+    salesforceShadow: Record<string, string | null>;
     isLinked: true;
   };
   audit: {
@@ -61,8 +83,8 @@ export function planSalesforceLink(
     jobId: job.id,
     patch: {
       jobNumber: sf.jobNumber,
-      jobName: sf.jobName,
       salesforceId: sf.sfId,
+      salesforceShadow: shadowFrom(sf),
       isLinked: true,
     },
     audit: {
@@ -108,4 +130,58 @@ export function applySalesforceLinkPlan(
     },
     rounds: state.rounds.map((r) => ({ ...r })),
   };
+}
+
+export type SalesforceUnlinkPlan = {
+  jobId: number;
+  patch: { isLinked: false; salesforceId: null };
+  undo: { isLinked: true; salesforceId: string };
+};
+
+export function planSalesforceUnlink(job: LinkableJob): SalesforceUnlinkPlan {
+  if (!job.isLinked && !job.salesforceId) {
+    throw DomainError.badRequest(
+      "Job is not linked",
+      "There is no Salesforce job number to unlink."
+    );
+  }
+  return {
+    jobId: job.id,
+    patch: { isLinked: false, salesforceId: null },
+    undo: { isLinked: true, salesforceId: job.salesforceId ?? "" },
+  };
+}
+
+/** Typing over an accepted suggestion breaks the link and keeps an undo handle. */
+export function typeOverSalesforceSuggestion<T>(current: T | null): {
+  selected: null;
+  undo: T | null;
+} {
+  return { selected: null, undo: current };
+}
+
+export function applySalesforceUnlinkPlan(
+  state: PursuitHistoryState,
+  plan: SalesforceUnlinkPlan
+): PursuitHistoryState {
+  return {
+    job: { ...state.job, ...plan.patch },
+    rounds: state.rounds.map((round) => ({ ...round })),
+  };
+}
+
+export function assertSalesforceJobNumberAvailable(
+  jobNumber: string,
+  existing: { id: number; jobNumber: string }[],
+  currentJobId: number
+): void {
+  const clash = existing.find(
+    (row) => row.jobNumber === jobNumber && row.id !== currentJobId
+  );
+  if (clash) {
+    throw DomainError.conflict(
+      "Salesforce job number already in use",
+      `Job ${clash.id} already uses ${jobNumber}.`
+    );
+  }
 }

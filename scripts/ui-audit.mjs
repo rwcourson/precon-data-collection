@@ -183,6 +183,13 @@ for (const theme of ["light", "dark"]) {
   for (const route of routes) await auditRoute(route, theme);
 }
 
+await page.setViewportSize({ width: 834, height: 1112 });
+await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
+await page.goto(`${BASE}/bid-schedule?viewMode=gantt`, {
+  waitUntil: "domcontentloaded",
+});
+await auditRoute("/bid-schedule?viewMode=gantt", "light-834-reduced-motion");
+
 await browser.close();
 
 const grouped = new Map();

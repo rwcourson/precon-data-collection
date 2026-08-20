@@ -16,6 +16,7 @@ const requiredScripts = [
   "verify:ios",
   "verify:all",
   "contract:check",
+  "roundtable:phase-status",
 ];
 const missing = requiredScripts.filter(
   (s) =>
@@ -61,6 +62,18 @@ const requiredDocs = [
   "brand/README-SLIDESHOW.md",
   "brand/brand-tokens.json",
   "docs/adr/002-post-bid-finalize-seam.md",
+  "docs/adr/003-canonical-one-job-schedule-projection.md",
+  "docs/adr/006-versioned-lock-revisions-and-publication-outbox.md",
+  "docs/rpd-roundtable-product-contract.md",
+  "docs/roundtable-rollback.md",
+  "docs/checklists/roundtable-phases.md",
+  "docs/checklists/roundtable-exit-audit.md",
+  "docs/checklists/operational-signoff.md",
+  "docs/mocks/nested-self-perform.md",
+  "docs/adr/004-approval-requests-separate-from-round-status.md",
+  "docs/adr/005-organization-membership-vs-region-visibility.md",
+  "docs/adr/007-locked-only-databricks-publication.md",
+  "docs/data-connections.md",
   "docs/security/role-capability-matrix.md",
   "vercel.json",
 ];
@@ -81,6 +94,23 @@ for (const needle of [
     process.stderr.write(`docs:check README or ROADMAP must link ${needle}\n`);
     process.exit(1);
   }
+}
+
+if (!readme.includes("roleChrome") && !roadmap.includes("roleChrome")) {
+  process.stderr.write(
+    "docs:check README or ROADMAP must describe roleChrome PCM nav\n"
+  );
+  process.exit(1);
+}
+if (
+  /Primary nav is Overview, Bid Schedule, Post-Bid, Dashboards, Reports/.test(
+    readme + roadmap
+  )
+) {
+  process.stderr.write(
+    "docs:check must not present Dashboards/Reports as current primary nav\n"
+  );
+  process.exit(1);
 }
 
 process.stdout.write(

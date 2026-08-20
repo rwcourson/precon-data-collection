@@ -291,7 +291,7 @@ export function DestiniImport() {
       <div>
         <button
           type="button"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35"
           onClick={() => setShowCsv((v) => !v)}
         >
           <ChevronDown

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDestiniFieldDiffs,
+  DESTINI_WRITABLE_KEYS,
+  destiniChecksumIsApplied,
   detectDestiniFormat,
+  filterWritableValues,
   mapDestiniRow,
   mapDestiniSheet,
   normLabel,
@@ -36,6 +40,8 @@ describe("tabular map", () => {
     expect(row.values.feeBackPage).toBe(400_000);
     expect(row.values.gcProposedOwnerSov).toBe(250_000);
     expect(row.unmappedHeaders).toContain("Mystery Col");
+    expect(row.values).not.toHaveProperty("jobNumber");
+    expect(row.values).not.toHaveProperty("jobName");
   });
 
   it("does not import judgmental / non-Destini columns even if present", () => {
@@ -117,5 +123,63 @@ describe("CSV parse", () => {
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]!.jobNumber).toBe("12345");
     expect(result.rows[0]!.values.estimateValue).toBe(1_500_000);
+  });
+});
+
+describe("Destini checksum short-circuit", () => {
+  it("treats an applied checksum as idempotent", () => {
+    expect(
+      destiniChecksumIsApplied(
+        [
+          { source: "destini", checksum: "abc", status: "preview" },
+          { source: "destini", checksum: "abc", status: "applied" },
+        ],
+        "abc"
+      )
+    ).toBe(true);
+    expect(
+      destiniChecksumIsApplied(
+        [{ source: "destini", checksum: "abc", status: "preview" }],
+        "abc"
+      )
+    ).toBe(false);
+  });
+});
+
+describe("Destini preview diffs", () => {
+  it("lists every proposed Destini key and marks only changed values", () => {
+    const diffs = buildDestiniFieldDiffs(
+      { estimateValue: 10_000_000, feeBackPage: 400_000, pmMonths: 12 },
+      { estimateValue: 12_000_000, feeBackPage: 400_000, pmMonths: 18 }
+    );
+    expect(diffs.map((diff) => diff.key)).toEqual([
+      "estimateValue",
+      "feeBackPage",
+      "pmMonths",
+    ]);
+    expect(diffs.find((diff) => diff.key === "estimateValue")?.changed).toBe(
+      true
+    );
+    expect(diffs.find((diff) => diff.key === "feeBackPage")?.changed).toBe(
+      false
+    );
+    expect(diffs.find((diff) => diff.key === "pmMonths")?.changed).toBe(true);
+  });
+});
+
+describe("Destini local-wins identity", () => {
+  it("never writes job identity or awardable amounts from Destini", () => {
+    expect(DESTINI_WRITABLE_KEYS).not.toContain("jobNumber");
+    expect(DESTINI_WRITABLE_KEYS).not.toContain("jobName");
+    expect(DESTINI_WRITABLE_KEYS).not.toContain("awardableAmount");
+    expect(DESTINI_WRITABLE_KEYS).not.toContain("contractAmountSigned");
+    expect(
+      filterWritableValues({
+        jobNumber: "2600123",
+        jobName: "Should stay local",
+        awardableAmount: 1,
+        estimateValue: 5_000_000,
+      })
+    ).toEqual({ estimateValue: 5_000_000 });
   });
 });

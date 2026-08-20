@@ -36,8 +36,8 @@ function safeFileName(name, id) {
   return `${base}__${id}.json`;
 }
 
-const me = await ss("/users/me");
-console.log(`Token OK — ${me.email ?? me.firstName ?? "user"}`);
+await ss("/users/me");
+console.log("Token OK — Smartsheet user");
 
 const list = await ss("/sheets?includeAll=true");
 const all = list.data ?? [];

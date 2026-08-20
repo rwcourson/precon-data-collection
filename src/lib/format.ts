@@ -1,3 +1,10 @@
+/** Stored `TBD-*` identities stay unchanged; the board shows a pending label. */
+export function displayJobNumber(jobNumber: string | null | undefined): string {
+  const value = jobNumber?.trim() ?? "";
+  if (!value) return "—";
+  return /^TBD-/i.test(value) ? "Pending job number" : value;
+}
+
 export function fmtDollars(
   v: number | null | undefined,
   compact = false
@@ -104,7 +111,7 @@ export function caretAfterSignificant(
 /** Format a raw field value according to its field type. */
 export function fmtFieldValue(
   value: unknown,
-  type: "text" | "number" | "dollars" | "date" | "dropdown" | "multi"
+  type: "text" | "number" | "dollars" | "date" | "month" | "dropdown" | "multi"
 ): string {
   if (value == null || value === "") return "—";
   switch (type) {
@@ -114,6 +121,11 @@ export function fmtFieldValue(
       return fmtNumber(Number(value));
     case "date":
       return fmtDate(String(value));
+    case "month":
+      return new Date(`${String(value)}-01T00:00:00`).toLocaleDateString(
+        "en-US",
+        { month: "short", year: "numeric" }
+      );
     case "multi":
       return Array.isArray(value) ? value.join(", ") : String(value);
     default:

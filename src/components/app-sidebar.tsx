@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { ComponentType } from "react";
 import { Suspense } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import { useSidebar } from "@/components/sidebar-context";
@@ -27,6 +26,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Role } from "@/db/schema";
+import {
+  isNavigationItemActive,
+  type NavigationIcon,
+  type NavigationItem,
+  type NavigationSection,
+  navigationForRole,
+} from "@/lib/navigation";
+import { PRODUCT_SHORT_NAME, PRODUCT_TAGLINE } from "@/lib/product";
 import { cn } from "@/lib/utils";
 
 export type PipelineBucketCounts = {
@@ -35,199 +43,18 @@ export type PipelineBucketCounts = {
   outstanding: number;
 };
 
-type SubItem = {
-  href: string;
-  label: string;
-  countKey?: keyof PipelineBucketCounts;
-  match?: (pathname: string, search: string) => boolean;
-};
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  exact?: boolean;
-  children?: SubItem[];
-};
-
-type NavSection = {
-  label: string;
-  items: NavItem[];
-};
-
 export type PinnedSheet = { id: number; name: string };
 
-const NAV_SECTIONS: NavSection[] = [
-  {
-    label: "Pipeline",
-    items: [
-      { href: "/", label: "Overview", icon: LayoutDashboard, exact: true },
-      {
-        href: "/bid-schedule",
-        label: "Bid Schedule",
-        icon: CalendarRange,
-        children: [
-          {
-            href: "/bid-schedule?section=all",
-            label: "All",
-            match: (_, s) =>
-              !s.includes("section=") || s.includes("section=all"),
-          },
-          {
-            href: "/bid-schedule?section=active",
-            label: "Active",
-            countKey: "active",
-            match: (_, s) => s.includes("section=active"),
-          },
-          {
-            href: "/bid-schedule?section=upcoming",
-            label: "Upcoming",
-            countKey: "upcoming",
-            match: (_, s) => s.includes("section=upcoming"),
-          },
-          {
-            href: "/bid-schedule?section=outstanding",
-            label: "Outstanding",
-            countKey: "outstanding",
-            match: (_, s) => s.includes("section=outstanding"),
-          },
-        ],
-      },
-      { href: "/post-bid", label: "Post-Bid Entry", icon: ClipboardList },
-    ],
-  },
-  {
-    label: "Tools",
-    items: [
-      {
-        href: "/dashboards",
-        label: "Dashboards",
-        icon: FileBarChart2,
-        children: [
-          {
-            href: "/dashboards?level=corporate",
-            label: "Corporate",
-            match: (p, s) =>
-              p === "/dashboards" &&
-              (!s.includes("level=") || s.includes("level=corporate")),
-          },
-          {
-            href: "/dashboards?level=region",
-            label: "Region",
-            match: (p, s) => p === "/dashboards" && s.includes("level=region"),
-          },
-          {
-            href: "/dashboards?level=division",
-            label: "Division",
-            match: (p, s) =>
-              p === "/dashboards" && s.includes("level=division"),
-          },
-        ],
-      },
-      {
-        href: "/reports",
-        label: "Reports",
-        icon: Table2,
-        children: [
-          {
-            href: "/reports",
-            label: "Report Builder",
-            match: (p) => p === "/reports",
-          },
-          {
-            href: "/reports/annual",
-            label: "Annual Regional Report",
-            match: (p) => p.startsWith("/reports/annual"),
-          },
-        ],
-      },
-      {
-        href: "/admin",
-        label: "Admin",
-        icon: Settings2,
-        children: [
-          {
-            href: "/admin?tab=columns",
-            label: "Data Columns",
-            match: (_, s) => !s.includes("tab=") || s.includes("tab=columns"),
-          },
-          {
-            href: "/admin?tab=lists",
-            label: "Reference Lists",
-            match: (_, s) => s.includes("tab=lists"),
-          },
-          {
-            href: "/admin?tab=audit",
-            label: "Audit Log",
-            match: (_, s) => s.includes("tab=audit"),
-          },
-          {
-            href: "/admin?tab=mcp",
-            label: "MCP Access",
-            match: (_, s) => s.includes("tab=mcp"),
-          },
-          {
-            href: "/admin?tab=integrations",
-            label: "Integrations",
-            match: (_, s) => s.includes("tab=integrations"),
-          },
-          {
-            href: "/admin?tab=salesforce",
-            label: "Salesforce Inbox",
-            match: (_, s) => s.includes("tab=salesforce"),
-          },
-          {
-            href: "/admin?tab=distribution",
-            label: "Distribution",
-            match: (_, s) => s.includes("tab=distribution"),
-          },
-          {
-            href: "/admin/destini",
-            label: "Destini import",
-            match: (p) => p.startsWith("/admin/destini"),
-          },
-          {
-            href: "/trash",
-            label: "Trash",
-            match: (p) => p.startsWith("/trash"),
-          },
-        ],
-      },
-    ],
-  },
-  {
-    label: "More",
-    items: [
-      { href: "/sheets", label: "Sheets", icon: Sheet },
-      {
-        href: "/dashboards/studio",
-        label: "Studio",
-        icon: FileBarChart2,
-      },
-      {
-        href: "/dashboards/forecast",
-        label: "Forecast",
-        icon: FileBarChart2,
-      },
-      {
-        href: "/dashboards/reconciliation",
-        label: "DMR Reconciliation",
-        icon: FileBarChart2,
-      },
-      {
-        href: "/copilot",
-        label: "AI Copilot",
-        icon: Sparkles,
-      },
-    ],
-  },
-];
-
-function isSectionActive(item: NavItem, pathname: string) {
-  if (item.exact) return pathname === item.href;
-  if (item.href === "/") return pathname === "/";
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
-}
+const ICONS: Record<NavigationIcon, typeof LayoutDashboard> = {
+  overview: LayoutDashboard,
+  schedule: CalendarRange,
+  postBid: ClipboardList,
+  dashboard: FileBarChart2,
+  reports: Table2,
+  admin: Settings2,
+  sheets: Sheet,
+  copilot: Sparkles,
+};
 
 const itemClass = (active: boolean, collapsed = false) =>
   cn(
@@ -247,13 +74,14 @@ function CollapsedFlyout({
   pathname,
   counts,
 }: {
-  item: NavItem;
+  item: NavigationItem;
   active: boolean;
   search: string;
   pathname: string;
   counts: PipelineBucketCounts;
 }) {
-  const { href, label, icon: Icon, children } = item;
+  const { href, label, icon, children } = item;
+  const Icon = ICONS[icon];
   const hasChildren = Boolean(children?.length);
 
   return (
@@ -324,9 +152,9 @@ function CollapsedFlyout({
 }
 
 function withPinnedSheets(
-  sections: NavSection[],
+  sections: NavigationSection[],
   pinnedSheets: PinnedSheet[]
-): NavSection[] {
+): NavigationSection[] {
   if (pinnedSheets.length === 0) return sections;
   return sections.map((section) => ({
     ...section,
@@ -355,15 +183,22 @@ function withPinnedSheets(
 function SidebarNav({
   pinnedSheets,
   counts,
+  role,
+  roleChrome,
 }: {
   pinnedSheets: PinnedSheet[];
   counts: PipelineBucketCounts;
+  role: Role;
+  roleChrome: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
   const { collapsed, toggle, ready } = useSidebar();
-  const sections = withPinnedSheets(NAV_SECTIONS, pinnedSheets);
+  const sections = withPinnedSheets(
+    navigationForRole(role, { roleChrome }),
+    pinnedSheets
+  );
 
   return (
     <aside
@@ -388,10 +223,10 @@ function SidebarNav({
           )}
         >
           <p className="truncate whitespace-nowrap text-sm font-semibold tracking-tight">
-            B&amp;G Precon
+            {PRODUCT_SHORT_NAME}
           </p>
           <p className="truncate whitespace-nowrap text-xs text-ink-secondary">
-            Pursuits &amp; Data
+            {PRODUCT_TAGLINE}
           </p>
         </div>
       </div>
@@ -422,8 +257,9 @@ function SidebarNav({
               )}
             >
               {section.items.map((item) => {
-                const { href, label, icon: Icon, children } = item;
-                const active = isSectionActive(item, pathname);
+                const { href, label, icon, children } = item;
+                const Icon = ICONS[icon];
+                const active = isNavigationItemActive(item, pathname);
                 const expanded = Boolean(
                   active && children?.length && !collapsed
                 );
@@ -547,13 +383,22 @@ const EMPTY_COUNTS: PipelineBucketCounts = {
 export function AppSidebar({
   pinnedSheets = [],
   counts = EMPTY_COUNTS,
+  role,
+  roleChrome = true,
 }: {
   pinnedSheets?: PinnedSheet[];
   counts?: PipelineBucketCounts;
+  role: Role;
+  roleChrome?: boolean;
 }) {
   return (
     <Suspense fallback={null}>
-      <SidebarNav pinnedSheets={pinnedSheets} counts={counts} />
+      <SidebarNav
+        pinnedSheets={pinnedSheets}
+        counts={counts}
+        role={role}
+        roleChrome={roleChrome}
+      />
     </Suspense>
   );
 }

@@ -647,6 +647,11 @@ export function ReportBuilder({
                 {result.isGrouped ? ", grouped" : ""})
               </span>
             </CardTitle>
+            {result.grainFooter ? (
+              <p className="text-[13px] font-normal text-muted-foreground">
+                {result.grainFooter}
+              </p>
+            ) : null}
             {result.rows.length > 0 ? (
               <CardAction>
                 <div className="flex items-center gap-1.5">

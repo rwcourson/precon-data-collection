@@ -123,4 +123,33 @@ describe("copilot Principal-scoped tools", () => {
       true
     );
   });
+
+  it("token and MCP principals only see locked efforts", async () => {
+    const [rpd] = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "rpd"))
+      .limit(1);
+    const tokenPrincipal = createPrincipal({
+      user: rpd,
+      authSource: "api_token",
+      workspaceRegion: rpd.region,
+      token: {
+        id: 1,
+        name: "copilot-lock",
+        tokenHash: "hash",
+        tokenPrefix: "copi",
+        scopes: ["read:pursuits"],
+        regionAllowlist: rpd.region ? [rpd.region] : [],
+        createdById: rpd.id,
+        expiresAt: null,
+        revokedAt: null,
+        lastUsedAt: null,
+        createdAt: new Date(),
+      },
+    });
+    const efforts = await copilotQueryService.queryEfforts(tokenPrincipal);
+    expect(efforts.length).toBeGreaterThan(0);
+    expect(efforts.every((row) => row.status === "locked")).toBe(true);
+  });
 });

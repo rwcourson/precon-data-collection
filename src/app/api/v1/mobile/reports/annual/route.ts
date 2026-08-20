@@ -1,6 +1,7 @@
 import { buildAnnualReport } from "@/lib/annual-report";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 export async function GET(req: Request) {
   return withMobileAuth(req, { scopes: "read:reports" }, async (principal) => {
@@ -8,9 +9,10 @@ export async function GET(req: Request) {
       const year = Number(
         new URL(req.url).searchParams.get("year") ?? new Date().getFullYear()
       );
-      const rows = await listRoundsWithJobsForPrincipal(
+      const listed = await listRoundsWithJobsForPrincipal(
         principal.authorization
       );
+      const rows = await maskRoundRowsForMetrics(listed);
       const data = buildAnnualReport({
         rows,
         region: principal.authorization.workspace.region,

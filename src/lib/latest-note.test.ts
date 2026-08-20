@@ -5,8 +5,11 @@ import { describe, expect, it } from "vitest";
 import { buildPrintHtml, buildWorkbook } from "./export-helpers";
 import {
   formatLatestNoteCell,
+  LATEST_NOTE_EMPTY_LABEL,
+  LATEST_NOTE_ERROR_LABEL,
   LATEST_NOTE_KEY,
   LATEST_NOTE_LABEL,
+  latestNoteBoardDisplay,
   PRINT_NOTE_MAX_CHARS,
   truncatePrintNote,
 } from "./latest-note";
@@ -26,6 +29,18 @@ function longNote(len: number, marker: string): string {
 }
 
 describe("latest-note print policy", () => {
+  it("labels empty and failed board cells without inventing note text", () => {
+    expect(latestNoteBoardDisplay("")).toBe(LATEST_NOTE_EMPTY_LABEL);
+    expect(latestNoteBoardDisplay("   ")).toBe(LATEST_NOTE_EMPTY_LABEL);
+    expect(latestNoteBoardDisplay("Jay · Aug 20 — check drawings")).toBe(
+      "Jay · Aug 20 — check drawings"
+    );
+    expect(latestNoteBoardDisplay("Jay · Aug 20 — check drawings", true)).toBe(
+      LATEST_NOTE_ERROR_LABEL
+    );
+    expect(latestNoteBoardDisplay("", true)).toBe(LATEST_NOTE_ERROR_LABEL);
+  });
+
   it("truncates print/Excel note bodies at 300 characters with an ellipsis", () => {
     const body = longNote(500, "WRAP");
     expect(body.length).toBe(500);

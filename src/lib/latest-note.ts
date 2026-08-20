@@ -8,7 +8,19 @@
 
 export const LATEST_NOTE_KEY = "latestNote";
 export const LATEST_NOTE_LABEL = "Latest note";
+export const LATEST_NOTE_EMPTY_LABEL = "Add the first note";
+export const LATEST_NOTE_ERROR_LABEL = "Notes unavailable";
 export const PRINT_NOTE_MAX_CHARS = 300;
+
+/** Board Notes column copy. SSR waits on the join; this labels empty vs load failure. */
+export function latestNoteBoardDisplay(
+  text: string | null | undefined,
+  loadFailed = false
+): string {
+  if (loadFailed) return LATEST_NOTE_ERROR_LABEL;
+  const value = text?.trim() ?? "";
+  return value || LATEST_NOTE_EMPTY_LABEL;
+}
 
 export type LatestNoteSource = {
   authorName: string | null;

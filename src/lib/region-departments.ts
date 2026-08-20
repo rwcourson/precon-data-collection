@@ -9,7 +9,7 @@ export const REGION_DEPARTMENTS: Record<string, readonly string[]> = {
     "Central Heavy Civil",
     "Central Nashville",
   ],
-  Florida: ["Florida"],
+  Florida: ["Florida", "Florida – Miami", "Florida – Jacksonville"],
   Georgia: [
     "Georgia – Commercial",
     "Georgia – Healthcare",

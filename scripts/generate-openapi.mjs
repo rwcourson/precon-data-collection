@@ -125,7 +125,7 @@ for (const file of walk(mobileRoot).sort()) {
 const doc = {
   openapi: "3.1.0",
   info: {
-    title: "B&G Precon Mobile API",
+    title: "B&G Precon — Pursuits & Data Mobile API",
     version: "1.0.0",
     description: "Generated contract for Expo and Swift clients.",
   },

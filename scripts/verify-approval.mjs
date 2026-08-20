@@ -98,19 +98,25 @@ try {
     .waitFor({ state: "visible" });
   report("complete approval locks the round");
 
+  await page.goto(`${baseUrl}${complete.href}`);
+  await page.waitForLoadState("networkidle");
   const estimateValue = page
     .locator("div.space-y-1", { has: page.getByText("Estimate Value $") })
     .locator("input")
     .first();
+  await estimateValue.waitFor({ state: "visible" });
   const current = await estimateValue.inputValue();
-  await estimateValue.fill(String(Number(current || "1000000") + 5000));
+  const numeric = Number((current || "1000000").replace(/,/g, ""));
+  await estimateValue.fill(
+    String((Number.isFinite(numeric) ? numeric : 1_000_000) + 5000)
+  );
   await page.getByRole("button", { name: /Save Correction/ }).click();
   await page
     .locator("[data-sonner-toast]")
     .last()
     .waitFor({ state: "visible" });
   await page.getByRole("tab", { name: /History/ }).click();
-  await page.getByText("Post-lock audit log").waitFor({ state: "visible" });
+  await page.getByText("Locked history").waitFor({ state: "visible" });
   report("post-lock correction creates visible audit history");
 
   await pickPersona("Marcus Webb");

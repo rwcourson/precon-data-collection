@@ -3,6 +3,14 @@ import { eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db";
 import { salesforceJobs } from "@/db/schema";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { wrapConnectLookups } from "./fallback";
+import {
+  type ConnectJob,
+  normaliseConnectJob,
+  normaliseConnectJobs,
+} from "./normalize";
+
+export type { ConnectJob };
 
 /**
  * B&G Connect / Salesforce lookup (BRD Section 5). The Databricks probe found no
@@ -11,18 +19,6 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
  * pointing `CONNECT_MODE=rest` at a real endpoint swaps the source without
  * touching the pursuit actions or the match-and-merge UI.
  */
-
-export type ConnectJob = {
-  sfId: string;
-  jobNumber: string;
-  jobName: string;
-  region: string;
-  marketSector: string | null;
-  city: string | null;
-  state: string | null;
-  /** Opportunity creation date, where the source exposes one. */
-  createdDate?: string | null;
-};
 
 export type ConnectMode = "disabled" | "mock" | "rest";
 
@@ -76,66 +72,42 @@ function restProvider(baseUrl: string, token: string): ConnectProvider {
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
-      // Pursuit lookups are interactive; a stale answer is worse than a slow one.
       cache: "no-store",
     });
+    if (res.status === 404) return null;
     if (!res.ok) throw new Error(`B&G Connect responded ${res.status}`);
     return (await res.json()) as unknown;
-  };
-
-  const normalise = (raw: unknown): ConnectJob | null => {
-    const r = raw as Record<string, unknown>;
-    const sfId = str(r.sfId ?? r.id ?? r.Id);
-    const jobNumber = str(r.jobNumber ?? r.JobNumber ?? r.job_number);
-    const jobName = str(r.jobName ?? r.Name ?? r.job_name);
-    if (!sfId || !jobNumber || !jobName) return null;
-    return {
-      sfId,
-      jobNumber,
-      jobName,
-      region: str(r.region ?? r.Region) ?? "",
-      marketSector: str(r.marketSector ?? r.MarketSector),
-      city: str(r.city ?? r.City),
-      state: str(r.state ?? r.State),
-      createdDate: str(r.createdDate ?? r.CreatedDate),
-    };
-  };
-
-  const many = (payload: unknown): ConnectJob[] => {
-    const rows = Array.isArray(payload)
-      ? payload
-      : ((payload as { records?: unknown[] })?.records ?? []);
-    return rows.map(normalise).filter((j): j is ConnectJob => j != null);
   };
 
   return {
     mode: "rest",
     async search(query) {
-      return many(await call("jobs", { q: query.trim(), limit: "8" }));
+      const payload = await call("jobs", { q: query.trim(), limit: "8" });
+      return payload == null ? [] : normaliseConnectJobs(payload);
     },
     async getById(sfId) {
-      return normalise(await call(`jobs/${encodeURIComponent(sfId)}`));
+      const payload = await call(`jobs/${encodeURIComponent(sfId)}`);
+      return payload == null ? null : normaliseConnectJob(payload);
     },
     async list() {
-      return many(await call("jobs", { limit: "500" }));
+      const payload = await call("jobs", { limit: "500" });
+      return payload == null ? [] : normaliseConnectJobs(payload);
     },
   };
 }
-
-const str = (v: unknown): string | null => {
-  if (typeof v === "string" && v.trim()) return v.trim();
-  if (typeof v === "number") return String(v);
-  return null;
-};
 
 export function connectProvider(): ConnectProvider {
   const mode = connectMode();
   if (mode === "mock") return mockProvider;
   if (mode === "rest") {
-    return restProvider(
+    const rest = restProvider(
       process.env.CONNECT_API_URL!,
       process.env.CONNECT_API_TOKEN!
     );
+    return {
+      mode: "rest",
+      ...wrapConnectLookups(rest, mockProvider),
+    };
   }
   throw new Error("B&G Connect is disabled for this deployment.");
 }

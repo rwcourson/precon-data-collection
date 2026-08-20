@@ -21,6 +21,13 @@ import type { RoundStatus } from "@/db/schema";
 import { principalCanIntegrate } from "@/lib/authorization/decisions";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import {
+  awardableCoverage,
+  shadowAwardableHitRate,
+  shadowAwardableHitRateByLead,
+  shadowAwardableHitRateBySector,
+  toAwardableReportingRows,
+} from "@/lib/awardable-reporting";
 import { parseHierarchyFromSearchParams } from "@/lib/bid-schedule-filter";
 import { fmtDollars } from "@/lib/format";
 import { STATUS_ORDER } from "@/lib/labels";
@@ -28,11 +35,14 @@ import { buildOverviewQueues } from "@/lib/overview-queues";
 import { getMultiValuesForRounds } from "@/lib/queries";
 import { missingRequiredFields } from "@/lib/validation";
 import { getWorkspace } from "@/lib/workspace-server";
+import { loadNotApplicableKeysByRound } from "@/services/field-exceptions-service";
+import { roundtableFeaturesFor } from "@/services/rollout-service";
 
 export default async function OverviewPage() {
   const workspace = await getWorkspace();
   const principal = await getWebPrincipal();
   const user = principal.user;
+  const features = await roundtableFeaturesFor(principal);
   const regionRows = await listRoundsWithJobsForPrincipal(principal);
 
   const byStatus = new Map<RoundStatus, number>();
@@ -58,6 +68,25 @@ export default async function OverviewPage() {
   const decided = locked2026.filter(
     (r) => r.round.outcome !== "pending"
   ).length;
+  const awardableTotal = locked2026.reduce(
+    (sum, item) => sum + (item.round.awardableAmount ?? 0),
+    0
+  );
+  const signedTotal = locked2026.reduce(
+    (sum, item) => sum + (item.round.contractAmountSigned ?? 0),
+    0
+  );
+  const awardableRows = toAwardableReportingRows(
+    locked2026.map(({ round, estimateLeadName }) => ({
+      ...round,
+      estimateLeadName,
+    })),
+    await loadNotApplicableKeysByRound(locked2026.map(({ round }) => round.id))
+  );
+  const awardableCover = awardableCoverage(awardableRows);
+  const awardableHit = shadowAwardableHitRate(awardableRows);
+  const awardableHitBySector = shadowAwardableHitRateBySector(awardableRows);
+  const awardableHitByLead = shadowAwardableHitRateByLead(awardableRows);
 
   const scopeLabel = workspace.region ?? "All Regions";
 
@@ -83,20 +112,32 @@ export default async function OverviewPage() {
       bidDueDate: round.bidDueDate,
       isLinked: job.isLinked,
       missingRequiredCount: ["submitted", "post_bid"].includes(round.status)
-        ? missingRequiredFields(round, multiMap.get(round.id) ?? {}, {
-            jobNumber: job.jobNumber,
-            jobName: job.jobName,
-            estimateLeadName,
-          }).length
+        ? missingRequiredFields(
+            round,
+            multiMap.get(round.id) ?? {},
+            {
+              jobNumber: job.jobNumber,
+              jobName: job.jobName,
+              estimateLeadName,
+            },
+            {},
+            { fieldPolicy: features.fieldPolicy }
+          ).length
         : 0,
       preconDepartment: round.preconDepartment,
       teamAssignedAt: round.teamAssignedAt,
+      estimateLeadId: round.estimateLeadId,
     })),
     new Date(),
-    hierarchy
+    hierarchy,
+    {
+      uniqueJobs: features.scheduleProjection,
+      owedLeadId:
+        principal.user.role === "estimate_lead" ? principal.user.id : undefined,
+    }
   );
 
-  const kpis = [
+  const kpis: { label: string; value: string; sub: string }[] = [
     {
       label: `2026 Pursuit Volume — ${scopeLabel}`,
       value: fmtDollars(ytdVolume, true),
@@ -115,9 +156,63 @@ export default async function OverviewPage() {
     {
       label: "2026 Win Rate (decided)",
       value: decided > 0 ? `${Math.round((wins / decided) * 100)}%` : "—",
-      sub: `${wins} of ${decided} decided rounds`,
+      sub: `${wins} of ${decided} decided rounds · legacy count definition`,
     },
   ];
+  if (features.awardableReporting) {
+    kpis.push(
+      {
+        label: "Awardable conversion (shadow)",
+        value:
+          awardableTotal > 0
+            ? `${Math.round((signedTotal / awardableTotal) * 100)}%`
+            : "—",
+        sub: `${fmtDollars(signedTotal, true)} signed of ${fmtDollars(awardableTotal, true)} awardable`,
+      },
+      {
+        label: "Awardable data coverage",
+        value:
+          awardableCover.coverage != null
+            ? `${Math.round(awardableCover.coverage * 100)}%`
+            : "—",
+        sub: `${awardableCover.withAwardable} of ${awardableCover.locked} locked · ${awardableCover.grain}`,
+      },
+      {
+        label: "Awardable hit rate (shadow)",
+        value:
+          awardableHit.rate != null
+            ? `${Math.round(awardableHit.rate * 100)}%`
+            : "—",
+        sub: `${awardableHit.wins} of ${awardableHit.attempts} · ${awardableHit.grain}`,
+      },
+      {
+        label: "Awardable hit by sector (shadow)",
+        value:
+          awardableHitBySector[0]?.rate != null
+            ? `${Math.round(awardableHitBySector[0].rate * 100)}%`
+            : "—",
+        sub:
+          awardableHitBySector.length === 0
+            ? awardableHit.grain
+            : awardableHitBySector
+                .map((row) => `${row.sector} ${row.wins}/${row.attempts}`)
+                .join(" · "),
+      },
+      {
+        label: "Awardable hit by lead (shadow)",
+        value:
+          awardableHitByLead[0]?.rate != null
+            ? `${Math.round(awardableHitByLead[0].rate * 100)}%`
+            : "—",
+        sub:
+          awardableHitByLead.length === 0
+            ? awardableHit.grain
+            : awardableHitByLead
+                .map((row) => `${row.lead} ${row.wins}/${row.attempts}`)
+                .join(" · "),
+      }
+    );
+  }
 
   const modules = [
     {
@@ -145,6 +240,13 @@ export default async function OverviewPage() {
       desc: "Managed reference lists, two-tier column governance, and the full audit trail.",
     },
   ];
+  const visibleModules = modules.filter(({ href }) => {
+    if (["pcm", "estimate_lead"].includes(user.role)) {
+      return href === "/bid-schedule" || href === "/post-bid";
+    }
+    if (user.role === "leadership") return href !== "/admin";
+    return true;
+  });
 
   return (
     <div className="space-y-5">
@@ -173,40 +275,54 @@ export default async function OverviewPage() {
                 canSync={principalCanIntegrate(principal)}
               />
             ) : (
-              <Link key={q.id} href={q.href} className="group">
-                <Card className="h-full transition-colors group-hover:bg-info-soft/60">
-                  <CardHeader className="gap-1.5 pb-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <CardDescription className="text-[13px] font-medium text-foreground">
-                          {q.title}
-                        </CardDescription>
-                        <CardTitle className="font-mono text-xl font-medium tabular-nums">
-                          {q.count}
-                        </CardTitle>
+              <Card key={q.id} className="h-full">
+                <Link href={q.href} className="group block">
+                  <div className="transition-colors group-hover:bg-info-soft/60">
+                    <CardHeader className="gap-1.5 pb-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <CardDescription className="text-[13px] font-medium text-foreground">
+                            {q.title}
+                          </CardDescription>
+                          <CardTitle className="font-mono text-xl font-medium tabular-nums">
+                            {q.count}
+                          </CardTitle>
+                        </div>
+                        <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                       </div>
-                      <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
-                    </div>
-                    <CardDescription>{q.description}</CardDescription>
-                  </CardHeader>
-                  {q.preview.length > 0 && (
-                    <CardContent className="pt-0">
-                      <ul className="space-y-1">
-                        {q.preview.map((item) => (
-                          <li
-                            key={item.roundId}
-                            className="truncate text-[13px] text-muted-foreground"
+                      <CardDescription>{q.description}</CardDescription>
+                    </CardHeader>
+                  </div>
+                </Link>
+                {q.preview.length > 0 && (
+                  <CardContent className="pt-0">
+                    <ul className="space-y-1">
+                      {q.preview.map((item) => (
+                        <li
+                          key={item.roundId}
+                          className="truncate rounded px-1 py-0.5 text-[13px] text-muted-foreground hover:bg-info-soft hover:text-foreground"
+                        >
+                          <Link
+                            href={`/jobs/${item.jobId}`}
+                            className="font-mono hover:underline"
                           >
-                            <span className="font-mono">{item.jobNumber}</span>
-                            {" · "}
+                            {item.jobNumber.startsWith("TBD-")
+                              ? "Pending job number"
+                              : item.jobNumber}
+                          </Link>
+                          {" · "}
+                          <Link
+                            href={`/rounds/${item.roundId}`}
+                            className="hover:underline"
+                          >
                             {item.jobName}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  )}
-                </Card>
-              </Link>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                )}
+              </Card>
             )
           )}
         </div>
@@ -263,7 +379,7 @@ export default async function OverviewPage() {
           <Separator className="flex-1" />
         </div>
         <div className="grid gap-2.5 sm:grid-cols-2">
-          {modules.map(({ href, icon: Icon, title, desc }) => (
+          {visibleModules.map(({ href, icon: Icon, title, desc }) => (
             <Link key={href} href={href} className="group">
               <Card className="h-full transition-colors group-hover:bg-muted/40">
                 <CardHeader className="gap-1.5">

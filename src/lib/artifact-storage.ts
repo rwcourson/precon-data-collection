@@ -77,25 +77,32 @@ export function getArtifactStorage(): ArtifactStorage {
       );
     }
     const token = config.storage.token;
+    type BlobModule = {
+      put: (
+        pathname: string,
+        body: Buffer,
+        opts: Record<string, unknown>
+      ) => Promise<{ pathname?: string; url?: string }>;
+      get: (
+        urlOrPathname: string,
+        opts: Record<string, unknown>
+      ) => Promise<{ statusCode: number; stream: ReadableStream | null }>;
+    };
+    const loadBlobModule = (): BlobModule => {
+      // Dynamic package name avoids build-time resolution of optional @vercel/blob.
+      const packageName = ["@vercel", "blob"].join("/");
+      try {
+        return require(packageName);
+      } catch {
+        throw new Error(
+          "vercel-blob storage requires @vercel/blob and a valid private blob token; refusing local fallback."
+        );
+      }
+    };
     return {
       mode: () => "vercel-blob",
       async put(key, bytes, contentType) {
-        // Dynamic package name avoids build-time resolution of optional @vercel/blob.
-        const packageName = ["@vercel", "blob"].join("/");
-        let mod: {
-          put: (
-            pathname: string,
-            body: Buffer,
-            opts: Record<string, unknown>
-          ) => Promise<{ pathname?: string; url?: string }>;
-        };
-        try {
-          mod = require(packageName);
-        } catch {
-          throw new Error(
-            "vercel-blob storage requires @vercel/blob and a valid private blob token; refusing local fallback."
-          );
-        }
+        const mod = loadBlobModule();
         const result = await mod.put(key, Buffer.from(bytes), {
           access: "private",
           contentType,
@@ -109,8 +116,27 @@ export function getArtifactStorage(): ArtifactStorage {
           contentType,
         };
       },
-      async get() {
-        throw new Error("Private blob get requires signed access credentials.");
+      async get(key) {
+        const mod = loadBlobModule();
+        let result: Awaited<ReturnType<BlobModule["get"]>>;
+        try {
+          result = await mod.get(key, { access: "private", token });
+        } catch (error) {
+          // Missing blobs read as null; every other failure surfaces.
+          if ((error as { name?: string })?.name === "BlobNotFoundError") {
+            return null;
+          }
+          throw error;
+        }
+        if (result.statusCode !== 200 || !result.stream) return null;
+        const chunks: Uint8Array[] = [];
+        const reader = result.stream.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) chunks.push(value);
+        }
+        return Buffer.concat(chunks);
       },
     };
   }

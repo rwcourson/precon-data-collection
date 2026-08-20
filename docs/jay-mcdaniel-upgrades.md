@@ -1,8 +1,15 @@
-# Jay McDaniel meeting upgrades
+# Jay McDaniel meeting upgrades — shipped baseline
 
-Shipped after the 2026-08-14 leadership conversation. These sit on top of V1. They do **not** replace Smartsheet as the 2026 system of record.
+Shipped after the 2026-08-14 leadership conversation. These sit on top of V1
+and describe current behavior. Smartsheet remains the system of record today.
 
-This page is the operator and engineer contract for everything that meeting asked to add now.
+This page is the operator and engineer contract for what the Aug. 14 meeting
+shipped. It is not the authority for later scope. The
+[Aug. 19 RPD Roundtable product contract](rpd-roundtable-product-contract.md)
+supersedes stale exclusions and marks the same-data Gantt, lock revisions, and
+locked-only Databricks publication as **implemented behind rollout flags**, not
+as V1 exclusions. Lucy, Production dump cutover, live MERGE, and Power BI
+parity remain unsigned owner gates.
 
 ## Guardrails (do not regress)
 
@@ -87,7 +94,12 @@ Chat-shaped history on the pricing effort: author, timestamp, edit marker, soft-
 
 Region custom columns (example: Central — Heavy Civil) render in their own tab and **never** block lock. Queue chips: ready-to-lock vs awaiting required fields, with missing labels.
 
-The lock-vs-Databricks flip is `finalizeRound()` only — [ADR 002](adr/002-post-bid-finalize-seam.md).
+Today, `finalizeRound()` is the lock-passthrough seam described by
+[ADR-002](adr/002-post-bid-finalize-seam.md). The approved future shape is
+versioned local lock revisions with an asynchronous outbox
+([ADR-006](adr/006-versioned-lock-revisions-and-publication-outbox.md)) and
+locked-only Databricks publication
+([ADR-007](adr/007-locked-only-databricks-publication.md)).
 
 ## Copilot
 
@@ -153,6 +165,8 @@ Typecheck **after** `next build` on a clean tree (Next 16 generates `LayoutProps
 
 ## Related
 
+- [rpd-roundtable-product-contract.md](rpd-roundtable-product-contract.md) —
+  canonical post–Aug. 19 requirements and Phases 0–16
 - [generated-documents.md](generated-documents.md) — branded PPTX / future Word and PDF
 - [github-and-vercel.md](github-and-vercel.md) — how this ships
 - [security/role-capability-matrix.md](security/role-capability-matrix.md) — who can do what

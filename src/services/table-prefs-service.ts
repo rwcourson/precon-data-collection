@@ -13,6 +13,7 @@ import {
 export type TablePrefsPatch = {
   columns?: string[];
   density?: "summary" | "detail";
+  viewMode?: "table" | "cards" | "gantt";
   columnWidths?: Record<string, number>;
   defaultViewId?: number | null;
 };
@@ -22,9 +23,10 @@ function mergePrefs(
   patch: TablePrefsPatch
 ): UserTablePrefsConfig {
   return {
-    version: 1,
+    version: 2,
     columns: patch.columns ?? current.columns,
     density: patch.density ?? current.density,
+    viewMode: patch.viewMode ?? current.viewMode,
     columnWidths: patch.columnWidths ?? current.columnWidths,
     defaultViewId:
       patch.defaultViewId !== undefined

@@ -17,6 +17,7 @@ import {
 import { db } from "./index";
 import type { RoundStatus } from "./schema";
 import {
+  approvalRequests,
   auditLog,
   customColumns,
   customColumnValues,
@@ -26,20 +27,33 @@ import {
   distributionRuns,
   emailOutbox,
   estimateRounds,
+  groupEditPolicies,
+  integrationImportBatches,
+  jobGroupMemberships,
   jobRegionVisibility,
+  jobRelationships,
   jobs,
   jobUserVisibility,
   notifications,
+  organizationGroups,
+  productEvents,
+  publicationOutbox,
   referenceLists,
   referenceListValues,
   reportTemplates,
+  roundFieldExceptions,
+  roundLockRevisions,
   roundMultiValues,
   roundNoteAttachments,
   roundNoteMentions,
   roundNotes,
+  roundStaffAssignments,
   salesforceJobs,
   savedReports,
+  sourceProvenance,
   statusTransitions,
+  userGroupMemberships,
+  userRoundWatermarks,
   users,
 } from "./schema";
 
@@ -215,6 +229,19 @@ const PHASE_SEQUENCES: string[][] = [
 export async function seedDemoData() {
   assertDemoSeedAllowed();
   console.log("Clearing existing data…");
+  await db.delete(publicationOutbox);
+  await db.delete(roundLockRevisions);
+  await db.delete(roundFieldExceptions);
+  await db.delete(userRoundWatermarks);
+  await db.delete(roundStaffAssignments);
+  await db.delete(approvalRequests);
+  await db.delete(sourceProvenance);
+  await db.delete(integrationImportBatches);
+  await db.delete(productEvents);
+  await db.delete(groupEditPolicies);
+  await db.delete(userGroupMemberships);
+  await db.delete(jobGroupMemberships);
+  await db.delete(jobRelationships);
   await db.delete(customColumnValues);
   await db.delete(customColumns);
   await db.delete(roundMultiValues);
@@ -238,6 +265,7 @@ export async function seedDemoData() {
   await db.delete(salesforceJobs);
   await db.delete(referenceListValues);
   await db.delete(referenceLists);
+  await db.delete(organizationGroups);
   await db.delete(users);
 
   console.log("Seeding reference lists…");
@@ -249,6 +277,19 @@ export async function seedDemoData() {
         list.values.map((value, i) => ({ listKey: key, value, sortOrder: i }))
       );
   }
+  await db.insert(organizationGroups).values(
+    Object.entries(REGION_DEPARTMENTS).flatMap(([region, departments]) =>
+      departments.map((department) => ({
+        key: `department:${department
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")}`,
+        name: department,
+        kind: "precon_department",
+        region,
+      }))
+    )
+  );
 
   console.log("Seeding users…");
   const userRows = await db
@@ -461,6 +502,7 @@ export async function seedDemoData() {
         drawingsDueDate: `${bidYear}-${String(Math.max(1, month - 1)).padStart(2, "0")}-15`,
         bidReviewDate: `${bidYear}-${String(month).padStart(2, "0")}-01`,
         projectStartDate: startDate,
+        projectStartMonth: startDate.slice(0, 7),
         owner: pick([
           "HCA Healthcare",
           "Auburn University",
@@ -471,7 +513,8 @@ export async function seedDemoData() {
         ]),
         city,
         state,
-        estimateLeadId: leadName === estimateLead.name ? estimateLead.id : null,
+        estimateLeadId:
+          isComplete || leadName === estimateLead.name ? estimateLead.id : null,
         mlt,
         marketSector: sector,
         contractType: pick(REFERENCE_LISTS.contractType.values),
@@ -582,10 +625,10 @@ export async function seedDemoData() {
       if (region === "Central") centralRoundIds.push(inserted.id);
 
       // Multi-value fields
-      if (full && !partial && spPct > 0) {
+      if (full && !partial) {
         const types = pickN(
           REFERENCE_LISTS.selfPerformWorkType.values,
-          1 + Math.floor(rand() * 3)
+          spPct > 0 ? 1 + Math.floor(rand() * 3) : 1
         );
         await db.insert(roundMultiValues).values(
           types.map((v) => ({
@@ -901,6 +944,29 @@ export async function seedDemoData() {
         }))
       );
     }
+  }
+
+  const [seededJobs, seededGroups] = await Promise.all([
+    db.select().from(jobs),
+    db.select().from(organizationGroups),
+  ]);
+  const groupByName = new Map(
+    seededGroups.map((group) => [group.name, group.id])
+  );
+  const membershipValues = seededJobs.flatMap((job) => {
+    const groupId = groupByName.get(job.preconDepartment);
+    return groupId
+      ? [
+          {
+            jobId: job.id,
+            groupId,
+            participationRole: "lead",
+          },
+        ]
+      : [];
+  });
+  if (membershipValues.length) {
+    await db.insert(jobGroupMemberships).values(membershipValues);
   }
 
   console.log(`Done. Seeded ${totalRounds} estimate rounds across 42 jobs.`);

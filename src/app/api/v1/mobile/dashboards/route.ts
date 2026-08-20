@@ -7,7 +7,7 @@ import {
   listDashboardsForPrincipal,
   listRoundsWithJobsForPrincipal,
 } from "@/lib/authorization/loaders";
-import { METRIC_DEFS } from "@/lib/metrics";
+import { calcMetric, METRIC_DEFS } from "@/lib/metrics";
 import {
   groupVolumeChartSubtitle,
   groupVolumeChartTitle,
@@ -17,6 +17,7 @@ import {
   statusSeriesFromRounds,
 } from "@/lib/mobile-dashboard-scope";
 import { jsonError, jsonOk, mapError, withMobileAuth } from "@/lib/mobile-http";
+import { loadNotApplicableKeysByRound } from "@/services/field-exceptions-service";
 
 export async function GET(req: Request) {
   return withMobileAuth(
@@ -46,6 +47,9 @@ export async function GET(req: Request) {
       }));
 
       const scoped = scopeRoundsForLevel(rounds, level, focusRegion);
+      const naMap = await loadNotApplicableKeysByRound(
+        scoped.map((r) => r.round.id)
+      );
 
       const locked = scoped.filter((r) => r.status === "locked");
       const won = locked.filter((r) => r.round.outcome === "successful");
@@ -89,7 +93,7 @@ export async function GET(req: Request) {
         .slice(0, 6)
         .map((m) => {
           const values = scoped
-            .map((r) => m.calc(r.round))
+            .map((r) => calcMetric(m, r.round, naMap.get(r.round.id)))
             .filter((v): v is number => v != null);
           const avg =
             values.length === 0

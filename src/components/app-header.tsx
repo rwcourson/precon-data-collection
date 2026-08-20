@@ -5,9 +5,12 @@ import { db } from "@/db";
 import type { User } from "@/db/schema";
 import { notifications } from "@/db/schema";
 import { authMode } from "@/lib/auth";
+import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { getAllUsers, getCurrentUser } from "@/lib/current-user";
 import { fmtDateTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/labels";
+import { PRODUCT_DESCRIPTION } from "@/lib/product";
+import { roundtableFeatureEnabled } from "@/services/rollout-service";
 import { GlobalSearch } from "./global-search";
 import { MobileNav } from "./mobile-nav";
 import { NotificationsBell } from "./notifications-bell";
@@ -16,8 +19,11 @@ import { ThemeToggle } from "./theme-toggle";
 export async function AppHeader() {
   let user: User | null = null;
   let users: User[] = [];
+  let roleChrome = true;
   try {
     [user, users] = await Promise.all([getCurrentUser(), getAllUsers()]);
+    const principal = await getWebPrincipal();
+    roleChrome = await roundtableFeatureEnabled(principal, "roleChrome");
   } catch {
     user = null;
     users = [];
@@ -38,10 +44,10 @@ export async function AppHeader() {
       <div className="flex h-14 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 md:px-10 xl:px-14">
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
           <Suspense fallback={null}>
-            <MobileNav />
+            <MobileNav role={user?.role ?? "pcm"} roleChrome={roleChrome} />
           </Suspense>
           <p className="hidden text-sm text-muted-foreground md:block">
-            Preconstruction Data Collection
+            {PRODUCT_DESCRIPTION}
           </p>
         </div>
         <div className="flex min-w-0 items-center justify-end gap-0.5 sm:gap-2">

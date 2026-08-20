@@ -91,6 +91,11 @@ export type ResourceDescriptor = {
   round?: { status: RoundStatus; region: string };
   fieldKey?: string;
   fieldPolicy?: FieldWriteOverride | null;
+  /**
+   * When true, locked rounds cannot be edited in place (Phase 10).
+   * Omitted/false preserves the V1 RPD locked-correction path.
+   */
+  lockImmutable?: boolean;
   adminSection?: string;
 };
 

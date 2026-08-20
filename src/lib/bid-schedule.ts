@@ -5,6 +5,7 @@ import {
   parseHierarchyFromSearchParams,
 } from "@/lib/bid-schedule-filter";
 import { STATUS_LABELS } from "@/lib/labels";
+import { calendarDate } from "@/lib/overview-queues";
 import { groupRowsByField, type LabeledGroup } from "@/lib/sheets";
 
 const EXPORT_SECTION_STATUSES: Record<
@@ -12,6 +13,7 @@ const EXPORT_SECTION_STATUSES: Record<
   Array<keyof typeof STATUS_LABELS>
 > = {
   all: ["active", "upcoming", "outstanding"],
+  pipeline: ["active", "upcoming"],
   active: ["active"],
   upcoming: ["upcoming"],
   outstanding: ["outstanding"],
@@ -29,6 +31,9 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
     year?: string | null;
     q?: string | null;
     sortBy?: { field: string; dir: "asc" | "desc" }[];
+    queue?: string | null;
+    childJobIds?: Iterable<number> | null;
+    today?: string | null;
   }
 ): T[] {
   const keys =
@@ -69,6 +74,32 @@ export function applyBidScheduleExportScope<T extends Record<string, unknown>>(
           .includes(q)
     );
   }
+  const today = opts.today ?? calendarDate(new Date());
+  if (opts.queue === "past-due") {
+    filtered = filtered.filter(
+      (r) =>
+        String(r.status) === STATUS_LABELS.active &&
+        r.bidDueDate != null &&
+        String(r.bidDueDate) < today
+    );
+  } else if (opts.queue === "unlinked") {
+    filtered = filtered.filter(
+      (r) =>
+        Number(r.isLinked ?? 1) === 0 ||
+        String(r.jobNumber ?? "").startsWith("TBD-")
+    );
+  } else if (opts.queue === "needs-staffing") {
+    filtered = filtered.filter(
+      (r) =>
+        String(r.status) === STATUS_LABELS.upcoming && r.teamAssignedAt == null
+    );
+  }
+  if (opts.childJobIds) {
+    const children = new Set([...opts.childJobIds].map((id) => Number(id)));
+    filtered = filtered.filter(
+      (r) => !children.has(Number(r.jobId ?? r.id ?? -1))
+    );
+  }
   for (const s of [...(opts.sortBy ?? [])].reverse()) {
     filtered = [...filtered].sort((a, b) => {
       const av = a[s.field];
@@ -91,14 +122,24 @@ export const BID_SCHEDULE_GROUP_OPTIONS: {
   { value: "preconDepartment", label: "Division" },
   { value: "marketSector", label: "Market sector" },
   { value: "estimatePhase", label: "Estimate phase" },
-  { value: "bidDueDate", label: "Bid due date" },
+  { value: "estimateLead", label: "Lead estimator" },
+  { value: "bidDueMonth", label: "Bid due month" },
   { value: "drawingsDueDate", label: "Drawings due" },
   { value: "bidReviewDate", label: "Bid review" },
 ];
 
-export const BID_SCHEDULE_SORT_OPTIONS = BID_SCHEDULE_GROUP_OPTIONS.filter(
-  (o) => o.value !== "none"
-);
+export const BID_SCHEDULE_SORT_OPTIONS: {
+  value: BidScheduleSortField;
+  label: string;
+}[] = [
+  { value: "bidDueDate", label: "Bid due date" },
+  { value: "drawingsDueDate", label: "Drawings due" },
+  { value: "bidReviewDate", label: "Bid review" },
+  { value: "estimateLead", label: "Lead estimator" },
+  { value: "preconDepartment", label: "Division" },
+  { value: "marketSector", label: "Market sector" },
+  { value: "estimatePhase", label: "Estimate phase" },
+];
 
 export type BidScheduleSortField = Exclude<BidScheduleGroupBy, "none">;
 
@@ -174,6 +215,19 @@ export const BID_DUE_URGENCY_LABEL: Record<
   fortnight: "Due ≤14d",
 };
 
+export function dateAgingNudge(
+  field: "bidDueDate" | "drawingsDueDate",
+  urgency: BidDueUrgency
+): string | null {
+  if (!urgency) return null;
+  const label = field === "bidDueDate" ? "Bid due" : "Drawings due";
+  if (urgency === "overdue")
+    return `${label} has passed. Confirm the date is still right — status does not move by itself.`;
+  if (urgency === "week")
+    return `${label} is within 7 days. Confirm the team still has this date.`;
+  return `${label} is within 14 days. Confirm before it becomes overdue.`;
+}
+
 export type BidScheduleViewQuery = {
   section?: string;
   group?: string;
@@ -185,6 +239,7 @@ export type BidScheduleViewQuery = {
   queue?: string;
   columns?: string[];
   density?: "summary" | "detail";
+  viewMode?: "table" | "cards" | "gantt";
 };
 
 function bidScheduleSearchParams(
@@ -203,7 +258,10 @@ function bidScheduleSearchParams(
     p.set("departments", config.departments.join(","));
   if (config.density && config.density !== "summary")
     p.set("density", config.density);
+  if (config.viewMode && config.viewMode !== "table")
+    p.set("viewMode", config.viewMode);
   if (config.queue) p.set("queue", config.queue);
+  if (config.columns?.length) p.set("columns", config.columns.join(","));
   return p;
 }
 
@@ -232,6 +290,7 @@ export type BidScheduleGroupable = {
   bidDueDate: string | null;
   drawingsDueDate?: string | null;
   bidReviewDate?: string | null;
+  estimateLeadName?: string | null;
   jobName: string;
   jobNumber: string;
   roundNumber: number;
@@ -248,8 +307,12 @@ function groupValue(
       return row.marketSector;
     case "estimatePhase":
       return row.estimatePhase;
+    case "estimateLead":
+      return row.estimateLeadName ?? "Unassigned";
     case "bidDueDate":
       return row.bidDueDate;
+    case "bidDueMonth":
+      return row.bidDueDate?.slice(0, 7) ?? null;
     case "drawingsDueDate":
       return row.drawingsDueDate ?? null;
     case "bidReviewDate":

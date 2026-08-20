@@ -9,6 +9,7 @@ import {
   users,
 } from "@/db/schema";
 import { createPrincipal } from "@/lib/authorization/principal";
+import { getMultiValuesForRounds } from "@/lib/queries";
 import { regionCustomTabForRound } from "@/lib/region-custom-columns";
 import { evaluateLockGate, missingRequiredFields } from "@/lib/validation";
 import { finalizeRound } from "@/services/finalize-round";
@@ -143,6 +144,39 @@ describe("post-bid region tab and finalize seam", () => {
         /demo|River Mile|Spoil Disposal|Clean Room/i
       );
     }
+  });
+
+  it("seeded post-bid queue includes both incomplete and complete rounds", async () => {
+    const rows = await db
+      .select({
+        round: estimateRounds,
+        job: jobs,
+        estimateLeadName: users.name,
+      })
+      .from(estimateRounds)
+      .innerJoin(jobs, eq(estimateRounds.jobId, jobs.id))
+      .leftJoin(users, eq(estimateRounds.estimateLeadId, users.id))
+      .where(eq(estimateRounds.status, "post_bid"));
+    const multi = await getMultiValuesForRounds(
+      rows.map((row) => row.round.id)
+    );
+    let complete = 0;
+    let incomplete = 0;
+    for (const row of rows) {
+      const missing = missingRequiredFields(
+        row.round,
+        multi.get(row.round.id) ?? {},
+        {
+          jobNumber: row.job.jobNumber,
+          jobName: row.job.jobName,
+          estimateLeadName: row.estimateLeadName,
+        }
+      );
+      if (missing.length === 0) complete += 1;
+      else incomplete += 1;
+    }
+    expect(incomplete).toBeGreaterThan(0);
+    expect(complete).toBeGreaterThan(0);
   });
 
   it("finalizeRound default is lock-passthrough and still enforces the required-field gate", async () => {

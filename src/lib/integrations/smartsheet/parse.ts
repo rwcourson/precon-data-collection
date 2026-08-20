@@ -438,3 +438,47 @@ export function mergeSmartsheetDrafts(
     source: `${a.source}|${b.source}`,
   };
 }
+
+const HISTORY_DUMP_INCLUDE =
+  /Bid_Schedule|Post_Bid_Data_Collection|Estimate_Metrics_Capture/i;
+const HISTORY_DUMP_EXCLUDE =
+  /Self_Perform_Estimate_Metrics|Checklist|Backup|Roster|Consolidated|Dashboard|Scoreboard|Cost_Tracking/i;
+
+/** Same file filter as `seed-from-smartsheet` so dump counts match import. */
+export function isSmartsheetHistoryDumpFile(file: string): boolean {
+  return HISTORY_DUMP_INCLUDE.test(file) && !HISTORY_DUMP_EXCLUDE.test(file);
+}
+
+export type SmartsheetSheetJson = {
+  columns?: { id: number; title: string }[];
+  rows?: {
+    cells?: { columnId: number; value?: unknown; displayValue?: string }[];
+  }[];
+};
+
+/**
+ * Parse bid-schedule / post-bid / metrics sheets into merged unique drafts.
+ * `rawDataRows` is the pre-merge data-row count (duplicate keys collapsed).
+ */
+export function parseSmartsheetDumpSheets(
+  files: { fileName: string; sheet: SmartsheetSheetJson }[]
+): { drafts: SmartsheetRoundDraft[]; rawDataRows: number } {
+  const byKey = new Map<string, SmartsheetRoundDraft>();
+  let rawDataRows = 0;
+  for (const { fileName, sheet } of files) {
+    for (const row of sheet.rows ?? []) {
+      const draft = parseSmartsheetRound(
+        smartsheetRowToCells(sheet, row),
+        fileName
+      );
+      if (!draft) continue;
+      rawDataRows += 1;
+      const existing = byKey.get(draft.key);
+      byKey.set(
+        draft.key,
+        existing ? mergeSmartsheetDrafts(existing, draft) : draft
+      );
+    }
+  }
+  return { drafts: [...byKey.values()], rawDataRows };
+}

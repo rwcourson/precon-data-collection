@@ -46,12 +46,17 @@ function hasSessionCookie(req: NextRequest): boolean {
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (isExempt(pathname)) return NextResponse.next();
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+  const nextWithPath = () =>
+    NextResponse.next({ request: { headers: requestHeaders } });
+
+  if (isExempt(pathname)) return nextWithPath();
 
   const status = inspectRuntimeConfig();
   if (!status.ok) {
     // Still allow the bare sign-in HTML if config is mid-deploy.
-    if (pathname === "/sign-in") return NextResponse.next();
+    if (pathname === "/sign-in") return nextWithPath();
     return NextResponse.json(
       {
         error: "Service configuration is unavailable.",
@@ -61,7 +66,7 @@ export function proxy(req: NextRequest) {
     );
   }
 
-  if (status.config.authMode !== "sso") return NextResponse.next();
+  if (status.config.authMode !== "sso") return nextWithPath();
 
   if (!hasSessionCookie(req)) {
     if (pathname.startsWith("/api/")) {
@@ -69,7 +74,7 @@ export function proxy(req: NextRequest) {
       // never carry a session cookie. Their routes enforce their own auth and
       // fail closed, so a credentialed request passes through the SSO gate.
       if (req.headers.get("authorization") || req.headers.get("x-eve-hmac")) {
-        return NextResponse.next();
+        return nextWithPath();
       }
       return NextResponse.json(
         { error: "Not signed in. Sign in with Microsoft." },
@@ -84,7 +89,7 @@ export function proxy(req: NextRequest) {
     }
     return NextResponse.redirect(signIn);
   }
-  return NextResponse.next();
+  return nextWithPath();
 }
 
 export const config = {

@@ -45,10 +45,34 @@ export async function saveAccessSettings(next: AccessSettings) {
     const key = group.trim();
     if (key && region.trim()) groupRegions[key] = region.trim();
   }
+  const roleMap = (
+    values: Record<string, Role> | undefined
+  ): Record<string, Role> => {
+    const out: Record<string, Role> = {};
+    for (const [rawKey, role] of Object.entries(values ?? {})) {
+      const key = rawKey.trim().toLowerCase();
+      if (key && ROLES.includes(role)) out[key] = role;
+    }
+    return out;
+  };
+  const regionMap = (
+    values: Record<string, string> | undefined
+  ): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const [rawKey, region] of Object.entries(values ?? {})) {
+      const key = rawKey.trim().toLowerCase();
+      if (key && region.trim()) out[key] = region.trim();
+    }
+    return out;
+  };
 
   const merged: AccessSettings = {
     groupRoles,
     groupRegions,
+    titleRoles: roleMap(next.titleRoles),
+    managerRoles: roleMap(next.managerRoles),
+    emailRoles: roleMap(next.emailRoles),
+    emailRegions: regionMap(next.emailRegions),
     defaultRole: ROLES.includes(next.defaultRole)
       ? next.defaultRole
       : DEFAULT_ACCESS.defaultRole,

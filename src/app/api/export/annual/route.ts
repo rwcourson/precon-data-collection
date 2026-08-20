@@ -8,6 +8,7 @@ import type { FlatRow } from "@/lib/report-engine";
 import type { RollupStats } from "@/lib/rollup";
 import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 export const dynamic = "force-dynamic";
 // Multi-year full-dataset report rendered to PDF by headless Chromium.
@@ -52,7 +53,8 @@ export async function GET(req: NextRequest) {
   const toYear = clampYear(params.get("to"), currentYear);
   const fromYear = Math.min(clampYear(params.get("from"), toYear - 2), toYear);
 
-  const rows = await listRoundsWithJobsForPrincipal(principal);
+  const listed = await listRoundsWithJobsForPrincipal(principal);
+  const rows = await maskRoundRowsForMetrics(listed);
   const report = buildAnnualReport({ rows, region, fromYear, toYear });
   const title = `${report.scope} Annual Precon Report ${fromYear}-${toYear}`;
 

@@ -1,3 +1,5 @@
+import { previewDatabaseIsolationIssue } from "@/lib/preview-isolation";
+
 export type AppEnvironment = "local" | "demo" | "production";
 export type RuntimeAuthMode = "demo" | "sso";
 export type DatabaseMode = "pglite" | "postgres";
@@ -327,6 +329,8 @@ export function inspectRuntimeConfig(
         ...(unpooledUrl ? { unpooledUrl } : {}),
       };
   }
+  const previewIsolation = previewDatabaseIsolationIssue(env);
+  if (previewIsolation) issues.push(previewIsolation);
   if (production && databaseMode !== "postgres") {
     issues.push({
       key: "DATABASE_MODE",

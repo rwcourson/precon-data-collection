@@ -1,4 +1,10 @@
 import type { EstimateRound } from "@/db/schema";
+import {
+  AWARDABLE_REPORTING_GRAIN,
+  buildAwardableCandidateReport,
+  formatAwardableShadowBrief,
+  toAwardableReportingRows,
+} from "./awardable-reporting";
 import { fmtDollars, fmtPercent } from "./format";
 import type { RoundRow } from "./queries";
 import { computeStats, type RollupStats, rollup } from "./rollup";
@@ -39,6 +45,8 @@ export type AnnualReport = {
   byDepartment: RollupStats[];
   wins: AnnualHighlight[];
   emptyReason: string | null;
+  awardableShadow: ReturnType<typeof buildAwardableCandidateReport>;
+  awardableBrief: ReturnType<typeof formatAwardableShadowBrief>;
 };
 
 export function buildAnnualReport({
@@ -78,6 +86,17 @@ export function buildAnnualReport({
     .slice(0, 10)
     .map(toHighlight(rows));
 
+  const awardableRows = toAwardableReportingRows(
+    rows
+      .filter(
+        (r) =>
+          (region == null || r.round.region === region) &&
+          r.round.bidYear >= fromYear &&
+          r.round.bidYear <= toYear
+      )
+      .map(({ round, estimateLeadName }) => ({ ...round, estimateLeadName }))
+  );
+
   return {
     scope,
     fromYear,
@@ -97,6 +116,8 @@ export function buildAnnualReport({
       inScope.length === 0
         ? `No estimate rounds recorded for ${scope} between ${fromYear} and ${toYear}.`
         : null,
+    awardableShadow: buildAwardableCandidateReport(awardableRows),
+    awardableBrief: formatAwardableShadowBrief(awardableRows),
   };
 }
 
@@ -349,6 +370,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
       )
       .join("")}
   </div>
+  <p class="note">${esc(report.awardableBrief.coverageLine)} · ${esc(AWARDABLE_REPORTING_GRAIN.coverage)} Production win rate above stays on the current count definition.</p>
 
   <h2>Pursuit volume by bid year</h2>
   <div class="chart">${chart}</div>

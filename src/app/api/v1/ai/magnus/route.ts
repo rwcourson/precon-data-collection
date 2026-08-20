@@ -9,7 +9,9 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
 import { resolveWidgets } from "@/lib/dashboard-query";
 import { runMagnusTurn } from "@/lib/magnus-ai";
+import { magnusExternalScope } from "@/lib/magnus-scope";
 import { toPlainText } from "@/lib/plain-text";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -29,8 +31,9 @@ export async function POST(req: Request) {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const previousPlan = body.previousPlan ?? null;
 
-  const rows = await listRoundsWithJobsForPrincipal(principal);
-  const rounds = rows.map((r) => r.round);
+  const listed = await listRoundsWithJobsForPrincipal(principal);
+  const rows = await maskRoundRowsForMetrics(listed);
+  const rounds = magnusExternalScope(rows.map((r) => r.round));
 
   if (!isAiConfigured()) {
     // Rules / optional non-stream LLM path for demo & offline.

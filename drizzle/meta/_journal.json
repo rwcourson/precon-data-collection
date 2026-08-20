@@ -127,6 +127,55 @@
       "when": 1787716800000,
       "tag": "0017_mcp_user_access",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787803200000,
+      "tag": "0018_roundtable_core_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787889600000,
+      "tag": "0019_roundtable_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787976000000,
+      "tag": "0020_roundtable_approvals",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788062400000,
+      "tag": "0021_roundtable_lock_and_change",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788148800000,
+      "tag": "0022_roundtable_source_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788235200000,
+      "tag": "0023_roundtable_ijv_board",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788321600000,
+      "tag": "0024_publication_outbox_nullable_revision",
+      "breakpoints": true
     }
   ]
 }

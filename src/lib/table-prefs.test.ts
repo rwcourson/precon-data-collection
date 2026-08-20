@@ -30,6 +30,15 @@ describe("user table prefs config", () => {
     expect(parsed.density).toBe("summary");
     expect(parsed.columnWidths).toEqual({ jobName: 280 });
     expect(parsed.defaultViewId).toBe(12);
+    expect(parsed.viewMode).toBeUndefined();
+  });
+
+  it("stores viewMode on personal prefs", () => {
+    const parsed = parseUserTablePrefsConfig({
+      viewMode: "cards",
+      density: "summary",
+    });
+    expect(parsed.viewMode).toBe("cards");
   });
 
   it("falls back to empty prefs for garbage JSONB", () => {
@@ -38,7 +47,7 @@ describe("user table prefs config", () => {
       columns: "bad",
       defaultViewId: "x",
     });
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.columns).toBeUndefined();
     expect(parsed.columnWidths).toBeUndefined();
     expect(parsed.defaultViewId).toBeNull();
@@ -106,6 +115,16 @@ describe("resolveBidScheduleTableState precedence", () => {
     expect(resolved.source).toBe("defaults");
     expect(resolved.columns).toBeUndefined();
     expect(resolved.density).toBe("summary");
+  });
+
+  it("lets URL columns override prefs and named views", () => {
+    const resolved = resolveBidScheduleTableState({
+      urlViewId: 1,
+      urlColumns: ["jobNumber", "bidDueDate"],
+      prefs,
+      views,
+    });
+    expect(resolved.columns).toEqual(["jobNumber", "bidDueDate"]);
   });
 });
 

@@ -6,6 +6,7 @@ import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import type { CopilotPlan } from "@/lib/dashboard-copilot";
 import { resolveWidgets, type WidgetResolved } from "@/lib/dashboard-query";
 import { type MagnusTurn, runMagnusTurn } from "@/lib/magnus-ai";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 export type CopilotPreviewResult = {
   plan: CopilotPlan;
@@ -23,7 +24,8 @@ export async function askMagnus(prompt: string): Promise<MagnusChatResult> {
   if (trimmed.length < 2)
     throw new Error("Ask a question or describe a dashboard.");
 
-  const rows = await listRoundsWithJobsForPrincipal(principal);
+  const listed = await listRoundsWithJobsForPrincipal(principal);
+  const rows = await maskRoundRowsForMetrics(listed);
   const rounds = rows.map((r) => r.round);
   const turn = await runMagnusTurn(trimmed, rounds);
 

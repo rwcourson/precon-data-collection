@@ -1,4 +1,6 @@
 import ExcelJS from "exceljs";
+import { PRODUCT_NAME } from "@/lib/product";
+import { loadNotApplicableKeysByRound } from "@/services/field-exceptions-service";
 import {
   listCustomColumnsForPrincipal,
   listRoundsWithJobsForPrincipal,
@@ -27,10 +29,11 @@ export async function getFlatDataset(principal: Principal): Promise<{
     listCustomColumnsForPrincipal(principal),
   ]);
   const ids = rowData.map((r) => r.round.id);
-  const [multiMap, customMap, noteMap] = await Promise.all([
+  const [multiMap, customMap, noteMap, naMap] = await Promise.all([
     getMultiValuesForRounds(ids),
     getCustomValuesForRounds(ids),
     latestNoteCellsForRounds(ids),
+    loadNotApplicableKeysByRound(ids),
   ]);
   const rows = rowData.map((r) =>
     flattenRound(
@@ -39,7 +42,8 @@ export async function getFlatDataset(principal: Principal): Promise<{
       r.estimateLeadName,
       multiMap.get(r.round.id) ?? {},
       customMap.get(r.round.id) ?? {},
-      noteMap.get(r.round.id) ?? null
+      noteMap.get(r.round.id) ?? null,
+      naMap.get(r.round.id)
     )
   );
   return { rows, catalog: buildFieldCatalog(customCols) };
@@ -67,7 +71,7 @@ export async function buildWorkbook(opts: {
   footer?: string;
 }): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "B&G Precon Data Collection";
+  wb.creator = PRODUCT_NAME;
   const ws = wb.addWorksheet(opts.sheetName ?? "Export", {
     pageSetup: { orientation: "landscape", fitToPage: true },
     headerFooter: {
@@ -242,7 +246,7 @@ export function buildPrintHtml(opts: {
 <body>
   <div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
   <h1>${esc(opts.title)}</h1>
-  <p class="meta">Generated ${new Date().toLocaleString("en-US")} · ${opts.rows.length} record${opts.rows.length === 1 ? "" : "s"} · B&amp;G Precon Data Collection</p>
+  <p class="meta">Generated ${new Date().toLocaleString("en-US")} · ${opts.rows.length} record${opts.rows.length === 1 ? "" : "s"} · B&amp;G Precon — Pursuits &amp; Data</p>
   <table>
     <thead><tr>${opts.columns.map((c) => `<th${c.key === LATEST_NOTE_KEY ? ' class="note"' : ""}>${esc(c.label)}</th>`).join("")}</tr></thead>
     <tbody>${bodyRows}</tbody>

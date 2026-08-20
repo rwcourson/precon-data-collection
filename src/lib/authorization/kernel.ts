@@ -145,7 +145,15 @@ function fieldWriteAllowed(
     !principalAllowsRegion(principal, round.region)
   )
     return false;
-  if (round.status === "locked") return principal.user.role === "rpd";
+  // V1: RPDs may correct locked records in place. Phase 10 lock revisions
+  // make that path immutable until an explicit unlock.
+  if (round.status === "locked") {
+    if (resource.lockImmutable) return false;
+    return principal.user.role === "rpd";
+  }
+  if (fieldKey === "outcome" && round.status === "post_bid") {
+    return principal.user.role === "rpd";
+  }
   const def = FIELD_DEFS.find((field) => field.key === fieldKey);
   const postBid = fieldKey.startsWith("custom:") || Boolean(def && !def.core);
   if (postBid) {

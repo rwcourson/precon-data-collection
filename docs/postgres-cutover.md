@@ -23,6 +23,8 @@ docker compose up -d --wait
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres pnpm test
 ```
 
+If port 5432 is already in use, run a throwaway `postgres:17-alpine` on another loopback port (for example `127.0.0.1:55432`) and point `TEST_DATABASE_URL` at that container. Never pass Production `DATABASE_URL` to Vitest.
+
 Without `TEST_DATABASE_URL`, `pnpm test` stays on throwaway PGlite.
 
 Hosting and the Vercel env matrix: [github-and-vercel.md](github-and-vercel.md).

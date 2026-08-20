@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import "./globals.css";
 import { themeScript } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/product";
 
 const manrope = localFont({
   src: [
@@ -22,8 +23,8 @@ const spaceMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "B&G Precon — Pursuits & Data",
-  description: "Preconstruction bid & post-bid data collection",
+  title: PRODUCT_NAME,
+  description: PRODUCT_DESCRIPTION,
 };
 
 export const viewport: Viewport = {

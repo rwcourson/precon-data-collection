@@ -3,19 +3,26 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { auditLog, estimateRounds, jobs } from "@/db/schema";
+import {
+  auditLog,
+  estimateRounds,
+  integrationImportBatches,
+  jobs,
+  sourceProvenance,
+} from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import {
+  buildDestiniFieldDiffs,
   DESTINI_WRITABLE_KEYS,
   type DestiniMappedRow,
   type DestiniWritableKey,
+  destiniChecksumIsApplied,
   filterWritableValues,
   mapDestiniSheet,
   parseDestiniCsv,
   parseDestiniWorkbook,
 } from "@/lib/destini-import";
-import { FIELD_MAP } from "@/lib/fields";
 import { pursuitService } from "@/services/pursuit-service";
 
 /** Preview is open to signed-in principals; confirm applies the same field policy as interactive edits. */
@@ -152,19 +159,7 @@ async function buildPreview(
 
     const target = base.rounds.find((r) => r.id === base.suggestedRoundId);
     if (target) {
-      base.diffs = DESTINI_WRITABLE_KEYS.filter((key) => key in row.values).map(
-        (key) => {
-          const current = target.current[key] ?? null;
-          const incoming = row.values[key] ?? null;
-          return {
-            key,
-            label: FIELD_MAP[key]?.label ?? key,
-            current,
-            incoming,
-            changed: String(current ?? "") !== String(incoming ?? ""),
-          };
-        }
-      );
+      base.diffs = buildDestiniFieldDiffs(target.current, row.values);
     }
 
     out.push(base);
@@ -235,12 +230,33 @@ export async function previewDestiniFile(
 export async function confirmDestiniImport(input: {
   roundId: number;
   values: Record<string, number | string | null>;
+  sourceName?: string;
+  checksum?: string;
 }) {
   const principal = await assertImporter();
   const values = filterWritableValues(input.values);
   const keys = Object.keys(values) as DestiniWritableKey[];
   if (keys.length === 0)
     throw DomainError.badRequest("No Destini fields to import.");
+
+  if (input.checksum) {
+    const batches = await db
+      .select({
+        source: integrationImportBatches.source,
+        checksum: integrationImportBatches.checksum,
+        status: integrationImportBatches.status,
+      })
+      .from(integrationImportBatches)
+      .where(eq(integrationImportBatches.checksum, input.checksum));
+    if (destiniChecksumIsApplied(batches, input.checksum)) {
+      return {
+        ok: true as const,
+        roundId: input.roundId,
+        fields: 0,
+        idempotent: true,
+      };
+    }
+  }
 
   const stringValues: Record<string, string> = {};
   for (const key of keys) {
@@ -253,6 +269,7 @@ export async function confirmDestiniImport(input: {
     values: stringValues,
     multiValues: {},
     customValues: {},
+    sourceBatch: input.checksum ?? `destini:${input.roundId}`,
   });
 
   await db.insert(auditLog).values({
@@ -263,6 +280,30 @@ export async function confirmDestiniImport(input: {
     userId: principal.user.id,
     newValue: JSON.stringify({ keys, values }),
   });
+  if (input.checksum) {
+    await db
+      .insert(integrationImportBatches)
+      .values({
+        source: "destini",
+        sourceName: input.sourceName ?? null,
+        checksum: input.checksum,
+        status: "applied",
+        summary: { roundId: input.roundId, fields: keys },
+        importedById: principal.user.id,
+        completedAt: new Date(),
+      })
+      .onConflictDoNothing();
+  }
+  await db.insert(sourceProvenance).values(
+    keys.map((key) => ({
+      roundId: input.roundId,
+      fieldKey: key,
+      source: "destini",
+      sourceRecordId: input.sourceName ?? null,
+      valueHash: input.checksum ?? null,
+      importedById: principal.user.id,
+    }))
+  );
 
   revalidatePath("/post-bid");
   revalidatePath(`/rounds/${input.roundId}`);

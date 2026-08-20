@@ -25,6 +25,7 @@ import { fmtDollars, fmtPercent } from "@/lib/format";
 import { getReferenceValues } from "@/lib/queries";
 import { toOptions } from "@/lib/select-options";
 import { getWorkspace } from "@/lib/workspace-server";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 export default async function AnnualReportPage({
   searchParams,
@@ -36,10 +37,11 @@ export default async function AnnualReportPage({
     getWebPrincipal(),
     getWorkspace(),
   ]);
-  const [rows, lists] = await Promise.all([
+  const [listed, lists] = await Promise.all([
     listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
   ]);
+  const rows = await maskRoundRowsForMetrics(listed);
 
   const availableYears = [...new Set(rows.map((r) => r.round.bidYear))].sort();
   const latest = availableYears.at(-1) ?? new Date().getFullYear();
@@ -191,6 +193,12 @@ export default async function AnnualReportPage({
               </Card>
             ))}
           </div>
+
+          <p className="text-[13px] text-muted-foreground">
+            {report.awardableBrief.coverageLine} ·{" "}
+            {report.awardableShadow.hitRate.grain} Production win rate stays on
+            the current count definition.
+          </p>
 
           <Card>
             <CardHeader className="pb-2">

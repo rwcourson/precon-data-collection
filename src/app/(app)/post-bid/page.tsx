@@ -21,10 +21,11 @@ import {
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
 import { fmtDate, fmtDateTime, fmtDollars } from "@/lib/format";
-import { postBidQueueRow } from "@/lib/post-bid-queue";
+import { postBidQueueRow, postBidShowsMineOnly } from "@/lib/post-bid-queue";
 import { getMultiValuesForRounds } from "@/lib/queries";
-import { requiredCompletion } from "@/lib/validation";
+import { legacyZeroFieldLabels, requiredCompletion } from "@/lib/validation";
 import { getWorkspace } from "@/lib/workspace-server";
+import { roundtableFeatureEnabled } from "@/services/rollout-service";
 
 export default async function PostBidPage({
   searchParams,
@@ -36,12 +37,16 @@ export default async function PostBidPage({
     getWebPrincipal(),
     getWorkspace(),
   ]);
+  const fieldPolicy = await roundtableFeatureEnabled(principal, "fieldPolicy");
   const rows = await listRoundsWithJobsForPrincipal(principal);
 
   const region = workspace.region ?? params.region ?? "all";
   const queueFilter = params.queue;
+  const mine = postBidShowsMineOnly(principal.user.role, params.mine);
   const inScope = rows.filter(
-    (r) => region === "all" || r.round.region === region
+    (r) =>
+      (region === "all" || r.round.region === region) &&
+      (!mine || r.round.estimateLeadId === principal.user.id)
   );
 
   let queue = inScope
@@ -56,8 +61,7 @@ export default async function PostBidPage({
     .sort(
       (a, b) =>
         (b.round.lockedAt?.getTime() ?? 0) - (a.round.lockedAt?.getTime() ?? 0)
-    )
-    .slice(0, 8);
+    );
 
   const multiMap = await getMultiValuesForRounds(queue.map((r) => r.round.id));
 
@@ -72,10 +76,16 @@ export default async function PostBidPage({
           jobNumber: job.jobNumber,
           jobName: job.jobName,
           estimateLeadName,
-        }
+        },
+        {},
+        { fieldPolicy }
       );
       return done < total;
     });
+  } else if (queueFilter === "legacy-zeros") {
+    queue = inScope.filter(
+      ({ round }) => legacyZeroFieldLabels(round).length > 0
+    );
   }
 
   const queueLabel =
@@ -83,7 +93,9 @@ export default async function PostBidPage({
       ? "Incomplete required fields"
       : queueFilter === "awaiting-lock"
         ? "Awaiting RPD lock"
-        : null;
+        : queueFilter === "legacy-zeros"
+          ? "Historical zeros to remediate"
+          : null;
 
   return (
     <div className="space-y-5">
@@ -93,6 +105,55 @@ export default async function PostBidPage({
           region !== "all" ? ` Showing ${region}.` : " Showing all Regions."
         }`}
       />
+
+      <div className="flex flex-wrap gap-1.5">
+        <Button
+          variant={!queueFilter ? "secondary" : "outline"}
+          size="sm"
+          render={
+            <Link href={mine ? "/post-bid?mine=1" : "/post-bid?mine=0"} />
+          }
+        >
+          In queue
+        </Button>
+        <Button
+          variant={!mine ? "secondary" : "outline"}
+          size="sm"
+          render={<Link href="/post-bid?mine=0" />}
+        >
+          Region queue
+        </Button>
+        <Button
+          variant={mine ? "secondary" : "outline"}
+          size="sm"
+          render={<Link href="/post-bid?mine=1" />}
+        >
+          My post-bid
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="/post-bid?queue=awaiting-lock" />}
+        >
+          Ready for RPD
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link href="#locked-history" />}
+        >
+          Locked history
+        </Button>
+        {fieldPolicy ? (
+          <Button
+            variant={queueFilter === "legacy-zeros" ? "secondary" : "outline"}
+            size="sm"
+            render={<Link href="/post-bid?queue=legacy-zeros" />}
+          >
+            Historical zeros
+          </Button>
+        ) : null}
+      </div>
 
       {queueLabel && (
         <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-[13px] text-info-foreground">
@@ -106,9 +167,9 @@ export default async function PostBidPage({
         </div>
       )}
 
-      <Card>
+      <Card id="locked-history">
         <CardHeader className="pb-2">
-          <CardTitle>Queue ({queue.length})</CardTitle>
+          <CardTitle>In queue ({queue.length})</CardTitle>
           <CardDescription>
             The Estimate Lead is the primary owner of post-bid entry; Admins can
             enter on their behalf. Required fields block approval while blank.
@@ -149,7 +210,8 @@ export default async function PostBidPage({
                 const queueRow = postBidQueueRow(
                   round,
                   multiMap.get(round.id) ?? {},
-                  extras
+                  extras,
+                  { fieldPolicy }
                 );
                 const pct =
                   queueRow.total === 0
@@ -244,7 +306,9 @@ export default async function PostBidPage({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Recently locked</CardTitle>
+          <CardTitle className="text-base">
+            Locked history ({recentlyLocked.length})
+          </CardTitle>
           <CardDescription>
             Approved records roll into the Project Estimate Summary and
             dashboards.

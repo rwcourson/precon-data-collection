@@ -166,6 +166,37 @@ export function NotificationSettingsPanel({
             </div>
           </div>
 
+          <div className="space-y-2 border-t pt-3">
+            <Label className="text-xs font-medium">
+              Schedule date-shift recipients
+            </Label>
+            <p className="text-2xs text-muted-foreground">
+              Default is the estimate lead and the home-region RPD/SPD. Channels
+              above still apply. The actor who made the change is never
+              notified.
+            </p>
+            <label className="flex items-center gap-2 text-xs">
+              <Checkbox
+                checked={draft.dateShiftNotifyLead}
+                onCheckedChange={(v) =>
+                  patch({ dateShiftNotifyLead: Boolean(v) })
+                }
+                disabled={!canEdit}
+              />
+              Estimate lead
+            </label>
+            <label className="flex items-center gap-2 text-xs">
+              <Checkbox
+                checked={draft.dateShiftNotifyRegionalRpd}
+                onCheckedChange={(v) =>
+                  patch({ dateShiftNotifyRegionalRpd: Boolean(v) })
+                }
+                disabled={!canEdit}
+              />
+              Regional RPD / SPD
+            </label>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2 border-t pt-3">
             <Badge variant="outline" size="sm" className="gap-1">
               <Mail className="size-3" />

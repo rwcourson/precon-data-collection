@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import type { ExportTemplateConfig } from "@/db/schema";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { awardableExportFooter } from "@/lib/awardable-reporting";
 import { applyBidScheduleExportScope } from "@/lib/bid-schedule";
 import {
   buildPrintHtml,
@@ -10,8 +11,11 @@ import {
 } from "@/lib/export-helpers";
 import { pdfResponse } from "@/lib/pdf";
 import { formatReportValue } from "@/lib/report-engine";
+import { compactFlatScheduleRows } from "@/lib/schedule-projection";
 import { resolveRegionParam } from "@/lib/workspace";
 import { getWorkspace } from "@/lib/workspace-server";
+import { listChildJobIds } from "@/services/organization-service";
+import { recordProductEvent } from "@/services/product-events-service";
 
 export const dynamic = "force-dynamic";
 // Synchronous xlsx/PDF build; PDF uses headless Chromium.
@@ -40,7 +44,8 @@ export async function GET(req: NextRequest) {
 
   const { rows, catalog } = await getFlatDataset(principal);
 
-  const filtered = applyBidScheduleExportScope(rows, {
+  const childJobIds = await listChildJobIds();
+  const filteredRounds = applyBidScheduleExportScope(rows, {
     section: params.get("section"),
     region: scoped.region,
     regions: params.get("regions"),
@@ -49,7 +54,13 @@ export async function GET(req: NextRequest) {
     year: params.get("year"),
     q: params.get("q"),
     sortBy: config.sortBy,
+    queue: params.get("queue"),
+    childJobIds,
   });
+  const filtered =
+    params.get("compact") === "1"
+      ? compactFlatScheduleRows(filteredRounds)
+      : filteredRounds;
 
   const columns: ExportColumn[] = config.columns.map((key) => {
     const def = catalog.find((c) => c.key === key);
@@ -57,8 +68,13 @@ export async function GET(req: NextRequest) {
   });
 
   const title = config.header || "Bid Schedule";
-  const footer =
-    config.footer || "Brasfield & Gorrie Preconstruction — Confidential";
+  const grain = awardableExportFooter(config.columns);
+  const footer = [
+    config.footer || "Brasfield & Gorrie Preconstruction — Confidential",
+    grain,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   if (format === "pdf") {
     const html = buildPrintHtml({
@@ -79,6 +95,11 @@ export async function GET(req: NextRequest) {
     rows: filtered,
     groupBy: config.groupBy,
     footer,
+  });
+  await recordProductEvent(principal, "export.current_view", {
+    rows: filtered.length,
+    columns: columns.length,
+    compact: params.get("compact") === "1",
   });
   return new Response(new Uint8Array(buffer), {
     headers: {

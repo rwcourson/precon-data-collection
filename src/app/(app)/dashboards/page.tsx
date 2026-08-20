@@ -31,12 +31,14 @@ import { getReferenceValues } from "@/lib/queries";
 import {
   applyLeadershipRoundScope,
   computeStats,
+  defaultDashboardStatus,
   parseLeadershipRoundMode,
   rollup,
   scopeRoundsForDashboardExport,
 } from "@/lib/rollup";
 import { toOptions } from "@/lib/select-options";
 import { getWorkspace } from "@/lib/workspace-server";
+import { maskRoundRowsForMetrics } from "@/services/field-exceptions-service";
 
 const LEVELS = [
   { key: "corporate", label: "Corporate", groupLabel: "Region" },
@@ -55,10 +57,11 @@ export default async function DashboardsPage({
     getWorkspace(),
   ]);
   const user = principal.user;
-  const [rows, lists] = await Promise.all([
+  const [listed, lists] = await Promise.all([
     listRoundsWithJobsForPrincipal(principal),
     getReferenceValues(),
   ]);
+  const rows = await maskRoundRowsForMetrics(listed);
 
   // A Region workspace has no Corporate rollup — that view belongs to Corporate.
   const levels =
@@ -77,7 +80,7 @@ export default async function DashboardsPage({
   const sector = params.sector ?? "all";
   const year = params.year ?? "all";
   const phase = params.phase ?? "all";
-  const status = params.status ?? "all";
+  const status = params.status ?? defaultDashboardStatus(user.role);
   const roundMode = parseLeadershipRoundMode(params.rounds);
 
   const scoped = scopeRoundsForDashboardExport(
@@ -242,7 +245,7 @@ export default async function DashboardsPage({
         title="Dashboards"
         description={
           level.key === "corporate"
-            ? "Company-wide rollup. Default counts one latest/final round per job so pricing rounds are not summed."
+            ? `Company-wide rollup. ${status === "locked" ? "Locked RPD-approved data only." : "Operator view includes in-flight data."}`
             : level.key === "region"
               ? `${region} Region rollup by Division/Precon Department.`
               : `${region} — ${dept === "all" ? "all Divisions" : dept} by Market Sector.`

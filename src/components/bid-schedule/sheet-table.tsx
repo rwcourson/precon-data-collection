@@ -6,6 +6,7 @@ import {
   ArrowUpDown,
   Columns3,
   Filter,
+  Layers3,
   Unlink,
   X,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import {
   resetBidScheduleTablePrefs,
   saveBidScheduleTablePrefs,
 } from "@/actions/table-prefs";
+import { AcknowledgeChangesButton } from "@/components/bid-schedule/acknowledge-changes-button";
 import { AddRoundDialog } from "@/components/bid-schedule/add-round-dialog";
 import { SavedViewsMenu } from "@/components/bid-schedule/saved-views-menu";
 import { StatusMenu } from "@/components/bid-schedule/status-menu";
@@ -34,6 +36,7 @@ import { CellEditor } from "@/components/sheets/cell-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FieldHelp } from "@/components/ui/field-help";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -48,8 +51,10 @@ import {
   type BidScheduleViewQuery,
   bidDueUrgency,
   buildBidScheduleSections,
+  dateAgingNudge,
 } from "@/lib/bid-schedule";
-import { fmtDate, fmtDollars } from "@/lib/format";
+import { displayJobNumber, fmtDate, fmtDollars } from "@/lib/format";
+import { latestNoteBoardDisplay } from "@/lib/latest-note";
 import {
   beginColumnResize,
   COLUMN_RESIZE_HANDLE_CLASS,
@@ -84,22 +89,39 @@ export type BidSheetRow = {
   bidYear: number;
   drawingsDueDate: string | null;
   bidReviewDate: string | null;
+  interviewDate: string | null;
   bidDueDate: string | null;
   projectStartDate: string | null;
+  projectStartMonth: string | null;
+  projectScheduleDuration: number | null;
+  awardability: string | null;
   city: string | null;
   state: string | null;
   estimateLeadName: string | null;
   estimateValue: number | null;
+  latestNote: string;
+  latestNoteLoadFailed?: boolean;
   status: RoundStatus;
   isLinked: boolean;
   homeRegion?: string;
   visibilityRegions?: string[];
   teamAssignedAt?: string | null;
+  changedFields: string[];
+  latestAuditId: number | null;
+  changeCount: number;
+  newlyPublished?: boolean;
+  updatedAt?: string | null;
   allowed: RoundStatus[];
 };
 
-function actionColumnWidth(canEdit: boolean, canMarkStaffing: boolean) {
-  return (canEdit ? 168 : 0) + (canMarkStaffing ? 28 : 0);
+function actionColumnWidth(
+  canEdit: boolean,
+  canMarkStaffing: boolean,
+  hasChanges: boolean
+) {
+  return (
+    (canEdit ? 168 : 0) + (canMarkStaffing ? 28 : 0) + (hasChanges ? 92 : 0)
+  );
 }
 
 type ColKey =
@@ -111,6 +133,7 @@ type ColKey =
   | "estimatePhase"
   | "drawingsDueDate"
   | "bidReviewDate"
+  | "interviewDate"
   | "bidDueDate"
   | "procurement"
   | "mlt"
@@ -120,6 +143,10 @@ type ColKey =
   | "bidYear"
   | "location"
   | "projectStartDate"
+  | "projectStartMonth"
+  | "projectScheduleDuration"
+  | "awardability"
+  | "latestNote"
   | "statusAtPricing"
   | "estimateValue"
   | "status";
@@ -209,6 +236,15 @@ const COLS: ColDef[] = [
     getSortValue: (r) => r.bidReviewDate ?? "9999",
   },
   {
+    key: "interviewDate",
+    label: "Interview",
+    width: 118,
+    minWidth: 88,
+    filter: "text",
+    getValue: (r) => r.interviewDate ?? "",
+    getSortValue: (r) => r.interviewDate ?? "9999",
+  },
+  {
     key: "bidDueDate",
     label: "Bid Due",
     width: 168,
@@ -290,6 +326,37 @@ const COLS: ColDef[] = [
     getSortValue: (r) => r.projectStartDate ?? "9999",
   },
   {
+    key: "projectStartMonth",
+    label: "Start Month",
+    width: 108,
+    minWidth: 88,
+    filter: "text",
+    getValue: (r) => r.projectStartMonth ?? "",
+    getSortValue: (r) => r.projectStartMonth ?? "9999",
+  },
+  {
+    key: "projectScheduleDuration",
+    label: "Contract Time",
+    width: 112,
+    minWidth: 88,
+    align: "right",
+    filter: "text",
+    getValue: (r) =>
+      r.projectScheduleDuration == null
+        ? ""
+        : String(r.projectScheduleDuration),
+    getSortValue: (r) => r.projectScheduleDuration ?? -1,
+  },
+  {
+    key: "awardability",
+    label: "Awardability",
+    width: 126,
+    minWidth: 96,
+    filter: "values",
+    getValue: (r) => r.awardability ?? "",
+    getSortValue: (r) => r.awardability ?? "",
+  },
+  {
     key: "statusAtPricing",
     label: "Status at Pricing",
     width: 140,
@@ -317,6 +384,15 @@ const COLS: ColDef[] = [
     getValue: (r) => r.status,
     getSortValue: (r) => r.status,
   },
+  {
+    key: "latestNote",
+    label: "Latest Note",
+    width: 260,
+    minWidth: 160,
+    filter: "text",
+    getValue: (r) => r.latestNote,
+    getSortValue: (r) => r.latestNote,
+  },
 ];
 
 const COL_BY_KEY = Object.fromEntries(COLS.map((c) => [c.key, c])) as Record<
@@ -327,14 +403,17 @@ const COL_BY_KEY = Object.fromEntries(COLS.map((c) => [c.key, c])) as Record<
 export const SUMMARY_COL_KEYS: ColKey[] = [
   "jobNumber",
   "jobName",
-  "owner",
+  "region",
+  "preconDepartment",
   "estimatePhase",
+  "projectStartMonth",
+  "projectScheduleDuration",
+  "awardability",
+  "marketSector",
   "drawingsDueDate",
-  "bidReviewDate",
+  "interviewDate",
   "bidDueDate",
-  "procurement",
   "estimateLead",
-  "estimateValue",
   "status",
 ];
 
@@ -347,6 +426,7 @@ export const DETAIL_COL_KEYS: ColKey[] = [
   "estimatePhase",
   "drawingsDueDate",
   "bidReviewDate",
+  "interviewDate",
   "bidDueDate",
   "procurement",
   "mlt",
@@ -356,9 +436,13 @@ export const DETAIL_COL_KEYS: ColKey[] = [
   "bidYear",
   "location",
   "projectStartDate",
+  "projectStartMonth",
+  "projectScheduleDuration",
+  "awardability",
   "statusAtPricing",
   "estimateValue",
   "status",
+  "latestNote",
 ];
 
 const EDITABLE: Partial<Record<ColKey, { type: string; listKey?: string }>> = {
@@ -366,6 +450,7 @@ const EDITABLE: Partial<Record<ColKey, { type: string; listKey?: string }>> = {
   estimatePhase: { type: "dropdown", listKey: "estimatePhase" },
   drawingsDueDate: { type: "date" },
   bidReviewDate: { type: "date" },
+  interviewDate: { type: "date" },
   bidDueDate: { type: "date" },
   procurement: { type: "dropdown", listKey: "procurement" },
   mlt: { type: "dropdown", listKey: "mlt" },
@@ -374,7 +459,18 @@ const EDITABLE: Partial<Record<ColKey, { type: string; listKey?: string }>> = {
   bidYear: { type: "dropdown", listKey: "bidYear" },
   statusAtPricing: { type: "dropdown", listKey: "statusAtPricing" },
   projectStartDate: { type: "date" },
+  projectStartMonth: { type: "month" },
+  projectScheduleDuration: { type: "number" },
+  awardability: { type: "dropdown", listKey: "awardability" },
 };
+
+function editableColumns(
+  fieldPolicy: boolean
+): Partial<Record<ColKey, { type: string; listKey?: string }>> {
+  if (!fieldPolicy) return EDITABLE;
+  const { mlt: _mlt, ...rest } = EDITABLE;
+  return rest;
+}
 
 type SortState = { key: ColKey; dir: "asc" | "desc" } | null;
 type Filters = Partial<Record<ColKey, { text?: string; values?: string[] }>>;
@@ -420,6 +516,7 @@ export function BidScheduleSheet({
   prefsHref,
   viewConfig,
   shareLabel = "Share with my region",
+  fieldPolicy = false,
 }: {
   rows: BidSheetRow[];
   canEdit: boolean;
@@ -439,6 +536,7 @@ export function BidScheduleSheet({
   prefsHref?: string;
   viewConfig: BidScheduleViewQuery;
   shareLabel?: string;
+  fieldPolicy?: boolean;
 }) {
   const [committedWidths, setCommittedWidths] = useState(() =>
     mergeColWidths(initialWidths)
@@ -643,7 +741,11 @@ export function BidScheduleSheet({
 
   const clearFilters = () => setFilters({});
 
-  const actionWidth = actionColumnWidth(canEdit, canMarkStaffing);
+  const actionWidth = actionColumnWidth(
+    canEdit,
+    canMarkStaffing,
+    rows.some((row) => row.changeCount > 0)
+  );
   const showActions = actionWidth > 0;
   const totalWidth =
     visibleCols.reduce((sum, c) => sum + (widths[c.key] ?? c.width), 0) +
@@ -901,6 +1003,7 @@ export function BidScheduleSheet({
                           row={row}
                           cols={visibleCols}
                           canEdit={canEdit}
+                          fieldPolicy={fieldPolicy}
                           lists={lists}
                           widths={widths}
                           actionWidth={actionWidth}
@@ -934,6 +1037,7 @@ function BidScheduleDataRow({
   row,
   cols,
   canEdit,
+  fieldPolicy,
   lists,
   widths,
   actionWidth,
@@ -944,6 +1048,7 @@ function BidScheduleDataRow({
   row: BidSheetRow;
   cols: ColDef[];
   canEdit: boolean;
+  fieldPolicy: boolean;
   lists: Record<string, string[]>;
   widths: Record<string, number>;
   actionWidth: number;
@@ -958,9 +1063,15 @@ function BidScheduleDataRow({
   );
 
   return (
-    <tr className="border-b border-border/60 hover:bg-muted/35">
+    <tr
+      data-schedule-job-id={row.jobId}
+      className={cn(
+        "border-b border-border/60 hover:bg-muted/35",
+        (row.changeCount > 0 || row.newlyPublished) && "bg-warning-soft/35"
+      )}
+    >
       {cols.map((col) => {
-        const spec = EDITABLE[col.key];
+        const spec = editableColumns(fieldPolicy)[col.key];
         const editable = Boolean(canEdit && spec);
         const isEditing = editing === col.key;
         return (
@@ -969,7 +1080,9 @@ function BidScheduleDataRow({
             className={cn(
               "overflow-hidden border-r border-border/40 px-2.5 py-2 align-middle last:border-r-0",
               col.align === "right" && "text-right tabular-nums",
-              editable && "cursor-text hover:bg-primary/5"
+              editable && "cursor-text hover:bg-primary/5",
+              row.changedFields.includes(col.key) &&
+                "bg-warning-soft ring-1 ring-inset ring-warning-border"
             )}
             style={{ width: widths[col.key] ?? col.width }}
             onDoubleClick={() => editable && setEditing(col.key)}
@@ -983,13 +1096,22 @@ function BidScheduleDataRow({
                 onCommit={async (next) => {
                   setEditing(null);
                   try {
-                    await updateRoundCell(row.id, col.key, next);
-                    setOverrides((prev) => ({ ...prev, [col.key]: next }));
+                    const result = await updateRoundCell(
+                      row.id,
+                      col.key,
+                      next,
+                      row.updatedAt ?? undefined
+                    );
+                    if ("pendingApproval" in result && result.pendingApproval) {
+                      toast.success("Change sent to the RPD for approval");
+                    } else {
+                      setOverrides((prev) => ({ ...prev, [col.key]: next }));
+                    }
                     router.refresh();
                   } catch (e) {
                     toast.error(
                       e instanceof Error
-                        ? e.message
+                        ? `${e.message} Refresh and try again if someone else saved first.`
                         : "Could not save that value"
                     );
                   }
@@ -1014,6 +1136,13 @@ function BidScheduleDataRow({
       {actionWidth > 0 ? (
         <td className="px-2.5 py-2 align-middle" style={{ width: actionWidth }}>
           <div className="flex h-7 flex-nowrap items-center justify-start gap-0.5 whitespace-nowrap">
+            {row.latestAuditId && row.changeCount > 0 ? (
+              <AcknowledgeChangesButton
+                roundId={row.id}
+                throughAuditId={row.latestAuditId}
+                count={row.changeCount}
+              />
+            ) : null}
             {canMarkStaffing ? (
               <TeamAssignedButton
                 roundId={row.id}
@@ -1063,12 +1192,23 @@ function CellDisplay({
 }) {
   if (col.key === "jobNumber") {
     return (
-      <span className="flex h-5 items-center gap-1 truncate">
+      <span className="flex min-h-5 flex-wrap items-center gap-1">
+        <Link
+          href={`/jobs/${row.jobId}`}
+          className="truncate font-mono text-xs leading-5 text-primary hover:underline"
+        >
+          {displayJobNumber(row.jobNumber)}
+        </Link>
         <JobLookupPopover row={row} siblings={siblings} />
+        {row.newlyPublished ? (
+          <Badge variant="warning" size="sm">
+            New
+          </Badge>
+        ) : null}
         {!row.isLinked && (
           <Badge variant="warning" size="sm">
             <Unlink />
-            unlinked
+            pending
           </Badge>
         )}
         {row.status === "upcoming" && !row.teamAssignedAt && (
@@ -1151,31 +1291,73 @@ function CellDisplay({
     );
   }
 
+  if (col.key === "latestNote") {
+    const label = latestNoteBoardDisplay(display, row.latestNoteLoadFailed);
+    return (
+      <Link
+        href={`/rounds/${row.id}?tab=notes`}
+        className="block truncate text-xs leading-5 text-muted-foreground hover:text-foreground hover:underline"
+        title={label}
+      >
+        {label}
+      </Link>
+    );
+  }
+
+  if (col.key === "projectStartMonth") {
+    const label = display
+      ? new Date(`${display}-01T00:00:00`).toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
+    return <span className="tabular-nums">{label}</span>;
+  }
+
+  if (col.key === "projectScheduleDuration") {
+    return (
+      <span className="block text-right tabular-nums">
+        {display ? `${display} mo` : "—"}
+      </span>
+    );
+  }
+
   if (
     col.key === "bidDueDate" ||
     col.key === "drawingsDueDate" ||
     col.key === "bidReviewDate" ||
+    col.key === "interviewDate" ||
     col.key === "projectStartDate"
   ) {
     const shown = display;
     const urgency =
-      col.key === "bidDueDate" ? bidDueUrgency(shown || null) : null;
+      col.key === "bidDueDate" || col.key === "drawingsDueDate"
+        ? bidDueUrgency(shown || null)
+        : null;
     return (
       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-5">
         <span className="tabular-nums">{fmtDate(shown || null)}</span>
         {urgency ? (
-          <Badge
-            variant={
-              urgency === "overdue"
-                ? "destructive"
-                : urgency === "week"
-                  ? "warning"
-                  : "info"
-            }
-            size="sm"
-          >
-            {BID_DUE_URGENCY_LABEL[urgency]}
-          </Badge>
+          <>
+            <Badge
+              variant={
+                urgency === "overdue"
+                  ? "destructive"
+                  : urgency === "week"
+                    ? "warning"
+                    : "info"
+              }
+              size="sm"
+            >
+              {BID_DUE_URGENCY_LABEL[urgency]}
+            </Badge>
+            <FieldHelp label={`${col.key} aging`}>
+              {dateAgingNudge(
+                col.key as "bidDueDate" | "drawingsDueDate",
+                urgency
+              )}
+            </FieldHelp>
+          </>
         ) : null}
       </span>
     );
@@ -1218,17 +1400,20 @@ function JobLookupPopover({
     <Popover>
       <PopoverTrigger
         render={
-          <button
+          <Button
             type="button"
-            className="truncate font-mono text-xs leading-5 hover:underline"
-            title="Other estimate rounds on this job"
+            variant="ghost"
+            size="xs"
+            className="h-5 px-1.5 text-2xs text-muted-foreground"
+            title="All efforts on this job"
           />
         }
       >
-        {row.jobNumber}
+        <Layers3 className="size-3" />
+        {phases.length} effort{phases.length === 1 ? "" : "s"}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 gap-2 p-3">
-        <p className="text-xs font-medium">Rounds on this job</p>
+        <p className="text-xs font-medium">All efforts on this job</p>
         <ul className="space-y-1">
           {phases.map((phase) => (
             <li key={phase.id}>

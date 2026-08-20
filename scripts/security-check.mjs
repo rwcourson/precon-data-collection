@@ -131,6 +131,29 @@ check(
   copilotBridge.includes("COPILOT_TOOL_MAX_SKEW_MS")
 );
 
+const routeAccess = fs.readFileSync(
+  path.join(root, "src/lib/route-access.ts"),
+  "utf8"
+);
+check(
+  "PCM Copilot is denied at the route boundary",
+  routeAccess.includes('role === "pcm"') && routeAccess.includes("/copilot")
+);
+
+const previewIsolation = fs.readFileSync(
+  path.join(root, "src/lib/preview-isolation.ts"),
+  "utf8"
+);
+check(
+  "Preview database isolation is fail-closed",
+  previewIsolation.includes("PRODUCTION_DATABASE_URL")
+);
+
+const roundtableReview = fs.existsSync(
+  path.join(root, "docs/security/roundtable-review.md")
+);
+check("roundtable security review artifact exists", roundtableReview);
+
 const failed = checks.filter((c) => !c.ok);
 for (const c of checks)
   process.stdout.write(`${c.ok ? "PASS" : "FAIL"} ${c.name}\n`);

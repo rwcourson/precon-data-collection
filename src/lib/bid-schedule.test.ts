@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  BID_SCHEDULE_GROUP_OPTIONS,
   bidDueUrgency,
   bidSchedulePrefsHref,
   bidScheduleViewHref,
   buildBidScheduleSections,
+  dateAgingNudge,
   parseBidScheduleGroupBy,
   parseBidScheduleSort,
 } from "./bid-schedule";
@@ -35,6 +37,16 @@ function row(partial: Partial<Row> & Pick<Row, "id" | "status">): Row {
 }
 
 describe("bid schedule group/sort", () => {
+  it("labels Group by options including lead estimator and bid month", () => {
+    expect(BID_SCHEDULE_GROUP_OPTIONS).toEqual(
+      expect.arrayContaining([
+        { value: "none", label: "No grouping" },
+        { value: "estimateLead", label: "Lead estimator" },
+        { value: "bidDueMonth", label: "Bid due month" },
+      ])
+    );
+  });
+
   it("parses group-by and sort URL values", () => {
     expect(parseBidScheduleGroupBy("marketSector")).toBe("marketSector");
     expect(parseBidScheduleGroupBy("nope")).toBe("none");
@@ -113,6 +125,48 @@ describe("bid schedule group/sort", () => {
     expect(bidDueUrgency("2026-08-28", today)).toBe("fortnight");
     expect(bidDueUrgency("2026-09-15", today)).toBe(null);
     expect(bidDueUrgency(null, today)).toBe(null);
+    expect(dateAgingNudge("bidDueDate", "overdue")).toMatch(/Confirm the date/);
+    expect(dateAgingNudge("drawingsDueDate", "week")).toMatch(/within 7 days/);
+  });
+
+  it("groups by lead estimator and bid due month", () => {
+    const sections = buildBidScheduleSections(
+      [
+        {
+          ...row({ id: 1, status: "active" }),
+          estimateLeadName: "Marcus Webb",
+          bidDueDate: "2026-09-15",
+        },
+        {
+          ...row({ id: 2, status: "active" }),
+          estimateLeadName: "Marcus Webb",
+          bidDueDate: "2026-10-01",
+        },
+      ],
+      "estimateLead",
+      { field: "bidDueDate", dir: "asc" }
+    );
+    expect(sections[0]?.groups?.map((group) => group.label)).toEqual([
+      "Marcus Webb",
+    ]);
+    const byMonth = buildBidScheduleSections(
+      [
+        {
+          ...row({ id: 1, status: "upcoming" }),
+          bidDueDate: "2026-09-15",
+        },
+        {
+          ...row({ id: 2, status: "upcoming" }),
+          bidDueDate: "2026-10-01",
+        },
+      ],
+      "bidDueMonth",
+      { field: "bidDueDate", dir: "asc" }
+    );
+    expect(byMonth[0]?.groups?.map((group) => group.label)).toEqual([
+      "2026-09",
+      "2026-10",
+    ]);
   });
 
   it("builds a saved-view URL from config without default noise", () => {

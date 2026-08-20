@@ -8,6 +8,7 @@ export type FieldType =
   | "number"
   | "dollars"
   | "date"
+  | "month"
   | "dropdown"
   | "multi";
 
@@ -27,8 +28,21 @@ export type FieldDef = {
   note?: string;
   /** Part of the Bid Schedule core set captured at pursuit creation. */
   core?: boolean;
+  /**
+   * Schedule-mode fields on Active/Upcoming rounds (identity, department,
+   * phase, lead, awardability, sector, start month, contract time, dates).
+   */
+  scheduleCore?: boolean;
   /** Only applies when Awardability indicates a Rate Only pricing round. */
   conditional?: "rateOnly";
+  /** Explicit N/A is stored separately; never use numeric zero as a sentinel. */
+  naAllowed?: boolean;
+  /** A zero value may be saved as a draft but cannot satisfy the lock gate. */
+  zeroInvalid?: boolean;
+  /** Advisory range; values outside it require an acknowledgement before lock. */
+  range?: { min?: number; max?: number };
+  /** Filled from another field; not independently keyed when field policy is on. */
+  derived?: boolean;
 };
 
 export const FIELD_DEFS: FieldDef[] = [
@@ -41,6 +55,7 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Project Identity",
     source: "connect",
     core: true,
+    scheduleCore: true,
     note: "Parent Job Number; may be unlinked pending Salesforce match",
   },
   {
@@ -51,6 +66,8 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Project Identity",
     source: "connect",
     core: true,
+    scheduleCore: true,
+    note: "Local job name; Salesforce may suggest a replacement but does not overwrite unless accepted",
   },
   {
     key: "owner",
@@ -69,6 +86,7 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Project Identity",
     listKey: "region",
     core: true,
+    scheduleCore: true,
     note: "Lead operational Division/Region if IJV",
   },
   {
@@ -79,6 +97,7 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Project Identity",
     listKey: "preconDepartment",
     core: true,
+    scheduleCore: true,
     note: "Lead Preconstruction Department if IJV",
   },
   {
@@ -89,6 +108,7 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Project Identity",
     listKey: "estimatePhase",
     core: true,
+    scheduleCore: true,
     note: "Identifies this Estimate Round",
   },
   {
@@ -107,6 +127,7 @@ export const FIELD_DEFS: FieldDef[] = [
     tier: "optional",
     group: "Dates & Geography",
     core: true,
+    scheduleCore: true,
     note: "Operational Bid Schedule date — does not block RPD lock",
   },
   {
@@ -119,21 +140,42 @@ export const FIELD_DEFS: FieldDef[] = [
     note: "Operational Bid Schedule date — does not block RPD lock",
   },
   {
+    key: "interviewDate",
+    label: "Interview Date",
+    type: "date",
+    tier: "optional",
+    group: "Dates & Geography",
+    core: true,
+    scheduleCore: true,
+    note: "Client interview date; distinct from the internal bid review date",
+  },
+  {
     key: "bidDueDate",
     label: "Bid Due Date",
     type: "date",
     tier: "required",
     group: "Dates & Geography",
     core: true,
+    scheduleCore: true,
+    note: "Client bid due date; aging labels never auto-move lifecycle status",
   },
   {
     key: "projectStartDate",
     label: "Project Start Date",
     type: "date",
+    tier: "optional",
+    group: "Dates & Geography",
+    note: "Legacy day-granularity value; Start Month is the board source of truth",
+  },
+  {
+    key: "projectStartMonth",
+    label: "Project Start Month",
+    type: "month",
     tier: "required",
     group: "Dates & Geography",
     core: true,
-    note: "When construction starts",
+    scheduleCore: true,
+    note: "Construction start at month granularity; no invented calendar day",
   },
   {
     key: "city",
@@ -160,15 +202,19 @@ export const FIELD_DEFS: FieldDef[] = [
     tier: "required",
     group: "Project Identity",
     core: true,
+    scheduleCore: true,
+    note: "Named lead for this pricing effort; round-stage staffing is separate and does not grant visibility",
   },
   {
     key: "mlt",
     label: "Market Leadership Team (MLT)",
     type: "dropdown",
-    tier: "required",
+    tier: "optional",
     group: "Classification",
     listKey: "mlt",
-    core: true,
+    core: false,
+    derived: true,
+    note: "Derived from the granular Market Sector; do not key both",
   },
   {
     key: "marketSector",
@@ -179,6 +225,8 @@ export const FIELD_DEFS: FieldDef[] = [
     listKey: "marketSector",
     source: "connect",
     core: true,
+    scheduleCore: true,
+    note: "Granular market sector; MLT is derived from this value and is not keyed separately",
   },
   {
     key: "contractType",
@@ -235,6 +283,7 @@ export const FIELD_DEFS: FieldDef[] = [
     tier: "required",
     group: "Classification",
     listKey: "awardability",
+    scheduleCore: true,
     note: "Is this a Work Under Contract pricing round?",
   },
   {
@@ -253,6 +302,22 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Estimate Value & Fee",
     source: "destini",
     note: "Grand total price on the pursuit",
+  },
+  {
+    key: "awardableAmount",
+    label: "Awardable Amount $",
+    type: "dollars",
+    tier: "optional",
+    group: "Estimate Value & Fee",
+    note: "Amount genuinely available to win in this pricing effort; do not infer from estimate value",
+  },
+  {
+    key: "contractAmountSigned",
+    label: "Contract Amount Signed $",
+    type: "dollars",
+    tier: "optional",
+    group: "Estimate Value & Fee",
+    note: "Executed contract value credited to this effort",
   },
   {
     key: "feeBackPage",
@@ -303,12 +368,14 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Labor",
     source: "destini",
     note: "All craft labor manhours, incl. nested self-perform estimates",
+    zeroInvalid: true,
+    range: { min: 1, max: 10_000_000 },
   },
   {
     key: "gcBgSort",
     label: "GC $ – B&G Sort",
     type: "dollars",
-    tier: "required",
+    tier: "optional",
     group: "General Conditions & Requirements",
     source: "destini",
     note: "B&G Cost Sort using Benchmark Component Code",
@@ -317,7 +384,7 @@ export const FIELD_DEFS: FieldDef[] = [
     key: "grBgSort",
     label: "GR $ – B&G Sort",
     type: "dollars",
-    tier: "required",
+    tier: "optional",
     group: "General Conditions & Requirements",
     note: "Not Destini-checkmarked in 2026 markup — enter manually",
   },
@@ -325,7 +392,7 @@ export const FIELD_DEFS: FieldDef[] = [
     key: "gcProposedOwnerSov",
     label: "GC $ Proposed – Owner SOV",
     type: "dollars",
-    tier: "required",
+    tier: "optional",
     group: "General Conditions & Requirements",
     source: "destini",
     note: "GC cost that the Owner sees on the SOV",
@@ -334,7 +401,7 @@ export const FIELD_DEFS: FieldDef[] = [
     key: "grProposedOwnerSov",
     label: "GR $ Proposed – Owner SOV",
     type: "dollars",
-    tier: "required",
+    tier: "optional",
     group: "General Conditions & Requirements",
     source: "destini",
   },
@@ -346,6 +413,8 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Staffing",
     source: "destini",
     note: "Total months, Assistant Project Manager through Project Director",
+    zeroInvalid: true,
+    range: { min: 0.1, max: 120 },
   },
   {
     key: "fieldSupervisionMonths",
@@ -360,7 +429,7 @@ export const FIELD_DEFS: FieldDef[] = [
     key: "preconCost",
     label: "Precon Cost $ (in estimate)",
     type: "dollars",
-    tier: "required",
+    tier: "optional",
     group: "Precon & Design",
     source: "destini",
     note: "Cost included in the estimate",
@@ -373,6 +442,16 @@ export const FIELD_DEFS: FieldDef[] = [
     group: "Precon & Design",
     source: "destini",
     note: "Design consultants, design management, and/or construction engineering support",
+  },
+  {
+    key: "selfPerformIntent",
+    label: "Self-Perform Intent",
+    type: "multi",
+    tier: "optional",
+    group: "Self-Perform",
+    listKey: "selfPerformWorkType",
+    scheduleCore: true,
+    note: "Early pipeline signal for self-perform managers; detailed post-bid collection remains separate",
   },
   {
     key: "selfPerformPriced",
@@ -401,12 +480,16 @@ export const FIELD_DEFS: FieldDef[] = [
   },
   {
     key: "projectScheduleDuration",
-    label: "Project Schedule Duration (MO)",
+    label: "Contract Time (months)",
     type: "number",
     tier: "required",
     group: "Schedule & Engagement",
     source: "destini",
     note: "Construction duration only",
+    core: true,
+    scheduleCore: true,
+    zeroInvalid: true,
+    range: { min: 1, max: 120 },
   },
   {
     key: "projectPlanningPreconEngagement",
@@ -420,7 +503,7 @@ export const FIELD_DEFS: FieldDef[] = [
     key: "utilizedSupportServices",
     label: "Utilized Support Services",
     type: "multi",
-    tier: "required",
+    tier: "optional",
     group: "Schedule & Engagement",
     listKey: "supportGroups",
     note: "What support departments helped with the preconstruction effort (repeatable)",
@@ -570,6 +653,22 @@ export const SOURCE_LABELS: Record<NonNullable<FieldDef["source"]>, string> = {
   buildingconnected: "BuildingConnected",
 };
 
+export function isScheduleCoreField(def: FieldDef): boolean {
+  return Boolean(def.scheduleCore);
+}
+
+export function fieldsForRoundEntry(input: {
+  mode: "schedule" | "postBid";
+  hideIjvDropdown?: boolean;
+}): FieldDef[] {
+  return FIELD_DEFS.filter((def) => {
+    if (input.mode === "schedule" && !isScheduleCoreField(def)) return false;
+    if (input.hideIjvDropdown && def.key === "internalJointVenture")
+      return false;
+    return true;
+  });
+}
+
 export function isRateOnly(
   awardability: string | null | undefined,
   estimatePhase: string | null | undefined
@@ -589,6 +688,120 @@ export type ConditionContext = {
   estimatePhase?: string | null;
   internalJointVenture?: string | null;
 };
+
+export type EstimatePhaseBand = "concept" | "design" | "commitment";
+
+const CONCEPT_REQUIRED = new Set([
+  "jobNumber",
+  "jobName",
+  "region",
+  "preconDepartment",
+  "estimatePhase",
+  "bidDueDate",
+  "projectStartMonth",
+  "estimateLead",
+  "marketSector",
+  "awardability",
+  "estimateValue",
+  "feeBackPage",
+  "feeExpected",
+  "contingencyTotal",
+]);
+
+const NON_AWARDABLE_DESIGN_OPTIONAL = new Set([
+  "craftLaborBase",
+  "craftLaborBurden",
+  "craftLaborManHours",
+  "pmMonths",
+  "fieldSupervisionMonths",
+  "selfPerformPriced",
+  "selfPerformProposed",
+  "selfPerformWorkType",
+]);
+
+export const FIELD_POLICY_VERSION = 1;
+
+export function estimatePhaseBand(
+  estimatePhase: string | null | undefined
+): EstimatePhaseBand {
+  const phase = (estimatePhase ?? "").toLowerCase();
+  if (/gmp|hard bid|firm fixed|construction document|\bcd\b/.test(phase)) {
+    return "commitment";
+  }
+  if (
+    /quick rom|\bconcept\b|feasib|schematic/.test(phase) &&
+    !/\bdd\b|design development/.test(phase)
+  ) {
+    return "concept";
+  }
+  return "design";
+}
+
+export function requiredFieldKeysFor(
+  ctx: ConditionContext,
+  options: { fieldPolicy?: boolean } = {}
+): string[] {
+  const hidden = new Set(inapplicableFieldKeys(ctx));
+  const band = estimatePhaseBand(ctx.estimatePhase);
+  let required = REQUIRED_FIELD_KEYS.filter((key) => !hidden.has(key));
+  if (options.fieldPolicy !== true) return required;
+  if (band === "concept") {
+    required = required.filter((key) => CONCEPT_REQUIRED.has(key));
+  } else if (
+    band === "design" &&
+    /not awardable|unlikely|no/i.test(ctx.awardability ?? "")
+  ) {
+    required = required.filter(
+      (key) => !NON_AWARDABLE_DESIGN_OPTIONAL.has(key)
+    );
+  }
+  if (isRateOnly(ctx.awardability, ctx.estimatePhase)) {
+    required = [...new Set([...required, "costOfWorkBasis"])];
+  }
+  required = required.filter(
+    (key) => !FIELD_DEFS.find((def) => def.key === key)?.derived
+  );
+  return required;
+}
+
+export function isFieldRequired(
+  def: FieldDef,
+  ctx: ConditionContext,
+  options: { fieldPolicy?: boolean } = {}
+): boolean {
+  return requiredFieldKeysFor(ctx, options).includes(def.key);
+}
+
+export function fieldAllowsNa(def: FieldDef): boolean {
+  if (def.naAllowed != null) return def.naAllowed;
+  return (
+    (def.type === "number" || def.type === "dollars") &&
+    !def.core &&
+    !["estimateValue", "feeBackPage", "feeExpected"].includes(def.key)
+  );
+}
+
+export function fieldRangeIssue(def: FieldDef, value: unknown): string | null {
+  if (!def.range || value == null || value === "") return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  if (def.range.min != null && numeric < def.range.min)
+    return `${def.label} is below the usual minimum of ${def.range.min}.`;
+  if (def.range.max != null && numeric > def.range.max)
+    return `${def.label} is above the usual maximum of ${def.range.max}.`;
+  return null;
+}
+
+export function maskNotApplicableValues<T extends Record<string, unknown>>(
+  values: T,
+  keys: ReadonlySet<string>
+): T {
+  const next = { ...values };
+  for (const key of keys) {
+    if (key in next) (next as Record<string, unknown>)[key] = null;
+  }
+  return next;
+}
 
 export function isInternalJointVenture(
   value: string | null | undefined

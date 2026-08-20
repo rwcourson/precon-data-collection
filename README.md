@@ -1,8 +1,14 @@
-# B&G Precon Data Collection — V1
+# B&G Precon — Pursuits & Data
 
 In-house web app for Precon **project data collection**: the bid schedule, post-bid yellow-field capture, a Salesforce link when the job number exists, and the summary numbers Lucy already publishes.
 
-This is **not** Jay’s Gantt, Lowery’s Precon App, Magnet Workforce, or a Salesforce replacement. Smartsheet stays the system of record through 2026. Target enterprise flip ~January 2027. This V1 is the November “we can run the Monday loop here” bar.
+The shipped V1 baseline is the working Smartsheet process on the web. The
+[Aug. 19 RPD Roundtable contract](docs/rpd-roundtable-product-contract.md)
+governs work after that baseline. Same-data Gantt, lock revisions, and
+locked-only Databricks publication are in the tree behind rollout flags and
+are not treated as permanent exclusions. Lowery's staffing/equipment/rates
+app remains a separate product. Smartsheet stays readable until a reconciled
+history dump is signed off.
 
 Default identity is **Brian Meyers**, Central RPD.
 
@@ -16,11 +22,17 @@ Default identity is **Brian Meyers**, Central RPD.
 4. **Visualization** — Region / Division / Corporate dashboards, including a seeded Standard set. **Default = one latest/final round per job** so pricing rounds are not summed. Power BI stays for DMs; numbers must match.
 5. **Effort notes** — Chat on the pricing effort (`@[userId]` mentions, 25 MB attachments). Not project-level, not private.
 6. **Staffing** — Explicit “team assigned” mark. Overview **Needs staffing** = Upcoming + unstaffed in your scope.
-7. **Copilot** — `/copilot` (Eve locally; Magnus fallback on Vercel). Tools are Principal-scoped. Threads persist per user in the browser.
+7. **Copilot** — `/copilot` (Eve locally; Magnus fallback on Vercel). Tools are Principal-scoped. Threads persist per user in the browser. PCM/lead chrome hides Copilot.
 
-Primary nav: Overview, Bid Schedule, Post-Bid, Dashboards, Reports. Sheets / Studio / Forecast / DMR / Copilot live under **More**.
+**V1 demo nav (historical):** Overview, Bid Schedule, Post-Bid, Dashboards, Reports. Sheets / Studio / Forecast / DMR / Copilot live under **More**. After Aug. 19, PCM and estimate lead see Overview, Bid Schedule, and Post-Bid only (`roleChrome`). Dashboards/Reports/Copilot stay in RPD/admin Tools and More.
 
-Jay-meeting upgrades in full: [docs/jay-mcdaniel-upgrades.md](docs/jay-mcdaniel-upgrades.md). GitHub Actions + Vercel env/crons: [docs/github-and-vercel.md](docs/github-and-vercel.md). Open items for Brian, Keller, Lucy, and Eric: [docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
+Canonical post–Aug. 19 requirements and Phases 0–16:
+[docs/rpd-roundtable-product-contract.md](docs/rpd-roundtable-product-contract.md).
+Shipped Jay-meeting upgrades:
+[docs/jay-mcdaniel-upgrades.md](docs/jay-mcdaniel-upgrades.md). GitHub Actions
++ Vercel env/crons:
+[docs/github-and-vercel.md](docs/github-and-vercel.md). Open legacy V1 items:
+[docs/V1-REMAINING-QUESTIONS.md](docs/V1-REMAINING-QUESTIONS.md).
 
 ## Quick start
 
@@ -36,7 +48,7 @@ pnpm run dev         # http://localhost:3000 against Neon
 
 Do **not** run `pnpm run db:reset` if you want this dataset — that rebuilds the small synthetic demo on local PGlite and never writes Neon.
 
-After pulling a fresh Smartsheet export, `pnpm run db:import-smartsheet` maps **Owner**, **Drawings Due Date**, and **Bid Review Date** through the shipped parser (`src/lib/integrations/smartsheet/parse.ts`).
+After pulling a fresh Smartsheet export (`pnpm smartsheet:pull`), `pnpm smartsheet:dump-counts` checksums the gitignored JSON with the same parser as import. `pnpm run db:import-smartsheet` maps **Owner**, **Drawings Due Date**, and **Bid Review Date** through the shipped parser (`src/lib/integrations/smartsheet/parse.ts`). The dump helper never flips `SMARTSHEET_MODE`.
 
 ### Synthetic demo only (offline PGlite)
 
@@ -78,7 +90,7 @@ Salesforce-first New Pursuit is there if asked. Manual tab is **No job number ye
 | Status state machine + lock gate labels | Destini autofill (CSV import + badges; no unique final-phase tag yet) |
 | Latest-round-per-job leadership rollups | Native mobile (responsive web; iOS/Expo exist but are not V1) |
 | RBAC kernel, Region workspaces, multi-region visibility | Microsoft Entra SSO locally (`AUTH_MODE=demo` uses Brian Meyers) |
-| Post-lock outcome + audit; `finalizeRound()` seam | Live warehouse write (`DATABRICKS_ALLOW_WRITE` stays false) |
+| Post-lock outcome + audit; current `finalizeRound()` lock seam | Versioned lock revisions and live locked-only warehouse publication (planned Phases 10/15; `DATABRICKS_ALLOW_WRITE` stays false today) |
 | PDF + Excel exports, latest-note column, Standard dashboards | Live SMTP (outbox until Resend); Eve sibling (Magnus on Vercel) |
 
 ## Production configuration
@@ -89,7 +101,7 @@ Every integration has a live path guarded by an environment variable; unset, it 
 | --- | --- |
 | `AUTH_MODE=sso` | Microsoft Entra via Better Auth (`/sign-in`). |
 | `CONNECT_MODE=rest`, `CONNECT_API_URL`, `CONNECT_API_TOKEN` | Live B&G Connect lookup. |
-| `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABRICKS_WAREHOUSE_ID`, `DATABRICKS_TABLE` | Warehouse feed builds for real; write stays off unless IT sets allow-write. |
+| `DATABRICKS_HOST`, `DATABRICKS_TOKEN`, `DATABRICKS_WAREHOUSE_ID`, `DATABRICKS_TABLE` | Current warehouse adapter configuration; write stays off. Phase 15 replaces it with reconciled, locked-only async publication before enablement. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Reminder / schedule emails send; otherwise they queue to the outbox. |
 | `CRON_SECRET` | Required as a bearer token on reminder / distribution / sync / snapshot routes. Vercel Cron sends it automatically. |
 | `AI_GATEWAY_API_KEY`, `AI_MODEL` | Magnus + Eve tool loop via Vercel AI Gateway. |

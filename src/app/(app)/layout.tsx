@@ -11,7 +11,9 @@ import {
   type PipelineBucketCounts,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import { roleMayAccessPath } from "@/lib/route-access";
 import { listPinnedSheets } from "@/lib/sheets-server";
+import { roundtableFeaturesFor } from "@/services/rollout-service";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +26,26 @@ const EMPTY_COUNTS: PipelineBucketCounts = {
 async function chromeData() {
   try {
     const principal = await getWebPrincipal();
-    const [pinned, counts] = await Promise.all([
+    const [pinned, counts, features] = await Promise.all([
       listPinnedSheets(principal),
       countPreBidStatusesForPrincipal(principal),
+      roundtableFeaturesFor(principal),
     ]);
-    return { pinned, counts };
+    return {
+      pinned,
+      counts,
+      role: principal.user.role,
+      authorized: true,
+      roleChrome: features.roleChrome,
+    };
   } catch {
-    return { pinned: [], counts: EMPTY_COUNTS };
+    return {
+      pinned: [],
+      counts: EMPTY_COUNTS,
+      role: "pcm" as const,
+      authorized: false,
+      roleChrome: true,
+    };
   }
 }
 
@@ -50,11 +65,20 @@ export default async function AppLayout({
     }
   }
 
-  const { pinned, counts } = await chromeData();
+  const { pinned, counts, role, authorized, roleChrome } = await chromeData();
+  const pathname = (await headers()).get("x-pathname") ?? "/";
+  if (authorized && !roleMayAccessPath(role, pathname, { roleChrome })) {
+    redirect("/");
+  }
 
   return (
     <SidebarProvider>
-      <AppSidebar pinnedSheets={pinned} counts={counts} />
+      <AppSidebar
+        pinnedSheets={pinned}
+        counts={counts}
+        role={role}
+        roleChrome={roleChrome}
+      />
       <AppMain>
         <AppHeader />
         <main className="flex-1 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6 md:px-10 md:py-9 md:pb-9 xl:px-14 xl:py-10">

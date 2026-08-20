@@ -13,7 +13,6 @@ import { showJobInMyRegion } from "@/actions/visibility";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { FieldHelp } from "@/components/ui/field-help";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,8 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DuplicateMatch } from "@/lib/duplicate-jobs";
+import { typeOverSalesforceSuggestion } from "@/lib/salesforce-link";
 
 type SfJob = {
   sfId: string;
@@ -73,13 +73,11 @@ export function NewPursuitDialog({
   previewDuplicates?: boolean;
 }) {
   const [open, setOpen] = useState(previewDuplicates);
-  const [mode, setMode] = useState<"salesforce" | "manual">(
-    previewDuplicates ? "manual" : "salesforce"
-  );
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SfJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<SfJob | null>(null);
+  const [undoMatch, setUndoMatch] = useState<SfJob | null>(null);
   const [manualName, setManualName] = useState(
     previewDuplicates ? "Auburn Football Performance Center" : ""
   );
@@ -99,6 +97,12 @@ export function NewPursuitDialog({
 
   async function runSearch(q: string) {
     setQuery(q);
+    setManualName(q);
+    if (selected) {
+      const override = typeOverSalesforceSuggestion(selected);
+      setSelected(override.selected);
+      setUndoMatch(override.undo);
+    }
     if (q.trim().length < 2) {
       setResults([]);
       return;
@@ -123,16 +127,11 @@ export function NewPursuitDialog({
         return;
       }
     }
-    if (mode === "salesforce" && !selected) {
-      toast.error(
-        "Select a job from Salesforce / Connect, or switch to No job number yet (ROM)"
-      );
+    if (!manualName.trim()) {
+      toast.error("Enter a job name. Salesforce can suggest a number later.");
       return;
     }
-    if (mode === "manual" && !manualName.trim()) {
-      toast.error("Enter a Job Name for the manual pursuit");
-      return;
-    }
+    const mode: CreatePursuitInput["mode"] = selected ? "salesforce" : "manual";
     const input: CreatePursuitInput = {
       mode,
       sfId: selected?.sfId,
@@ -141,14 +140,9 @@ export function NewPursuitDialog({
       preconDepartment: form.preconDepartment,
       estimatePhase: form.estimatePhase,
       bidYear: Number(form.bidYear),
-      bidDueDate: form.bidDueDate,
       city: selected?.city ?? undefined,
       state: selected?.state ?? undefined,
-      mlt: form.mlt,
-      contractType: form.contractType,
-      procurement: form.procurement,
-      statusAtPricing: form.statusAtPricing,
-      initialStatus: form.initialStatus as CreatePursuitInput["initialStatus"],
+      initialStatus: "upcoming",
       confirmDuplicate,
     };
     startTransition(async () => {
@@ -159,12 +153,15 @@ export function NewPursuitDialog({
           return;
         }
         toast.success(
-          mode === "manual"
-            ? "ROM created as TBD-… and left unlinked — link to Salesforce when the number arrives"
-            : "Pursuit created from Salesforce / Connect"
+          result.kind === "pending"
+            ? "Sent to the RPD for approval — it appears in the pending strip"
+            : selected
+              ? "Pursuit created from Salesforce / Connect"
+              : "ROM created with a pending job number — link to Salesforce when the number arrives"
         );
         setOpen(false);
         setSelected(null);
+        setUndoMatch(null);
         setManualName("");
         setQuery("");
         setResults([]);
@@ -203,94 +200,104 @@ export function NewPursuitDialog({
         <DialogHeader>
           <DialogTitle>New Pursuit</DialogTitle>
           <DialogDescription>
-            Salesforce first — look up the job number in B&amp;G Connect. Use No
-            job number yet (ROM) only when Precon is pricing before Salesforce
-            has a number. That path stays unlinked as TBD-….
+            Start typing a job name. Salesforce / Connect suggests a match, but
+            only its job number is authoritative. Leave the suggestion unused to
+            create a ROM with a pending job number.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="salesforce">
-              From Salesforce / Connect
-            </TabsTrigger>
-            <TabsTrigger value="manual">No job number yet (ROM)</TabsTrigger>
-          </TabsList>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="pursuit-name">Job name</Label>
+            <FieldHelp label="Salesforce suggestions">
+              Matches appear as you type. Accepting one uses the Salesforce job
+              number. Typing over a suggestion unlinks it; use Undo to restore
+              the last match.
+            </FieldHelp>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              id="pursuit-name"
+              placeholder="e.g. Riverside Medical Tower — Quick ROM"
+              className="pl-8"
+              value={selected ? manualName : query || manualName}
+              onChange={(e) => runSearch(e.target.value)}
+            />
+            {searching && (
+              <Loader2 className="absolute right-2.5 top-2.5 size-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {undoMatch && !selected && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => {
+                setSelected(undoMatch);
+                setManualName(undoMatch.jobName);
+                setUndoMatch(null);
+                setResults([]);
+              }}
+            >
+              Undo — restore Salesforce match #{undoMatch.jobNumber}
+            </Button>
+          )}
+        </div>
 
-          <TabsContent value="salesforce" className="space-y-3 pt-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Search Connect by job name or number…"
-                className="pl-8"
-                value={query}
-                onChange={(e) => runSearch(e.target.value)}
-              />
-              {searching && (
-                <Loader2 className="absolute right-2.5 top-2.5 size-4 animate-spin text-muted-foreground" />
-              )}
+        {selected ? (
+          <div className="space-y-2 rounded-md border bg-accent/40 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">
+                  #{selected.jobNumber} — Salesforce name “{selected.jobName}”
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Shadow only: {selected.region} · {selected.marketSector} ·{" "}
+                  {selected.city}, {selected.state}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setUndoMatch(selected);
+                  setSelected(null);
+                  setQuery(manualName);
+                }}
+              >
+                Unlink
+              </Button>
             </div>
-            {selected ? (
-              <div className="flex items-start justify-between rounded-md border bg-accent/40 p-3">
-                <div>
+          </div>
+        ) : (
+          results.length > 0 && (
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-1">
+              {results.map((r) => (
+                <button
+                  key={r.sfId}
+                  type="button"
+                  className="w-full rounded-sm px-2 py-1.5 text-left outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
+                  onClick={() => {
+                    setSelected(r);
+                    setManualName(r.jobName);
+                    setUndoMatch(null);
+                    setDuplicates([]);
+                    setResults([]);
+                  }}
+                >
                   <p className="text-sm font-medium">
-                    #{selected.jobNumber} — {selected.jobName}
+                    #{r.jobNumber} — {r.jobName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Salesforce office {selected.region} ·{" "}
-                    {selected.marketSector} · {selected.city}, {selected.state}
+                    {r.region} · {r.marketSector}
                   </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelected(null)}
-                >
-                  Change
-                </Button>
-              </div>
-            ) : (
-              results.length > 0 && (
-                <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-1">
-                  {results.map((r) => (
-                    <button
-                      key={r.sfId}
-                      type="button"
-                      className="w-full rounded-sm px-2 py-1.5 text-left outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40"
-                      onClick={() => {
-                        setSelected(r);
-                        setDuplicates([]);
-                      }}
-                    >
-                      <p className="text-sm font-medium">
-                        #{r.jobNumber} — {r.jobName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.region} · {r.marketSector}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              )
-            )}
-          </TabsContent>
-
-          <TabsContent value="manual" className="space-y-3 pt-2">
-            <div className="flex items-center gap-2 rounded-md border border-dashed bg-muted/40 p-2.5 text-xs text-muted-foreground">
-              <Unlink className="size-3.5 shrink-0" />A placeholder Job Number
-              is assigned. When the job appears in Salesforce later, the system
-              suggests candidate matches to link.
+                </button>
+              ))}
             </div>
-            <div className="space-y-1.5">
-              <Label>Job Name</Label>
-              <Input
-                placeholder="e.g. Riverside Medical Tower — Quick ROM"
-                value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+          )
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           {canChooseRegion ? (
@@ -326,48 +333,6 @@ export function NewPursuitDialog({
             onChange={(v) => set("bidYear", v)}
             options={lists.bidYear ?? []}
           />
-          <div className="space-y-1.5">
-            <Label className="text-xs">Bid Due Date</Label>
-            <DatePicker
-              value={form.bidDueDate ?? ""}
-              onChange={(next) => set("bidDueDate", next)}
-            />
-          </div>
-          <SelectField
-            label="MLT"
-            value={form.mlt}
-            onChange={(v) => set("mlt", v)}
-            options={lists.mlt ?? []}
-          />
-          <SelectField
-            label="Contract Type"
-            value={form.contractType}
-            onChange={(v) => set("contractType", v)}
-            options={lists.contractType ?? []}
-          />
-          <SelectField
-            label="Procurement"
-            value={form.procurement}
-            onChange={(v) => set("procurement", v)}
-            options={lists.procurement ?? []}
-          />
-          <SelectField
-            label="Status at Pricing"
-            value={form.statusAtPricing}
-            onChange={(v) => set("statusAtPricing", v)}
-            options={lists.statusAtPricing ?? []}
-          />
-          <SelectField
-            label="Bid Schedule Section"
-            value={form.initialStatus}
-            onChange={(v) => set("initialStatus", v)}
-            options={["active", "upcoming", "outstanding"]}
-            labels={{
-              active: "Active",
-              upcoming: "Upcoming",
-              outstanding: "Outstanding",
-            }}
-          />
         </div>
 
         {duplicates.length > 0 && (
@@ -387,16 +352,22 @@ export function NewPursuitDialog({
                       {match.jobNumber} · {match.homeRegion}
                       {match.creatorName ? ` · ${match.creatorName}` : ""}
                     </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="mt-2"
-                      disabled={pending}
-                      onClick={() => adopt(match.jobId)}
-                    >
-                      Show in my region instead
-                    </Button>
+                    {match.jobNumber === "Pending approval" ? (
+                      <p className="mt-2 text-xs">
+                        A matching create is already waiting for RPD approval.
+                      </p>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-2"
+                        disabled={pending}
+                        onClick={() => adopt(match.jobId)}
+                      >
+                        Show in my region instead
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -404,9 +375,9 @@ export function NewPursuitDialog({
           </Alert>
         )}
 
-        {mode === "manual" && (
+        {!selected && (
           <Badge variant="warning">
-            <Unlink /> Will be created unlinked
+            <Unlink /> Will be created with a pending job number
           </Badge>
         )}
 

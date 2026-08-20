@@ -5,6 +5,10 @@ import { z } from "zod";
 import type { EstimateRound } from "@/db/schema";
 import type { Principal } from "@/lib/authorization/types";
 import {
+  formatAwardableShadowBrief,
+  toAwardableReportingRows,
+} from "@/lib/awardable-reporting";
+import {
   type CopilotPlan,
   planDashboardFromPrompt,
   planDashboardWithOptionalLlm,
@@ -55,12 +59,14 @@ function buildBrief(rounds: EstimateRound[]): string {
     (r) => r.marketSector || "Unclassified"
   ).slice(0, 8);
   const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
+  const shadow = formatAwardableShadowBrief(toAwardableReportingRows(rounds));
   return [
     `Rounds: ${fmtNumber(totals.rounds)}`,
     `Pursuit volume: ${fmtDollars(totals.volume, true)}`,
     `Win rate: ${fmtPercent(totals.winRate)}`,
     `Expected fee: ${fmtDollars(totals.totalFee, true)}`,
     `Fee % (weighted): ${fmtPercent(totals.weightedFeePct)}`,
+    `${shadow.coverageLine} · ${shadow.grain.coverage}`,
     `Bid years: ${years.join(", ") || "—"}`,
     "Volume by region:",
     ...byRegion.map(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyLeadershipRoundScope,
   computeStats,
+  defaultDashboardStatus,
   latestRoundsPerJob,
   parseLeadershipRoundMode,
   scopeRoundsForDashboardExport,
@@ -170,5 +171,14 @@ describe("scopeRoundsForDashboardExport (Excel + page)", () => {
     });
     expect(scoped).toHaveLength(1);
     expect(scoped[0]!.jobId).toBe(1);
+  });
+});
+
+describe("defaultDashboardStatus", () => {
+  it("defaults leadership and corporate to locked, other roles to all", () => {
+    expect(defaultDashboardStatus("leadership")).toBe("locked");
+    expect(defaultDashboardStatus("corporate_admin")).toBe("locked");
+    expect(defaultDashboardStatus("rpd")).toBe("all");
+    expect(defaultDashboardStatus("pcm")).toBe("all");
   });
 });

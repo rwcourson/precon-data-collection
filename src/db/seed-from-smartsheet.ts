@@ -11,19 +11,19 @@ import { eq } from "drizzle-orm";
 import { syncDataQualityFlags } from "../lib/data-quality-sync";
 import { DEFAULT_DEMO_RPD } from "../lib/demo-identity";
 import {
-  mergeSmartsheetDrafts,
-  parseSmartsheetRound,
-  type SmartsheetRoundDraft,
-  smartsheetRowToCells,
+  isSmartsheetHistoryDumpFile,
+  parseSmartsheetDumpSheets,
 } from "../lib/integrations/smartsheet/parse";
 import { IMPORT_SOURCE_KEY } from "../lib/migration-source";
 import { REFERENCE_LISTS } from "../lib/reference-data";
+import { REGION_DEPARTMENTS } from "../lib/region-departments";
 import {
   consolidatedRegionalReportInsert,
   upcomingBidScheduleReportInsert,
 } from "../lib/report-presets";
-import { db } from "./index";
+import { closeDatabase, db } from "./index";
 import {
+  approvalRequests,
   appSettings,
   auditLog,
   customColumns,
@@ -31,19 +31,32 @@ import {
   dataQualityFlags,
   emailOutbox,
   estimateRounds,
+  groupEditPolicies,
+  integrationImportBatches,
+  jobGroupMemberships,
+  jobRelationships,
   jobs,
   notifications,
+  organizationGroups,
+  productEvents,
+  publicationOutbox,
   referenceLists,
   referenceListValues,
   reportTemplates,
+  roundFieldExceptions,
+  roundLockRevisions,
   roundMultiValues,
+  roundStaffAssignments,
   salesforceJobs,
   savedReports,
   sheetColumns,
   sheetPins,
   sheetRows,
   sheets,
+  sourceProvenance,
   statusTransitions,
+  userGroupMemberships,
+  userRoundWatermarks,
   users,
 } from "./schema";
 import { seedSheetsFromExport } from "./seed-sheets";
@@ -71,6 +84,19 @@ async function main() {
   }
 
   console.log("Clearing existing app data…");
+  await db.delete(publicationOutbox);
+  await db.delete(roundLockRevisions);
+  await db.delete(roundFieldExceptions);
+  await db.delete(userRoundWatermarks);
+  await db.delete(roundStaffAssignments);
+  await db.delete(approvalRequests);
+  await db.delete(sourceProvenance);
+  await db.delete(integrationImportBatches);
+  await db.delete(productEvents);
+  await db.delete(groupEditPolicies);
+  await db.delete(userGroupMemberships);
+  await db.delete(jobGroupMemberships);
+  await db.delete(jobRelationships);
   // Sheets reference users, so they have to go before the personas are replaced.
   await db.delete(sheetPins);
   await db.delete(sheetRows);
@@ -92,6 +118,7 @@ async function main() {
   await db.delete(salesforceJobs);
   await db.delete(referenceListValues);
   await db.delete(referenceLists);
+  await db.delete(organizationGroups);
   await db.delete(users);
 
   console.log("Seeding reference lists + demo personas…");
@@ -103,6 +130,19 @@ async function main() {
         list.values.map((value, i) => ({ listKey: key, value, sortOrder: i }))
       );
   }
+  await db.insert(organizationGroups).values(
+    Object.entries(REGION_DEPARTMENTS).flatMap(([region, departments]) =>
+      departments.map((department) => ({
+        key: `department:${department
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")}`,
+        name: department,
+        kind: "precon_department",
+        region,
+      }))
+    )
+  );
 
   const userRows = await db
     .insert(users)
@@ -162,46 +202,27 @@ async function main() {
   const rpd = userRows.find((u) => u.role === "rpd")!;
 
   const allFiles = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".json"));
-  const files = allFiles.filter(
-    (f) =>
-      /Bid_Schedule|Post_Bid_Data_Collection|Estimate_Metrics_Capture/i.test(
-        f
-      ) &&
-      !/Self_Perform_Estimate_Metrics|Checklist|Backup|Roster|Consolidated|Dashboard|Scoreboard|Cost_Tracking/i.test(
-        f
-      )
-  );
+  const files = allFiles.filter(isSmartsheetHistoryDumpFile);
   const skipped = allFiles.filter((f) => !files.includes(f));
 
   console.log(`Parsing ${files.length} Smartsheet files…`);
-  const byKey = new Map<string, SmartsheetRoundDraft>();
+  const { drafts: mergedDrafts } = parseSmartsheetDumpSheets(
+    files.map((file) => ({
+      fileName: file,
+      sheet: JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf8")),
+    }))
+  );
 
-  for (const file of files) {
-    const sheet = JSON.parse(
-      fs.readFileSync(path.join(DATA_DIR, file), "utf8")
-    );
-    for (const row of sheet.rows ?? []) {
-      const draft = parseSmartsheetRound(
-        smartsheetRowToCells(sheet, row),
-        file
-      );
-      if (!draft) continue;
-      const existing = byKey.get(draft.key);
-      byKey.set(
-        draft.key,
-        existing ? mergeSmartsheetDrafts(existing, draft) : draft
-      );
-    }
-  }
-
-  console.log(`Merged ${byKey.size} unique estimate rounds. Inserting…`);
+  console.log(
+    `Merged ${mergedDrafts.length} unique estimate rounds. Inserting…`
+  );
 
   const jobMap = new Map<string, number>();
   const leadCache = new Map<string, number>();
   const roundNoByJob = new Map<string, number>();
   let roundCount = 0;
 
-  const drafts = [...byKey.values()].sort(
+  const drafts = [...mergedDrafts].sort(
     (a, b) =>
       a.jobNumber.localeCompare(b.jobNumber) ||
       a.estimatePhase.localeCompare(b.estimatePhase)
@@ -352,6 +373,22 @@ async function main() {
       rounds: roundCount,
     },
   });
+  const [importedJobs, importedGroups] = await Promise.all([
+    db.select().from(jobs),
+    db.select().from(organizationGroups),
+  ]);
+  const importedGroupByName = new Map(
+    importedGroups.map((group) => [group.name, group.id])
+  );
+  const importedMemberships = importedJobs.flatMap((job) => {
+    const groupId = importedGroupByName.get(job.preconDepartment);
+    return groupId
+      ? [{ jobId: job.id, groupId, participationRole: "lead" }]
+      : [];
+  });
+  if (importedMemberships.length) {
+    await db.insert(jobGroupMemberships).values(importedMemberships);
+  }
 
   const scan = await syncDataQualityFlags();
 
@@ -372,7 +409,7 @@ async function main() {
   console.log(
     `Workspace rebuilt: ${tree.views} pursuit views + ${tree.grids} standalone sheets (${tree.rows.toLocaleString()} rows).`
   );
-  process.exit(0);
+  await closeDatabase();
 }
 
 main().catch((err) => {

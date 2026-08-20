@@ -143,7 +143,7 @@ export function RegionsEditor({
                 disabled={!canToggle || pending}
                 onClick={() => toggleRegion(region, !on)}
                 className={cn(
-                  "rounded-full border px-2.5 py-0.5 text-sm",
+                  "rounded-full border px-2.5 py-0.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/35",
                   on
                     ? "border-primary bg-primary/10 text-foreground"
                     : "text-muted-foreground",

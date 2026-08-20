@@ -1,9 +1,11 @@
 "use client";
 
 import { Check, ChevronDown, Info, Loader2, Lock, Save } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { updateFieldException } from "@/actions/field-exceptions";
 import { savePostBidData } from "@/actions/post-bid";
 import { CustomColumnFields } from "@/components/rounds/custom-column-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
+import { FieldHelp } from "@/components/ui/field-help";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
@@ -36,14 +39,17 @@ import type { CustomColumn } from "@/db/schema";
 import {
   type ConditionContext,
   conditionalHint,
-  FIELD_DEFS,
   FIELD_GROUPS,
   type FieldDef,
+  fieldAllowsNa,
   fieldApplies,
+  fieldRangeIssue,
+  fieldsForRoundEntry,
   isInternalJointVenture,
   isRateOnly,
   SOURCE_LABELS,
 } from "@/lib/fields";
+import { deriveMltFromMarketSector } from "@/lib/market-rollup";
 import { companyScopedColumns } from "@/lib/region-custom-columns";
 
 type Props = {
@@ -61,6 +67,13 @@ type Props = {
   canEdit: boolean;
   locked: boolean;
   missingKeys: string[];
+  requiredKeys: string[];
+  mode: "schedule" | "postBid";
+  hideIjvDropdown?: boolean;
+  jobId?: number;
+  notApplicableKeys: string[];
+  rangeAcknowledgedKeys: string[];
+  fieldPolicy?: boolean;
   /**
    * The round's updatedAt (ISO) as rendered. Sent with the save so the server
    * can reject writes over data someone else changed since this page loaded.
@@ -83,6 +96,13 @@ export function EntryForm({
   canEdit,
   locked,
   missingKeys,
+  requiredKeys,
+  mode,
+  hideIjvDropdown = false,
+  jobId,
+  notApplicableKeys,
+  rangeAcknowledgedKeys,
+  fieldPolicy = false,
   updatedAt,
 }: Props) {
   const [values, setValues] = useState(initialValues);
@@ -90,6 +110,12 @@ export function EntryForm({
   const [custom, setCustom] = useState(initialCustom);
   const [leadId, setLeadId] = useState<number | null>(estimateLeadId);
   const [dirty, setDirty] = useState(false);
+  const [notApplicable, setNotApplicable] = useState(
+    () => new Set(notApplicableKeys)
+  );
+  const [rangeAcknowledged, setRangeAcknowledged] = useState(
+    () => new Set(rangeAcknowledgedKeys)
+  );
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -104,9 +130,11 @@ export function EntryForm({
   const groups = useMemo(() => {
     const byGroup = new Map<string, FieldDef[]>();
     for (const g of FIELD_GROUPS) byGroup.set(g, []);
-    for (const f of FIELD_DEFS) byGroup.get(f.group)!.push(f);
+    for (const f of fieldsForRoundEntry({ mode, hideIjvDropdown })) {
+      byGroup.get(f.group)!.push(f);
+    }
     return [...byGroup.entries()].filter(([, fs]) => fs.length > 0);
-  }, []);
+  }, [mode, hideIjvDropdown]);
 
   const visibleGroups = groups
     .map(
@@ -122,6 +150,10 @@ export function EntryForm({
       if (k === "awardability" || k === "estimatePhase") {
         if (!isRateOnly(next.awardability, next.estimatePhase))
           next.costOfWorkBasis = "";
+      }
+      if (fieldPolicy && k === "marketSector") {
+        const derived = deriveMltFromMarketSector(v);
+        if (derived) next.mlt = derived;
       }
       return next;
     });
@@ -141,13 +173,47 @@ export function EntryForm({
         });
         setDirty(false);
         toast.success(
-          res.audited > 0
-            ? `Saved — ${res.audited} post-lock change${res.audited === 1 ? "" : "s"} recorded in the audit log`
-            : "Saved"
+          "pendingApproval" in res && res.pendingApproval
+            ? "Changes sent to the RPD for approval"
+            : res.audited > 0
+              ? `Saved — ${res.audited} change${res.audited === 1 ? "" : "s"} recorded in History`
+              : "Saved"
         );
         router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Save failed");
+      }
+    });
+  }
+
+  function toggleException(
+    fieldKey: string,
+    kind: "not_applicable" | "range_acknowledgement",
+    enabled: boolean
+  ) {
+    startTransition(async () => {
+      try {
+        await updateFieldException({ roundId, fieldKey, kind, enabled });
+        const setter =
+          kind === "not_applicable" ? setNotApplicable : setRangeAcknowledged;
+        setter((current) => {
+          const next = new Set(current);
+          if (enabled) next.add(fieldKey);
+          else next.delete(fieldKey);
+          return next;
+        });
+        toast.success(
+          enabled
+            ? kind === "not_applicable"
+              ? "Marked N/A"
+              : "Range acknowledged"
+            : "Exception removed"
+        );
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not update field"
+        );
       }
     });
   }
@@ -157,16 +223,50 @@ export function EntryForm({
 
   return (
     <div className="space-y-4">
-      {ijv && (
+      {mode === "schedule" && (
         <Alert variant="info" className="text-xs">
           <Info />
           <AlertDescription className="text-inherit">
-            <span className="font-medium">Internal Joint Venture</span> — record
-            the lead operational Region and lead Preconstruction Department per
-            the DMR, not the supporting party. The full estimate value stays on
-            this round so it is counted once in Corporate rollups.
+            <span className="font-medium">Schedule fields only.</span> These
+            values drive the board, cards, and Gantt. The complete post-bid card
+            opens after this effort is submitted.
           </AlertDescription>
         </Alert>
+      )}
+      {mode === "postBid" && (
+        <Alert variant="info" className="text-xs">
+          <Info />
+          <AlertDescription className="text-inherit">
+            <span className="font-medium">Posted for RPD review.</span> Complete
+            remaining required fields here. An RPD/SPD locks a versioned
+            revision when the gate is green.
+          </AlertDescription>
+        </Alert>
+      )}
+      {hideIjvDropdown && jobId ? (
+        <Alert variant="info" className="text-xs">
+          <Info />
+          <AlertDescription className="text-inherit">
+            <span className="font-medium">Participating groups</span> live on
+            the job, not this dropdown. This effort stays one instance.{" "}
+            <Link href={`/jobs/${jobId}`} className="underline">
+              Open job groups
+            </Link>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        ijv && (
+          <Alert variant="info" className="text-xs">
+            <Info />
+            <AlertDescription className="text-inherit">
+              <span className="font-medium">Internal Joint Venture</span> —
+              record the lead operational Region and lead Preconstruction
+              Department per the DMR, not the supporting party. The full
+              estimate value stays on this round so it is counted once in
+              Corporate rollups.
+            </AlertDescription>
+          </Alert>
+        )
       )}
 
       {rateOnly && (
@@ -203,10 +303,23 @@ export function EntryForm({
                 );
               if (f.key === "jobName")
                 return <ReadOnlyField key={f.key} def={f} value={jobName} />;
+              if (fieldPolicy && f.derived)
+                return (
+                  <ReadOnlyField
+                    key={f.key}
+                    def={f}
+                    value={values[f.key] ?? ""}
+                    hint="Derived from Market Sector"
+                  />
+                );
               if (f.key === "estimateLead")
                 return (
                   <div key={f.key} className="space-y-1">
-                    <FieldLabel def={f} missing={missingKeys.includes(f.key)} />
+                    <FieldLabel
+                      def={f}
+                      missing={missingKeys.includes(f.key)}
+                      required={requiredKeys.includes(f.key)}
+                    />
                     <Select
                       items={users.map((u) => ({
                         value: String(u.id),
@@ -241,7 +354,11 @@ export function EntryForm({
                     key={f.key}
                     className="space-y-1 sm:col-span-2 lg:col-span-3"
                   >
-                    <FieldLabel def={f} missing={missingKeys.includes(f.key)} />
+                    <FieldLabel
+                      def={f}
+                      missing={missingKeys.includes(f.key)}
+                      required={requiredKeys.includes(f.key)}
+                    />
                     <MultiSelect
                       options={options}
                       selected={selected}
@@ -256,12 +373,18 @@ export function EntryForm({
               }
 
               const hint = conditionalHint(f.key, ctx);
+              const isNa = notApplicable.has(f.key);
+              const rangeIssue = fieldRangeIssue(f, values[f.key]);
 
               if (f.type === "dropdown") {
                 const options = lists[f.listKey ?? ""] ?? [];
                 return (
                   <div key={f.key} className="space-y-1">
-                    <FieldLabel def={f} missing={missingKeys.includes(f.key)} />
+                    <FieldLabel
+                      def={f}
+                      missing={missingKeys.includes(f.key)}
+                      required={requiredKeys.includes(f.key)}
+                    />
                     <Select
                       value={values[f.key] ?? ""}
                       onValueChange={(v) => set(f.key, v ?? "")}
@@ -287,7 +410,11 @@ export function EntryForm({
 
               return (
                 <div key={f.key} className="space-y-1">
-                  <FieldLabel def={f} missing={missingKeys.includes(f.key)} />
+                  <FieldLabel
+                    def={f}
+                    missing={missingKeys.includes(f.key)}
+                    required={requiredKeys.includes(f.key)}
+                  />
                   <div className="relative">
                     {f.type === "dollars" && (
                       <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -298,27 +425,73 @@ export function EntryForm({
                       <DatePicker
                         value={values[f.key] ?? ""}
                         onChange={(next) => set(f.key, next)}
-                        disabled={disabled}
+                        disabled={disabled || isNa}
+                      />
+                    ) : f.type === "month" ? (
+                      <Input
+                        type="month"
+                        value={values[f.key] ?? ""}
+                        onChange={(event) => set(f.key, event.target.value)}
+                        disabled={disabled || isNa}
                       />
                     ) : f.type === "dollars" || f.type === "number" ? (
                       <NumericInput
                         className={f.type === "dollars" ? "pl-6" : ""}
                         value={values[f.key] ?? ""}
                         onChange={(next) => set(f.key, next)}
-                        disabled={disabled}
-                        placeholder={f.type === "dollars" ? "0" : undefined}
+                        disabled={disabled || isNa}
+                        placeholder={
+                          f.type === "dollars" ? "Enter amount" : "Enter value"
+                        }
                       />
                     ) : (
                       <Input
                         type="text"
                         value={values[f.key] ?? ""}
                         onChange={(e) => set(f.key, e.target.value)}
-                        disabled={disabled}
+                        disabled={disabled || isNa}
                       />
                     )}
                   </div>
                   {hint && (
                     <p className="text-2xs text-info-foreground">{hint}</p>
+                  )}
+                  {fieldAllowsNa(f) && !locked && (
+                    <Button
+                      type="button"
+                      variant={isNa ? "secondary" : "ghost"}
+                      size="xs"
+                      disabled={!canEdit || pending}
+                      onClick={() =>
+                        toggleException(f.key, "not_applicable", !isNa)
+                      }
+                    >
+                      {isNa ? "N/A elected — undo" : "Mark N/A"}
+                    </Button>
+                  )}
+                  {rangeIssue && !isNa && (
+                    <Alert variant="warning" className="py-2 text-xs">
+                      <AlertDescription className="flex items-center justify-between gap-2 text-inherit">
+                        <span>{rangeIssue} Are you sure?</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          disabled={!canEdit || pending}
+                          onClick={() =>
+                            toggleException(
+                              f.key,
+                              "range_acknowledgement",
+                              !rangeAcknowledged.has(f.key)
+                            )
+                          }
+                        >
+                          {rangeAcknowledged.has(f.key)
+                            ? "Acknowledged"
+                            : "Use anyway"}
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
               );
@@ -327,7 +500,7 @@ export function EntryForm({
         </Card>
       ))}
 
-      {companyCols.length > 0 && (
+      {mode === "postBid" && companyCols.length > 0 && (
         <Card className="border-dashed">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">
@@ -375,16 +548,22 @@ export function EntryForm({
   );
 }
 
-function FieldLabel({ def, missing }: { def: FieldDef; missing: boolean }) {
+function FieldLabel({
+  def,
+  missing,
+  required = def.tier === "required",
+}: {
+  def: FieldDef;
+  missing: boolean;
+  required?: boolean;
+}) {
   return (
     <div className="flex items-center gap-1.5">
       <Label
         className={`text-xs font-medium ${missing ? "text-destructive" : ""}`}
       >
         {def.label}
-        {def.tier === "required" && (
-          <span className="ml-0.5 text-destructive">*</span>
-        )}
+        {required && <span className="ml-0.5 text-destructive">*</span>}
       </Label>
       {def.source && (
         <Tooltip>
@@ -403,10 +582,10 @@ function FieldLabel({ def, missing }: { def: FieldDef; missing: boolean }) {
             Mapped to {SOURCE_LABELS[def.source]}. Manual entry at launch; the
             data model mirrors the source system so a future API connection
             populates it without schema changes.
-            {def.note ? ` ${def.note}.` : ""}
           </TooltipContent>
         </Tooltip>
       )}
+      {def.note && <FieldHelp label={def.label}>{def.note}</FieldHelp>}
     </div>
   );
 }

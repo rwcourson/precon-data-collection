@@ -282,6 +282,7 @@ function ColumnTable({
                     className="text-muted-foreground hover:text-destructive"
                     disabled={pending}
                     onClick={() => onDelete(c)}
+                    aria-label={`Delete ${c.label}`}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>

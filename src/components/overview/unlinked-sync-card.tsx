@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { displayJobNumber } from "@/lib/format";
 import type { OverviewQueuePreview } from "@/lib/overview-queues";
 
 export function UnlinkedSyncCard({
@@ -92,13 +93,17 @@ export function UnlinkedSyncCard({
         <CardContent className="pt-0">
           <ul className="space-y-1">
             {preview.map((item) => (
-              <li
-                key={item.roundId}
-                className="truncate text-[13px] text-muted-foreground"
-              >
-                <span className="font-mono">{item.jobNumber}</span>
-                {" · "}
-                {item.jobName}
+              <li key={item.roundId}>
+                <Link
+                  href={`/rounds/${item.roundId}`}
+                  className="block truncate rounded px-1 py-0.5 text-[13px] text-muted-foreground hover:bg-info-soft hover:text-foreground"
+                >
+                  <span className="font-mono">
+                    {displayJobNumber(item.jobNumber)}
+                  </span>
+                  {" · "}
+                  {item.jobName}
+                </Link>
               </li>
             ))}
           </ul>

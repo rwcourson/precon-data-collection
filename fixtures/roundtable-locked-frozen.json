@@ -1,0 +1,63 @@
+{
+  "id": "roundtable-locked-frozen-v1",
+  "purpose": "Lucy / Power BI candidate numbers. Production hit-rate stays on the current count definition until this packet is signed.",
+  "grain": {
+    "throughput": "Locked revisions only; one current revision per round; grouped by precon department and bid year.",
+    "hitRate": "Shadow count of locked awardable efforts with a successful outcome over locked awardable efforts. Dollars stay shadow until early-release aggregation is approved.",
+    "hitRateBySector": "Shadow count of locked awardable efforts with a successful outcome over locked awardable efforts, grouped by market sector.",
+    "hitRateByLead": "Shadow count of locked awardable efforts with a successful outcome over locked awardable efforts, grouped by estimate lead.",
+    "efficiency": "Locked revisions with craft labor man hours; estimate value / man hours by region and market sector.",
+    "lift": "Locked revisions; self-perform proposed / estimate value and design-build contract type share.",
+    "coverage": "Locked revisions only. Share that have a non-null awardable amount. Sparse fields stay labeled provisional."
+  },
+  "rows": [
+    {
+      "roundId": 1,
+      "status": "locked",
+      "outcome": "Awarded",
+      "region": "Central",
+      "preconDepartment": "Central Building Group",
+      "marketSector": "Healthcare – Acute",
+      "contractType": "GC - Lump Sum",
+      "bidYear": 2026,
+      "estimateValue": 40000000,
+      "awardableAmount": 32000000,
+      "contractAmountSigned": 30000000,
+      "craftLaborManHours": 80000,
+      "selfPerformProposed": 4000000,
+      "estimateLeadName": "Marcus Webb"
+    },
+    {
+      "roundId": 2,
+      "status": "locked",
+      "outcome": "Lost",
+      "region": "Central",
+      "preconDepartment": "Central Building Group",
+      "marketSector": "Healthcare – Acute",
+      "contractType": "Design-Build",
+      "bidYear": 2026,
+      "estimateValue": 20000000,
+      "awardableAmount": 20000000,
+      "contractAmountSigned": null,
+      "craftLaborManHours": 10000,
+      "selfPerformProposed": null,
+      "estimateLeadName": "Jay McDaniel"
+    },
+    {
+      "roundId": 3,
+      "status": "active",
+      "outcome": "pending",
+      "region": "Georgia",
+      "preconDepartment": "Georgia Building Group",
+      "marketSector": "Education – K-12",
+      "contractType": "GC - Lump Sum",
+      "bidYear": 2026,
+      "estimateValue": 8000000,
+      "awardableAmount": 8000000,
+      "contractAmountSigned": null,
+      "craftLaborManHours": null,
+      "selfPerformProposed": null,
+      "estimateLeadName": "Alex Rivera"
+    }
+  ]
+}

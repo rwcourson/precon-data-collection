@@ -5,18 +5,35 @@ import path from "node:path";
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  approvalRequests,
+  auditLog,
+  bidScheduleViews,
   customColumnValues,
   dataSnapshots,
   deletionBatches,
   entityVersions,
   estimateRounds,
+  integrationImportBatches,
+  jobGroupMemberships,
+  jobRelationships,
   jobs,
+  organizationGroups,
+  publicationOutbox,
   reportArtifacts,
+  roundFieldExceptions,
+  roundLockRevisions,
   roundMultiValues,
+  roundNoteAttachments,
+  roundNoteMentions,
+  roundNotes,
+  roundStaffAssignments,
   sheetRows,
   sheets,
+  sourceProvenance,
   statusTransitions,
   type User,
+  userRoundWatermarks,
+  userTablePrefs,
 } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import { getArtifactStorage } from "@/lib/artifact-storage";
@@ -32,7 +49,7 @@ import type { Principal } from "@/lib/authorization/types";
 import { withTransaction } from "@/lib/transactions";
 
 const TRASH_RETENTION_DAYS = 30;
-export const BACKUP_FORMAT_VERSION = 1;
+export const BACKUP_FORMAT_VERSION = 2;
 const TRASH_MANAGER_ROLES = new Set(["rpd", "corporate_admin", "admin_jsa"]);
 
 export type TrashItem = {
@@ -539,6 +556,24 @@ export type LogicalBackup = {
     customColumnValues: unknown[];
     sheets: unknown[];
     sheetRows: unknown[];
+    roundNotes: unknown[];
+    roundNoteAttachments: unknown[];
+    roundNoteMentions: unknown[];
+    auditLog: unknown[];
+    statusTransitions: unknown[];
+    bidScheduleViews: unknown[];
+    userTablePrefs: unknown[];
+    organizationGroups: unknown[];
+    jobGroupMemberships: unknown[];
+    jobRelationships: unknown[];
+    roundStaffAssignments: unknown[];
+    approvalRequests: unknown[];
+    roundLockRevisions: unknown[];
+    roundFieldExceptions: unknown[];
+    userRoundWatermarks: unknown[];
+    publicationOutbox: unknown[];
+    sourceProvenance: unknown[];
+    integrationImportBatches: unknown[];
   };
   hashes: Record<string, string>;
 };
@@ -567,15 +602,57 @@ export async function createDataSnapshot(periodKey: string): Promise<{
     };
   }
 
-  const [jobRows, roundRows, multi, customs, sheetList, gridRows] =
-    await Promise.all([
-      db.select().from(jobs),
-      db.select().from(estimateRounds),
-      db.select().from(roundMultiValues),
-      db.select().from(customColumnValues),
-      db.select().from(sheets),
-      db.select().from(sheetRows),
-    ]);
+  const [
+    jobRows,
+    roundRows,
+    multi,
+    customs,
+    sheetList,
+    gridRows,
+    notes,
+    noteAttachments,
+    noteMentions,
+    audits,
+    transitions,
+    views,
+    prefs,
+    groups,
+    groupMemberships,
+    relationships,
+    staffing,
+    approvals,
+    lockRevisions,
+    fieldExceptions,
+    watermarks,
+    publications,
+    provenance,
+    importBatches,
+  ] = await Promise.all([
+    db.select().from(jobs),
+    db.select().from(estimateRounds),
+    db.select().from(roundMultiValues),
+    db.select().from(customColumnValues),
+    db.select().from(sheets),
+    db.select().from(sheetRows),
+    db.select().from(roundNotes),
+    db.select().from(roundNoteAttachments),
+    db.select().from(roundNoteMentions),
+    db.select().from(auditLog),
+    db.select().from(statusTransitions),
+    db.select().from(bidScheduleViews),
+    db.select().from(userTablePrefs),
+    db.select().from(organizationGroups),
+    db.select().from(jobGroupMemberships),
+    db.select().from(jobRelationships),
+    db.select().from(roundStaffAssignments),
+    db.select().from(approvalRequests),
+    db.select().from(roundLockRevisions),
+    db.select().from(roundFieldExceptions),
+    db.select().from(userRoundWatermarks),
+    db.select().from(publicationOutbox),
+    db.select().from(sourceProvenance),
+    db.select().from(integrationImportBatches),
+  ]);
 
   const backup: LogicalBackup = {
     formatVersion: BACKUP_FORMAT_VERSION,
@@ -588,6 +665,24 @@ export async function createDataSnapshot(periodKey: string): Promise<{
       customColumnValues: customs,
       sheets: sheetList,
       sheetRows: gridRows,
+      roundNotes: notes,
+      roundNoteAttachments: noteAttachments,
+      roundNoteMentions: noteMentions,
+      auditLog: audits,
+      statusTransitions: transitions,
+      bidScheduleViews: views,
+      userTablePrefs: prefs,
+      organizationGroups: groups,
+      jobGroupMemberships: groupMemberships,
+      jobRelationships: relationships,
+      roundStaffAssignments: staffing,
+      approvalRequests: approvals,
+      roundLockRevisions: lockRevisions,
+      roundFieldExceptions: fieldExceptions,
+      userRoundWatermarks: watermarks,
+      publicationOutbox: publications,
+      sourceProvenance: provenance,
+      integrationImportBatches: importBatches,
     },
     hashes: {
       jobs: hashRecords(jobRows),
@@ -596,6 +691,24 @@ export async function createDataSnapshot(periodKey: string): Promise<{
       customColumnValues: hashRecords(customs),
       sheets: hashRecords(sheetList),
       sheetRows: hashRecords(gridRows),
+      roundNotes: hashRecords(notes),
+      roundNoteAttachments: hashRecords(noteAttachments),
+      roundNoteMentions: hashRecords(noteMentions),
+      auditLog: hashRecords(audits),
+      statusTransitions: hashRecords(transitions),
+      bidScheduleViews: hashRecords(views),
+      userTablePrefs: hashRecords(prefs),
+      organizationGroups: hashRecords(groups),
+      jobGroupMemberships: hashRecords(groupMemberships),
+      jobRelationships: hashRecords(relationships),
+      roundStaffAssignments: hashRecords(staffing),
+      approvalRequests: hashRecords(approvals),
+      roundLockRevisions: hashRecords(lockRevisions),
+      roundFieldExceptions: hashRecords(fieldExceptions),
+      userRoundWatermarks: hashRecords(watermarks),
+      publicationOutbox: hashRecords(publications),
+      sourceProvenance: hashRecords(provenance),
+      integrationImportBatches: hashRecords(importBatches),
     },
   };
 

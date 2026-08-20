@@ -89,6 +89,15 @@ export const jobs = pgTable(
     preconDepartment: text("precon_department").notNull(),
     salesforceId: text("salesforce_id"),
     isLinked: boolean("is_linked").notNull().default(false),
+    /**
+     * Last values observed from Salesforce/Connect. Local fields remain
+     * authoritative; this shadow is shown as context and never auto-applied.
+     */
+    salesforceShadow:
+      jsonb("salesforce_shadow").$type<Record<string, string | null>>(),
+    hppFlag: text("hpp_flag"),
+    goNoGoFlag: text("go_no_go_flag"),
+    ijvBoardFlag: text("ijv_board_flag"),
     createdById: integer("created_by_id").references(() => users.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     deletedAt: timestamp("deleted_at"),
@@ -168,7 +177,10 @@ export const estimateRounds = pgTable(
     bidDueDate: date("bid_due_date"),
     drawingsDueDate: date("drawings_due_date"),
     bidReviewDate: date("bid_review_date"),
+    interviewDate: date("interview_date"),
     projectStartDate: date("project_start_date"),
+    /** Month-granularity source of truth (`YYYY-MM`); old date remains fallback. */
+    projectStartMonth: text("project_start_month"),
     /** Project owner from the bid schedule (not the Salesforce PK). */
     owner: text("owner"),
     city: text("city"),
@@ -189,6 +201,8 @@ export const estimateRounds = pgTable(
     awardability: text("awardability"),
     businessStrategyValues: text("business_strategy_values"),
     estimateValue: doublePrecision("estimate_value"),
+    awardableAmount: doublePrecision("awardable_amount"),
+    contractAmountSigned: doublePrecision("contract_amount_signed"),
     feeBackPage: doublePrecision("fee_back_page"),
     feeExpected: doublePrecision("fee_expected"),
     contingencyTotal: doublePrecision("contingency_total"),
@@ -377,6 +391,8 @@ export const statusTransitions = pgTable("status_transitions", {
   fromStatus: text("from_status"),
   toStatus: text("to_status").notNull(),
   userId: integer("user_id").references(() => users.id),
+  reason: text("reason"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -414,6 +430,8 @@ export const notifications = pgTable(
     title: text("title").notNull(),
     body: text("body"),
     roundId: integer("round_id"),
+    kind: text("kind").notNull().default("general"),
+    idempotencyKey: text("idempotency_key"),
     noteId: integer("note_id").references(() => roundNotes.id, {
       onDelete: "set null",
     }),
@@ -422,6 +440,9 @@ export const notifications = pgTable(
   },
   (table) => [
     index("notifications_user_created_idx").on(table.userId, table.createdAt),
+    uniqueIndex("notifications_user_idempotency_unique")
+      .on(table.userId, table.idempotencyKey)
+      .where(sql`${table.idempotencyKey} is not null`),
   ]
 );
 
@@ -536,7 +557,7 @@ export const reportTemplates = pgTable("report_templates", {
 
 /** Named Bid Schedule views — company equivalent of working groups (not ATL OR-filters). */
 export type BidScheduleViewConfig = {
-  version?: 1 | 2;
+  version?: 1 | 2 | 3;
   section?: string;
   group?: string;
   sort?: string;
@@ -547,6 +568,7 @@ export type BidScheduleViewConfig = {
   queue?: string;
   columns?: string[];
   density?: "summary" | "detail";
+  viewMode?: "table" | "cards" | "gantt";
 };
 
 export const bidScheduleViews = pgTable("bid_schedule_views", {
@@ -564,9 +586,10 @@ export const bidScheduleViews = pgTable("bid_schedule_views", {
 
 /** Per-user table chrome (columns, density, widths, default named view). Not a named view. */
 export type UserTablePrefsConfig = {
-  version?: 1;
+  version?: 1 | 2;
   columns?: string[];
   density?: "summary" | "detail";
+  viewMode?: "table" | "cards" | "gantt";
   columnWidths?: Record<string, number>;
   defaultViewId?: number | null;
 };
@@ -832,6 +855,364 @@ export const fieldWritePolicies = pgTable("field_write_policies", {
     .default([]),
   regionScoped: boolean("region_scoped").notNull().default(true),
 });
+
+// ---------------------------------------------------------------------------
+// RPD roundtable foundations (2026-08-19)
+// ---------------------------------------------------------------------------
+
+/** Organization membership is filtering/collaboration, never authorization. */
+export const organizationGroups = pgTable(
+  "organization_groups",
+  {
+    id: serial("id").primaryKey(),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(), // region | precon_department | support | business
+    region: text("region"),
+    parentKey: text("parent_key"),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("organization_groups_key_unique").on(table.key)]
+);
+
+export const userGroupMemberships = pgTable(
+  "user_group_memberships",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: "cascade" }),
+    membershipRole: text("membership_role").notNull().default("member"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_group_memberships_user_group_unique").on(
+      table.userId,
+      table.groupId
+    ),
+  ]
+);
+
+export const jobGroupMemberships = pgTable(
+  "job_group_memberships",
+  {
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: "cascade" }),
+    participationRole: text("participation_role").notNull().default("partner"), // lead | partner | visibility
+    discipline: text("discipline"), // preconstruction | operations
+    addedById: integer("added_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("job_group_memberships_job_group_unique").on(
+      table.jobId,
+      table.groupId
+    ),
+    index("job_group_memberships_group_idx").on(table.groupId),
+  ]
+);
+
+export const jobRelationships = pgTable(
+  "job_relationships",
+  {
+    id: serial("id").primaryKey(),
+    parentJobId: integer("parent_job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    childJobId: integer("child_job_id")
+      .notNull()
+      .references(() => jobs.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("sub_job"), // sub_job | tenant_improvement
+    createdById: integer("created_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("job_relationships_parent_child_unique").on(
+      table.parentJobId,
+      table.childJobId
+    ),
+    index("job_relationships_child_idx").on(table.childJobId),
+  ]
+);
+
+export const roundStaffAssignments = pgTable(
+  "round_staff_assignments",
+  {
+    id: serial("id").primaryKey(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id, { onDelete: "cascade" }),
+    stage: text("stage").notNull(), // concept | dd | cd
+    userId: integer("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    roleLabel: text("role_label"),
+    assignedById: integer("assigned_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("round_staff_assignments_round_stage_user_unique").on(
+      table.roundId,
+      table.stage,
+      table.userId
+    ),
+    index("round_staff_assignments_round_idx").on(table.roundId),
+  ]
+);
+
+export type ApprovalRequestPayload = {
+  values?: Record<string, unknown>;
+  multiValues?: Record<string, string[]>;
+  customValues?: Record<string, string>;
+  pursuit?: Record<string, unknown>;
+};
+
+/** Drafts/proposals stay separate from the published round lifecycle. */
+export const approvalRequests = pgTable(
+  "approval_requests",
+  {
+    id: serial("id").primaryKey(),
+    kind: text("kind").notNull(), // create | edit
+    status: text("status").notNull().default("pending"),
+    region: text("region").notNull(),
+    jobId: integer("job_id").references(() => jobs.id, {
+      onDelete: "cascade",
+    }),
+    roundId: integer("round_id").references(() => estimateRounds.id, {
+      onDelete: "cascade",
+    }),
+    payload: jsonb("payload").$type<ApprovalRequestPayload>().notNull(),
+    expectedUpdatedAt: timestamp("expected_updated_at"),
+    requestedById: integer("requested_by_id")
+      .notNull()
+      .references(() => users.id),
+    requestedAt: timestamp("requested_at").notNull().defaultNow(),
+    decidedById: integer("decided_by_id").references(() => users.id),
+    decidedAt: timestamp("decided_at"),
+    decisionReason: text("decision_reason"),
+    publishedJobId: integer("published_job_id").references(() => jobs.id),
+    publishedRoundId: integer("published_round_id").references(
+      () => estimateRounds.id
+    ),
+    highlightUntil: timestamp("highlight_until"),
+  },
+  (table) => [
+    index("approval_requests_region_status_idx").on(
+      table.region,
+      table.status,
+      table.requestedAt
+    ),
+    index("approval_requests_round_status_idx").on(table.roundId, table.status),
+  ]
+);
+
+export const groupEditPolicies = pgTable(
+  "group_edit_policies",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: "cascade" }),
+    role: roleEnum("role").notNull(),
+    mode: text("mode").notNull().default("propose"), // direct | propose | read
+    updatedById: integer("updated_by_id").references(() => users.id),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("group_edit_policies_group_role_unique").on(
+      table.groupId,
+      table.role
+    ),
+  ]
+);
+
+export const roundLockRevisions = pgTable(
+  "round_lock_revisions",
+  {
+    id: serial("id").primaryKey(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id, { onDelete: "cascade" }),
+    revision: integer("revision").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    lockedById: integer("locked_by_id")
+      .notNull()
+      .references(() => users.id),
+    lockedAt: timestamp("locked_at").notNull().defaultNow(),
+    unlockedById: integer("unlocked_by_id").references(() => users.id),
+    unlockedAt: timestamp("unlocked_at"),
+    unlockReason: text("unlock_reason"),
+  },
+  (table) => [
+    uniqueIndex("round_lock_revisions_round_revision_unique").on(
+      table.roundId,
+      table.revision
+    ),
+    index("round_lock_revisions_active_idx")
+      .on(table.roundId, table.lockedAt)
+      .where(sql`${table.unlockedAt} is null`),
+  ]
+);
+
+export const publicationOutbox = pgTable(
+  "publication_outbox",
+  {
+    id: serial("id").primaryKey(),
+    destination: text("destination").notNull().default("databricks"),
+    eventType: text("event_type").notNull(), // publish | retract
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id, { onDelete: "cascade" }),
+    lockRevisionId: integer("lock_revision_id").references(
+      () => roundLockRevisions.id,
+      { onDelete: "cascade" }
+    ),
+    idempotencyKey: text("idempotency_key").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    status: text("status").notNull().default("queued"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    availableAt: timestamp("available_at").notNull().defaultNow(),
+    processedAt: timestamp("processed_at"),
+    error: text("error"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("publication_outbox_idempotency_unique").on(
+      table.idempotencyKey
+    ),
+    index("publication_outbox_status_available_idx").on(
+      table.status,
+      table.availableAt
+    ),
+  ]
+);
+
+export const roundFieldExceptions = pgTable(
+  "round_field_exceptions",
+  {
+    id: serial("id").primaryKey(),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id, { onDelete: "cascade" }),
+    fieldKey: text("field_key").notNull(),
+    kind: text("kind").notNull(), // not_applicable | range_acknowledgement
+    valueSnapshot: text("value_snapshot"),
+    reason: text("reason"),
+    electedById: integer("elected_by_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => [
+    index("round_field_exceptions_round_field_idx").on(
+      table.roundId,
+      table.fieldKey
+    ),
+  ]
+);
+
+export const userRoundWatermarks = pgTable(
+  "user_round_watermarks",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    roundId: integer("round_id")
+      .notNull()
+      .references(() => estimateRounds.id, { onDelete: "cascade" }),
+    lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
+    lastAckedAuditId: integer("last_acked_audit_id"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_round_watermarks_user_round_unique").on(
+      table.userId,
+      table.roundId
+    ),
+  ]
+);
+
+export const productEvents = pgTable(
+  "product_events",
+  {
+    id: serial("id").primaryKey(),
+    event: text("event").notNull(),
+    userId: integer("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    region: text("region"),
+    properties: jsonb("properties")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    occurredAt: timestamp("occurred_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("product_events_event_time_idx").on(table.event, table.occurredAt),
+  ]
+);
+
+export const sourceProvenance = pgTable(
+  "source_provenance",
+  {
+    id: serial("id").primaryKey(),
+    jobId: integer("job_id").references(() => jobs.id, {
+      onDelete: "cascade",
+    }),
+    roundId: integer("round_id").references(() => estimateRounds.id, {
+      onDelete: "cascade",
+    }),
+    fieldKey: text("field_key").notNull(),
+    source: text("source").notNull(),
+    sourceRecordId: text("source_record_id"),
+    valueHash: text("value_hash"),
+    importedById: integer("imported_by_id").references(() => users.id),
+    importedAt: timestamp("imported_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("source_provenance_round_field_idx").on(
+      table.roundId,
+      table.fieldKey
+    ),
+  ]
+);
+
+export const integrationImportBatches = pgTable(
+  "integration_import_batches",
+  {
+    id: serial("id").primaryKey(),
+    source: text("source").notNull(),
+    sourceName: text("source_name"),
+    checksum: text("checksum").notNull(),
+    status: text("status").notNull().default("preview"),
+    summary: jsonb("summary")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    importedById: integer("imported_by_id").references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => [
+    uniqueIndex("integration_import_batches_source_checksum_unique").on(
+      table.source,
+      table.checksum
+    ),
+  ]
+);
 
 export const distributionLists = pgTable("distribution_lists", {
   id: serial("id").primaryKey(),
@@ -1144,6 +1525,11 @@ export type EmailOutboxRow = typeof emailOutbox.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type JobRegionVisibility = typeof jobRegionVisibility.$inferSelect;
 export type JobUserVisibility = typeof jobUserVisibility.$inferSelect;
+export type OrganizationGroup = typeof organizationGroups.$inferSelect;
+export type JobGroupMembership = typeof jobGroupMemberships.$inferSelect;
+export type ApprovalRequest = typeof approvalRequests.$inferSelect;
+export type RoundLockRevision = typeof roundLockRevisions.$inferSelect;
+export type PublicationOutboxRow = typeof publicationOutbox.$inferSelect;
 export type EstimateRound = typeof estimateRounds.$inferSelect;
 export type RoundNote = typeof roundNotes.$inferSelect;
 export type RoundNoteAttachment = typeof roundNoteAttachments.$inferSelect;

@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   caretAfterSignificant,
+  displayJobNumber,
   formatNumericInput,
   parseNumericInput,
   significantNumericCount,
 } from "@/lib/format";
 
 describe("numeric input grouping", () => {
+  it("renders stored TBD identities as Pending job number", () => {
+    expect(displayJobNumber("TBD-1008")).toBe("Pending job number");
+    expect(displayJobNumber("tbd-42")).toBe("Pending job number");
+    expect(displayJobNumber("2600123")).toBe("2600123");
+    expect(displayJobNumber("")).toBe("—");
+  });
+
   it("parses pasted money into a plain number string", () => {
     expect(parseNumericInput("$992,749,827")).toBe("992749827");
     expect(parseNumericInput("21,657,290.6")).toBe("21657290.6");

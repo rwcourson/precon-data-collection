@@ -10,13 +10,21 @@ import {
   isAiConfigured,
 } from "@/lib/ai/gateway";
 import {
+  formatAwardableShadowBrief,
+  toAwardableReportingRows,
+} from "@/lib/awardable-reporting";
+import {
   type CopilotPlan,
   planDashboardFromPrompt,
   planDashboardWithOptionalLlm,
 } from "@/lib/dashboard-copilot";
 import { fmtDollars, fmtNumber, fmtPercent } from "@/lib/format";
+import { magnusExternalScope } from "@/lib/magnus-scope";
 import { toPlainText } from "@/lib/plain-text";
+import { PRODUCT_NAME } from "@/lib/product";
 import { computeStats, rollup } from "@/lib/rollup";
+
+export { magnusExternalScope };
 
 export type MagnusTurn =
   | {
@@ -72,12 +80,14 @@ function buildDataBrief(rounds: EstimateRound[]): string {
   ).slice(0, 8);
   const years = [...new Set(rounds.map((r) => r.bidYear))].sort();
 
+  const shadow = formatAwardableShadowBrief(toAwardableReportingRows(rounds));
   const lines = [
     `Rounds: ${fmtNumber(totals.rounds)}`,
     `Pursuit volume: ${fmtDollars(totals.volume, true)}`,
     `Win rate: ${fmtPercent(totals.winRate)}`,
     `Expected fee: ${fmtDollars(totals.totalFee, true)}`,
     `Fee % (weighted): ${fmtPercent(totals.weightedFeePct)}`,
+    `${shadow.coverageLine} · ${shadow.grain.coverage}`,
     `Bid years: ${years.join(", ") || "—"}`,
     "Volume by region:",
     ...byRegion.map(
@@ -201,6 +211,7 @@ export async function runMagnusTurn(
   prompt: string,
   rounds: EstimateRound[]
 ): Promise<MagnusTurn> {
+  const lockedOnly = magnusExternalScope(rounds);
   const trimmed = prompt.trim();
   if (trimmed.length < 2) {
     return {
@@ -227,7 +238,7 @@ export async function runMagnusTurn(
         model: getZdrModel(),
         ...gatewayZdrOptions(),
         schema: routeSchema,
-        system: `You route Magnus AI for B&G Preconstruction.
+        system: `You route Magnus AI for ${PRODUCT_NAME}.
 "dashboard" = user wants charts, widgets, a scorecard, or canvas built — or asks about win rate, volume, fees, regions in a way that a view would help.
 "answer" = purely explanatory with no useful chart.
 Model: ${AI_MODEL_LABEL}.`,
@@ -242,7 +253,7 @@ Model: ${AI_MODEL_LABEL}.`,
   if (buildCanvas) {
     const [plan, answer] = await Promise.all([
       planDashboardWithOptionalLlm(trimmed),
-      llmAnswer(trimmed, rounds),
+      llmAnswer(trimmed, lockedOnly),
     ]);
     const text = toPlainText(
       `${answer.text}\n\nI also built “${plan.name}” on the canvas with ${plan.widgets.length} widgets — review it, then save if you want it in Studio.`
@@ -256,7 +267,7 @@ Model: ${AI_MODEL_LABEL}.`,
     };
   }
 
-  const answer = await llmAnswer(trimmed, rounds);
+  const answer = await llmAnswer(trimmed, lockedOnly);
   return {
     mode: "answer",
     text: toPlainText(answer.text),

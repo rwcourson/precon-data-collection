@@ -9,12 +9,14 @@ import { ColumnsManager } from "@/components/admin/columns-manager";
 import { DestiniImport } from "@/components/admin/destini-import";
 import { DistributionListsPanel } from "@/components/admin/distribution-lists-panel";
 import { FieldPromotionsPanel } from "@/components/admin/field-promotions";
+import { GroupEditPoliciesPanel } from "@/components/admin/group-edit-policies";
 import { McpAccessPanel } from "@/components/admin/mcp-access-panel";
 import { MigrationPanel } from "@/components/admin/migration-panel";
 import { NeedsReview } from "@/components/admin/needs-review";
 import { NotificationSettingsPanel } from "@/components/admin/notification-settings";
 import { PeoplePanel } from "@/components/admin/people-panel";
 import { ReferenceListsManager } from "@/components/admin/reference-lists";
+import { RolloutSettingsPanel } from "@/components/admin/rollout-settings";
 import { SalesforceInbox } from "@/components/admin/salesforce-inbox";
 import { SourceProbes } from "@/components/admin/source-probes";
 import { WarehouseFeed } from "@/components/admin/warehouse-feed";
@@ -89,6 +91,11 @@ import {
 import { findReminderTargets, getNotificationSettings } from "@/lib/reminders";
 import { isSuperAdmin } from "@/lib/super-admin";
 import { getWorkspace } from "@/lib/workspace-server";
+import {
+  listGroupEditPolicies,
+  listOrganizationGroups,
+} from "@/services/organization-service";
+import { loadRolloutSettings } from "@/services/rollout-service";
 
 const VALID_TABS = new Set([
   "columns",
@@ -204,6 +211,13 @@ export default async function AdminPage({
       ? db.select().from(jobs)
       : Promise.resolve([]),
   ]);
+  const [orgGroups, groupPolicies, rollout] = allowedSections.has("access")
+    ? await Promise.all([
+        listOrganizationGroups(),
+        listGroupEditPolicies(),
+        loadRolloutSettings(),
+      ])
+    : [[], [], { version: 1 as const, features: {} }];
 
   const showAudit = principalCanViewAudit(principal);
   const managePeople = principalCanManagePeople(principal);
@@ -565,13 +579,26 @@ export default async function AdminPage({
           )}
         </TabsContent>
 
-        <TabsContent value="access" className="pt-3">
+        <TabsContent value="access" className="space-y-4 pt-3">
           <AccessSettingsPanel
             settings={access}
             mode={authMode()}
             headers={SSO_HEADERS}
             roleLabels={ROLE_LABELS}
             regions={regionValues}
+            canEdit={user.role === "corporate_admin"}
+          />
+          <GroupEditPoliciesPanel
+            groups={orgGroups.map((group) => ({
+              id: group.id,
+              name: group.name,
+              region: group.region,
+            }))}
+            policies={groupPolicies}
+            canEdit={user.role === "corporate_admin"}
+          />
+          <RolloutSettingsPanel
+            settings={rollout}
             canEdit={user.role === "corporate_admin"}
           />
         </TabsContent>

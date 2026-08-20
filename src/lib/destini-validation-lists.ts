@@ -12,6 +12,8 @@ export const DESTINI_VALIDATION_LISTS: Record<string, string[]> = {
     "Central Heavy Civil",
     "Central Nashville", // markup typo "Cental" normalized
     "Florida",
+    "Florida – Miami",
+    "Florida – Jacksonville",
     "Georgia - Commercial",
     "Georgia - Healthcare",
     "Georgia - Mission Critical & Industrial",

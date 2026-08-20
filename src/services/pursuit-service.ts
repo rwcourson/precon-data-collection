@@ -8,7 +8,9 @@ import {
   estimateRounds,
   jobs,
   notifications,
+  publicationOutbox,
   type RoundStatus,
+  roundLockRevisions,
   roundMultiValues,
   statusTransitions,
   users,
@@ -21,30 +23,48 @@ import {
   loadRoundForPrincipal,
 } from "@/lib/authorization/loaders";
 import type { Principal } from "@/lib/authorization/types";
+import { includeDateShiftRecipient } from "@/lib/date-shift-recipients";
 import { type DuplicateMatch, findDuplicateJobs } from "@/lib/duplicate-jobs";
 import { deliverQueued, queueEmails } from "@/lib/email";
-import { MULTI_FIELD_KEYS, ROUND_COLUMN_KEYS } from "@/lib/fields";
+import {
+  FIELD_DEFS,
+  FIELD_POLICY_VERSION,
+  MULTI_FIELD_KEYS,
+  ROUND_COLUMN_KEYS,
+} from "@/lib/fields";
 import { resolveCreatorHomeRegion } from "@/lib/home-region";
 import { connectProvider } from "@/lib/integrations/connect";
 import { STATUS_LABELS } from "@/lib/labels";
+import { nextLockRevisionNumber } from "@/lib/lock-revisions";
+import { deriveMltFromMarketSector } from "@/lib/market-rollup";
 import { type OutcomeValue, planOutcomeUpdate } from "@/lib/outcome";
 import {
   getMultiValues,
   getReferenceValues,
   getRoundWithJob,
 } from "@/lib/queries";
-import { getNotificationSettings } from "@/lib/reminders";
-import { planSalesforceLink } from "@/lib/salesforce-link";
+import {
+  dateShiftRecipientRulesFrom,
+  getNotificationSettings,
+} from "@/lib/reminders";
+import {
+  assertSalesforceJobNumberAvailable,
+  planSalesforceLink,
+  planSalesforceUnlink,
+} from "@/lib/salesforce-link";
 import {
   transactionFault,
   updateRoundIfUnchanged,
   withTransaction,
 } from "@/lib/transactions";
 import { evaluateLockGate, validateFieldValue } from "@/lib/validation";
+import { loadFieldExceptions } from "@/services/field-exceptions-service";
 import {
   assertPrincipalCanCreatePursuit,
   requireAuthorized,
 } from "@/services/mutation-policy";
+import { recordProductEvent } from "@/services/product-events-service";
+import { roundtableFeatureEnabled } from "@/services/rollout-service";
 import { recordHomeRegionVisibility } from "@/services/visibility-service";
 
 export type CreatePursuitInput = {
@@ -112,6 +132,7 @@ export type SavePostBidInput = {
    * the round in between. Omitted → falls back to a fresh read (legacy).
    */
   expectedUpdatedAt?: string | Date | null;
+  sourceBatch?: string | null;
 };
 
 /** Unique-constraint violation (Postgres 23505 / PGlite message), possibly wrapped. */
@@ -169,20 +190,25 @@ export const pursuitService = {
     let jobName: string;
     let salesforceId: string | null = null;
     let isLinked = false;
-    let city = input.city ?? null;
-    let state = input.state ?? null;
-    let marketSector = input.marketSector ?? null;
+    const city = input.city ?? null;
+    const state = input.state ?? null;
+    const marketSector = input.marketSector ?? null;
+    let salesforceShadow: Record<string, string | null> | null = null;
 
     if (input.mode === "salesforce") {
       const sf = await connectProvider().getById(input.sfId ?? "");
       if (!sf) throw DomainError.notFound("Salesforce job not found");
       jobNumber = sf.jobNumber;
-      jobName = sf.jobName;
+      jobName = input.jobName?.trim() || sf.jobName;
       salesforceId = sf.sfId;
       isLinked = true;
-      city = city ?? sf.city;
-      state = state ?? sf.state;
-      marketSector = marketSector ?? sf.marketSector;
+      salesforceShadow = {
+        jobName: sf.jobName,
+        region: sf.region,
+        marketSector: sf.marketSector,
+        city: sf.city,
+        state: sf.state,
+      };
     } else {
       if (!input.jobName?.trim())
         throw DomainError.badRequest(
@@ -245,6 +271,7 @@ export const pursuitService = {
           region: homeRegion,
           preconDepartment: input.preconDepartment,
           salesforceId,
+          salesforceShadow,
           isLinked,
           createdById: user.id,
         })
@@ -408,13 +435,18 @@ export const pursuitService = {
             await tx.select().from(users).where(eq(users.role, "estimate_lead"))
           )[0]?.id;
         if (targetId) {
-          const title = `Post-bid data needed: ${job?.jobName ?? "Pursuit"}`;
+          const title = `You owe post-bid: ${job?.jobName ?? "Pursuit"}`;
           const body = `${round.estimatePhase} (Bid Year ${round.bidYear}) moved to Submitted. Complete the remaining post-bid fields.`;
           const settings = await getNotificationSettings(tx);
           if (settings.inApp) {
-            await tx
-              .insert(notifications)
-              .values({ userId: targetId, title, body, roundId });
+            await tx.insert(notifications).values({
+              userId: targetId,
+              title,
+              body,
+              roundId,
+              kind: "you_owe_post_bid",
+              idempotencyKey: `you-owe-post-bid:${roundId}:${to}`,
+            });
           }
           if (settings.email) {
             const [target] = await tx
@@ -489,6 +521,15 @@ export const pursuitService = {
       sf,
       existingRounds.map((r) => r.id)
     );
+    const existingNumbers = await db
+      .select({ id: jobs.id, jobNumber: jobs.jobNumber })
+      .from(jobs)
+      .where(isNull(jobs.deletedAt));
+    assertSalesforceJobNumberAvailable(
+      plan.patch.jobNumber,
+      existingNumbers,
+      job.id
+    );
 
     await db.update(jobs).set(plan.patch).where(eq(jobs.id, plan.jobId));
     await db.insert(auditLog).values({
@@ -505,6 +546,23 @@ export const pursuitService = {
       jobId: plan.jobId,
       preservedRoundIds: plan.preservedRoundIds,
     };
+  },
+
+  async unlinkJobFromSalesforce(principal: Principal, jobId: number) {
+    const loaded = await loadJobForPrincipal(principal, jobId, "edit");
+    if (!loaded) throw DomainError.notFound("Job not found");
+    const plan = planSalesforceUnlink(loaded.value);
+    await db.update(jobs).set(plan.patch).where(eq(jobs.id, plan.jobId));
+    await db.insert(auditLog).values({
+      entity: "job_match",
+      entityId: plan.jobId,
+      action: "salesforce_unlinked",
+      field: "jobNumber",
+      oldValue: loaded.value.jobNumber,
+      newValue: loaded.value.jobNumber,
+      userId: principal.user.id,
+    });
+    return { jobId: plan.jobId, undo: plan.undo };
   },
 
   async savePostBidData(principal: Principal, input: SavePostBidInput) {
@@ -525,9 +583,10 @@ export const pursuitService = {
         ? clientSnapshot
         : round.updatedAt;
 
-    const [lists, existingMulti] = await Promise.all([
+    const [lists, existingMulti, fieldPolicyEnabled] = await Promise.all([
       getReferenceValues(),
       getMultiValues(round.id),
+      roundtableFeatureEnabled(principal, "fieldPolicy"),
     ]);
     const patch: Record<string, unknown> = {};
     const auditRows: (typeof auditLog.$inferInsert)[] = [];
@@ -548,18 +607,46 @@ export const pursuitService = {
       if (changed) {
         patch[key] = newValue;
         changedFields.push(key);
-        if (locked) {
+        auditRows.push({
+          entity: "round",
+          entityId: round.id,
+          roundId: round.id,
+          action: locked ? "post_lock_edit" : "field_changed",
+          field: key,
+          oldValue: oldValue == null ? null : String(oldValue),
+          newValue: newValue == null ? null : String(newValue),
+          userId: user.id,
+        });
+      }
+    }
+    if ("marketSector" in patch) {
+      const derived = deriveMltFromMarketSector(
+        String(patch.marketSector ?? "")
+      );
+      if (fieldPolicyEnabled || !("mlt" in patch)) {
+        if (derived && derived !== round.mlt) {
+          patch.mlt = derived;
+          if (!changedFields.includes("mlt")) changedFields.push("mlt");
           auditRows.push({
             entity: "round",
             entityId: round.id,
             roundId: round.id,
-            action: "post_lock_edit",
-            field: key,
-            oldValue: oldValue == null ? null : String(oldValue),
-            newValue: newValue == null ? null : String(newValue),
+            action: "field_derived",
+            field: "mlt",
+            oldValue: round.mlt,
+            newValue: derived,
             userId: user.id,
           });
+        } else if (fieldPolicyEnabled) {
+          delete patch.mlt;
         }
+      }
+    } else if (fieldPolicyEnabled && "mlt" in patch) {
+      delete patch.mlt;
+      const idx = changedFields.indexOf("mlt");
+      if (idx >= 0) changedFields.splice(idx, 1);
+      for (let i = auditRows.length - 1; i >= 0; i--) {
+        if (auditRows[i]?.field === "mlt") auditRows.splice(i, 1);
       }
     }
 
@@ -569,18 +656,16 @@ export const pursuitService = {
     ) {
       patch.estimateLeadId = input.estimateLeadId;
       changedFields.push("estimateLead");
-      if (locked) {
-        auditRows.push({
-          entity: "round",
-          entityId: round.id,
-          roundId: round.id,
-          action: "post_lock_edit",
-          field: "estimateLead",
-          oldValue: String(round.estimateLeadId ?? ""),
-          newValue: String(input.estimateLeadId ?? ""),
-          userId: user.id,
-        });
-      }
+      auditRows.push({
+        entity: "round",
+        entityId: round.id,
+        roundId: round.id,
+        action: locked ? "post_lock_edit" : "field_changed",
+        field: "estimateLead",
+        oldValue: String(round.estimateLeadId ?? ""),
+        newValue: String(input.estimateLeadId ?? ""),
+        userId: user.id,
+      });
     }
 
     const multiChanges: { key: string; previous: string[]; next: string[] }[] =
@@ -596,18 +681,16 @@ export const pursuitService = {
         continue;
       multiChanges.push({ key, previous, next });
       changedFields.push(key);
-      if (locked) {
-        auditRows.push({
-          entity: "round",
-          entityId: round.id,
-          roundId: round.id,
-          action: "post_lock_edit",
-          field: key,
-          oldValue: previous.join(", "),
-          newValue: next.join(", "),
-          userId: user.id,
-        });
-      }
+      auditRows.push({
+        entity: "round",
+        entityId: round.id,
+        roundId: round.id,
+        action: locked ? "post_lock_edit" : "field_changed",
+        field: key,
+        oldValue: previous.join(", "),
+        newValue: next.join(", "),
+        userId: user.id,
+      });
     }
 
     const customChanges: {
@@ -642,18 +725,16 @@ export const pursuitService = {
           next: raw,
         });
         changedFields.push(`custom:${col.id}`);
-        if (locked) {
-          auditRows.push({
-            entity: "round",
-            entityId: round.id,
-            roundId: round.id,
-            action: "post_lock_edit",
-            field: `custom:${col.id}`,
-            oldValue: previous,
-            newValue: raw,
-            userId: user.id,
-          });
-        }
+        auditRows.push({
+          entity: "round",
+          entityId: round.id,
+          roundId: round.id,
+          action: locked ? "post_lock_edit" : "field_changed",
+          field: `custom:${col.id}`,
+          oldValue: previous,
+          newValue: raw,
+          userId: user.id,
+        });
       }
     }
 
@@ -715,6 +796,104 @@ export const pursuitService = {
       }
       if (auditRows.length > 0) await tx.insert(auditLog).values(auditRows);
     });
+    const dateChanges = auditRows.filter((change) =>
+      [
+        "drawingsDueDate",
+        "interviewDate",
+        "bidDueDate",
+        "projectStartMonth",
+      ].includes(change.field ?? "")
+    );
+    if (dateChanges.length > 0) {
+      const regionalRpdRows = await db
+        .select({ id: users.id, email: users.email })
+        .from(users)
+        .where(and(eq(users.role, "rpd"), eq(users.region, round.region)));
+      const leadRows = round.estimateLeadId
+        ? await db
+            .select({ id: users.id, email: users.email })
+            .from(users)
+            .where(eq(users.id, round.estimateLeadId))
+        : [];
+      const settings = await getNotificationSettings();
+      const rules = dateShiftRecipientRulesFrom(settings);
+      const tagged = [
+        ...regionalRpdRows.map((recipient) => ({
+          ...recipient,
+          source: "rpd" as const,
+        })),
+        ...leadRows.map((recipient) => ({
+          ...recipient,
+          source: "lead" as const,
+        })),
+      ].filter((recipient) =>
+        includeDateShiftRecipient(recipient.source, rules)
+      );
+      const recipients = [
+        ...new Map(
+          tagged.map((recipient) => [recipient.id, recipient])
+        ).values(),
+      ].filter((recipient) => recipient.id !== principal.user.id);
+      const grouped = Boolean(input.sourceBatch);
+      const notices = grouped
+        ? [
+            {
+              changeKey: `${round.id}:import:${input.sourceBatch}`,
+              title: "Imported schedule dates changed",
+              body: `A Destini import updated ${dateChanges.length} schedule date field(s) on this effort.`,
+            },
+          ]
+        : dateChanges.map((change) => ({
+            changeKey: `${round.id}:${change.field}:${change.oldValue ?? ""}:${change.newValue ?? ""}:${expectedUpdatedAt.getTime()}`,
+            title: `Schedule date changed: ${rowLabel(change.field)}`,
+            body: `${rowLabel(change.field)} changed from ${change.oldValue || "blank"} to ${change.newValue || "blank"}.`,
+          }));
+      if (settings.inApp && recipients.length > 0) {
+        for (const notice of notices) {
+          await db
+            .insert(notifications)
+            .values(
+              recipients.map((recipient) => ({
+                userId: recipient.id,
+                title: notice.title,
+                body: notice.body,
+                roundId: round.id,
+                kind: "date_shift",
+                idempotencyKey: notice.changeKey,
+              }))
+            )
+            .onConflictDoNothing();
+        }
+      }
+      if (settings.email && recipients.length > 0) {
+        const emailIds = await queueEmails(
+          recipients.flatMap((recipient) =>
+            recipient.email
+              ? notices.map((notice) => ({
+                  toEmail: recipient.email,
+                  toUserId: recipient.id,
+                  subject: notice.title,
+                  body: notice.body,
+                  kind: "date_shift" as const,
+                  roundId: round.id,
+                  logicalDeliveryKey: `date-shift:${recipient.id}:${notice.changeKey}`,
+                }))
+              : []
+          )
+        );
+        if (emailIds.length) await deliverQueued(emailIds);
+      }
+      await recordProductEvent(principal, "date.changed", {
+        roundId: round.id,
+        fields: dateChanges.map((change) => change.field),
+        recipients: recipients.length,
+      });
+      await recordProductEvent(principal, "resource.bar.future", {
+        roundId: round.id,
+        fields: dateChanges.map((change) => change.field),
+        autoSlidePeople: false,
+      });
+    }
     return { changed: Object.keys(patch).length, audited: auditRows.length };
   },
 
@@ -722,7 +901,8 @@ export const pursuitService = {
     principal: Principal,
     roundId: number,
     key: string,
-    value: string
+    value: string,
+    expectedUpdatedAt?: string | Date | null
   ) {
     if (key.startsWith("custom:")) {
       const columnId = Number(key.slice("custom:".length));
@@ -733,6 +913,7 @@ export const pursuitService = {
         values: {},
         multiValues: {},
         customValues: { [columnId]: value },
+        expectedUpdatedAt,
       });
     }
     if (!ROUND_COLUMN_KEYS.includes(key)) {
@@ -745,6 +926,7 @@ export const pursuitService = {
       values: { [key]: value },
       multiValues: {},
       customValues: {},
+      expectedUpdatedAt,
     });
   },
 
@@ -776,12 +958,25 @@ export const pursuitService = {
 
     const row = await getRoundWithJob(roundId);
     if (!row) throw DomainError.notFound("Round not found");
-    const multi = await getMultiValues(round.id);
-    const gate = evaluateLockGate(round, multi, {
-      jobNumber: row.job.jobNumber,
-      jobName: row.job.jobName,
-      estimateLeadName: row.estimateLeadName,
-    });
+    const [multi, exceptions] = await Promise.all([
+      getMultiValues(round.id),
+      loadFieldExceptions(round.id),
+    ]);
+    const [fieldPolicy, lockRevisions] = await Promise.all([
+      roundtableFeatureEnabled(principal, "fieldPolicy"),
+      roundtableFeatureEnabled(principal, "lockRevisions"),
+    ]);
+    const gate = evaluateLockGate(
+      round,
+      multi,
+      {
+        jobNumber: row.job.jobNumber,
+        jobName: row.job.jobName,
+        estimateLeadName: row.estimateLeadName,
+      },
+      exceptions,
+      { fieldPolicy }
+    );
     if (!gate.ok) {
       return {
         ok: false as const,
@@ -790,12 +985,13 @@ export const pursuitService = {
       };
     }
 
-    await withTransaction(async (tx) => {
+    const lockedAt = new Date();
+    const revision = await withTransaction(async (tx) => {
       await updateRoundIfUnchanged(tx, {
         roundId: round.id,
         expectedStatus: "post_bid",
         expectedUpdatedAt: round.updatedAt,
-        patch: { status: "locked", lockedAt: new Date() },
+        patch: { status: "locked", lockedAt },
       });
       await tx.insert(statusTransitions).values({
         roundId: round.id,
@@ -803,9 +999,54 @@ export const pursuitService = {
         toStatus: "locked",
         userId: principal.user.id,
       });
+      if (!lockRevisions) return null;
+      const prior = await tx
+        .select({ revision: roundLockRevisions.revision })
+        .from(roundLockRevisions)
+        .where(eq(roundLockRevisions.roundId, round.id));
+      const revision = nextLockRevisionNumber(
+        prior.map((item) => item.revision)
+      );
+      const snapshot = {
+        ...round,
+        status: "locked",
+        lockedAt: lockedAt.toISOString(),
+        policyVersion: FIELD_POLICY_VERSION,
+        job: row.job,
+        estimateLeadName: row.estimateLeadName,
+        multiValues: multi,
+      };
+      const [lockedRevision] = await tx
+        .insert(roundLockRevisions)
+        .values({
+          roundId: round.id,
+          revision,
+          snapshot,
+          lockedById: principal.user.id,
+          lockedAt,
+        })
+        .returning({ id: roundLockRevisions.id });
+      await tx
+        .insert(publicationOutbox)
+        .values({
+          destination: "databricks",
+          eventType: "publish",
+          roundId: round.id,
+          lockRevisionId: lockedRevision.id,
+          idempotencyKey: `databricks:${round.id}:${revision}:publish`,
+          payload: { ...snapshot, revision },
+        })
+        .onConflictDoNothing({
+          target: publicationOutbox.idempotencyKey,
+        });
+      return revision;
     });
 
-    return { ok: true as const };
+    await recordProductEvent(principal, "lock.created", {
+      roundId: round.id,
+      revision,
+    });
+    return { ok: true as const, revision };
   },
 
   async setOutcome(
@@ -818,7 +1059,10 @@ export const pursuitService = {
     const round = loaded.value.round;
     const user = principal.user;
 
-    // Field-level gate: outcome edits on locked rounds require RPD; kernel enforces region.
+    const lockImmutable = await roundtableFeatureEnabled(
+      principal,
+      "lockRevisions"
+    );
     if (round.status === "locked") {
       await requireRoundFieldWrite(principal, roundId, "outcome");
     } else {
@@ -833,12 +1077,15 @@ export const pursuitService = {
           published: true,
           deleted: false,
           round: { status: round.status, region: round.region },
+          lockImmutable,
         },
         "Round"
       );
     }
 
-    const { audit } = planOutcomeUpdate(user, round, outcome);
+    const { audit } = planOutcomeUpdate(user, round, outcome, {
+      lockImmutable,
+    });
     await db
       .update(estimateRounds)
       .set({ outcome, updatedAt: new Date() })
@@ -859,9 +1106,14 @@ async function requireRoundFieldWrite(
   roundId: number,
   fieldKey: string
 ) {
+  const lockImmutable = await roundtableFeatureEnabled(
+    principal,
+    "lockRevisions"
+  );
   const loaded = await loadRoundForPrincipal(principal, roundId, {
     capability: "edit",
     fieldKey,
+    lockImmutable,
   });
   if (!loaded) {
     // Distinguish not-found from field-policy denial after a successful read.
@@ -875,6 +1127,7 @@ async function requireRoundFieldWrite(
   const decision = authorize(principal, "edit", {
     ...loaded.descriptor,
     fieldKey,
+    lockImmutable,
   });
   if (!decision.allowed) {
     throw DomainError.forbidden(
@@ -883,4 +1136,11 @@ async function requireRoundFieldWrite(
     );
   }
   return loaded.value.round;
+}
+
+function rowLabel(field: string | null | undefined): string {
+  if (!field) return "Schedule";
+  return (
+    FIELD_DEFS.find((definition) => definition.key === field)?.label ?? field
+  );
 }
