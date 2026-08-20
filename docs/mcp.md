@@ -1,6 +1,6 @@
 # Remote MCP server
 
-OAuth-gated Model Context Protocol for Precon. External AI tools (Claude, Cursor, MCP Inspector) can read — and, if an admin opts in, write — through the same authorization kernel as the web app.
+OAuth-gated Model Context Protocol for Precon. External AI tools (Claude, Cursor, Grok on the web, MCP Inspector) can read — and, if an admin opts in, write — through the same authorization kernel as the web app. **Grok CLI** native HTTP OAuth does not complete today (see [Grok CLI](#grok-cli)).
 
 This is **not** a personal-access-token product. Users do not mint MCP tokens. They sign in with Microsoft Entra, approve scopes on `/consent`, and the app re-checks the grant ceiling on every `POST /api/mcp`.
 
@@ -18,9 +18,9 @@ MCP client
 ```
 
 - Better Auth 1.7 `mcp()` **is** the OAuth 2.1 provider. Do not also register `oauthProvider()`.
-- Dynamic Client Registration (RFC 7591) is advertised; CIMD is **not**. Grok CLI hangs on `[authenticating]` if metadata claims `client_id_metadata_document_supported` without a HTTPS client-metadata URL. Loopback DCR bodies are rewritten to `application_type: native`.
+- Dynamic Client Registration (RFC 7591) is advertised; CIMD is **not** (Grok CLI 1.0.5 hangs if `client_id_metadata_document_supported` is true). Loopback DCR bodies are rewritten to `application_type: native`.
 - Resource identifier is `${APP_ORIGIN}/api/mcp` (`mcpResourceIdentifier()`).
-- The handler uses MCP SDK v2 `createMcpHandler(..., { legacy: "stateless" })`. 2025 clients that POST JSON-RPC without a 2026 `_meta` envelope still work. Unauthenticated GET/HEAD return RFC 9728 `401` + `WWW-Authenticate` (Grok CLI probes GET before it will open a browser). DELETE is 405.
+- The handler uses MCP SDK v2 `createMcpHandler(..., { legacy: "stateless" })`. 2025 clients that POST JSON-RPC without a 2026 `_meta` envelope still work. Unauthenticated GET/HEAD return RFC 9728 `401` + `WWW-Authenticate`. JSON-RPC is POST-only; DELETE is 405.
 - Identity: OAuth claims email → app `users` row (case-insensitive). No roster row → 403. MCP does not auto-provision. Demo mode (`AUTH_MODE=demo`) has no OAuth flow.
 
 ## Permission model (four layers)
@@ -104,22 +104,50 @@ OAuth discovery (no cookies required):
 2. Same Entra + consent flow.
 3. After connecting, `whoami` should list your role and effective scopes.
 
-### Grok (web)
+### Grok (web) — use this for Grok
 
 1. Open [grok.com/connectors](https://grok.com/connectors) → **New Connector** → **Custom**.
 2. URL: `{APP_ORIGIN}/api/mcp`.
-3. Complete Microsoft sign-in and Precon consent.
+3. Complete Microsoft sign-in and Precon consent. Tools should appear after approve.
 
-### Grok CLI
+This is the supported Grok path. It uses HTTPS Dynamic Client Registration (same as Cursor/Claude), not the local CLI loopback client.
+
+### Grok CLI — known limitation (no browser)
+
+**Do not expect native HTTP OAuth to work in Grok CLI 1.0.5.** After `grok mcp add --transport http`, the TUI stays on **`precon [authenticating]` / no tools** and **never opens a browser**, including after remove/re-add and a full restart. `/mcps` then **`i`** retries the same handshake. `grok mcp doctor precon` reports `Auth(AuthorizationRequired)` — that command never starts OAuth; it only probes connectivity.
+
+What the CLI does against this server (verified in production logs):
+
+1. `GET /api/mcp` — RFC 9728 challenge (`401` + `WWW-Authenticate`)
+2. `GET /.well-known/oauth-protected-resource/api/mcp`
+3. `GET /.well-known/oauth-authorization-server/api/auth`
+4. Stop. No `POST /oauth2/register`, no `GET /oauth2/authorize`, no browser.
+
+Server-side work already in production for that handshake (SSO exemption, DCR, native loopback rewrite, CIMD not advertised, GET challenge matching Linear/Sentry) is not enough: Grok CLI never starts the authorize step. Treat this as a **Grok CLI bug / missing interactive OAuth**, not a missing Precon endpoint.
+
+**Workarounds (pick one):**
+
+| Path | When to use |
+| --- | --- |
+| [grok.com/connectors](https://grok.com/connectors) → Custom | Preferred. Same MCP URL, browser OAuth works. |
+| `mcp-remote` stdio wrapper (below) | You need tools **inside the Grok TUI** |
+| Cursor / Claude / Inspector | Other clients; their OAuth flows do open a browser |
+
+Stdio wrapper (opens a browser on first connect; Grok talks to a local process, not HTTP OAuth):
 
 ```bash
-grok mcp add --transport http precon {APP_ORIGIN}/api/mcp
+grok mcp remove precon
+grok mcp add precon -- npx -y mcp-remote {APP_ORIGIN}/api/mcp
 grok
 ```
 
-In the TUI: `/mcps`, highlight **precon**, press **`i`**. A browser should open. `grok mcp doctor` does **not** start OAuth; it only checks connectivity.
+Complete Entra + `/consent` in the window `mcp-remote` opens. Tokens live with `mcp-remote`, not `~/.grok/mcp_credentials.json`.
 
-If the TUI stays on `[authenticating]` with no browser, quit Grok fully and retry after the server advertises `registration_endpoint` **without** `client_id_metadata_document_supported`. Grok CLI chooses CIMD when that flag is on and never opens a login URL. Loopback DCR clients are treated as native (`http://127.0.0.1` redirects).
+Optional native HTTP config (will **not** complete OAuth until Grok CLI actually calls DCR + authorize):
+
+```bash
+grok mcp add --transport http precon {APP_ORIGIN}/api/mcp
+```
 
 ### MCP Inspector
 
@@ -139,7 +167,7 @@ Inspector will follow protected-resource metadata, open the browser for SSO, the
 | Tool missing from `tools/list` | Scope not in the effective intersection (ceiling ∩ consent). |
 | JSON-RPC error `Missing MCP grant: write:pursuits` | Write tool called without a write ceiling and consent. |
 | HTTP 400 `missing: ["_meta"]` | Client sent `MCP-Protocol-Version: 2026-07-28` without the per-request envelope. Omit the header (2025) or send `_meta`. |
-| Grok CLI `[authenticating]` with no browser | GET `/api/mcp` must be `401` + `WWW-Authenticate` (not `405`). Then metadata must omit CIMD and accept loopback DCR as native. Quit the TUI and press `i` again. |
+| Grok CLI `[authenticating]` with no browser | **Known limitation in Grok CLI 1.0.5.** Native `--transport http` discovers OAuth then never registers a client or opens a login URL. Use [grok.com/connectors](https://grok.com/connectors) or `npx mcp-remote {APP_ORIGIN}/api/mcp` as a stdio server. Restarting and pressing `i` will not help. |
 | Build log `relation "oauth_resource" does not exist` | Apply drizzle migration 0016 (`pnpm run db:migrate:deploy`) before first SSO runtime on Postgres. CI uses PGlite and is clean. |
 
 ## Rate limiting

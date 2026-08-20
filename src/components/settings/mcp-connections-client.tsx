@@ -123,8 +123,8 @@ export function McpConnectionsClient({
           <CardTitle className="text-sm">Connect an AI tool</CardTitle>
           <CardDescription>
             Paste this MCP server URL into Claude Desktop, Claude Code, Cursor,
-            or MCP Inspector. You will sign in with Microsoft and approve scopes
-            on the next screen.
+            MCP Inspector, or Grok on the web. You will sign in with Microsoft
+            and approve scopes on the next screen.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -147,7 +147,21 @@ export function McpConnectionsClient({
             </li>
           </ol>
           <p className="text-muted-foreground">
-            Full client-by-client steps are in <code>docs/mcp.md</code>.
+            Grok: use{" "}
+            <a
+              className="underline underline-offset-2"
+              href="https://grok.com/connectors"
+              target="_blank"
+              rel="noreferrer"
+            >
+              grok.com/connectors
+            </a>{" "}
+            → Custom. Grok CLI native HTTP (
+            <code className="text-xs">grok mcp add --transport http</code>)
+            stays on <code className="text-xs">[authenticating]</code> and does
+            not open a browser — wrap with{" "}
+            <code className="text-xs">npx -y mcp-remote</code> or use the web
+            connector. Full steps: <code>docs/mcp.md</code>.
           </p>
         </CardContent>
       </Card>

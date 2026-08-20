@@ -22,7 +22,7 @@ Authorization: Bearer pcn_<secret>
 
 Default recommendation for Magnus: **read scopes only**.
 
-MCP clients (Claude, Cursor, Inspector) do **not** use `pcn_` tokens. They use Entra OAuth against `POST /api/mcp`. See [mcp.md](mcp.md).
+MCP clients (Claude, Cursor, Grok on the web, Inspector) do **not** use `pcn_` tokens. They use Entra OAuth against `POST /api/mcp`. Grok CLI native HTTP OAuth does not complete in 1.0.5 — see [mcp.md](mcp.md#grok-cli--known-limitation-no-browser).
 
 ## Endpoints
 

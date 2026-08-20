@@ -148,8 +148,8 @@ export async function handleMcpWithClaims(
   const handler = createMcpHandler(
     () => createPreconMcpServer(resolved.principal, resolved.effectiveScopes),
     // 2025 clients POST JSON-RPC without the 2026 `_meta` envelope. Stateless
-    // fallback is the SDK default and keeps Claude/Cursor working; GET/DELETE
-    // stay 405.
+    // fallback is the SDK default and keeps Claude/Cursor working. Unauthenticated
+    // GET is handled on the route (RFC 9728 challenge); DELETE stays 405.
     { legacy: "stateless" }
   );
   return handler.fetch(request);
