@@ -23,6 +23,9 @@ export const LEGACY_DIRECT_ID_LOADERS = [
   "src/actions/templates.ts",
   "src/lib/auth.ts",
   "src/lib/email.ts",
+  // Identity resolution before a principal exists (same class as auth.ts /
+  // mobile-auth.ts): maps an OAuth access-token `sub` to the sign-in account.
+  "src/lib/mcp/resolve-principal.ts",
   "src/lib/mobile-auth.ts",
   "src/lib/queries.ts",
   "src/lib/recovery.ts",

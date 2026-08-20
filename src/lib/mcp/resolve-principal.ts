@@ -1,5 +1,6 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { user as authUser } from "@/db/auth-schema";
 import { users } from "@/db/schema";
 import {
   effectiveMcpScopes,
@@ -60,7 +61,19 @@ export async function resolveMcpPrincipal(
     };
   }
 
-  const email = emailFromClaims(claims);
+  // Access tokens only carry email/preferred_username/upn when the client
+  // requested OIDC scopes. Most MCP harnesses (mcp-remote, Cursor, Claude)
+  // request only our resource scopes, so fall back to resolving the token's
+  // `sub` (the Better Auth user id) to the signed-in account's email.
+  let email = emailFromClaims(claims);
+  if (!email && typeof claims.sub === "string" && claims.sub) {
+    const [account] = await db
+      .select({ email: authUser.email })
+      .from(authUser)
+      .where(eq(authUser.id, claims.sub))
+      .limit(1);
+    if (account?.email) email = account.email.trim().toLowerCase();
+  }
   if (!email) {
     return {
       ok: false,
