@@ -46,6 +46,7 @@ Canonical guides for the B&G Precon data-collection app. Start here; do not trea
 | Doc | What it is |
 | --- | --- |
 | [data-connections.md](data-connections.md) | Mermaid map of every inbound / outbound system and the RPD-lock warehouse gate |
+| [data-flows/index.html](data-flows/index.html) | Branded HTML explainer of the same map — open in a browser |
 | [adr/001-incremental-scaffold-architecture.md](adr/001-incremental-scaffold-architecture.md) | Incremental scaffold |
 | [adr/002-post-bid-finalize-seam.md](adr/002-post-bid-finalize-seam.md) | Current `finalizeRound()` lock-passthrough seam |
 | [adr/003-canonical-one-job-schedule-projection.md](adr/003-canonical-one-job-schedule-projection.md) | Canonical one-job schedule read model |

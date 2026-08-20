@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How precon data moves</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="page.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#top">Pursuits and Data <span>/ flows</span></a>
+    <nav class="site-nav" aria-label="Page">
+      <a href="#map">Map</a>
+      <a href="#path">Path</a>
+      <a href="#store">Store</a>
+      <a href="#outbox">Outbox</a>
+      <a href="#salesforce">Salesforce</a>
+      <a href="#inventory">Inventory</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" id="top">
+      <p class="meta">19 Aug 2026 · RPD roundtable</p>
+      <h1>How precon data moves</h1>
+      <p>Bid schedule, data collection, and reporting. Everything that writes in, everything that reads out, and the RPD lock in between. Salesforce access is not a blocker to using the app. Databricks discoverability is a blocker for Lucy’s Power BI.</p>
+      <div class="legend" role="group" aria-label="Legend">
+        <span><i class="pip pip--live"></i> Live</span>
+        <span><i class="pip pip--mock"></i> Mock / file</span>
+        <span><i class="pip pip--gated"></i> Gated</span>
+        <span><i class="pip pip--out"></i> Out of scope</span>
+        <span><i class="pip pip--in"></i> In</span>
+        <span><i class="pip pip--app"></i> App</span>
+        <span><i class="pip pip--outlane"></i> Out</span>
+      </div>
+    </section>
+
+    <section class="wrap block" id="map" style="padding-top:8px">
+      <p class="kicker">System map</p>
+      <h2>In → app → out</h2>
+      <p class="lede">Neon is the store. Smartsheet is a one-time dump, then it stops. Fourth floor, Power BI, and Magnus analytics only see rows an RPD has locked. Solid = live. Dashed = mock or file. Dotted = gated.</p>
+      <div class="filters" role="group" aria-label="Highlight by status">
+        <button type="button" data-filter="all" class="is-on">All</button>
+        <button type="button" data-filter="live">Live</button>
+        <button type="button" data-filter="mock">Mock / file</button>
+        <button type="button" data-filter="gated">Gated</button>
+        <button type="button" data-filter="out">Out of scope</button>
+      </div>
+      <div class="board">
+        <div class="lanes">
+          <div class="lane lane--in">
+            <div class="lane__title">In</div>
+            <a class="node node--mock" data-status="mock" href="#smartsheet">
+              <div class="node__top"><span class="node__name">Smartsheet</span><span class="node__tag">read</span></div>
+              <p class="node__meta">One history dump, then never import again. No write-back.</p>
+            </a>
+            <a class="node node--mock" data-status="mock" href="#salesforce">
+              <div class="node__top"><span class="node__name">Salesforce / Connect</span><span class="node__tag">suggest</span></div>
+              <p class="node__meta">Job number only is trusted. Local override. No fake numbers.</p>
+            </a>
+            <a class="node" data-status="live" href="#destini">
+              <div class="node__top"><span class="node__name">Destini file</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Excel / CSV. Preview diffs, confirm. Local decisions win.</p>
+            </a>
+            <a class="node node--gated" data-status="gated" href="#destini">
+              <div class="node__top"><span class="node__name">Destini Cloud API</span><span class="node__tag">gated</span></div>
+              <p class="node__meta">Jack’s fork vs next-day warehouse. Contingency cannot wait overnight.</p>
+            </a>
+            <a class="node" data-status="live" href="#identity">
+              <div class="node__top"><span class="node__name">Microsoft Entra</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Production SSO. Role from email, title, manager, groups.</p>
+            </a>
+            <a class="node" data-status="live" href="#identity">
+              <div class="node__top"><span class="node__name">DMR CSV</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Optional reconcile. Hedged DMR is not the source of truth.</p>
+            </a>
+          </div>
+          <div class="lane lane--app">
+            <div class="lane__title">This app</div>
+            <a class="node" data-status="live" href="#path">
+              <div class="node__top"><span class="node__name">Web / iPad</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Operators. PCM chrome is overview, schedule, post-bid.</p>
+            </a>
+            <div class="edge edge--solid">writes</div>
+            <a class="node node--hub" data-status="live" href="#store">
+              <div class="node__top"><span class="node__name">Neon Postgres</span><span class="node__tag">store</span></div>
+              <p class="node__meta">One job. Many rounds. Notes and team live on the round.</p>
+            </a>
+            <div class="edge edge--solid">lock</div>
+            <a class="node" data-status="live" href="#store">
+              <div class="node__top"><span class="node__name">Lock revisions</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Immutable snapshot at RPD lock. Unlock needs a reason.</p>
+            </a>
+            <div class="edge">queue, same txn</div>
+            <a class="node node--gated" data-status="gated" href="#outbox">
+              <div class="node__top"><span class="node__name">Publication outbox</span><span class="node__tag">gated write</span></div>
+              <p class="node__meta">Publish / retract so lock never waits on Databricks.</p>
+            </a>
+          </div>
+          <div class="lane lane--out">
+            <div class="lane__title">Out</div>
+            <a class="node node--gated" data-status="gated" href="#databricks">
+              <div class="node__top"><span class="node__name">Databricks</span><span class="node__tag">gated</span></div>
+              <p class="node__meta">Locked revisions only. MERGE on round + revision. Write off.</p>
+            </a>
+            <div class="edge">current view</div>
+            <a class="node node--gated" data-status="gated" href="#powerbi">
+              <div class="node__top"><span class="node__name">Power BI</span><span class="node__tag">gated</span></div>
+              <p class="node__meta">Lucy / fourth floor. November so dashboards do not drop.</p>
+            </a>
+            <a class="node" data-status="live" href="#magnus">
+              <div class="node__top"><span class="node__name">Magnus / Copilot / MCP</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Operator tools in-app. External answers: locked only.</p>
+            </a>
+            <a class="node" data-status="live" href="#files">
+              <div class="node__top"><span class="node__name">XLSX / PDF / PPTX</span><span class="node__tag">live</span></div>
+              <p class="node__meta">Current-view spreadsheet. Monday packet PDFs.</p>
+            </a>
+            <a class="node node--mock" data-status="mock" href="#files">
+              <div class="node__top"><span class="node__name">Email</span><span class="node__tag">stub</span></div>
+              <p class="node__meta">Durable outbox first. Resend not on Production yet.</p>
+            </a>
+            <a class="node node--out" data-status="out" href="#out">
+              <div class="node__top"><span class="node__name">Time cards / RM / Lowery</span><span class="node__tag">out</span></div>
+              <p class="node__meta">Join keys only. No screens in this product.</p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap" style="padding-bottom:8px">
+      <div class="cores">
+        <div class="core"><strong>Throughput</strong><p>Work actually priced, irrespective of company revenue.</p></div>
+        <div class="core"><strong>Hit rates</strong><p>Success against what was pursued. Unhedged, not DMR haircut.</p></div>
+        <div class="core"><strong>Efficiency</strong><p>Man-hours by region and sector. Calculated, not copied down.</p></div>
+        <div class="core"><strong>Lift</strong><p>More self-perform and design-build, on the same spine.</p></div>
+      </div>
+    </section>
+
+    <section class="wrap block" id="path">
+      <p class="kicker">Operator path</p>
+      <h2>How a pricing effort moves</h2>
+      <p class="lede">Precon does not wait for a Salesforce job number. Upcoming / Active / Outstanding stay. After submit, the same round is post-bid. There is no second metrics sheet.</p>
+      <div class="diagram">
+        <div class="flow-h">
+          <div class="box"><b>1 · Create</b><small>Two seconds. TBD or Salesforce match. RPD approves onto the board.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box"><b>2 · Price</b><small>Team, dates, SP intent, and notes live on the round — not the job.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box"><b>3 · Submit</b><small>Outstanding + post-bid queue. Phase-scaled required fields. No silent zeros.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box box--fill"><b>4 · RPD lock</b><small>Immutable revision. Warehouse gate. Chiefs do not lock.</small></div>
+        </div>
+        <p class="seq-cap">Later → unlock with reason → edit → new revision. Not a second row.</p>
+      </div>
+      <p class="lede" style="margin-top:16px">Florida ~197 posted in six months. Texas ~40 behind. Atlanta is form-to-lead. Conceptual budgets must not be forced to type zeros. PCM create; RPD approves onto the board.</p>
+    </section>
+
+    <section class="wrap block" id="store">
+      <p class="kicker">Canonical store</p>
+      <h2>One job · many efforts · one lock</h2>
+      <p class="lede">Smartsheet needed a holding sheet and a memorialized sheet. The app does not. Filter locked vs not. Change log, not a second row. Views follow assigned people and groups, not Salesforce house region.</p>
+      <div class="diagram">
+        <div class="flow-v">
+          <div class="box"><b>jobs</b><small>Number or TBD · Salesforce link · multi-group · parent/child TI</small></div>
+          <div class="v-arrow"></div>
+          <div class="box"><b>estimate_rounds</b><small>Upcoming → Active → Outstanding · dates · yellows · staffing · notes · SP intent</small></div>
+          <div class="v-arrow"></div>
+          <div class="split2">
+            <div class="col">
+              <div class="box box--fill"><b>round_lock_revisions</b><small>Immutable snapshot · actor · policy version</small></div>
+              <div class="v-arrow"></div>
+              <div class="box box--gate"><b>publication_outbox</b><small>publish | retract · idempotent key</small></div>
+            </div>
+            <div class="col">
+              <div class="box box--dash"><b>source_provenance</b><small>Destini checksum · Salesforce shadow</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap block" id="outbox">
+      <p class="kicker">Publication outbox</p>
+      <h2>Lock locally. Deliver later.</h2>
+      <p class="lede">If Databricks had to answer on the RPD click, a warehouse outage would block approval. The outbox is a Postgres table: same transaction as the lock, worker delivers after.</p>
+      <div class="diagram">
+        <div class="flow-h">
+          <div class="box"><b>RPD locks</b><small>Policy + authority. Operator is done.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box box--fill"><b>Same Neon txn</b><small>Snapshot + queued publish / retract. No warehouse call.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box"><b>Worker</b><small>Queued and failed events, up to 5 attempts.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box box--gate"><b>Databricks</b><small>MERGE or retract on round + revision.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box"><b>Power BI</b><small>Current non-retracted revision only.</small></div>
+        </div>
+        <p class="seq-cap">Local lock is valid even while events sit queued</p>
+      </div>
+      <p class="lede" style="margin-top:16px">Writes stay off until <code>DATABRICKS_ALLOW_WRITE=true</code>, warehouse publication is on, and MERGE is signed off. Events sit queued. The local lock is still valid.</p>
+    </section>
+
+    <section class="wrap block" id="salesforce">
+      <p class="kicker">Identity</p>
+      <h2>Suggest, do not chain</h2>
+      <p class="lede">The room will not wait for Salesforce cleanup. Job number is the join. Name, client, division, and market sector may be wrong. Duplicate numbers exist. Official project start stays in Salesforce.</p>
+      <div class="diagram">
+        <div class="flow-h" style="min-width:0;margin-bottom:16px">
+          <div class="box"><b>New pursuit</b><small>Two-second create. PCM.</small></div>
+          <div class="chev" aria-hidden="true">→</div>
+          <div class="box box--choice"><b>Job number exists?</b><small>Connect / Salesforce search</small></div>
+        </div>
+        <div class="split2">
+          <div class="col">
+            <div class="box"><b>Yes → typeahead</b><small>Accept, or local override. Keep source-shadow + undo. Job number is authoritative.</small></div>
+          </div>
+          <div class="col">
+            <div class="box box--dash"><b>No → pending identity</b><small>Not a fake number. Daily candidate inbox. Human yes / no.</small></div>
+          </div>
+        </div>
+        <div class="v-arrow" style="margin:0 auto"></div>
+        <div class="box box--fill" style="max-width:560px;margin:0 auto;text-align:center"><b>Same job row</b><small>Rounds stay attached. Never mint a second PK.</small></div>
+      </div>
+    </section>
+
+    <section class="wrap block" id="in">
+      <p class="kicker">Detail</p>
+      <h2>What each wire actually does</h2>
+      <p class="lede">Humans are still the main source. Company systems fill trusted fields when the operator accepts them. Nothing silent-overwrites a local choice.</p>
+      <div class="notes">
+        <article class="note" id="smartsheet">
+          <h3>Smartsheet <span class="node__tag">in · read</span></h3>
+          <p>Official workspace is the current operating system. Bryan still lives in the corporate sheet. Formula copy-down already corrupts numbers. The app never writes back.</p>
+          <dl class="kv">
+            <dt>How</dt><dd>API pull → gitignored JSON → parse → import</dd>
+            <dt>Cutover</dt><dd>One dump of live + historical, then disable reads</dd>
+            <dt>Gate</dt><dd>Green dump report and <code>SMARTSHEET_DUMP_SIGNED_OFF=1</code></dd>
+            <dt>Rehearsal</dt><dd>640 jobs / 1,098 rounds isolated. Owner gate unset</dd>
+          </dl>
+        </article>
+        <article class="note" id="destini">
+          <h3>Destini <span class="node__tag">in · file live</span></h3>
+          <p>GC/GR company sort should come from Destini on the parent estimate, not typing. Jack owns Cloud API vs next-day warehouse.</p>
+          <dl class="kv">
+            <dt>How</dt><dd>Per-round Excel/CSV. Preview, confirm, checksum</dd>
+            <dt>Wins</dt><dd>Identity and accepted local values are not overwritten</dd>
+            <dt>Probe</dt><dd>Read-only Databricks sample. Not auto-fill</dd>
+            <dt>Not yet</dt><dd>No second live-SQL path until contract 14.2</dd>
+          </dl>
+        </article>
+        <article class="note" id="identity">
+          <h3>Entra, DMR, BUILD <span class="node__tag">mixed</span></h3>
+          <p>Production SSO is Entra. DMR is a CSV compare against this unhedged pipeline. BUILD job master is inventoried in Unity Catalog, not joined live. No Salesforce tables found in UC.</p>
+          <dl class="kv">
+            <dt>SSO</dt><dd>Better Auth + Entra on Production</dd>
+            <dt>Titles</dt><dd>Email → title → manager → groups. Fail closed</dd>
+            <dt>DMR</dt><dd><code>jobNumber, dmrValue</code>. Status source still undecided</dd>
+            <dt>BUILD</dt><dd><code>domain.general.buildprojectdetails</code> probed only</dd>
+          </dl>
+        </article>
+        <article class="note" id="databricks">
+          <h3>Databricks + Power BI <span class="node__tag">out · gated</span></h3>
+          <p id="powerbi">Shadow table keyed by round id + lock revision. Unlock retracts the current view without deleting history. Dual analytics: RPDs in-tool, DMs in Power BI, same numbers.</p>
+          <dl class="kv">
+            <dt>Shape</dt><dd>One wide row per locked round. Custom cols as JSON</dd>
+            <dt>Kill</dt><dd><code>DATABRICKS_ALLOW_WRITE=false</code></dd>
+            <dt>Cron</dt><dd>Feed is preview-only. No mutating Vercel cron yet</dd>
+            <dt>Switch</dt><dd>After frozen-fixture parity. Lucy / Eric, November</dd>
+          </dl>
+        </article>
+        <article class="note" id="magnus">
+          <h3>Magnus, Eve, MCP <span class="node__tag">out · live</span></h3>
+          <p>This tool is the operator visualization. Magnus is ask-the-data later. In-product Copilot is Principal-scoped. External answers use locked rows. Tokens cannot delete a sheet.</p>
+        </article>
+        <article class="note" id="files">
+          <h3>Files, mail, later joins <span class="node__tag" id="out">mixed</span></h3>
+          <p>One-click current-view XLSX. Saved PDF templates for the Monday packet. Email queues submitted / reminder / report / date-shift. Time-card keys on the locked feed: job, number, round, revision, dates. Resource management gets a date event and must never auto-slide people.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap block" id="inventory">
+      <p class="kicker">Inventory</p>
+      <h2>Every connection</h2>
+      <div class="filters" role="group" aria-label="Filter inventory">
+        <button type="button" data-table-filter="all" class="is-on">All</button>
+        <button type="button" data-table-filter="live">Live</button>
+        <button type="button" data-table-filter="mock">Mock / file</button>
+        <button type="button" data-table-filter="gated">Gated</button>
+        <button type="button" data-table-filter="out">Out</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>System</th><th>Dir</th><th>Status</th><th>What moves</th><th>Owner</th></tr>
+          </thead>
+          <tbody>
+            <tr data-row-status="live"><td>Operators, web / iPad</td><td>In / out</td><td>Live</td><td>Schedule, post-bid, notes, staffing, flags</td><td>RPDs / Keller</td></tr>
+            <tr data-row-status="live"><td>Neon Postgres</td><td>Store</td><td>Live</td><td>Jobs, rounds, locks, outbox, provenance</td><td>Platform</td></tr>
+            <tr data-row-status="live"><td>Microsoft Entra</td><td>In</td><td>Live on Production</td><td>Identity, title, groups</td><td>IT</td></tr>
+            <tr data-row-status="mock"><td>Smartsheet</td><td>In</td><td>Read; cutover unsigned</td><td>History dump of the current OS</td><td>Bryan / Keller</td></tr>
+            <tr data-row-status="mock"><td>Salesforce / Connect</td><td>In</td><td>Seeded mock; REST ready</td><td>Job number + shadow fields</td><td>Robert / Eric</td></tr>
+            <tr data-row-status="live"><td>Destini file</td><td>In</td><td>Preview / confirm</td><td>Value, fee, labor, GC sort, months</td><td>Jack / leads</td></tr>
+            <tr data-row-status="gated"><td>Destini Cloud API</td><td>In</td><td>Deferred</td><td>Same-day fields (contingency)</td><td>Jack</td></tr>
+            <tr data-row-status="gated"><td>Databricks read</td><td>In probe</td><td>Inventory</td><td>Destini, BUILD, team, BC tables</td><td>Eric</td></tr>
+            <tr data-row-status="gated"><td>Databricks publish</td><td>Out</td><td>Write off</td><td>Locked revisions only</td><td>Lucy / Eric</td></tr>
+            <tr data-row-status="gated"><td>Power BI</td><td>Out</td><td>Still on Smartsheet</td><td>Corporate metrics; must match in-tool</td><td>Lucy</td></tr>
+            <tr data-row-status="live"><td>In-tool dashboards</td><td>Out</td><td>Live</td><td>Latest-round rollups for RPDs</td><td>RPDs</td></tr>
+            <tr data-row-status="live"><td>Magnus / Eve / MCP</td><td>Out</td><td>Live</td><td>Scoped operator reads; locked for external</td><td>Innovation</td></tr>
+            <tr data-row-status="live"><td>XLSX / PDF / PPTX</td><td>Out</td><td>Live</td><td>Current view and Monday packet</td><td>Jay</td></tr>
+            <tr data-row-status="mock"><td>Email</td><td>Out</td><td>Stub outbox</td><td>Reminders, reports, date-shift</td><td>Ops</td></tr>
+            <tr data-row-status="live"><td>DMR CSV</td><td>In</td><td>Live upload</td><td>Hedged pipeline compare</td><td>DMs</td></tr>
+            <tr data-row-status="out"><td>Time cards</td><td>Out keys</td><td>Out of scope</td><td>Stable keys, no screen</td><td>Later</td></tr>
+            <tr data-row-status="out"><td>Lowery / RM Gantt</td><td>—</td><td>Out of scope</td><td>Separate products</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="wrap block" id="clock" style="padding-top:8px">
+      <p class="kicker">Clock the room said out loud</p>
+      <h2>Cut over when the dump is clean</h2>
+      <div class="timeline">
+        <div class="t-item"><time>~1 week</time><p>Layout, filter, Gantt, export current view, grouping, overdue widgets.</p></div>
+        <div class="t-item"><time>2–4 weeks</time><p>This RPD room pilots. Process stays familiar.</p></div>
+        <div class="t-item"><time>1 Oct 2026</time><p>First pilot outside this room.</p></div>
+        <div class="t-item"><time>November</time><p>Databricks write after RPD lock so Power BI does not drop.</p></div>
+        <div class="t-item"><time>2026</time><p>If the dump is tested and the UX is agreed, flip. Jan 1 is not a gate.</p></div>
+      </div>
+      <p class="lede" style="margin-top:24px">Not this version: resource management, time-card screen, Lowery staffing, Destini Cloud as SoR, BuildingConnected comments, minting job numbers.</p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span>Internal explainer · 19 Aug 2026 roundtable + live integration seams</span>
+    <span>
+      <a href="../data-connections.md">Mermaid source</a>
+      · <a href="../rpd-roundtable-product-contract.md">Product contract</a>
+    </span>
+  </footer>
+
+  <script>
+    const nodes = [...document.querySelectorAll(".node[data-status]")];
+    const mapButtons = [...document.querySelectorAll("[data-filter]")];
+    const tableButtons = [...document.querySelectorAll("[data-table-filter]")];
+    const rows = [...document.querySelectorAll("tr[data-row-status]")];
+    const navLinks = [...document.querySelectorAll(".site-nav a")];
+
+    function on(buttons, active) {
+      buttons.forEach((b) => {
+        b.classList.toggle("is-on", b === active);
+      });
+    }
+    mapButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const kind = btn.getAttribute("data-filter");
+        on(mapButtons, btn);
+        nodes.forEach((n) => {
+          n.classList.toggle("is-dim", kind !== "all" && n.dataset.status !== kind);
+        });
+      });
+    });
+    tableButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const kind = btn.getAttribute("data-table-filter");
+        on(tableButtons, btn);
+        rows.forEach((r) => {
+          r.classList.toggle("is-hidden", kind !== "all" && r.dataset.status !== kind);
+        });
+      });
+    });
+
+    const sections = navLinks.map((l) => document.getElementById((l.getAttribute("href") || "").slice(1))).filter(Boolean);
+    if (sections.length && "IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (!vis) return;
+          navLinks.forEach((l) => {
+            l.classList.toggle("is-active", l.getAttribute("href") === `#${vis.target.id}`);
+          });
+        },
+        { rootMargin: "-18% 0px -70% 0px", threshold: [0.1, 0.3] }
+      );
+      sections.forEach((s) => {
+        io.observe(s);
+      });
+    }
+  </script>
+</body>
+</html>
