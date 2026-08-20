@@ -41,7 +41,8 @@ describe("MCP consent helpers", () => {
       const body = JSON.parse(String(init?.body)) as { accept: boolean };
       return new Response(
         JSON.stringify({
-          redirect_uri: body.accept
+          redirect: true,
+          url: body.accept
             ? "https://client.example/cb?code=ok"
             : "https://client.example/cb?error=access_denied",
         }),
@@ -70,5 +71,28 @@ describe("MCP consent helpers", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("still accepts a redirect_uri field from older consent responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        return new Response(
+          JSON.stringify({
+            redirect_uri: "https://client.example/cb?code=legacy",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      })
+    );
+    await expect(
+      submitOauthConsent({
+        accept: true,
+        oauthQuery: "client_id=x&scope=profile:read",
+        scope: "profile:read",
+      })
+    ).resolves.toEqual({
+      redirect_uri: "https://client.example/cb?code=legacy",
+    });
   });
 });

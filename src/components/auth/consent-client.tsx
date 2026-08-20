@@ -22,18 +22,24 @@ export async function submitOauthConsent(input: {
     }),
   });
   const body = (await response.json().catch(() => null)) as {
+    redirect?: boolean;
+    url?: string;
     redirect_uri?: string;
     error?: string;
+    error_description?: string;
     message?: string;
   } | null;
-  if (!response.ok || !body?.redirect_uri) {
+  // Better Auth JSON consent returns `{ redirect: true, url }` (not redirect_uri).
+  const redirectUri = body?.url || body?.redirect_uri;
+  if (!response.ok || !redirectUri) {
     throw new Error(
-      body?.message ||
+      body?.error_description ||
+        body?.message ||
         body?.error ||
         `Consent ${input.accept ? "approval" : "denial"} failed.`
     );
   }
-  return { redirect_uri: body.redirect_uri };
+  return { redirect_uri: redirectUri };
 }
 
 export function ConsentClient({
