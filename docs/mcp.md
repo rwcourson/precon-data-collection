@@ -125,38 +125,28 @@ What the CLI does against this server (verified in production logs):
 
 Server-side work already in production for that handshake (SSO exemption, DCR, native loopback rewrite, CIMD not advertised, GET challenge matching Linear/Sentry) is not enough: Grok CLI never starts the authorize step. Treat this as a **Grok CLI bug / missing interactive OAuth**, not a missing Precon endpoint.
 
-**Workarounds (pick one):**
+**Grok CLI** (stdio, no browser after first login):
 
-| Path | When to use |
-| --- | --- |
-| [grok.com/connectors](https://grok.com/connectors) → Custom | Preferred. Same MCP URL, browser OAuth works. |
-| `mcp-remote` stdio wrapper (below) | You need tools **inside the Grok TUI** |
-| Cursor / Claude / Inspector | Other clients; their OAuth flows do open a browser |
+Grok cannot complete native HTTP OAuth (1.0.5). Point it at the local stdio proxy in this repo — same pattern as Keel. It uses the refresh token on disk and **never opens a tab**.
 
-Stdio wrapper (opens a browser on first connect; Grok talks to a local process, not HTTP OAuth). **Do not run `grok mcp remove` / `add` every time** — that starts a new login. Authenticate once, then just launch `grok`.
-
-Pin the callback port and give Microsoft sign-in ten minutes (the default 30-second timeout is why the browser lands on a dead `localhost:27523` tab):
+One-time login (spare terminal, wait for `Connected`, then Ctrl+C):
 
 ```bash
-# Quit every other grok session first (multiple grok processes steal the callback port).
-
-npx -y mcp-remote https://precon-data.magnus.brasfieldgorrie.app/api/mcp 27523 --host localhost --auth-timeout 600
-# Complete Entra + Approve in the browser that this command opens.
-# Wait until the terminal prints "Connected" / "Proxy established".
-# Ctrl+C that process, then:
-
-grok mcp remove precon-data
-grok mcp add precon-data -- npx -y mcp-remote https://precon-data.magnus.brasfieldgorrie.app/api/mcp 27523 --host localhost --auth-timeout 600
-grok
+pnpm mcp:login
 ```
 
-Complete Entra + `/consent` in the window `mcp-remote` opens. Tokens live with `mcp-remote`, not `~/.grok/mcp_credentials.json`.
+Then in `~/.grok/config.toml`:
 
-Optional native HTTP config (will **not** complete OAuth until Grok CLI actually calls DCR + authorize):
-
-```bash
-grok mcp add --transport http precon {APP_ORIGIN}/api/mcp
+```toml
+[mcp_servers.precon-data]
+command = "node"
+args = ["/ABS/PATH/TO/precon-data-collection/scripts/mcp-stdio-proxy.mjs"]
+enabled = true
 ```
+
+Do not use `npx mcp-remote` as the Grok server command. Grok respawns it on every tool call; `mcp-remote` then opens a browser and waits up to ten minutes.
+
+Cursor / Claude / Inspector / grok.com still use the HTTPS URL directly.
 
 ### MCP Inspector
 
@@ -177,7 +167,7 @@ Inspector will follow protected-resource metadata, open the browser for SSO, the
 | JSON-RPC error `Missing MCP grant: write:pursuits` | Write tool called without a write ceiling and consent. |
 | HTTP 400 `missing: ["_meta"]` | Client sent `MCP-Protocol-Version: 2026-07-28` without the per-request envelope. Omit the header (2025) or send `_meta`. |
 | Grok CLI `[authenticating]` with no browser | **Known limitation in Grok CLI 1.0.5.** Native `--transport http` discovers OAuth then never registers a client or opens a login URL. Use [grok.com/connectors](https://grok.com/connectors) or `npx mcp-remote {APP_ORIGIN}/api/mcp` as a stdio server. Restarting and pressing `i` will not help. |
-| Browser opens `http://localhost:27523/oauth/callback` and the tab never finishes | The callback is correct. `mcp-remote` died before Entra finished (default 30s timeout, or a second `grok` stole the port). Quit every `grok`, run `npx -y mcp-remote {APP_ORIGIN}/api/mcp 27523 --host localhost --auth-timeout 600`, complete sign-in in **that** browser, then start a single `grok`. |
+| Browser opens `http://localhost:27523/oauth/callback` during a Grok chat | Grok is still spawning `mcp-remote`. Point `[mcp_servers.precon-data]` at `scripts/mcp-stdio-proxy.mjs` instead. |
 | Build log `relation "oauth_resource" does not exist` | Apply drizzle migration 0016 (`pnpm run db:migrate:deploy`) before first SSO runtime on Postgres. CI uses PGlite and is clean. |
 
 ## Rate limiting

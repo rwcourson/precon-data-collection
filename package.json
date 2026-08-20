@@ -54,6 +54,7 @@
     "verify:expo": "pnpm run mobile:typecheck:verify && pnpm run mobile:test && pnpm run mobile:bundle",
     "verify:ios": "node scripts/verify-ios.mjs",
     "verify:all": "pnpm run verify:web && pnpm run verify:expo && pnpm run verify:ios",
+    "mcp:login": "npx -y mcp-remote https://precon-data.magnus.brasfieldgorrie.app/api/mcp 27523 --host localhost --auth-timeout 600",
     "charts:sync": "node scripts/sync-chart-elements.mjs"
   },
   "engines": {
