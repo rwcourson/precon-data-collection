@@ -1,6 +1,4 @@
 import "server-only";
-import { cimd } from "@better-auth/cimd";
-import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -127,15 +125,11 @@ export const auth = betterAuth({
       consentPage: "/consent",
       resource: mcpResourceIdentifier(),
       scopes: [...MCP_ADVERTISED_SCOPES],
-      // CIMD is preferred (Grok web / Claude / Cursor). Local CLIs such as
-      // `grok mcp` still register a public loopback client via RFC 7591 before
-      // they can open the browser — without DCR they hang on [authenticating].
+      // Advertise DCR, not CIMD. Grok CLI sees CIMD support, has no HTTPS
+      // client-metadata URL, and hangs on [authenticating] instead of
+      // falling back to RFC 7591. Cursor/Claude/Grok web use DCR too.
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
-    }),
-    cimd({
-      fetchClientMetadataResource,
-      metadataProfile: "mcp-2026-07-28",
     }),
   ],
 });
