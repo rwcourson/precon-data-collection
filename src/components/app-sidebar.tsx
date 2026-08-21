@@ -109,7 +109,7 @@ function CollapsedFlyout({
         className="w-44 min-w-40 origin-[left_center] p-1 shadow-lg"
       >
         <DropdownMenuItem
-          className="rounded-md px-2 py-1 text-[13px] font-medium"
+          className="rounded-md px-2 py-1 text-sm font-medium"
           render={<Link href={href} />}
         >
           {label}
@@ -128,7 +128,7 @@ function CollapsedFlyout({
                 <DropdownMenuItem
                   key={sub.href}
                   className={cn(
-                    "rounded-md px-2 py-1 text-[13px]",
+                    "rounded-md px-2 py-1 text-sm",
                     subActive && "bg-info-soft font-medium text-primary"
                   )}
                   render={<Link href={sub.href} />}
@@ -136,7 +136,7 @@ function CollapsedFlyout({
                   <span className="flex w-full items-center justify-between gap-3">
                     {sub.label}
                     {count != null && (
-                      <span className="font-mono text-2xs tabular-nums text-muted-foreground">
+                      <span className="font-mono text-xs tabular-nums text-muted-foreground">
                         {count}
                       </span>
                     )}
@@ -320,7 +320,7 @@ function SidebarNav({
                                   key={sub.href}
                                   href={sub.href}
                                   className={cn(
-                                    "flex items-center gap-2 rounded-r-md border-l-2 border-transparent px-3 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                    "flex items-center gap-2 rounded-r-md border-l-2 border-transparent px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                                     subActive &&
                                       "border-l-primary bg-info-soft font-medium text-primary"
                                   )}
@@ -329,7 +329,7 @@ function SidebarNav({
                                     {sub.label}
                                   </span>
                                   {count != null && (
-                                    <span className="font-mono text-2xs tabular-nums">
+                                    <span className="font-mono text-xs tabular-nums">
                                       {count}
                                     </span>
                                   )}
@@ -365,7 +365,7 @@ function SidebarNav({
           ) : (
             <>
               <ChevronLeft className="size-4" />
-              <span className="text-[13px]">Collapse</span>
+              <span className="text-sm">Collapse</span>
             </>
           )}
         </Button>

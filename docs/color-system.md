@@ -29,6 +29,19 @@ Do not paint brand onto large surfaces (page, sidebar, cards, borders).
 4. **Theming** — change the role mappings in `:root` / `.dark`. Do not recolor
    components.
 
+## Type scale
+
+Four steps, **12px floor**, pinned in `px` in `src/app/globals.css` so they do not shrink under `html { text-sm }`. Guard: `src/lib/type-scale.contract.test.ts`.
+
+| Class | Size | Use |
+|---|---|---|
+| `text-xs` | 12px | Chrome: captions, table headers, badges, hints, toolbar labels, sm buttons |
+| `text-sm` | 14px | Content: body, sheets, nav, inputs, default buttons (`html` default) |
+| `text-base` | 16px | Card, dialog, and sheet titles |
+| `text-xl` | 20px | Page titles, KPIs, auth |
+
+Do not add `text-2xs`, `text-[11px]`, `text-[13px]`, `text-lg`, or `text-2xl`.
+
 ## Text and borders
 
 | Token | Role |

@@ -36,7 +36,7 @@ export default async function SheetPage({
 
   const header = (
     <div className="space-y-3">
-      <nav className="flex items-center gap-1 text-2xs text-muted-foreground">
+      <nav className="flex items-center gap-1 text-xs text-muted-foreground">
         <Link href="/sheets" className="hover:text-foreground hover:underline">
           Sheets
         </Link>

@@ -63,6 +63,7 @@ Hierarchical filter is **`preconDepartment`**, not a Georgia special case. Empty
 - URL: `regions`, `departments`. Saved views store config v2 (`src/lib/view-config.ts`); legacy JSONB still loads.
 - Per-user show/hide, density, and widths live in `user_table_prefs`. A named view URL (`?view=`) wins. `?source=prefs` skips the starred default. Widths are **not** in `localStorage`.
 - The filter trigger is a native `<button>` (`nativeButton={true}`).
+- Card view uses each card’s own height (`items-start`, `[--card-spacing:--spacing(5)]`). Cards do not stretch to the tallest card in the row.
 
 ## Notes and mentions
 
@@ -129,6 +130,7 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 - Dollar and count fields use `NumericInput` so commas appear while typing; stored values stay numeric.
 - Select and dropdown menus size to `--available-height` and wrap labels so they are not clipped.
 - Control height is **`h-7` (28px)** — same as the sheet **Pin** button. Buttons (default/`sm`), inputs, selects, date pickers, and header chips (`Badge` `size="md"`) share it. Dense table pills stay `Badge` `sm`.
+- Type is four steps, 12px floor: `text-xs` 12 (chrome), `text-sm` 14 (body, html default), `text-base` 16 (card/dialog titles), `text-xl` 20 (page titles, KPIs). Do not add `text-2xs`, 13px, `text-lg`, or `text-2xl`.
 - Job **Who can see this** is region visibility plus one-off pins. It is not
   the working team. Round **Team** on `/rounds/[id]` holds the estimate lead
   and Concept / DD / CD assignments for that pricing effort.
@@ -155,6 +157,8 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 | Copilot markdown / history | `src/components/copilot/copilot-markdown.tsx`, `src/lib/copilot-history.ts` |
 | HMAC bridge | `src/lib/ai/copilot-bridge.ts` |
 | Generated PPTX / brand | `brand/`, `src/lib/brand/`, `src/lib/pptx-canvas.ts`, `src/lib/pptx-forecast.ts` |
+| Type scale | `src/app/globals.css`, `src/lib/type-scale.contract.test.ts` |
+| Local OAuth origin | `src/lib/auth-base-url.ts` |
 
 ## Verify
 

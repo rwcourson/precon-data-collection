@@ -112,11 +112,11 @@ export function WidgetCanvas({
           >
             <header className="border-b border-border/70 px-4 py-3">
               <div className="min-w-0 space-y-0.5">
-                <h3 className="truncate text-[13px] font-semibold leading-snug tracking-tight text-foreground">
+                <h3 className="truncate text-sm font-semibold leading-snug tracking-tight text-foreground">
                   {w.config.title}
                 </h3>
                 {subtitle && (
-                  <p className="truncate text-2xs text-muted-foreground">
+                  <p className="truncate text-xs text-muted-foreground">
                     {subtitle}
                   </p>
                 )}

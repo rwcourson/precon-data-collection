@@ -70,7 +70,7 @@ function ChartTooltip({
   if (!active || !payload?.length) return null;
   return (
     <div className="min-w-32 rounded-md border border-[var(--chart-tooltip-border)] bg-[var(--chart-tooltip-bg)] px-3 py-2 text-[var(--chart-tooltip-fg)] shadow-[var(--overlay-shadow)]">
-      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">
         {label}
       </p>
       <ul className="space-y-1">
@@ -80,7 +80,7 @@ function ChartTooltip({
           return (
             <li
               key={String(item.name)}
-              className="flex items-center justify-between gap-4 text-[13px]"
+              className="flex items-center justify-between gap-4 text-sm"
             >
               <span className="flex items-center gap-1.5">
                 <span

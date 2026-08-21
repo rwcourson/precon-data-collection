@@ -54,27 +54,27 @@ export type ScheduleModeJob = {
 export function BidScheduleCards({ jobs }: { jobs: ScheduleModeJob[] }) {
   if (jobs.length === 0) return <ScheduleEmptyState />;
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
       {jobs.map((job) => (
         <Card
           key={job.jobId}
-          className="min-w-0"
+          className="min-w-0 gap-4 [--card-spacing:--spacing(5)]"
           data-schedule-job-id={job.jobId}
         >
-          <CardHeader className="gap-2 pb-2">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+          <CardHeader className="gap-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 space-y-1">
                 <Link
                   href={`/jobs/${job.jobId}`}
                   className="font-mono text-xs text-primary hover:underline"
                 >
                   {displayJobNumber(job.jobNumber)}
                 </Link>
-                <CardTitle className="truncate text-sm">
+                <CardTitle className="text-pretty text-sm leading-snug">
                   {job.jobName}
                 </CardTitle>
               </div>
-              <Badge variant="secondary" size="sm">
+              <Badge variant="secondary" size="sm" className="mt-0.5 shrink-0">
                 <Layers3 />
                 {job.efforts.length}
               </Badge>
@@ -90,16 +90,16 @@ export function BidScheduleCards({ jobs }: { jobs: ScheduleModeJob[] }) {
               )}
             </div>
           </CardHeader>
-          <CardContent className="space-y-1.5">
+          <CardContent className="flex flex-col gap-1">
             {job.efforts.map((effort) => (
               <Link
                 key={effort.id}
                 href={`/rounds/${effort.id}`}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-transparent px-2 py-1.5 text-xs hover:border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 rounded-md px-2.5 py-2 text-xs hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 <StatusBadge status={effort.status} />
                 <span className="truncate">{effort.estimatePhase}</span>
-                <span className="font-mono text-2xs text-muted-foreground">
+                <span className="font-mono text-xs text-muted-foreground">
                   {fmtDate(effort.bidDueDate)}
                 </span>
               </Link>
@@ -141,7 +141,7 @@ export function BidScheduleGantt({
               bid due; no people or staffing dates move automatically.
             </p>
           </div>
-          <p className="font-mono text-2xs text-muted-foreground">
+          <p className="font-mono text-xs text-muted-foreground">
             {fmtDate(new Date(start))} — {fmtDate(new Date(end))}
           </p>
         </div>
@@ -149,14 +149,14 @@ export function BidScheduleGantt({
       <CardContent className="overflow-x-auto p-0">
         <div className="min-w-[52rem]">
           <div className="sticky top-0 z-10 grid grid-cols-[16rem_minmax(0,1fr)] gap-4 border-b bg-card px-4 py-2">
-            <p className="self-end text-2xs font-medium text-muted-foreground">
+            <p className="self-end text-xs font-medium text-muted-foreground">
               Job
             </p>
             <div className="relative h-6">
               {ticks.map((tick) => (
                 <span
                   key={`${tick.label}-${tick.left}`}
-                  className="absolute top-1 -translate-x-1/2 text-2xs text-muted-foreground"
+                  className="absolute top-1 -translate-x-1/2 text-xs text-muted-foreground"
                   style={{ left: `${tick.left}%` }}
                 >
                   {tick.label}
@@ -177,7 +177,7 @@ export function BidScheduleGantt({
                 <div className="min-w-0">
                   <Link
                     href={`/jobs/${job.jobId}`}
-                    className="block truncate text-[13px] font-medium leading-5 hover:text-primary hover:underline"
+                    className="block truncate text-sm font-medium leading-5 hover:text-primary hover:underline"
                   >
                     {job.jobName}
                   </Link>

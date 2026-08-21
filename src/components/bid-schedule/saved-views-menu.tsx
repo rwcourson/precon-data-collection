@@ -137,7 +137,7 @@ export function SavedViewsMenu({
               >
                 <span className="min-w-0 flex-1 truncate">{view.name}</span>
                 {view.shared && (
-                  <span className="text-2xs text-muted-foreground">shared</span>
+                  <span className="text-xs text-muted-foreground">shared</span>
                 )}
                 <button
                   type="button"

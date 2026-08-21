@@ -78,7 +78,7 @@ export function ConsentClient({
       />
       <div className="relative z-10 w-full max-w-[480px] rounded-lg border border-white/12 bg-[#002070] px-6 py-8 text-white shadow-[0_16px_40px_rgb(0_0_0_/_0.45)] sm:px-8">
         <div className="space-y-2 text-center">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight text-balance text-white">
+          <h1 className="font-heading text-xl font-semibold tracking-tight text-balance text-white">
             Connect an AI tool
           </h1>
           <p className="text-pretty text-[15px] leading-relaxed text-[#d6e6ff]">
@@ -103,7 +103,7 @@ export function ConsentClient({
                 <span className="font-medium text-white">
                   {mcpScopeLabel(scope)}
                 </span>
-                <span className="mt-0.5 block font-mono text-[11px] text-[#93a9d6]">
+                <span className="mt-0.5 block font-mono text-xs text-[#93a9d6]">
                   {scope}
                 </span>
               </li>

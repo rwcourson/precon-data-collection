@@ -72,40 +72,40 @@ export default async function ForecastDashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">
+            <CardDescription className="text-xs">
               Objective total
             </CardDescription>
-            <CardTitle className="font-mono text-lg font-medium tabular-nums">
+            <CardTitle className="font-mono text-xl font-medium tabular-nums">
               {fmtDollars(series.totals.objective, true)}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">
+            <CardDescription className="text-xs">
               Risk-adjusted total
             </CardDescription>
-            <CardTitle className="font-mono text-lg font-medium tabular-nums">
+            <CardTitle className="font-mono text-xl font-medium tabular-nums">
               {fmtDollars(series.totals.adjusted, true)}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">
+            <CardDescription className="text-xs">
               Excluded rounds
             </CardDescription>
-            <CardTitle className="font-mono text-lg font-medium tabular-nums">
+            <CardTitle className="font-mono text-xl font-medium tabular-nums">
               {series.excluded.length}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card className="gap-2 py-3">
           <CardHeader className="pb-0">
-            <CardDescription className="text-2xs">
+            <CardDescription className="text-xs">
               Months in series
             </CardDescription>
-            <CardTitle className="font-mono text-lg font-medium tabular-nums">
+            <CardTitle className="font-mono text-xl font-medium tabular-nums">
               {series.months.length}
             </CardTitle>
           </CardHeader>

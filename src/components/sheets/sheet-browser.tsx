@@ -240,7 +240,7 @@ export function SheetBrowser({
                     <p className="truncate text-sm font-medium text-muted-foreground">
                       {s.name}
                     </p>
-                    <p className="truncate text-2xs text-muted-foreground">
+                    <p className="truncate text-xs text-muted-foreground">
                       {s.folder} · archived{" "}
                       {new Date(s.archivedAt).toLocaleDateString("en-US")}
                     </p>
@@ -258,7 +258,7 @@ export function SheetBrowser({
                       <Undo2 className="size-3.5" /> Restore
                     </Button>
                   ) : (
-                    <span className="shrink-0 text-2xs text-muted-foreground">
+                    <span className="shrink-0 text-xs text-muted-foreground">
                       Owner or RPD restores
                     </span>
                   )}
@@ -313,7 +313,7 @@ function SheetCard({
           <span className="truncate text-sm font-medium">{sheet.name}</span>
           {sheet.pinned && <Pin className="size-3 shrink-0 text-primary" />}
         </div>
-        <p className="line-clamp-2 min-h-8 text-2xs text-muted-foreground">
+        <p className="line-clamp-2 min-h-8 text-xs text-muted-foreground">
           {sheet.description ??
             (sheet.kind === "view"
               ? "Live view of pursuit records."

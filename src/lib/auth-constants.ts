@@ -6,7 +6,9 @@ export const BA_SESSION_COOKIE_SECURE = `__Secure-${BA_SESSION_COOKIE}`;
 
 /**
  * Cookie presence only — not a validated session.
- * `(app)/layout` still calls Better Auth `getSession` before rendering chrome.
+ * Use this in the edge proxy to skip the SSO gate. Do not use it on `/sign-in`
+ * to send the browser to `/`: a stale `session_token` plus layout `getSession`
+ * 307-loops `/` ↔ `/sign-in`.
  */
 export function cookiesLookLikeBetterAuthSession(
   cookies: Iterable<{ name: string; value: string }>

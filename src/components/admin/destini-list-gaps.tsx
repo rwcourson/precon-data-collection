@@ -32,10 +32,10 @@ export function DestiniListGaps() {
           </div>
           {g.missingInApp.length > 0 && (
             <div className="mb-2">
-              <p className="text-2xs font-medium text-warning-foreground">
+              <p className="text-xs font-medium text-warning-foreground">
                 In Destini, missing from app ({g.missingInApp.length})
               </p>
-              <p className="mt-1 text-2xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {g.missingInApp.slice(0, 12).join(" · ")}
                 {g.missingInApp.length > 12 ? "…" : ""}
               </p>
@@ -43,10 +43,10 @@ export function DestiniListGaps() {
           )}
           {g.extraInApp.length > 0 && (
             <div>
-              <p className="text-2xs font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 In app, not in Destini ({g.extraInApp.length})
               </p>
-              <p className="mt-1 text-2xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {g.extraInApp.slice(0, 12).join(" · ")}
                 {g.extraInApp.length > 12 ? "…" : ""}
               </p>

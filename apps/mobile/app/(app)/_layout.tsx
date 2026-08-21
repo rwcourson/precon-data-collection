@@ -73,7 +73,7 @@ export default function AppLayout() {
             paddingTop: 6,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
+            fontSize: 12,
             fontFamily: "Manrope_500Medium",
           },
         }}

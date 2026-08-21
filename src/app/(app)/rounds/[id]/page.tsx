@@ -317,7 +317,7 @@ export default async function RoundPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-medium">{job.jobName}</h1>
+            <h1 className="text-xl font-medium">{job.jobName}</h1>
             <StatusMenu
               roundId={round.id}
               status={round.status}
@@ -424,7 +424,7 @@ export default async function RoundPage({
       <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5">
         {headlineMetrics.map((m) => (
           <div key={m.label} className="bg-card px-3 py-2.5">
-            <p className="text-2xs text-muted-foreground">{m.label}</p>
+            <p className="text-xs text-muted-foreground">{m.label}</p>
             <p className="font-mono text-base font-medium tabular-nums">
               {m.value}
             </p>
@@ -614,11 +614,11 @@ export default async function RoundPage({
                           <p className="text-xs text-muted-foreground">
                             {m.label}
                           </p>
-                          <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                          <p className="mt-0.5 text-xl font-semibold tabular-nums">
                             {m.value}
                           </p>
                           {m.note && (
-                            <p className="text-2xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {m.note}
                             </p>
                           )}

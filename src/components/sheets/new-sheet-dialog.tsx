@@ -152,7 +152,7 @@ export function NewSheetDialog({
                     setName(picked.name.replace(/\.[^.]+$/, ""));
                 }}
               />
-              <p className="text-2xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 .csv, .tsv or .xlsx. The first row is read as column headings.
               </p>
             </div>
@@ -231,7 +231,7 @@ function KindCard({
         {icon}
         {title}
       </span>
-      <span className="mt-1 block text-2xs leading-relaxed text-muted-foreground">
+      <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
         {body}
       </span>
     </button>

@@ -429,7 +429,7 @@ export function EntryForm({
                       </SelectContent>
                     </Select>
                     {hint && (
-                      <p className="text-2xs text-info-foreground">{hint}</p>
+                      <p className="text-xs text-info-foreground">{hint}</p>
                     )}
                   </div>
                 );
@@ -481,7 +481,7 @@ export function EntryForm({
                     )}
                   </div>
                   {hint && (
-                    <p className="text-2xs text-info-foreground">{hint}</p>
+                    <p className="text-xs text-info-foreground">{hint}</p>
                   )}
                   {fieldAllowsNa(f) && !locked && (
                     <Button
@@ -633,7 +633,7 @@ function ReadOnlyField({
     <div className="space-y-1">
       <FieldLabel def={def} missing={false} />
       <Input value={value} disabled className="bg-muted/50" />
-      {hint && <p className="text-2xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

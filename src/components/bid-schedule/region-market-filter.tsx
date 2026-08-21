@@ -98,9 +98,9 @@ export function RegionMarketFilter({
                       <Minus className="pointer-events-none absolute inset-0 m-auto size-3 text-primary" />
                     )}
                   </span>
-                  <span className="text-[13px] font-medium">{node.region}</span>
+                  <span className="text-sm font-medium">{node.region}</span>
                   {some && (
-                    <span className="text-2xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {selectedCount} of {childCount}
                     </span>
                   )}
@@ -119,7 +119,7 @@ export function RegionMarketFilter({
                           />
                           <span
                             className={cn(
-                              "text-[13px]",
+                              "text-sm",
                               expanded.has(dept)
                                 ? "text-foreground"
                                 : "text-muted-foreground"

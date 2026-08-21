@@ -1,7 +1,4 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { SignInClient } from "@/components/auth/sign-in-client";
-import { cookiesLookLikeBetterAuthSession } from "@/lib/auth-constants";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 export default async function SignInPage({
@@ -11,14 +8,14 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
 
-  // Cookie presence only — keep Better Auth / Drizzle off this first compile.
-  // `(app)/layout` still validates the session before rendering chrome.
-  if (getRuntimeConfig().authMode === "sso") {
-    if (cookiesLookLikeBetterAuthSession((await cookies()).getAll())) {
-      const next = params.next?.startsWith("/") ? params.next : "/";
-      redirect(next);
-    }
-  }
-
-  return <SignInClient initialNext={params.next} initialError={params.error} />;
+  // Never bounce to `/` just because a session_token cookie exists. A stale
+  // Better Auth cookie plus `(app)/layout`'s getSession check 307-loops
+  // `/` ↔ `/sign-in`. The client confirms a live session before navigating.
+  return (
+    <SignInClient
+      sso={getRuntimeConfig().authMode === "sso"}
+      initialNext={params.next}
+      initialError={params.error}
+    />
+  );
 }

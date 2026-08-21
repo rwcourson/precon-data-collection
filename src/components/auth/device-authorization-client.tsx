@@ -90,7 +90,7 @@ export function DeviceAuthorizationClient({
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#00143c] px-4 py-10 text-white">
       <div className="relative z-10 w-full max-w-[480px] rounded-lg border border-white/12 bg-[#002070] px-6 py-8 shadow-[0_16px_40px_rgb(0_0_0_/_0.45)] sm:px-8">
-        <h1 className="font-heading text-2xl font-semibold">
+        <h1 className="font-heading text-xl font-semibold">
           Connect an AI tool
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-[#d6e6ff]">
@@ -111,7 +111,7 @@ export function DeviceAuthorizationClient({
                 if (event.key === "Enter") void verify();
               }}
               autoComplete="one-time-code"
-              className="h-12 w-full rounded-md border border-white/20 bg-[#0c2048] px-3 font-mono text-lg tracking-[0.2em] outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="h-12 w-full rounded-md border border-white/20 bg-[#0c2048] px-3 font-mono text-xl tracking-[0.2em] outline-none focus-visible:ring-2 focus-visible:ring-white"
               placeholder="ABCD-1234"
             />
             <button

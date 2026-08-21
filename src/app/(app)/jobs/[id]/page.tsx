@@ -120,7 +120,7 @@ export default async function JobPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-medium">{job.jobName}</h1>
+            <h1 className="text-xl font-medium">{job.jobName}</h1>
             {job.isLinked ? (
               <Badge variant="success">
                 <CheckCircle2 /> Connect-linked

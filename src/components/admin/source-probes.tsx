@@ -94,7 +94,7 @@ export function SourceProbes({
               <CardDescription>
                 SELECT probes against Destini, Build, and BuildingConnected
                 tables. Warehouse writes stay disabled unless{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">
                   DATABRICKS_ALLOW_WRITE=true
                 </code>
                 .
@@ -127,7 +127,7 @@ export function SourceProbes({
             </Button>
           )}
           {dbProbe && (
-            <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-2xs leading-relaxed whitespace-pre-wrap">
+            <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs leading-relaxed whitespace-pre-wrap">
               {dbProbe}
             </pre>
           )}
@@ -144,11 +144,11 @@ export function SourceProbes({
               <CardDescription>
                 Lists precon sheets visible to the API token. Refresh exports
                 locally with{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">
                   pnpm run smartsheet:pull
                 </code>{" "}
                 then import into Neon with{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">
                   pnpm run db:import-smartsheet
                 </code>
                 .
@@ -178,7 +178,7 @@ export function SourceProbes({
             </Button>
           )}
           {ssProbe && (
-            <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-2xs leading-relaxed whitespace-pre-wrap">
+            <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs leading-relaxed whitespace-pre-wrap">
               {ssProbe}
             </pre>
           )}

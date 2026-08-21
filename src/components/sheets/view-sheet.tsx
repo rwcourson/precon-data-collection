@@ -239,7 +239,7 @@ export function ViewSheet({
               markDirty();
             }}
           >
-            <SelectTrigger size="sm" className="w-44 text-[13px]">
+            <SelectTrigger size="sm" className="w-44 text-sm">
               <SelectValue placeholder="No grouping" />
             </SelectTrigger>
             <SelectContent>
@@ -377,7 +377,7 @@ function ColumnPicker({
         <div className="max-h-80 space-y-3 overflow-y-auto">
           {grouped.map(([category, fields]) => (
             <div key={category} className="space-y-1">
-              <p className="text-2xs font-semibold tracking-wide text-muted-foreground uppercase">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {category}
               </p>
               {fields.map((f) => {
@@ -442,7 +442,7 @@ function FilterBuilder({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-96 gap-3 p-3">
         <p className="text-xs font-medium">Sheet filters</p>
-        <p className="text-2xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           These are saved with the sheet — they define which records belong to
           it. Column filters in the header stay local to you.
         </p>
@@ -481,13 +481,13 @@ function FilterBuilder({
 
         <div className="space-y-2 rounded border border-dashed p-2">
           <div className="space-y-1">
-            <Label className="text-2xs">Column</Label>
+            <Label className="text-xs">Column</Label>
             <Select
               items={catalog.map((c) => ({ value: c.key, label: c.label }))}
               value={draft.field}
               onValueChange={(v) => setDraft({ ...draft, field: v ?? "" })}
             >
-              <SelectTrigger size="sm" className="w-full text-[13px]">
+              <SelectTrigger size="sm" className="w-full text-sm">
                 <SelectValue placeholder="Choose a column…" />
               </SelectTrigger>
               <SelectContent>
@@ -505,7 +505,7 @@ function FilterBuilder({
               value={draft.op}
               onValueChange={(v) => setDraft({ ...draft, op: v ?? "eq" })}
             >
-              <SelectTrigger size="sm" className="text-[13px]">
+              <SelectTrigger size="sm" className="text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

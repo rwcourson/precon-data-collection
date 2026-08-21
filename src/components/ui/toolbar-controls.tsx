@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /** Shared chrome for page toolbars: labels, chips, and compact selects. */
 export const toolbarLabelClass =
-  "flex h-4 items-center text-2xs font-medium leading-4 text-muted-foreground whitespace-nowrap";
+  "flex h-4 items-center text-xs font-medium leading-4 text-muted-foreground whitespace-nowrap";
 
 export const toolbarSelectClass =
   "h-7 min-w-[8.5rem] max-w-[min(22rem,100%)] px-2.5 text-xs font-medium *:data-[slot=select-value]:line-clamp-none";

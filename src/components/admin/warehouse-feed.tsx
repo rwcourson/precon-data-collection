@@ -73,7 +73,7 @@ export function WarehouseFeed({
               calculated metric set, and each Region&apos;s custom columns as a
               JSON map so a new column never needs a warehouse schema change.
               Point a scheduler at{" "}
-              <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 POST /api/jobs/databricks-sync
               </code>
               .
@@ -111,7 +111,7 @@ export function WarehouseFeed({
         <p className="text-xs text-muted-foreground">
           B&amp;G Connect lookups are currently served by the{" "}
           {connectMode === "rest" ? "live REST facade" : "seeded mirror"} — set{" "}
-          <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">
             CONNECT_MODE=rest
           </code>{" "}
           with an endpoint to switch. This feed is preview-only unless warehouse
@@ -156,7 +156,7 @@ export function WarehouseFeed({
         )}
 
         {preview && (
-          <pre className="max-h-72 overflow-auto rounded-md border bg-muted/40 p-3 text-2xs leading-relaxed">
+          <pre className="max-h-72 overflow-auto rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
             {preview}
           </pre>
         )}
@@ -178,7 +178,7 @@ function Fact({
     <div className="rounded-md border p-2.5">
       <p className="font-medium">{label}</p>
       <p
-        className={`text-muted-foreground ${mono ? "font-mono text-2xs" : ""}`}
+        className={`text-muted-foreground ${mono ? "font-mono text-xs" : ""}`}
       >
         {value}
       </p>

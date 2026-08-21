@@ -6,7 +6,7 @@ export default function NotFound() {
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-6 text-center">
         <p className="font-mono text-xs text-muted-foreground">404</p>
-        <h1 className="font-heading text-lg font-semibold tracking-tight text-foreground">
+        <h1 className="font-heading text-xl font-semibold tracking-tight text-foreground">
           Page not found
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">

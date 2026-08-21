@@ -141,7 +141,7 @@ export function AccessSettingsPanel({
               <CardDescription>
                 Production sign-in is Microsoft Entra via Better Auth (no app
                 passwords). Set{" "}
-                <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+                <code className="rounded bg-muted px-1 py-0.5 text-xs">
                   AUTH_MODE=sso
                 </code>{" "}
                 to require SSO and hide the demo persona picker.
@@ -157,13 +157,13 @@ export function AccessSettingsPanel({
           <div className="grid gap-2 text-xs sm:grid-cols-2">
             <div className="rounded-md border p-2.5">
               <p className="font-medium">Provider</p>
-              <code className="text-2xs text-muted-foreground">
+              <code className="text-xs text-muted-foreground">
                 Microsoft Entra ID
               </code>
             </div>
             <div className="rounded-md border p-2.5">
               <p className="font-medium">Callback</p>
-              <code className="text-2xs text-muted-foreground">
+              <code className="text-xs text-muted-foreground">
                 /api/auth/callback/microsoft
               </code>
             </div>
@@ -171,18 +171,18 @@ export function AccessSettingsPanel({
           <p className="text-xs text-muted-foreground">
             Role and region come from Entra group claims mapped below. Configure
             the app registration to emit a{" "}
-            <code className="rounded bg-muted px-1 text-2xs">groups</code> claim
+            <code className="rounded bg-muted px-1 text-xs">groups</code> claim
             (or security group IDs/names matching these keys). Legacy proxy
             header names remain documented for reference:{" "}
-            <code className="rounded bg-muted px-1 text-2xs">
+            <code className="rounded bg-muted px-1 text-xs">
               {headers.email}
             </code>
             ,{" "}
-            <code className="rounded bg-muted px-1 text-2xs">
+            <code className="rounded bg-muted px-1 text-xs">
               {headers.name}
             </code>
             ,{" "}
-            <code className="rounded bg-muted px-1 text-2xs">
+            <code className="rounded bg-muted px-1 text-xs">
               {headers.groups}
             </code>
             .

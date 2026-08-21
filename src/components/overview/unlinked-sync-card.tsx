@@ -40,7 +40,7 @@ export function UnlinkedSyncCard({
       <CardHeader className="gap-1.5 pb-2">
         <div className="flex items-start justify-between gap-3">
           <Link href={href} className="group min-w-0 flex-1">
-            <CardDescription className="text-[13px] font-medium text-foreground">
+            <CardDescription className="text-sm font-medium text-foreground">
               {title}
             </CardDescription>
             <CardTitle className="font-mono text-xl font-medium tabular-nums">
@@ -96,7 +96,7 @@ export function UnlinkedSyncCard({
               <li key={item.roundId}>
                 <Link
                   href={`/rounds/${item.roundId}`}
-                  className="block truncate rounded px-1 py-0.5 text-[13px] text-muted-foreground hover:bg-info-soft hover:text-foreground"
+                  className="block truncate rounded px-1 py-0.5 text-sm text-muted-foreground hover:bg-info-soft hover:text-foreground"
                 >
                   <span className="font-mono">
                     {displayJobNumber(item.jobNumber)}

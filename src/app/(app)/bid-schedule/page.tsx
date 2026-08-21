@@ -708,11 +708,11 @@ export default async function BidSchedulePage({
       />
 
       {queue && QUEUE_LABELS[queue] && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-[13px] text-info-foreground">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-sm text-info-foreground">
           <span>Queue · {QUEUE_LABELS[queue]}</span>
           <Link
             href={sectionHref(section.key)}
-            className="text-2xs font-medium hover:underline"
+            className="text-xs font-medium hover:underline"
           >
             Clear
           </Link>

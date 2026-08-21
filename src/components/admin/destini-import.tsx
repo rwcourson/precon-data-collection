@@ -103,9 +103,9 @@ function PreviewBlock({
             ) : null}
           </div>
           {row.error ? (
-            <p className="text-2xs text-warning-foreground">{row.error}</p>
+            <p className="text-xs text-warning-foreground">{row.error}</p>
           ) : (
-            <p className="text-2xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {Object.keys(row.values).length} Destini field
               {Object.keys(row.values).length === 1 ? "" : "s"} ready
               {row.skippedEmpty.length
@@ -183,7 +183,7 @@ function PreviewBlock({
       )}
 
       {row.unmappedHeaders.length > 0 && (
-        <p className="text-2xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Ignored (not Destini-sourced):{" "}
           {row.unmappedHeaders.slice(0, 8).join(", ")}
           {row.unmappedHeaders.length > 8 ? "…" : ""}

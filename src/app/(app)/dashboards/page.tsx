@@ -374,7 +374,7 @@ export default async function DashboardsPage({
         {kpis.map((k) => (
           <Card key={k.label} className="gap-2 py-3.5">
             <CardHeader className="pb-0">
-              <CardDescription className="text-2xs tracking-wide uppercase">
+              <CardDescription className="text-xs tracking-wide uppercase">
                 {k.label}
               </CardDescription>
               <CardTitle className="font-mono text-xl font-medium tracking-tight tabular-nums">
@@ -382,7 +382,7 @@ export default async function DashboardsPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xs leading-snug text-muted-foreground">
+              <p className="text-xs leading-snug text-muted-foreground">
                 {k.sub}
               </p>
             </CardContent>
@@ -393,11 +393,11 @@ export default async function DashboardsPage({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         {secondaryKpis.map((k) => (
           <div key={k.label} className="rounded-lg border bg-card px-3 py-2.5">
-            <p className="text-2xs text-muted-foreground">{k.label}</p>
+            <p className="text-xs text-muted-foreground">{k.label}</p>
             <p className="font-mono text-base font-medium tabular-nums">
               {k.value}
             </p>
-            <p className="text-2xs text-muted-foreground">{k.sub}</p>
+            <p className="text-xs text-muted-foreground">{k.sub}</p>
           </div>
         ))}
       </div>
@@ -492,7 +492,7 @@ export default async function DashboardsPage({
                     <TableCell className="text-right tabular-nums">
                       {fmtPercent(g.winRate)}
                       {g.decided > 0 && (
-                        <span className="ml-1 text-2xs text-muted-foreground">
+                        <span className="ml-1 text-xs text-muted-foreground">
                           ({g.wins}/{g.decided})
                         </span>
                       )}

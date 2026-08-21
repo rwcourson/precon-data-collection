@@ -239,7 +239,7 @@ export function GroupMembershipEditor({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{group.name}</span>
                     {group.region && (
-                      <span className="text-2xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {group.region}
                       </span>
                     )}

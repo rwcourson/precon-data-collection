@@ -45,8 +45,8 @@ Add **exactly** these under **Authentication → Platform configurations → Web
 | Production | `https://precon-data.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
 | Production (alias) | `https://precon-data-prod.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
 | Preview (per branch) | `https://precon-data-git-<branch>.magnus.brasfieldgorrie.app/api/auth/callback/microsoft` |
-| Local | `http://localhost:3001/api/auth/callback/microsoft` |
-| Local (alt port) | `http://localhost:3000/api/auth/callback/microsoft` |
+| Local | `http://localhost:3000/api/auth/callback/microsoft` |
+| Local (alt port) | `http://localhost:3001/api/auth/callback/microsoft` |
 
 Preview SSO only works after those URIs exist in Entra **and** Preview has `AUTH_MODE`, `APP_ORIGIN`, `BETTER_AUTH_URL`, and the Microsoft secrets (Production has them; Preview did not as of 2026-08-17). See [github-and-vercel.md](../github-and-vercel.md).
 
@@ -66,9 +66,27 @@ https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade
 - **Production:** `mapIdentityStrict` — unmapped groups → access denied.
 - **Local (`APP_ENV=local`):** if groups are missing, falls back to Access Settings `defaultRole` so you can test OAuth before group claims are configured. Domain allowlist still applies.
 
+## Local development
+
+`.env.development` is **demo personas** (`AUTH_MODE=demo`). `.env.local` wins. `npx vercel env pull` copies Development/Production values into `.env.local` and will put `AUTH_MODE=sso` plus the **production** `APP_ORIGIN` on your laptop unless you rewrite the local origins:
+
+```
+APP_ORIGIN=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001
+```
+
+Then restart `pnpm run dev`. For personas instead of Entra, also set `AUTH_MODE=demo`.
+
+**Wrong-port callback.** Microsoft redirects to `{BETTER_AUTH_URL}/api/auth/callback/microsoft`. If that URL is `:3001` and Next is on `:3000`, the browser shows “site can’t be reached.” Entra has both `localhost:3000` and `:3001` registered. Local Better Auth (`src/lib/auth-base-url.ts`) follows the request Host for loopback, so a leftover `:3001` env is not fatal after restart — as long as you start the OAuth flow from the port that is actually listening. Do not reuse an old `?code=` URL; codes are one-shot.
+
+**`/` ↔ `/sign-in` 307 loop.** `/sign-in` must not treat a `session_token` cookie as signed-in. A stale cookie plus `(app)/layout` `getSession` bounces forever. Presence is only an edge-proxy hint (`cookiesLookLikeBetterAuthSession`). The sign-in client calls `getSession()` before leaving the page; `getCurrentUser()` redirects to `/sign-in` when there is no live session.
+
+See [github-and-vercel.md](../github-and-vercel.md) for the env-pull checklist.
+
 ## Edge gate
 
-`src/proxy.ts` in SSO mode redirects HTML to `/sign-in` and returns 401 for APIs when the Better Auth session cookie is absent. Full validation runs on the server.
+`src/proxy.ts` in SSO mode redirects HTML to `/sign-in` and returns 401 for APIs when the Better Auth session cookie is **absent**. Cookie presence is not a validated session. `(app)/layout` and `getCurrentUser()` still call Better Auth `getSession`.
 
 ## Legacy proxy headers
 
