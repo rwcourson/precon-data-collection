@@ -158,21 +158,21 @@ export default async function AnnualReportPage({
             ].map((k) => (
               <Card key={k.label} className="gap-2 py-3">
                 <CardHeader className="pb-0">
-                  <CardDescription className="text-2xs">
+                  <CardDescription className="text-xs">
                     {k.label}
                   </CardDescription>
-                  <CardTitle className="font-mono text-lg font-medium tabular-nums">
+                  <CardTitle className="font-mono text-xl font-medium tabular-nums">
                     {k.value}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xs text-muted-foreground">{k.sub}</p>
+                  <p className="text-xs text-muted-foreground">{k.sub}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {report.awardableBrief.coverageLine} ·{" "}
             {report.awardableShadow.hitRate.grain} Production win rate stays on
             the current count definition.

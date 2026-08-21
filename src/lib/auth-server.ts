@@ -8,6 +8,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { jwt } from "better-auth/plugins";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
+import { authBaseURLConfig, authPublicOrigin } from "@/lib/auth-base-url";
 import { MCP_ADVERTISED_SCOPES } from "@/lib/authorization/mcp-scopes";
 
 function env(name: string): string {
@@ -43,40 +44,14 @@ function trustedOrigins(): string[] {
   return [...new Set(fromList)];
 }
 
-/**
- * Canonical public origin for OAuth redirects.
- * Prefer APP_ORIGIN / BETTER_AUTH_URL so production always uses the stable
- * host registered in Entra (never a one-off *.vercel.app deployment URL).
- */
-function baseURL(): string {
-  const explicit =
-    env("BETTER_AUTH_URL") || env("APP_ORIGIN") || env("NEXT_PUBLIC_APP_URL");
-  if (explicit) {
-    try {
-      return new URL(explicit).origin;
-    } catch {
-      return explicit.replace(/\/$/, "");
-    }
-  }
-  // Vercel production hostname (custom domain / stable project URL), not dpl_*.
-  const prodHost = env("VERCEL_PROJECT_PRODUCTION_URL");
-  if (prodHost) {
-    return prodHost.startsWith("http")
-      ? prodHost.replace(/\/$/, "")
-      : `https://${prodHost}`;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
-  }
-  return "http://localhost:3001";
-}
+const baseURL = authBaseURLConfig();
 
 /**
  * Better Auth server — Microsoft Entra OAuth.
  * App roles still live on `users` via email → resolveSsoUser().
  */
 export const auth = betterAuth({
-  baseURL: baseURL(),
+  baseURL,
   secret: env("BETTER_AUTH_SECRET") || undefined,
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -157,5 +132,5 @@ export type AuthSession = typeof auth.$Infer.Session;
 
 /** Canonical MCP resource identifier — must match `mcp({ resource })` and `requireMcpAuth`. */
 export function mcpResourceIdentifier(): string {
-  return `${baseURL()}/api/mcp`;
+  return `${authPublicOrigin(baseURL)}/api/mcp`;
 }

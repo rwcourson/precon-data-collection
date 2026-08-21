@@ -323,7 +323,7 @@ export function DataGrid({
 
       <div className="max-h-[70vh] overflow-auto rounded border border-border/70 bg-card">
         <table
-          className="border-collapse text-[13px]"
+          className="border-collapse text-sm"
           style={{ tableLayout: "fixed", width: totalWidth }}
         >
           <colgroup>
@@ -348,7 +348,7 @@ export function DataGrid({
                     onDrop={(e) => onHeaderDrop(col.key, e)}
                     onDragEnd={() => setDragOver(null)}
                     className={cn(
-                      "relative h-9 select-none border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0",
+                      "relative h-9 select-none border-r border-border/50 px-1.5 text-left align-middle text-xs font-medium tracking-wide text-muted-foreground last:border-r-0",
                       onColumnOrderChange &&
                         "cursor-grab active:cursor-grabbing",
                       dragOver?.key === col.key &&
@@ -544,7 +544,7 @@ function GroupSection({
         {columns.slice(1).map((col, i) => (
           <td
             key={col.key}
-            className="px-2 py-1.5 text-right text-2xs font-medium tabular-nums text-muted-foreground"
+            className="px-2 py-1.5 text-right text-xs font-medium tabular-nums text-muted-foreground"
             style={{ width: widthOf(col) }}
           >
             {totals[i + 1] != null
@@ -583,7 +583,7 @@ function FilterPanel({
         <Button
           variant="ghost"
           size="xs"
-          className="-mr-1 text-2xs text-muted-foreground"
+          className="-mr-1 text-xs text-muted-foreground"
           onClick={onClear}
         >
           Clear

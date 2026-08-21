@@ -271,11 +271,11 @@ export default async function PostBidPage({
       </div>
 
       {queueLabel && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-[13px] text-info-foreground">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-info-border bg-info-soft px-3 py-2 text-sm text-info-foreground">
           <span>Queue · {queueLabel}</span>
           <Link
             href={href({ queue: undefined })}
-            className="text-2xs font-medium hover:underline"
+            className="text-xs font-medium hover:underline"
           >
             Clear
           </Link>
@@ -408,7 +408,7 @@ export default async function PostBidPage({
                             <Badge variant="warning" size="sm">
                               Awaiting required fields
                             </Badge>
-                            <p className="max-w-52 text-2xs leading-snug text-pretty text-muted-foreground">
+                            <p className="max-w-52 text-xs leading-snug text-pretty text-muted-foreground">
                               Missing: {queueRow.missing.slice(0, 3).join(", ")}
                               {queueRow.missing.length > 3
                                 ? ` +${queueRow.missing.length - 3} more`

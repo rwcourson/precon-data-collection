@@ -17,7 +17,7 @@ export default function AppError({
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
       <div className="w-full max-w-md space-y-3 rounded-lg border border-border bg-card p-6 text-center">
-        <h2 className="font-heading text-lg font-semibold tracking-tight text-foreground">
+        <h2 className="font-heading text-xl font-semibold tracking-tight text-foreground">
           Something went wrong
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">

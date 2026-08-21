@@ -77,7 +77,7 @@ export function CellEditor({
         size="sm"
         defaultOpen
         autoFocus
-        className="h-7 w-full px-1.5 py-0 text-[13px]"
+        className="h-7 w-full px-1.5 py-0 text-sm"
         onChange={(next) => commit(next)}
         onDismiss={() => {
           if (!committed.current) onCancel();
@@ -97,7 +97,7 @@ export function CellEditor({
           if (!open && !committed.current) onCancel();
         }}
       >
-        <SelectTrigger size="sm" className="h-7 w-full text-[13px]">
+        <SelectTrigger size="sm" className="h-7 w-full text-sm">
           <SelectValue placeholder="Select…" />
         </SelectTrigger>
         <SelectContent>
@@ -112,7 +112,7 @@ export function CellEditor({
       <NumericInput
         autoFocus
         value={draft}
-        className="h-7 w-full px-1.5 py-0 text-[13px]"
+        className="h-7 w-full px-1.5 py-0 text-sm"
         onChange={setDraft}
         onBlur={() => commit(parseNumericInput(draft))}
         onKeyDown={(e) => {
@@ -134,7 +134,7 @@ export function CellEditor({
       autoFocus
       value={draft}
       type="text"
-      className="h-7 w-full px-1.5 py-0 text-[13px]"
+      className="h-7 w-full px-1.5 py-0 text-sm"
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => commit(draft)}
       onKeyDown={(e) => {

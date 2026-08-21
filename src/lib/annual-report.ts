@@ -316,7 +316,7 @@ export function renderAnnualReportHtml(report: AnnualReport): string {
   .eyebrow { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #64748b; margin: 0 0 6px; }
   h1 { font-size: 26px; margin: 0 0 4px; color: #1e3a5f; letter-spacing: -0.01em; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #1e3a5f; margin: 26px 0 10px; }
-  .meta { font-size: 11px; color: #64748b; margin: 0; }
+  .meta { font-size: 12px; color: #64748b; margin: 0; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .kpi { border: 1px solid #dbe3ec; border-radius: 6px; padding: 9px 11px; }
   .kpi .label { font-size: 9.5px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }

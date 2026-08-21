@@ -242,7 +242,7 @@ export function GlobalSearch() {
                             <div className="min-w-0 flex-1">
                               <p className="truncate">{s.label}</p>
                               {s.hint && (
-                                <p className="truncate text-2xs text-muted-foreground">
+                                <p className="truncate text-xs text-muted-foreground">
                                   {s.hint}
                                 </p>
                               )}
@@ -270,7 +270,7 @@ export function GlobalSearch() {
                             <div className="min-w-0 flex-1">
                               <p className="truncate">{j.label}</p>
                               {j.hint && (
-                                <p className="truncate text-2xs text-muted-foreground">
+                                <p className="truncate text-xs text-muted-foreground">
                                   {j.hint}
                                 </p>
                               )}
@@ -296,7 +296,7 @@ export function GlobalSearch() {
                             <div className="min-w-0 flex-1">
                               <p className="truncate">{r.label}</p>
                               {r.hint && (
-                                <p className="truncate text-2xs text-muted-foreground">
+                                <p className="truncate text-xs text-muted-foreground">
                                   {r.hint}
                                 </p>
                               )}
@@ -310,7 +310,7 @@ export function GlobalSearch() {
               )}
             </CommandList>
 
-            <div className="hidden items-center justify-between border-t px-3 py-2 text-2xs text-muted-foreground sm:flex">
+            <div className="hidden items-center justify-between border-t px-3 py-2 text-xs text-muted-foreground sm:flex">
               <span>↑↓ navigate · ↵ open · esc close</span>
               <span>⌘K</span>
             </div>

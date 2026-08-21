@@ -56,7 +56,7 @@ export function Calendar({
         {WEEKDAY_LABELS.map((label, index) => (
           <div
             key={`${label}-${index}`}
-            className="flex h-7 items-center justify-center text-2xs font-medium text-muted-foreground"
+            className="flex h-7 items-center justify-center text-xs font-medium text-muted-foreground"
           >
             {label}
           </div>

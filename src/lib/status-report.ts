@@ -455,7 +455,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
   .eyebrow { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #64748b; margin: 0 0 6px; }
   h1 { font-size: 25px; margin: 0 0 4px; color: #1e3a5f; letter-spacing: -0.01em; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #1e3a5f; margin: 24px 0 9px; }
-  .meta { font-size: 11px; color: #64748b; margin: 0; }
+  .meta { font-size: 12px; color: #64748b; margin: 0; }
   .lede { font-size: 12px; line-height: 1.55; color: #334155; margin: 0 0 4px; max-width: 62em; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .kpi { border: 1px solid #dbe3ec; border-radius: 6px; padding: 9px 11px; }
@@ -475,7 +475,7 @@ export function renderStatusReportHtml(r: StatusReport): string {
   td.mark.gate { color: #b45309; }
   td.mark.todo { color: #64748b; }
   .callout { border-left: 3px solid #1e3a5f; background: #f6f8fb; padding: 8px 12px; margin-bottom: 7px; }
-  .callout-q { font-size: 11px; font-weight: 600; margin: 0 0 2px; }
+  .callout-q { font-size: 12px; font-weight: 600; margin: 0 0 2px; }
   .callout-a { font-size: 10.5px; color: #334155; margin: 0; line-height: 1.5; }
   .note { font-size: 9.5px; color: #94a3b8; margin-top: 6px; line-height: 1.5; }
   .toolbar { position: fixed; top: 12px; right: 12px; }

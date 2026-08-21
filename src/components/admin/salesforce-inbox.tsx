@@ -114,7 +114,7 @@ export function SalesforceInbox({
               without suppressing future matches.
             </CardDescription>
             {lastRun && (
-              <p className="text-2xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Last sync {lastRun.startedAt}
                 {lastRun.finishedAt ? ` → ${lastRun.finishedAt}` : ""} ·{" "}
                 {lastRun.status} · {lastRun.opportunitiesSeen} opps ·{" "}
@@ -186,7 +186,7 @@ export function SalesforceInbox({
                   </span>
                 </TableCell>
                 <TableCell className="max-w-56">
-                  <p className="truncate font-mono text-2xs text-muted-foreground">
+                  <p className="truncate font-mono text-xs text-muted-foreground">
                     {formatSignals(c.signals)}
                   </p>
                 </TableCell>

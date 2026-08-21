@@ -95,8 +95,8 @@ Names only — values live in the Vercel dashboard. Production has the live set.
 | `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | yes | yes (Neon **branch**, not Production) | yes | `.env.local` or PGlite |
 | `PRODUCTION_DATABASE_URL` | — | yes (comparison only; must differ from Preview `DATABASE_URL`) | — | unused |
 | `DATABASE_MODE` | yes | yes (`postgres`) | yes | `.env.development` = `pglite` |
-| `AUTH_MODE` | yes (`sso`) | yes (`demo`) | yes | `demo` |
-| `APP_ENV` | yes | yes (`demo`) | yes | `demo` |
+| `AUTH_MODE` | yes (`sso`) | yes (`demo`) | yes | `.env.development` = `demo`; `.env.local` may pull `sso` |
+| `APP_ENV` | yes | yes (`demo`) | yes | `.env.development` = `demo`; `.env.local` may pull `local` |
 | `APP_ORIGIN` / `ALLOWED_ORIGINS` / `BETTER_AUTH_URL` | yes | derived from `VERCEL_BRANCH_URL` when unset | yes | localhost |
 | `BETTER_AUTH_SECRET` + Microsoft Entra trio | yes | — | yes | optional |
 | `CRON_SECRET` | yes | — | — | unused in demo |
@@ -134,4 +134,12 @@ APP_ENV=production DATABASE_URL_UNPOOLED=… pnpm run db:migrate:deploy
 npx vercel env pull .env.local --scope brasfieldgorrie
 ```
 
-`.env.local` wins over `.env.development`. Do not run `pnpm run db:reset` against a shell that still has Neon URLs if you meant to keep hosted data — demo bootstrap wipes **PGlite only**, but it is easy to confuse which database `next dev` will open. `pnpm run db:status` first.
+`.env.local` wins over `.env.development`. After a pull, rewrite local origins so Microsoft OAuth does not send the callback to production or to a port `next dev` is not using:
+
+```
+APP_ORIGIN=http://localhost:3000
+BETTER_AUTH_URL=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001
+```
+
+Local Better Auth also follows the browser Host for loopback ports, so a leftover `:3001` URL is not fatal when the app is on `:3000`. Do not run `pnpm run db:reset` against a shell that still has Neon URLs if you meant to keep hosted data — demo bootstrap wipes **PGlite only**, but it is easy to confuse which database `next dev` will open. `pnpm run db:status` first.

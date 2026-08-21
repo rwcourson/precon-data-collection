@@ -8,6 +8,15 @@ const source = readFileSync(
   "utf8"
 );
 
+describe("schedule cards", () => {
+  it("keeps even inset padding and does not stretch cards in a row", () => {
+    expect(source).toContain("grid items-start gap-4");
+    expect(source).toContain("[--card-spacing:--spacing(5)]");
+    expect(source).toContain("CardHeader className=\"gap-3\"");
+    expect(source).not.toContain("gap-2 pb-2");
+  });
+});
+
 describe("Gantt date-edit seam", () => {
   it("uses the conflict-safe cell mutation and never auto-slides people", () => {
     expect(source).toContain(

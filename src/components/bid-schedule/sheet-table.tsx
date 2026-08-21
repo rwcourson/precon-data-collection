@@ -825,7 +825,7 @@ export function BidScheduleSheet({
 
       <div className="overflow-auto rounded border border-border/70 bg-card">
         <table
-          className="border-collapse text-[13px]"
+          className="border-collapse text-sm"
           style={{ tableLayout: "fixed", width: totalWidth }}
         >
           <colgroup>
@@ -853,7 +853,7 @@ export function BidScheduleSheet({
                     onDrop={(e) => onHeaderDrop(col.key, e)}
                     onDragEnd={() => setDragOver(null)}
                     className={cn(
-                      "relative h-9 cursor-grab select-none border-r border-border/50 px-2.5 text-left align-middle text-2xs font-medium tracking-wide text-muted-foreground last:border-r-0 active:cursor-grabbing",
+                      "relative h-9 cursor-grab select-none border-r border-border/50 px-2.5 text-left align-middle text-xs font-medium tracking-wide text-muted-foreground last:border-r-0 active:cursor-grabbing",
                       col.align === "right" && "text-right",
                       dragOver?.key === col.key &&
                         dragOver.place === "before" &&
@@ -946,7 +946,7 @@ export function BidScheduleSheet({
               })}
               {showActions ? (
                 <th
-                  className="h-9 border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium text-muted-foreground last:border-r-0"
+                  className="h-9 border-r border-border/50 px-1.5 text-left align-middle text-xs font-medium text-muted-foreground last:border-r-0"
                   style={{ width: actionWidth }}
                 >
                   Actions
@@ -978,7 +978,7 @@ export function BidScheduleSheet({
                     <tr className="border-b border-border/70 bg-muted/55">
                       <td
                         colSpan={colSpan}
-                        className="h-7 px-2.5 py-0 text-2xs font-semibold tracking-wide text-foreground"
+                        className="h-7 px-2.5 py-0 text-xs font-semibold tracking-wide text-foreground"
                       >
                         <span className="sticky left-2 inline-flex h-7 items-center gap-1.5">
                           {section.label}
@@ -995,7 +995,7 @@ export function BidScheduleSheet({
                         <tr className="border-b border-border/50 bg-muted/30">
                           <td
                             colSpan={colSpan}
-                            className="h-7 px-2.5 py-0 text-2xs font-medium text-muted-foreground"
+                            className="h-7 px-2.5 py-0 text-xs font-medium text-muted-foreground"
                           >
                             <span className="sticky left-2 inline-flex h-7 items-center">
                               {block.label}
@@ -1208,7 +1208,7 @@ function CellDisplay({
       <span className="flex w-full flex-col items-center justify-center gap-0.5 text-center">
         <Link
           href={`/jobs/${row.jobId}`}
-          className="max-w-full truncate font-mono text-[13px] leading-5 text-primary hover:underline"
+          className="max-w-full truncate font-mono text-sm leading-5 text-primary hover:underline"
         >
           {displayJobNumber(row.jobNumber)}
         </Link>
@@ -1247,12 +1247,12 @@ function CellDisplay({
       <div className="min-w-0">
         <Link
           href={`/jobs/${row.jobId}`}
-          className="block truncate text-[13px] font-medium leading-5 hover:underline"
+          className="block truncate text-sm font-medium leading-5 hover:underline"
           title={row.jobName}
         >
           {row.jobName}
         </Link>
-        <p className="mt-0.5 truncate text-2xs leading-4 text-muted-foreground">
+        <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
           {row.preconDepartment}
           {row.marketSector ? ` · ${row.marketSector}` : ""} · Round{" "}
           {row.roundNumber}
@@ -1263,7 +1263,7 @@ function CellDisplay({
               render={
                 <button
                   type="button"
-                  className="mt-0.5 text-2xs leading-4 text-primary hover:underline"
+                  className="mt-0.5 text-xs leading-4 text-primary hover:underline"
                 />
               }
             >
@@ -1422,7 +1422,7 @@ function JobLookupPopover({
             type="button"
             variant="ghost"
             size="xs"
-            className="h-auto gap-1 px-1 py-0 text-[13px] font-normal text-muted-foreground"
+            className="h-auto gap-1 px-1 py-0 text-sm font-normal text-muted-foreground"
             title="All efforts on this job"
           />
         }
@@ -1457,7 +1457,7 @@ function JobLookupPopover({
         </ul>
         <Link
           href={`/jobs/${row.jobId}`}
-          className="block px-1.5 pt-1 text-2xs text-primary hover:underline"
+          className="block px-1.5 pt-1 text-xs text-primary hover:underline"
         >
           Open job record
         </Link>
@@ -1551,7 +1551,7 @@ function ColumnFilterPanel({
         <Button
           variant="ghost"
           size="xs"
-          className="-mr-1 text-2xs text-muted-foreground"
+          className="-mr-1 text-xs text-muted-foreground"
           onClick={onClear}
         >
           Clear

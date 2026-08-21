@@ -157,7 +157,7 @@ export function ApiTokensPanel({ tokens }: { tokens: ApiTokenRow[] }) {
                     onCheckedChange={() => toggleScope(scope)}
                   />
                   <span>{SCOPE_LABELS[scope]}</span>
-                  <span className="ml-auto font-mono text-2xs text-muted-foreground">
+                  <span className="ml-auto font-mono text-xs text-muted-foreground">
                     {scope}
                   </span>
                 </label>

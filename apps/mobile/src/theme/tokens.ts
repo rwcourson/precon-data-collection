@@ -216,7 +216,7 @@ export const typography = {
     fontFamily: fonts.medium,
   },
   micro: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: fonts.semiBold,
     letterSpacing: 0.4,
   },

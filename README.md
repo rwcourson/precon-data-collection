@@ -48,6 +48,8 @@ pnpm run dev         # http://localhost:3000 against Neon
 
 Do **not** run `pnpm run db:reset` if you want this dataset — that rebuilds the small synthetic demo on local PGlite and never writes Neon.
 
+Identity: `.env.development` is demo personas (Brian Meyers). `.env.local` wins. After `npx vercel env pull`, rewrite `APP_ORIGIN` / `BETTER_AUTH_URL` / `ALLOWED_ORIGINS` to `http://localhost:3000` (see [docs/github-and-vercel.md](docs/github-and-vercel.md) and [docs/security/sso.md](docs/security/sso.md)) or Microsoft will callback the production host or the wrong port. `AUTH_MODE=sso` uses `/sign-in`; `AUTH_MODE=demo` skips Entra.
+
 After pulling a fresh Smartsheet export (`pnpm smartsheet:pull`), `pnpm smartsheet:dump-counts` checksums the gitignored JSON with the same parser as import. `pnpm run db:import-smartsheet` maps **Owner**, **Drawings Due Date**, and **Bid Review Date** through the shipped parser (`src/lib/integrations/smartsheet/parse.ts`). The dump helper never flips `SMARTSHEET_MODE`.
 
 ### Synthetic demo only (offline PGlite)
@@ -89,7 +91,7 @@ Salesforce-first New Pursuit is there if asked. Manual tab is **No job number ye
 | Postgres schema (jobs → estimate rounds), Owner + operational dates, field dictionary | Live Salesforce/Connect (seeded mirror; adapter ready) |
 | Status state machine + lock gate labels | Destini autofill (CSV import + badges; no unique final-phase tag yet) |
 | Latest-round-per-job leadership rollups | Native mobile (responsive web; iOS/Expo exist but are not V1) |
-| RBAC kernel, Region workspaces, multi-region visibility | Microsoft Entra SSO locally (`AUTH_MODE=demo` uses Brian Meyers) |
+| RBAC kernel, Region workspaces, multi-region visibility | Local demo personas (`AUTH_MODE=demo`) or Entra (`AUTH_MODE=sso` in `.env.local`) |
 | Post-lock outcome + audit; current `finalizeRound()` lock seam | Versioned lock revisions and live locked-only warehouse publication (planned Phases 10/15; `DATABRICKS_ALLOW_WRITE` stays false today) |
 | PDF + Excel exports, latest-note column, Standard dashboards | Live SMTP (outbox until Resend); Eve sibling (Magnus on Vercel) |
 

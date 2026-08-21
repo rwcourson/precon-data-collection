@@ -1,5 +1,6 @@
 import { asc } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db, ensureDbReady } from "@/db";
 import type { User } from "@/db/schema";
@@ -32,7 +33,9 @@ export const getCurrentUser = cache(
     if (authMode() === "sso") {
       const session = await auth.api.getSession({ headers: await headers() });
       if (!session?.user) {
-        throw new Error("Not signed in.");
+        // Throwing here races with (app)/layout's redirect and 307-loops when
+        // /sign-in also treats a stale session cookie as signed-in.
+        redirect("/sign-in");
       }
 
       const profile = await microsoftProfileFromAccount(session.user.id);

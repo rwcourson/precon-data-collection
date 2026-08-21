@@ -43,7 +43,7 @@ export function NotificationsBell({ items }: { items: Item[] }) {
         {unread > 0 && (
           <span
             aria-hidden
-            className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-2xs font-semibold text-white tabular-nums"
+            className="absolute right-1.5 top-1.5 flex size-4 items-center justify-center rounded-full bg-destructive text-xs font-semibold text-white tabular-nums"
           >
             {unread}
           </span>
@@ -87,7 +87,7 @@ export function NotificationsBell({ items }: { items: Item[] }) {
               {n.body && (
                 <p className="mt-0.5 text-xs text-muted-foreground">{n.body}</p>
               )}
-              <p className="mt-1 text-2xs text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {n.createdAtLabel}
               </p>
             </Link>

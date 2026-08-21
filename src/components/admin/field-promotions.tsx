@@ -109,7 +109,7 @@ export function FieldPromotionsPanel({
               <TableRow key={p.id}>
                 <TableCell className="pl-6">
                   <p className="text-sm font-medium">{p.columnLabel}</p>
-                  <p className="font-mono text-2xs text-muted-foreground">
+                  <p className="font-mono text-xs text-muted-foreground">
                     {p.columnKey}
                   </p>
                 </TableCell>

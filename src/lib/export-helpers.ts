@@ -262,7 +262,7 @@ export function buildPrintHtml(opts: {
   body { font-family: "Manrope", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin: 28px; color: #10141c; overflow-x: hidden; }
   .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 3px solid #0c2048; padding-bottom: 10px; margin-bottom: 16px; }
   h1 { font-size: 20px; margin: 0; color: #0c2048; letter-spacing: -0.02em; }
-  .meta { font-size: 11px; color: #5b6b82; margin: 0; }
+  .meta { font-size: 12px; color: #5b6b82; margin: 0; }
   table { border-collapse: collapse; width: 100%; font-size: 10.5px; table-layout: fixed; }
   thead { display: table-header-group; }
   tbody { display: table-row-group; }

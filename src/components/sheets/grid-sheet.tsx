@@ -152,7 +152,7 @@ export function GridSheet({
             value={groupBy}
             onValueChange={(v) => setGroupBy(v ?? "")}
           >
-            <SelectTrigger size="sm" className="h-8 w-44 text-[13px]">
+            <SelectTrigger size="sm" className="h-8 w-44 text-sm">
               <SelectValue placeholder="No grouping" />
             </SelectTrigger>
             <SelectContent>
@@ -404,7 +404,7 @@ function ManageColumnsDialog({
                     );
                 }}
               />
-              <span className="w-16 shrink-0 text-2xs text-muted-foreground">
+              <span className="w-16 shrink-0 text-xs text-muted-foreground">
                 {c.type}
               </span>
               <Button
@@ -419,7 +419,7 @@ function ManageColumnsDialog({
             </div>
           ))}
         </div>
-        <p className="text-2xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Sheet id {sheetId} · {columns.length} column
           {columns.length === 1 ? "" : "s"}
         </p>

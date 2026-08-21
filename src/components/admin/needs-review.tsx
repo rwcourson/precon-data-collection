@@ -304,7 +304,7 @@ function GroupCard({
         </span>
       </div>
       {group.samples.length > 0 && (
-        <p className="mt-2 truncate font-mono text-2xs text-muted-foreground">
+        <p className="mt-2 truncate font-mono text-xs text-muted-foreground">
           {group.samples.join(" · ")}
         </p>
       )}
@@ -397,11 +397,11 @@ function ResolvedCell({
   return (
     <div className="flex items-center justify-end gap-2">
       <div className="text-right">
-        <p className="text-2xs font-medium text-success-foreground">
+        <p className="text-xs font-medium text-success-foreground">
           Reviewed by {row.resolvedByName ?? "—"}
         </p>
         {row.resolutionNote && (
-          <p className="max-w-48 truncate text-2xs text-muted-foreground">
+          <p className="max-w-48 truncate text-xs text-muted-foreground">
             {row.resolutionNote}
           </p>
         )}

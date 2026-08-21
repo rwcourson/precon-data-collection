@@ -82,7 +82,7 @@ export function NotificationSettingsPanel({
             When a round reaches Submitted with required fields still blank, the
             Estimate Lead is nudged on this cadence, and the Region&apos;s RPD
             is copied once the round is badly overdue. A scheduler calls{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-2xs">
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">
               POST /api/jobs/reminders
             </code>{" "}
             to run the sweep.
@@ -126,7 +126,7 @@ export function NotificationSettingsPanel({
                 onChange={(e) => patch({ graceDays: Number(e.target.value) })}
                 disabled={!canEdit}
               />
-              <p className="text-2xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Days after Submitted before the first nudge.
               </p>
             </div>
@@ -170,7 +170,7 @@ export function NotificationSettingsPanel({
             <Label className="text-xs font-medium">
               Schedule date-shift recipients
             </Label>
-            <p className="text-2xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Default is the estimate lead and the home-region RPD/SPD. Channels
               above still apply. The actor who made the change is never
               notified.

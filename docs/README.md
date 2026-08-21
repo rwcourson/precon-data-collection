@@ -70,7 +70,7 @@ Canonical guides for the B&G Precon data-collection app. Start here; do not trea
 
 | Doc | What it is |
 | --- | --- |
-| [color-system.md](color-system.md) | Shared chart / UI tokens |
+| [color-system.md](color-system.md) | Shared chart / UI tokens and the four-step type scale |
 | [generated-documents.md](generated-documents.md) | B&G 2026 kit for PPTX and later Word/PDF |
 | [../brand/README-SLIDESHOW.md](../brand/README-SLIDESHOW.md) | Slideshow brand kit (tokens, logos, fonts, guides) |
 

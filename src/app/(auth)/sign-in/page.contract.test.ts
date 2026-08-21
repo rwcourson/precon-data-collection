@@ -12,4 +12,10 @@ describe("sign-in compile isolation", () => {
     expect(source).not.toMatch('@/lib/auth"');
     expect(source).not.toMatch("@/db");
   });
+
+  it("does not bounce to the app on cookie presence alone", () => {
+    const source = readFileSync(path.join(dir, "page.tsx"), "utf8");
+    expect(source).not.toMatch("cookiesLookLikeBetterAuthSession");
+    expect(source).not.toMatch("redirect(");
+  });
 });

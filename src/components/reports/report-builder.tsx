@@ -202,7 +202,7 @@ export function ReportBuilder({
                   onClick={() => load(r)}
                 >
                   <p className="font-medium leading-tight">{r.name}</p>
-                  <p className="text-2xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {r.ownerId === currentUserId
                       ? "Mine"
                       : `Shared by ${r.ownerName}`}
@@ -629,7 +629,7 @@ export function ReportBuilder({
               </span>
             </CardTitle>
             {result.grainFooter ? (
-              <p className="text-[13px] font-normal text-muted-foreground">
+              <p className="text-sm font-normal text-muted-foreground">
                 {result.grainFooter}
               </p>
             ) : null}
@@ -873,7 +873,7 @@ function FieldPicker({
           )}
           {visibleCategories.map((cat) => (
             <div key={cat}>
-              <p className="px-2 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {cat}
               </p>
               {matches

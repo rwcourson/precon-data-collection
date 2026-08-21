@@ -1,29 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
+function safeNext(next?: string) {
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
 export function SignInClient({
+  sso = false,
   initialNext,
   initialError,
 }: {
+  sso?: boolean;
   initialNext?: string;
   initialError?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(initialError ?? null);
 
+  useEffect(() => {
+    if (!sso) return;
+    let cancelled = false;
+    void authClient.getSession().then(({ data }) => {
+      if (cancelled || !data?.user) return;
+      window.location.replace(safeNext(initialNext));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sso, initialNext]);
+
   const signIn = async () => {
     setPending(true);
     setError(null);
     try {
-      const callbackURL =
-        initialNext?.startsWith("/") && !initialNext.startsWith("//")
-          ? initialNext
-          : "/";
       const result = await authClient.signIn.social({
         provider: "microsoft",
-        callbackURL,
+        callbackURL: safeNext(initialNext),
       });
       if (result?.error) {
         setError(result.error.message || "Sign-in failed");
@@ -57,7 +71,7 @@ export function SignInClient({
             />
           </div>
           <div className="space-y-2">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight text-balance text-white">
+            <h1 className="font-heading text-xl font-semibold tracking-tight text-balance text-white">
               B&amp;G Precon
             </h1>
             <p className="text-pretty text-[15px] leading-relaxed text-[#d6e6ff]">
@@ -92,7 +106,7 @@ export function SignInClient({
             )}
             {pending ? "Redirecting to Microsoft…" : "Sign in with Microsoft"}
           </button>
-          <p className="text-pretty text-center text-[13px] leading-relaxed text-[#93a9d6]">
+          <p className="text-pretty text-center text-sm leading-relaxed text-[#93a9d6]">
             No app passwords — identity is Microsoft Entra ID. Contact Precon
             admin if your groups are not mapped.
           </p>

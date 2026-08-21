@@ -283,7 +283,7 @@ export default async function OverviewPage() {
                   <CardHeader className="gap-1.5 pb-2">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <CardDescription className="text-[13px] font-medium text-foreground">
+                        <CardDescription className="text-sm font-medium text-foreground">
                           {q.title}
                         </CardDescription>
                         <CardTitle className="font-mono text-xl font-medium tabular-nums">
@@ -301,7 +301,7 @@ export default async function OverviewPage() {
                       {q.preview.map((item) => (
                         <li
                           key={item.roundId}
-                          className="truncate rounded px-1 py-0.5 text-[13px] text-muted-foreground hover:bg-info-soft hover:text-foreground"
+                          className="truncate rounded px-1 py-0.5 text-sm text-muted-foreground hover:bg-info-soft hover:text-foreground"
                         >
                           <Link
                             href={`/jobs/${item.jobId}`}
@@ -333,7 +333,7 @@ export default async function OverviewPage() {
         {kpis.map((k) => (
           <Card key={k.label}>
             <CardHeader className="pb-0.5">
-              <CardDescription className="text-[13px]">
+              <CardDescription className="text-sm">
                 {k.label}
               </CardDescription>
               <CardTitle className="font-mono text-xl font-medium tabular-nums">
@@ -341,7 +341,7 @@ export default async function OverviewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-[13px] text-muted-foreground">{k.sub}</p>
+              <p className="text-sm text-muted-foreground">{k.sub}</p>
             </CardContent>
           </Card>
         ))}
@@ -361,7 +361,7 @@ export default async function OverviewPage() {
               <div key={s} className="flex items-center gap-1.5">
                 <div className="flex items-center gap-2 rounded bg-muted/50 px-2.5 py-1.5">
                   <StatusBadge status={s} />
-                  <span className="font-mono text-[13px] font-medium tabular-nums">
+                  <span className="font-mono text-sm font-medium tabular-nums">
                     {byStatus.get(s)}
                   </span>
                 </div>

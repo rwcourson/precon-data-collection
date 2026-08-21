@@ -73,8 +73,15 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-warning-soft: var(--warning-soft);
   --color-warning-border: var(--warning-border);
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
+  /* Absolute px so the 12px floor does not shrink with html text-sm (14px rem). */
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -326,6 +333,13 @@
   --sidebar-ring: var(--accent-400);
 }
 
+/*
+ * Type scale — four steps, 12px floor. Do not add 11px, 13px, 18px, or 24px.
+ *   text-xs   12  chrome: captions, table headers, badges, hints, toolbar labels
+ *   text-sm   14  content: body, controls, sheets, nav (html default)
+ *   text-base 16  titles: cards, dialogs, sheets
+ *   text-xl   20  display: page headers, KPIs, auth
+ */
 @layer base {
   * {
     @apply border-border outline-ring/50;

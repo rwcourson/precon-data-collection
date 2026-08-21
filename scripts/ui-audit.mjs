@@ -10,14 +10,14 @@ import { chromium } from "playwright";
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 
 /*
- * Tokens are declared in rem. The app's root is 13px/14px rather than the
- * browser default, so the expected pixel values are derived at runtime — a
- * hardcoded px table would flag the whole app as off-token.
+ * Tokens are declared in rem. The app's root is 14px (html text-sm), so the
+ * expected pixel values are derived at runtime — a hardcoded px table would
+ * flag the whole app as off-token.
  */
 const BUTTON_HEIGHT_REM = [1.5, 1.75, 2, 2.25]; // xs, sm, default, lg
-const BUTTON_FONT_REM = [0.75, 0.875]; // text-xs, text-sm
+const BUTTON_FONT_REM = [12 / 14, 1]; // 12px chrome, 14px body (html root 14px)
 const BADGE_HEIGHT_REM = [1.125, 1.25]; // sm, default
-const BADGE_FONT_REM = [0.6875, 0.75]; // text-2xs, text-xs
+const BADGE_FONT_REM = [12 / 14]; // text-xs is 12px
 
 let ROOT_PX = 14;
 /** Tolerant of sub-pixel layout: a token match within half a pixel. */

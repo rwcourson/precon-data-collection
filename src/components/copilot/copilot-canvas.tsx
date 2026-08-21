@@ -583,7 +583,7 @@ function CopilotShell({
               </p>
             ) : null}
             <div>
-              <h2 className="font-heading text-lg font-semibold tracking-tight">
+              <h2 className="font-heading text-base font-semibold tracking-tight">
                 {chart.plan.name}
               </h2>
               <p className="text-sm text-muted-foreground">

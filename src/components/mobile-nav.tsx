@@ -84,7 +84,7 @@ export function MobileNav({
               <p className="truncate text-sm font-semibold tracking-tight">
                 {PRODUCT_SHORT_NAME}
               </p>
-              <p className="truncate text-2xs text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 {PRODUCT_TAGLINE}
               </p>
             </div>
@@ -121,7 +121,7 @@ export function MobileNav({
                         if (!item.children) close();
                       }}
                       className={cn(
-                        "flex min-h-10 items-center gap-2 rounded-r-md border-l-2 border-transparent px-2.5 py-2 text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        "flex min-h-10 items-center gap-2 rounded-r-md border-l-2 border-transparent px-2.5 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                         active &&
                           "border-l-primary bg-info-soft font-medium text-primary"
                       )}
@@ -158,7 +158,7 @@ export function MobileNav({
                                   href={sub.href}
                                   onClick={close}
                                   className={cn(
-                                    "flex min-h-9 items-center rounded px-2 py-1.5 text-[13px] text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                    "flex min-h-9 items-center rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                                     subActive &&
                                       "bg-info-soft font-medium text-primary"
                                   )}
