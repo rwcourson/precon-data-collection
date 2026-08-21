@@ -31,15 +31,17 @@ describe("rewriteLoopbackDcrBody", () => {
     });
   });
 
-  it("adds refresh scope without marking mixed redirects native", () => {
-    const body = {
-      redirect_uris: [
-        "http://127.0.0.1:54321/callback",
-        "https://grok.com/oauth/callback",
-      ],
-    };
-    expect(rewriteLoopbackDcrBody(body)).toEqual({
-      ...body,
+  it("forces native when loopback is mixed with an HTTPS callback", () => {
+    expect(
+      rewriteLoopbackDcrBody({
+        redirect_uris: [
+          "http://127.0.0.1:54321/callback",
+          "https://grok.com/oauth/callback",
+        ],
+      })
+    ).toMatchObject({
+      application_type: "native",
+      token_endpoint_auth_method: "none",
       scope: "offline_access",
     });
   });
@@ -106,6 +108,34 @@ describe("rewriteLoopbackDcrBody", () => {
       application_type: "native",
       redirect_uris: [
         bridgeCursorRedirect(cursorUri, origin),
+        "http://localhost:8787/callback",
+      ],
+    });
+  });
+
+  it("rewrites Cursor's documented three-callback DCR body", () => {
+    const cursorUri = "cursor://anysphere.cursor-mcp/oauth/callback";
+    const origin = "https://precon.example";
+    expect(
+      rewriteLoopbackDcrBody(
+        {
+          client_name: "Cursor",
+          redirect_uris: [
+            cursorUri,
+            "https://www.cursor.com/agents/mcp/oauth/callback",
+            "http://localhost:8787/callback",
+          ],
+          grant_types: ["authorization_code", "refresh_token"],
+          response_types: ["code"],
+          token_endpoint_auth_method: "none",
+        },
+        origin
+      )
+    ).toMatchObject({
+      application_type: "native",
+      redirect_uris: [
+        bridgeCursorRedirect(cursorUri, origin),
+        "https://www.cursor.com/agents/mcp/oauth/callback",
         "http://localhost:8787/callback",
       ],
     });

@@ -137,4 +137,36 @@ describe("MCP OAuth discovery documents", () => {
     expect(registration.status, body.error_description).toBe(201);
     expect(body.application_type).toBe("native");
   });
+
+  it("registers Cursor's documented mix of cursor, HTTPS, and localhost callbacks", async () => {
+    const registration = await postAuth(
+      new Request("https://precon.example/api/auth/oauth2/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_name: "Cursor",
+          token_endpoint_auth_method: "none",
+          redirect_uris: [
+            "cursor://anysphere.cursor-mcp/oauth/callback",
+            "https://www.cursor.com/agents/mcp/oauth/callback",
+            "http://localhost:8787/callback",
+          ],
+          grant_types: ["authorization_code", "refresh_token"],
+          response_types: ["code"],
+        }),
+      })
+    );
+    const body = (await registration.json()) as {
+      application_type?: string;
+      redirect_uris?: string[];
+      error_description?: string;
+    };
+    expect(registration.status, body.error_description).toBe(201);
+    expect(body.application_type).toBe("native");
+    expect(body.redirect_uris).toEqual([
+      "https://precon.example/api/auth/native-callback?redirect_uri=cursor%3A%2F%2Fanysphere.cursor-mcp%2Foauth%2Fcallback",
+      "https://www.cursor.com/agents/mcp/oauth/callback",
+      "http://localhost:8787/callback",
+    ]);
+  });
 });
