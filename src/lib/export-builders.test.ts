@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { describe, expect, it } from "vitest";
 import { applyBidScheduleExportScope } from "./bid-schedule";
 import {
@@ -35,7 +36,6 @@ describe("export builders and scope", () => {
     expect(buffer.length).toBeGreaterThan(500);
     expect(buffer[0]).toBe(0x50);
     expect(buffer[1]).toBe(0x4b);
-    const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     const ws = wb.worksheets[0]!;
