@@ -1,5 +1,6 @@
-import { ArrowLeft, Download, FileText } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ExportActions } from "@/components/export-actions";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,33 +88,10 @@ export default async function AnnualReportPage({
         title="Annual Regional Report"
         description={`Leadership-ready summary of ${report.scope} preconstruction activity across bid years ${fromYear}–${toYear} — multi-year trends, the year's scorecard, sector and department breakdowns, and the wins.`}
         actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              nativeButton={false}
-              render={
-                <a href={`/api/export/annual?format=xlsx&${exportQuery}`} />
-              }
-            >
-              <Download className="size-4" /> Excel
-            </Button>
-            <Button
-              size="sm"
-              className="gap-1.5"
-              nativeButton={false}
-              render={
-                <a
-                  href={`/api/export/annual?format=pdf&${exportQuery}`}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              <FileText className="size-4" /> PDF
-            </Button>
-          </>
+          <ExportActions
+            excelHref={`/api/export/annual?format=xlsx&${exportQuery}`}
+            pdfHref={`/api/export/annual?format=pdf&${exportQuery}`}
+          />
         }
       />
 

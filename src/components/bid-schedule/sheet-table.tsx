@@ -16,6 +16,7 @@ import {
   type DragEvent,
   Fragment,
   type PointerEvent,
+  type ReactNode,
   useMemo,
   useRef,
   useState,
@@ -43,6 +44,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ToolbarField } from "@/components/ui/toolbar-controls";
 import type { RoundStatus } from "@/db/schema";
 import type { BidScheduleGroupBy } from "@/domain/contracts";
 import {
@@ -120,7 +122,7 @@ function actionColumnWidth(
   hasChanges: boolean
 ) {
   return (
-    (canEdit ? 168 : 0) + (canMarkStaffing ? 28 : 0) + (hasChanges ? 92 : 0)
+    (canEdit ? 168 : 0) + (canMarkStaffing ? 32 : 0) + (hasChanges ? 32 : 0)
   );
 }
 
@@ -220,8 +222,8 @@ const COLS: ColDef[] = [
   {
     key: "drawingsDueDate",
     label: "Drawings Due",
-    width: 118,
-    minWidth: 88,
+    width: 196,
+    minWidth: 140,
     filter: "text",
     getValue: (r) => r.drawingsDueDate ?? "",
     getSortValue: (r) => r.drawingsDueDate ?? "9999",
@@ -247,8 +249,8 @@ const COLS: ColDef[] = [
   {
     key: "bidDueDate",
     label: "Bid Due",
-    width: 168,
-    minWidth: 118,
+    width: 196,
+    minWidth: 140,
     filter: "text",
     getValue: (r) => r.bidDueDate ?? "",
     getSortValue: (r) => r.bidDueDate ?? "9999",
@@ -517,6 +519,7 @@ export function BidScheduleSheet({
   viewConfig,
   shareLabel = "Share with my region",
   fieldPolicy = false,
+  toolbar,
 }: {
   rows: BidSheetRow[];
   canEdit: boolean;
@@ -537,6 +540,7 @@ export function BidScheduleSheet({
   viewConfig: BidScheduleViewQuery;
   shareLabel?: string;
   fieldPolicy?: boolean;
+  toolbar?: ReactNode;
 }) {
   const [committedWidths, setCommittedWidths] = useState(() =>
     mergeColWidths(initialWidths)
@@ -760,59 +764,64 @@ export function BidScheduleSheet({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">
-          {filteredSorted.length} of {rows.length} estimate round
-          {rows.length === 1 ? "" : "s"}
-          {activeFilterCount > 0
-            ? ` · ${activeFilterCount} column filter${activeFilterCount === 1 ? "" : "s"}`
-            : ""}
-          {canEdit ? " · double-click a cell to edit" : ""}
-        </p>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {activeFilterCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1"
-              onClick={clearFilters}
-            >
-              <X className="size-3" /> Clear filters
-            </Button>
-          )}
-          <ColumnPicker
-            selected={visibleKeys}
-            onChange={commitVisibleKeys}
-            onResetToDefaults={async () => {
-              clearTimeout(prefsTimer.current);
-              pendingPrefs.current = {};
-              if (persistColumnPrefs) {
-                await resetBidScheduleTablePrefs();
-                const keys = keysForDensity(density);
-                setVisibleKeys(keys);
-                const nextWidths = { ...DEFAULT_COL_WIDTHS };
-                setCommittedWidths(nextWidths);
-                return;
-              }
-              const fromView = (initialColumns ?? []).filter(
-                (k): k is ColKey => k in COL_BY_KEY
-              );
-              setVisibleKeys(
-                fromView.length > 0 ? fromView : keysForDensity(density)
-              );
-            }}
-          />
-          <SavedViewsMenu
-            views={views}
-            currentUserId={currentUserId}
-            activeViewId={activeViewId}
-            defaultViewId={defaultViewId}
-            prefsHref={prefsHref}
-            config={config}
-            shareLabel={shareLabel}
-          />
+      <div className="flex items-end gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2">
+          {toolbar}
         </div>
+        <ToolbarField label="Actions" srOnlyLabel>
+          <div className="flex items-center gap-1.5">
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={clearFilters}
+              >
+                <X className="size-3" /> Clear filters
+              </Button>
+            )}
+            <ColumnPicker
+              selected={visibleKeys}
+              onChange={commitVisibleKeys}
+              onResetToDefaults={async () => {
+                clearTimeout(prefsTimer.current);
+                pendingPrefs.current = {};
+                if (persistColumnPrefs) {
+                  await resetBidScheduleTablePrefs();
+                  const keys = keysForDensity(density);
+                  setVisibleKeys(keys);
+                  const nextWidths = { ...DEFAULT_COL_WIDTHS };
+                  setCommittedWidths(nextWidths);
+                  return;
+                }
+                const fromView = (initialColumns ?? []).filter(
+                  (k): k is ColKey => k in COL_BY_KEY
+                );
+                setVisibleKeys(
+                  fromView.length > 0 ? fromView : keysForDensity(density)
+                );
+              }}
+            />
+            <SavedViewsMenu
+              views={views}
+              currentUserId={currentUserId}
+              activeViewId={activeViewId}
+              defaultViewId={defaultViewId}
+              prefsHref={prefsHref}
+              config={config}
+              shareLabel={shareLabel}
+            />
+          </div>
+        </ToolbarField>
       </div>
+      <p className="text-xs text-muted-foreground">
+        {filteredSorted.length} of {rows.length} estimate round
+        {rows.length === 1 ? "" : "s"}
+        {activeFilterCount > 0
+          ? ` · ${activeFilterCount} column filter${activeFilterCount === 1 ? "" : "s"}`
+          : ""}
+        {canEdit ? " · double-click a cell to edit" : ""}
+      </p>
 
       <div className="overflow-auto rounded border border-border/70 bg-card">
         <table
@@ -937,7 +946,7 @@ export function BidScheduleSheet({
               })}
               {showActions ? (
                 <th
-                  className="h-9 border-r border-border/50 px-2.5 text-left align-middle text-2xs font-medium text-muted-foreground last:border-r-0"
+                  className="h-9 border-r border-border/50 px-1.5 text-left align-middle text-2xs font-medium text-muted-foreground last:border-r-0"
                   style={{ width: actionWidth }}
                 >
                   Actions
@@ -1078,7 +1087,10 @@ function BidScheduleDataRow({
           <td
             key={col.key}
             className={cn(
-              "overflow-hidden border-r border-border/40 px-2.5 py-2 align-middle last:border-r-0",
+              "border-r border-border/40 px-2.5 py-2 align-middle last:border-r-0",
+              col.key === "bidDueDate" || col.key === "drawingsDueDate"
+                ? "overflow-visible"
+                : "overflow-hidden",
               col.align === "right" && "text-right tabular-nums",
               editable && "cursor-text hover:bg-primary/5",
               row.changedFields.includes(col.key) &&
@@ -1134,13 +1146,14 @@ function BidScheduleDataRow({
         );
       })}
       {actionWidth > 0 ? (
-        <td className="px-2.5 py-2 align-middle" style={{ width: actionWidth }}>
-          <div className="flex h-7 flex-nowrap items-center justify-start gap-0.5 whitespace-nowrap">
+        <td className="px-1.5 py-2 align-middle" style={{ width: actionWidth }}>
+          <div className="flex w-max items-center gap-0.5 whitespace-nowrap">
             {row.latestAuditId && row.changeCount > 0 ? (
               <AcknowledgeChangesButton
                 roundId={row.id}
                 throughAuditId={row.latestAuditId}
                 count={row.changeCount}
+                compact
               />
             ) : null}
             {canMarkStaffing ? (
@@ -1162,7 +1175,7 @@ function BidScheduleDataRow({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2"
+                  className="px-2"
                   nativeButton={false}
                   render={<Link href={`/rounds/${row.id}`} />}
                 >
@@ -1192,33 +1205,35 @@ function CellDisplay({
 }) {
   if (col.key === "jobNumber") {
     return (
-      <span className="flex min-h-5 flex-wrap items-center gap-1">
+      <span className="flex w-full flex-col items-center justify-center gap-0.5 text-center">
         <Link
           href={`/jobs/${row.jobId}`}
-          className="truncate font-mono text-xs leading-5 text-primary hover:underline"
+          className="max-w-full truncate font-mono text-[13px] leading-5 text-primary hover:underline"
         >
           {displayJobNumber(row.jobNumber)}
         </Link>
-        <JobLookupPopover row={row} siblings={siblings} />
-        {row.newlyPublished ? (
-          <Badge variant="warning" size="sm">
-            New
-          </Badge>
-        ) : null}
-        {!row.isLinked && (
-          <Badge variant="warning" size="sm">
-            <Unlink />
-            pending
-          </Badge>
-        )}
-        {row.status === "upcoming" && !row.teamAssignedAt && (
-          <span
-            role="img"
-            className="inline-block size-1.5 shrink-0 rounded-full bg-warning"
-            title="Needs staffing"
-            aria-label="Needs staffing"
-          />
-        )}
+        <span className="flex flex-wrap items-center justify-center gap-1">
+          <JobLookupPopover row={row} siblings={siblings} />
+          {row.newlyPublished ? (
+            <Badge variant="warning" size="sm">
+              New
+            </Badge>
+          ) : null}
+          {!row.isLinked && (
+            <Badge variant="warning" size="sm">
+              <Unlink />
+              pending
+            </Badge>
+          )}
+          {row.status === "upcoming" && !row.teamAssignedAt && (
+            <span
+              role="img"
+              className="inline-block size-1.5 shrink-0 rounded-full bg-warning"
+              title="Needs staffing"
+              aria-label="Needs staffing"
+            />
+          )}
+        </span>
       </span>
     );
   }
@@ -1335,10 +1350,18 @@ function CellDisplay({
         ? bidDueUrgency(shown || null)
         : null;
     return (
-      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 leading-5">
-        <span className="tabular-nums">{fmtDate(shown || null)}</span>
+      <span className="flex items-center gap-1">
+        <span className="tabular-nums whitespace-nowrap">
+          {fmtDate(shown || null)}
+        </span>
         {urgency ? (
           <>
+            <FieldHelp className="shrink-0" label={`${col.key} aging`}>
+              {dateAgingNudge(
+                col.key as "bidDueDate" | "drawingsDueDate",
+                urgency
+              )}
+            </FieldHelp>
             <Badge
               variant={
                 urgency === "overdue"
@@ -1348,15 +1371,10 @@ function CellDisplay({
                     : "info"
               }
               size="sm"
+              className="shrink-0"
             >
               {BID_DUE_URGENCY_LABEL[urgency]}
             </Badge>
-            <FieldHelp label={`${col.key} aging`}>
-              {dateAgingNudge(
-                col.key as "bidDueDate" | "drawingsDueDate",
-                urgency
-              )}
-            </FieldHelp>
           </>
         ) : null}
       </span>
@@ -1404,12 +1422,12 @@ function JobLookupPopover({
             type="button"
             variant="ghost"
             size="xs"
-            className="h-5 px-1.5 text-2xs text-muted-foreground"
+            className="h-auto gap-1 px-1 py-0 text-[13px] font-normal text-muted-foreground"
             title="All efforts on this job"
           />
         }
       >
-        <Layers3 className="size-3" />
+        <Layers3 className="size-3.5" />
         {phases.length} effort{phases.length === 1 ? "" : "s"}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 gap-2 p-3">
@@ -1462,7 +1480,9 @@ function ColumnPicker({
   return (
     <Popover>
       <PopoverTrigger
-        render={<Button variant="outline" size="sm" className="gap-1.5" />}
+        render={
+          <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs" />
+        }
       >
         <Columns3 className="size-3.5" />
         Columns

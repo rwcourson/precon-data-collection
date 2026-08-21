@@ -1,8 +1,8 @@
-import { headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignInClient } from "@/components/auth/sign-in-client";
-import { authMode } from "@/lib/auth";
-import { auth } from "@/lib/auth-server";
+import { cookiesLookLikeBetterAuthSession } from "@/lib/auth-constants";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 export default async function SignInPage({
   searchParams,
@@ -11,10 +11,10 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
 
-  // Already signed in → home (or requested next path).
-  if (authMode() === "sso") {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (session?.user) {
+  // Cookie presence only — keep Better Auth / Drizzle off this first compile.
+  // `(app)/layout` still validates the session before rendering chrome.
+  if (getRuntimeConfig().authMode === "sso") {
+    if (cookiesLookLikeBetterAuthSession((await cookies()).getAll())) {
       const next = params.next?.startsWith("/") ? params.next : "/";
       redirect(next);
     }

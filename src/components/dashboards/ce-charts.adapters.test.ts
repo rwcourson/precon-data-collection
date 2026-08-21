@@ -5,6 +5,7 @@ import {
   ComboMetricChart,
   HorizontalBarChart,
   PieDonutMetricChart,
+  TrendChart,
   VerticalBarChart,
   WaterfallMetricChart,
 } from "@/components/dashboards/ce-charts";
@@ -21,6 +22,24 @@ describe("chart adapters smoke", () => {
     expect(scaleForMetric([0.7], "percent").format(70)).toBe("70.0%");
     expect(humanizeCategory("post_bid")).toBe("Post-bid");
     expect(formatTableCell("Win rate", 0.55)).toBe("55%");
+  });
+
+  it("trend chart keeps visible markers on a single-year series", () => {
+    expect(
+      isValidElement(
+        createElement(TrendChart, {
+          percent: true,
+          data: [
+            { year: "2025", winRate: null, feePct: null },
+            { year: "2026", winRate: 0.62, feePct: 0.036 },
+          ],
+          lines: [
+            { key: "winRate", label: "Win Rate" },
+            { key: "feePct", label: "Fee %" },
+          ],
+        })
+      )
+    ).toBe(true);
   });
 
   it("renders empty-state without throw", () => {

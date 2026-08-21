@@ -31,11 +31,13 @@ export function StaffingCard({
   assignments: initial,
   users,
   canEdit,
+  estimateLeadName,
 }: {
   roundId: number;
   assignments: Assignment[];
   users: { id: number; name: string }[];
   canEdit: boolean;
+  estimateLeadName?: string | null;
 }) {
   const [assignments, setAssignments] = useState(initial);
   const [stage, setStage] = useState<"concept" | "dd" | "cd">("concept");
@@ -82,14 +84,27 @@ export function StaffingCard({
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm">
           <UsersRound className="size-4" />
-          Round staffing
+          Team
         </CardTitle>
         <CardDescription>
-          Concept, DD, and CD teams belong to this pricing effort. They are
-          separate from who can see the parent job.
+          This pricing effort's people. Concept, DD, and CD can differ from the
+          next round. Who can see the parent job is set on the job record, not
+          here.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="w-16 text-xs font-medium uppercase text-muted-foreground">
+            Lead
+          </span>
+          {estimateLeadName ? (
+            <Badge variant="secondary">{estimateLeadName}</Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              Set on Estimate Data
+            </span>
+          )}
+        </div>
         {(["concept", "dd", "cd"] as const).map((itemStage) => (
           <div key={itemStage} className="flex flex-wrap items-center gap-1.5">
             <span className="w-16 text-xs font-medium uppercase text-muted-foreground">

@@ -53,6 +53,8 @@ const nextConfig: NextConfig = {
     "@electric-sql/pglite",
     "@sparticuz/chromium",
     "playwright-core",
+    "better-auth",
+    "drizzle-orm",
     "@better-auth/cimd",
     "@better-auth/mcp",
     "@better-auth/oauth-provider",

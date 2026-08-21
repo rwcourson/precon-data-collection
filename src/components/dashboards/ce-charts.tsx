@@ -10,7 +10,6 @@ import {
   BarColumnChart,
   ChartFrame,
   ComboChart,
-  LineAreaChart,
   PieDonutChart,
   WaterfallChart,
 } from "@rwcourson/chart-elements/charts";
@@ -23,6 +22,7 @@ import {
   type ScaleKind,
   scaleForMetric,
 } from "@/components/dashboards/chart-format";
+import { ProductLineChart } from "@/components/dashboards/product-line-chart";
 import { cn } from "@/lib/utils";
 
 export { dollarsCompact };
@@ -132,15 +132,14 @@ export function TrendChart({
   });
   return (
     <div className="h-[300px] w-full min-h-[240px]">
-      <LineAreaChart
+      <ProductLineChart
         data={rows}
         categoryKey="year"
-        seriesKeys={seriesKeys}
+        series={lines.map((line) => ({ key: line.key, label: line.label }))}
         variant="line"
         showLegend={lines.length > 1}
         valueFormatter={scaled.format}
         yAxisLabel={scaled.unitLabel || undefined}
-        missingValues="connect"
       />
     </div>
   );
@@ -160,15 +159,17 @@ export function ForecastVolumeChart({
   }));
   return (
     <div className="h-[320px] w-full min-h-[260px]">
-      <LineAreaChart
+      <ProductLineChart
         data={rows}
         categoryKey="month"
-        seriesKeys={["objective", "adjusted"]}
+        series={[
+          { key: "objective", label: "Objective" },
+          { key: "adjusted", label: "Risk-adjusted" },
+        ]}
         variant="line"
         showLegend
         valueFormatter={scaled.format}
         yAxisLabel={scaled.unitLabel || undefined}
-        missingValues="connect"
       />
     </div>
   );
@@ -304,18 +305,17 @@ export function AreaMetricChart({
   const scaled = scaleForMetric(raw, kindFromPercent(percent));
   return (
     <div className="h-[300px] w-full min-h-[240px]">
-      <LineAreaChart
+      <ProductLineChart
         data={data.map((row, i) => ({
           year: String(row.year ?? row.name ?? ""),
           [dataKey]: row[dataKey] == null ? null : (scaled.values[i] ?? 0),
         }))}
         categoryKey="year"
-        seriesKeys={[dataKey]}
+        series={[{ key: dataKey }]}
         variant="area"
         showLegend={false}
         valueFormatter={scaled.format}
         yAxisLabel={scaled.unitLabel || undefined}
-        missingValues="connect"
       />
     </div>
   );

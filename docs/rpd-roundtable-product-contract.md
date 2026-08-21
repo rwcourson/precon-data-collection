@@ -142,7 +142,7 @@ promotes them into an executable phase.
 
 | ID | Disposition | Phase | Contract |
 | --- | --- | --- | --- |
-| 7.1 | implement | 8 | Keep staffing on round/stage assignments and relabel job Access as “Who can see this.” |
+| 7.1 | implement | 8 | Keep staffing on round/stage assignments (`StaffingCard` on `/rounds/[id]`, always shown). Job Access is **Who can see this** — regions and one-off pins only, not a region-wide team roster. |
 | 7.2 | implement | 8 | Add lightweight self-perform intent to upcoming/active rounds and filters. |
 | 7.3 | preserve | 4 | Preserve Needs staffing = upcoming + no team assigned; add direct preview-row links under 3.2. |
 

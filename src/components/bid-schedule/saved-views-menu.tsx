@@ -108,7 +108,13 @@ export function SavedViewsMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="outline" size="sm" className="gap-1.5" />}
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs"
+            />
+          }
         >
           <Bookmark className="size-3.5" />
           {active ? active.name : "Views"}

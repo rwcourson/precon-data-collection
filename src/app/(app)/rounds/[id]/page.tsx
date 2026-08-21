@@ -8,8 +8,11 @@ import { NotesThread } from "@/components/notes/notes-thread";
 import { ApproveLockButton } from "@/components/rounds/approve-lock-button";
 import { DestiniRoundImport } from "@/components/rounds/destini-round-import";
 import { EntryForm } from "@/components/rounds/entry-form";
+import { FormSheetToggle } from "@/components/rounds/form-sheet-toggle";
 import { OutcomeSelect } from "@/components/rounds/outcome-select";
 import { RegionCustomTab } from "@/components/rounds/region-custom-tab";
+import { RoundEntrySheet } from "@/components/rounds/round-entry-sheet";
+import { SectionFilter } from "@/components/rounds/section-filter";
 import { StaffingCard } from "@/components/rounds/staffing-card";
 import { UnlockRoundButton } from "@/components/rounds/unlock-round-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -57,6 +60,17 @@ import {
   loadRoundForPrincipal,
 } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
+import {
+  cellsForRoundEntry,
+  columnsForCustomEntry,
+  columnsForRoundEntry,
+  entrySectionOptions,
+  entryViewHref,
+  matchesEntrySection,
+  parseEntrySection,
+  parseEntryViewMode,
+  sectionSlug,
+} from "@/lib/entry-view";
 import { fmtDateTime } from "@/lib/format";
 import { lockRevisionFieldDiffs } from "@/lib/lock-revisions";
 import {
@@ -65,7 +79,10 @@ import {
   METRIC_DEFS,
   METRIC_GROUPS,
 } from "@/lib/metrics";
-import { regionCustomTabForRound } from "@/lib/region-custom-columns";
+import {
+  companyScopedColumns,
+  regionCustomTabForRound,
+} from "@/lib/region-custom-columns";
 import {
   applicableRequiredKeys,
   missingRequiredFields,
@@ -144,6 +161,16 @@ export default async function RoundPage({
   const regionTab = regionCustomTabForRound(customCols, round);
   const customValues =
     (await getCustomValuesForRounds([round.id])).get(round.id) ?? {};
+  const viewMode = parseEntryViewMode(query.viewMode);
+  const queryParams = Object.fromEntries(
+    Object.entries(query).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value[0] : value,
+    ])
+  ) as Record<string, string | undefined>;
+  const formHref = entryViewHref(`/rounds/${round.id}`, queryParams, "form");
+  const sheetHref = entryViewHref(`/rounds/${round.id}`, queryParams, "sheet");
+  const section = parseEntrySection(query.section);
 
   const missing = missingRequiredFields(
     round,
@@ -164,6 +191,19 @@ export default async function RoundPage({
     ["active", "upcoming", "outstanding"].includes(round.status)
       ? "schedule"
       : "postBid";
+  const sectionOptions = entrySectionOptions({
+    mode: entryMode,
+    hideIjvDropdown: features.organizationGroups,
+    includeCompanyColumns:
+      entryMode === "postBid" && companyScopedColumns(customCols).length > 0,
+  });
+  const metricSectionOptions = [
+    { value: "all", label: "All sections" },
+    ...METRIC_GROUPS.map((group) => ({
+      value: sectionSlug(group),
+      label: group,
+    })),
+  ];
   const requirementContext = conditionContextFrom(
     round as unknown as Record<string, unknown>
   );
@@ -179,6 +219,57 @@ export default async function RoundPage({
   const initialMulti: Record<string, string[]> = {};
   for (const key of MULTI_FIELD_KEYS) initialMulti[key] = multi[key] ?? [];
 
+  const sheetLockReason = !canEdit
+    ? locked
+      ? "Approved and locked — only the RPD can correct it."
+      : "Your role has read-only access."
+    : undefined;
+  const dataSheetColumns = columnsForRoundEntry({
+    mode: entryMode,
+    hideIjvDropdown: features.organizationGroups,
+    lists,
+    customCols: companyScopedColumns(customCols),
+  });
+  const dataSheetRows = [
+    {
+      id: round.id,
+      cells: cellsForRoundEntry({
+        columns: dataSheetColumns,
+        values: initialValues,
+        multi: initialMulti,
+        custom: customValues as Record<number, string>,
+        jobNumber: job.jobNumber,
+        jobName: job.jobName,
+        estimateLeadName,
+      }),
+      locked: !canEdit,
+      lockReason: sheetLockReason,
+    },
+  ];
+  const regionSheetColumns = regionTab
+    ? columnsForCustomEntry(regionTab.columns)
+    : [];
+  const regionSheetRows = regionTab
+    ? [
+        {
+          id: round.id,
+          cells: cellsForRoundEntry({
+            columns: regionSheetColumns,
+            values: {},
+            multi: {},
+            custom: customValues as Record<number, string>,
+            jobNumber: job.jobNumber,
+            jobName: job.jobName,
+          }),
+          locked: !canEdit,
+          lockReason: sheetLockReason,
+        },
+      ]
+    : [];
+  const expectedUpdatedAtById = {
+    [round.id]: round.updatedAt.toISOString(),
+  };
+
   const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
   const notApplicable = exceptions.notApplicable ?? new Set();
   const headlineMetrics = METRIC_DEFS.filter((m) => m.headline).map((m) => ({
@@ -193,6 +284,13 @@ export default async function RoundPage({
       note: m.note,
     })),
   }));
+  const visibleMetricGroups =
+    section === "all" ||
+    metricGroups.some((group) => matchesEntrySection(group.group, section))
+      ? metricGroups.filter((group) =>
+          matchesEntrySection(group.group, section)
+        )
+      : metricGroups;
 
   return (
     <div className="space-y-4">
@@ -334,14 +432,13 @@ export default async function RoundPage({
         ))}
       </div>
 
-      {features.organizationGroups ? (
-        <StaffingCard
-          roundId={round.id}
-          assignments={staffAssignments}
-          users={allUsers.map((user) => ({ id: user.id, name: user.name }))}
-          canEdit={!locked && principalCanMarkStaffing(principal, round)}
-        />
-      ) : null}
+      <StaffingCard
+        roundId={round.id}
+        assignments={staffAssignments}
+        users={allUsers.map((user) => ({ id: user.id, name: user.name }))}
+        canEdit={!locked && principalCanMarkStaffing(principal, round)}
+        estimateLeadName={estimateLeadName}
+      />
 
       {entryMode === "schedule" && !round.bidDueDate ? (
         <Alert>
@@ -358,9 +455,13 @@ export default async function RoundPage({
         defaultValue={
           query.tab === "notes"
             ? "notes"
-            : query.tab === "region" && regionTab
-              ? "region"
-              : "data"
+            : query.tab === "history"
+              ? "history"
+              : query.tab === "metrics"
+                ? "metrics"
+                : query.tab === "region" && regionTab
+                  ? "region"
+                  : "data"
         }
       >
         <TabsList>
@@ -389,94 +490,146 @@ export default async function RoundPage({
         </TabsList>
 
         <TabsContent value="data" className="pt-2">
-          <EntryForm
-            roundId={round.id}
-            jobNumber={job.jobNumber}
-            jobName={job.jobName}
-            jobLinked={job.isLinked}
-            initialValues={initialValues}
-            initialMulti={initialMulti}
-            initialCustom={customValues as Record<number, string>}
-            estimateLeadId={round.estimateLeadId}
-            users={allUsers.map((u) => ({
-              id: u.id,
-              name: u.name,
-              role: u.role,
-            }))}
-            lists={lists}
-            customCols={customCols}
-            canEdit={canEdit}
-            locked={locked}
-            missingKeys={missingKeys}
-            requiredKeys={requiredKeys}
-            mode={entryMode}
-            hideIjvDropdown={features.organizationGroups}
-            fieldPolicy={features.fieldPolicy}
-            jobId={job.id}
-            notApplicableKeys={[...(exceptions.notApplicable ?? [])]}
-            rangeAcknowledgedKeys={[...(exceptions.rangeAcknowledged ?? [])]}
-            updatedAt={round.updatedAt.toISOString()}
-          />
-          {entryMode === "postBid" && features.sourceIngestion && (
-            <div className="mt-4">
-              <DestiniRoundImport roundId={round.id} canEdit={canEdit} />
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <FormSheetToggle
+                formHref={formHref}
+                sheetHref={sheetHref}
+                value={viewMode}
+              />
+              <SectionFilter
+                pathname={`/rounds/${round.id}`}
+                value={section}
+                options={sectionOptions}
+                currentParams={{ ...queryParams, tab: undefined }}
+              />
             </div>
-          )}
+            {viewMode === "sheet" ? (
+              <RoundEntrySheet
+                key={round.updatedAt.toISOString()}
+                columns={dataSheetColumns}
+                rows={dataSheetRows}
+                canEdit={canEdit}
+                expectedUpdatedAtById={expectedUpdatedAtById}
+                section={section}
+              />
+            ) : (
+              <EntryForm
+                roundId={round.id}
+                jobNumber={job.jobNumber}
+                jobName={job.jobName}
+                jobLinked={job.isLinked}
+                initialValues={initialValues}
+                initialMulti={initialMulti}
+                initialCustom={customValues as Record<number, string>}
+                estimateLeadId={round.estimateLeadId}
+                users={allUsers.map((u) => ({
+                  id: u.id,
+                  name: u.name,
+                  role: u.role,
+                }))}
+                lists={lists}
+                customCols={customCols}
+                canEdit={canEdit}
+                locked={locked}
+                missingKeys={missingKeys}
+                requiredKeys={requiredKeys}
+                mode={entryMode}
+                hideIjvDropdown={features.organizationGroups}
+                fieldPolicy={features.fieldPolicy}
+                jobId={job.id}
+                notApplicableKeys={[...(exceptions.notApplicable ?? [])]}
+                rangeAcknowledgedKeys={[
+                  ...(exceptions.rangeAcknowledged ?? []),
+                ]}
+                updatedAt={round.updatedAt.toISOString()}
+                section={section}
+              />
+            )}
+            {entryMode === "postBid" && features.sourceIngestion && (
+              <DestiniRoundImport roundId={round.id} canEdit={canEdit} />
+            )}
+          </div>
         </TabsContent>
 
         {regionTab && (
           <TabsContent value="region" className="pt-2">
-            <RegionCustomTab
-              roundId={round.id}
-              title={regionTab.title}
-              columns={regionTab.columns}
-              initialCustom={customValues as Record<number, string>}
-              canEdit={canEdit}
-              locked={locked}
-            />
+            <div className="space-y-3">
+              <FormSheetToggle
+                formHref={formHref}
+                sheetHref={sheetHref}
+                value={viewMode}
+              />
+              {viewMode === "sheet" ? (
+                <RoundEntrySheet
+                  key={`${round.updatedAt.toISOString()}-region`}
+                  columns={regionSheetColumns}
+                  rows={regionSheetRows}
+                  canEdit={canEdit}
+                  expectedUpdatedAtById={expectedUpdatedAtById}
+                />
+              ) : (
+                <RegionCustomTab
+                  roundId={round.id}
+                  title={regionTab.title}
+                  columns={regionTab.columns}
+                  initialCustom={customValues as Record<number, string>}
+                  canEdit={canEdit}
+                  locked={locked}
+                />
+              )}
+            </div>
           </TabsContent>
         )}
 
         <TabsContent value="metrics" className="pt-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Server-side calculated metrics
-              </CardTitle>
-              <CardDescription>
-                The Project Estimate Summary formula set — always derived from
-                the underlying fields, never entered separately, so they
-                reconcile with source values. Blank inputs yield “—” rather than
-                a misleading zero.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {metricGroups.map((g) => (
-                <section key={g.group}>
-                  <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {g.group}
-                  </h3>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {g.metrics.map((m) => (
-                      <div key={m.label} className="rounded-lg border p-3">
-                        <p className="text-xs text-muted-foreground">
-                          {m.label}
-                        </p>
-                        <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                          {m.value}
-                        </p>
-                        {m.note && (
-                          <p className="text-2xs text-muted-foreground">
-                            {m.note}
+          <div className="space-y-3">
+            <SectionFilter
+              pathname={`/rounds/${round.id}`}
+              value={section}
+              options={metricSectionOptions}
+              currentParams={{ ...queryParams, tab: "metrics" }}
+            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Server-side calculated metrics
+                </CardTitle>
+                <CardDescription>
+                  The Project Estimate Summary formula set — always derived from
+                  the underlying fields, never entered separately, so they
+                  reconcile with source values. Blank inputs yield “—” rather
+                  than a misleading zero.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {visibleMetricGroups.map((g) => (
+                  <section key={g.group} id={`section-${sectionSlug(g.group)}`}>
+                    <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {g.group}
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {g.metrics.map((m) => (
+                        <div key={m.label} className="rounded-lg border p-3">
+                          <p className="text-xs text-muted-foreground">
+                            {m.label}
                           </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </CardContent>
-          </Card>
+                          <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                            {m.value}
+                          </p>
+                          {m.note && (
+                            <p className="text-2xs text-muted-foreground">
+                              {m.note}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="notes" className="pt-2">

@@ -7,10 +7,11 @@ You answer from live app data only. Every tool is already scoped to the asking u
 - **Pursuit / job** — a bid opportunity. `jobs.region` is the HOME region only.
 - **Effort / estimate round** — a pricing pass on a job (`estimate_rounds`). Statuses: upcoming, active, outstanding, submitted, post_bid, locked.
 - **Department** — `preconDepartment` (the hierarchy filter), not a free-text market.
-- **Team assigned** — an explicit `teamAssignedAt` mark. Estimate Lead is not staffing.
+- **Team assigned** — an explicit `teamAssignedAt` mark on the estimate round. Estimate Lead is the round lead, not the same as “team assigned.”
+- **Round team** — estimate lead plus Concept / DD / CD assignments on `/rounds/[id]`. Not the job **Who can see this** list.
 - **Needs staffing** — Upcoming efforts with no `teamAssignedAt`. Same preset as Overview → Needs staffing.
 - **Notes** — chat on an effort (`round_notes`). Cite the round and job when you quote a note.
-- **Staffing marks** — `teamAssignedById` is who marked the team, not inferred membership.
+- **Staffing marks** — `teamAssignedById` is who marked the team, not inferred membership. Job region visibility is access, not staffing.
 
 ## How to answer
 

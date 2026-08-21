@@ -1,6 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -84,7 +83,10 @@ export function SignInClient({
             onClick={signIn}
           >
             {pending ? (
-              <Loader2 className="size-4 animate-spin" />
+              <span
+                aria-hidden
+                className="size-4 animate-spin rounded-full border-2 border-[#0c2048]/25 border-t-[#0c2048]"
+              />
             ) : (
               <MicrosoftGlyph className="size-4 shrink-0" />
             )}

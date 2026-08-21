@@ -275,24 +275,25 @@ export default async function OverviewPage() {
                 canSync={principalCanIntegrate(principal)}
               />
             ) : (
-              <Card key={q.id} className="h-full">
-                <Link href={q.href} className="group block">
-                  <div className="transition-colors group-hover:bg-info-soft/60">
-                    <CardHeader className="gap-1.5 pb-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <CardDescription className="text-[13px] font-medium text-foreground">
-                            {q.title}
-                          </CardDescription>
-                          <CardTitle className="font-mono text-xl font-medium tabular-nums">
-                            {q.count}
-                          </CardTitle>
-                        </div>
-                        <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+              <Card
+                key={q.id}
+                className="h-full transition-colors hover:bg-info-soft/60"
+              >
+                <Link href={q.href} className="block">
+                  <CardHeader className="gap-1.5 pb-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardDescription className="text-[13px] font-medium text-foreground">
+                          {q.title}
+                        </CardDescription>
+                        <CardTitle className="font-mono text-xl font-medium tabular-nums">
+                          {q.count}
+                        </CardTitle>
                       </div>
-                      <CardDescription>{q.description}</CardDescription>
-                    </CardHeader>
-                  </div>
+                      <ArrowRight className="size-3.5 text-muted-foreground opacity-0 transition-all group-hover/card:translate-x-0.5 group-hover/card:opacity-100" />
+                    </div>
+                    <CardDescription>{q.description}</CardDescription>
+                  </CardHeader>
                 </Link>
                 {q.preview.length > 0 && (
                   <CardContent className="pt-0">

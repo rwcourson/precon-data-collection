@@ -62,6 +62,28 @@ function excelFormat(type: string, key: string): string | undefined {
   return undefined;
 }
 
+/** Display value for PDF / HTML exports (Excel uses typed cells instead). */
+export function formatExportCell(
+  type: string,
+  value: string | number | null
+): string {
+  if (value == null || value === "") return "—";
+  if (typeof value === "string") return value;
+  if (!Number.isFinite(value)) return "—";
+  if (type === "dollars") {
+    return value.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    });
+  }
+  if (type === "percent") return `${(value * 100).toFixed(1)}%`;
+  if (type === "number") {
+    return value.toLocaleString("en-US", { maximumFractionDigits: 1 });
+  }
+  return String(value);
+}
+
 export async function buildWorkbook(opts: {
   title: string;
   sheetName?: string;
@@ -84,17 +106,18 @@ export async function buildWorkbook(opts: {
   ws.mergeCells(1, 1, 1, Math.max(2, opts.columns.length));
   const titleCell = ws.getCell(1, 1);
   titleCell.value = opts.title;
-  titleCell.font = { bold: true, size: 14, color: { argb: "FF1E3A5F" } };
+  titleCell.font = { bold: true, size: 14, color: { argb: "FF0C2048" } };
   ws.getRow(1).height = 24;
 
   // Header row
   const headerRow = ws.addRow(opts.columns.map((c) => c.label));
+  headerRow.height = 22;
   headerRow.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
     cell.fill = {
       type: "pattern",
       pattern: "solid",
-      fgColor: { argb: "FF1E3A5F" },
+      fgColor: { argb: "FF0C2048" },
     };
     cell.border = { bottom: { style: "thin" } };
     cell.alignment = { vertical: "middle", wrapText: true };
@@ -114,6 +137,13 @@ export async function buildWorkbook(opts: {
       if (fmt) cell.numFmt = fmt;
       cell.font = { size: 10 };
       cell.alignment = { wrapText: true, vertical: "top" };
+      if (row.number % 2 === 0) {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFF4F7FB" },
+        };
+      }
     });
     const note = r[LATEST_NOTE_KEY];
     if (typeof note === "string" && note.length > 80) {
@@ -157,6 +187,19 @@ export async function buildWorkbook(opts: {
     );
     col.width = Math.min(42, Math.max(10, maxLen + 2));
   });
+
+  const lastRow = ws.lastRow?.number ?? 2;
+  const lastCol = Math.max(1, opts.columns.length);
+  ws.views = [{ state: "frozen", ySplit: 2, showGridLines: false }];
+  if (lastRow >= 2) {
+    ws.autoFilter = {
+      from: { row: 2, column: 1 },
+      to: { row: lastRow, column: lastCol },
+    };
+  }
+  ws.pageSetup.fitToPage = true;
+  ws.pageSetup.fitToWidth = 1;
+  ws.pageSetup.fitToHeight = 0;
 
   const buffer = await wb.xlsx.writeBuffer();
   return Buffer.from(buffer);
@@ -216,37 +259,41 @@ export function buildPrintHtml(opts: {
 <style>
   * { box-sizing: border-box; }
   html, body { max-width: 100%; }
-  body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin: 32px; color: #1a202c; overflow-x: hidden; }
-  h1 { font-size: 18px; margin: 0 0 2px; color: #1e3a5f; }
-  .meta { font-size: 11px; color: #64748b; margin-bottom: 16px; }
+  body { font-family: "Manrope", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; margin: 28px; color: #10141c; overflow-x: hidden; }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 3px solid #0c2048; padding-bottom: 10px; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; color: #0c2048; letter-spacing: -0.02em; }
+  .meta { font-size: 11px; color: #5b6b82; margin: 0; }
   table { border-collapse: collapse; width: 100%; font-size: 10.5px; table-layout: fixed; }
   thead { display: table-header-group; }
   tbody { display: table-row-group; }
   th, td {
     text-align: left;
-    padding: 6px 8px;
+    padding: 7px 8px;
     vertical-align: top;
     overflow-wrap: anywhere;
     word-break: break-word;
     white-space: normal;
     max-width: 12rem;
   }
-  th { background: #1e3a5f; color: white; font-weight: 600; }
-  td { border-bottom: 1px solid #e2e8f0; }
+  th { background: #0c2048; color: white; font-weight: 600; }
+  td { border-bottom: 1px solid #e6edf5; }
+  tbody tr:nth-child(even):not(.group) td { background: #f4f7fb; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   th.note, td.note { max-width: 22rem; width: 28%; }
   tr, tr.group { break-inside: avoid; page-break-inside: avoid; }
   tr.group td { background: #e8eef4; font-weight: 700; }
   .footer { margin-top: 18px; font-size: 10px; color: #94a3b8; }
   .toolbar { position: fixed; top: 12px; right: 12px; }
-  .toolbar button { padding: 8px 16px; background: #1e3a5f; color: white; border: 0; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .toolbar button { padding: 8px 16px; background: #0c2048; color: white; border: 0; border-radius: 6px; cursor: pointer; font-size: 13px; }
   @media print { .toolbar { display: none; } body { margin: 0; overflow-x: hidden; } }
 </style>
 </head>
 <body>
   <div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
-  <h1>${esc(opts.title)}</h1>
-  <p class="meta">Generated ${new Date().toLocaleString("en-US")} · ${opts.rows.length} record${opts.rows.length === 1 ? "" : "s"} · B&amp;G Precon — Pursuits &amp; Data</p>
+  <div class="brand">
+    <h1>${esc(opts.title)}</h1>
+    <p class="meta">${opts.rows.length} record${opts.rows.length === 1 ? "" : "s"} · ${esc(new Date().toLocaleString("en-US"))}</p>
+  </div>
   <table>
     <thead><tr>${opts.columns.map((c) => `<th${c.key === LATEST_NOTE_KEY ? ' class="note"' : ""}>${esc(c.label)}</th>`).join("")}</tr></thead>
     <tbody>${bodyRows}</tbody>

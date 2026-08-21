@@ -19,6 +19,15 @@ import {
 } from "@/components/ui/popover";
 import type { RoundStatus } from "@/db/schema";
 import { displayJobNumber, fmtDate } from "@/lib/format";
+import {
+  GANTT_LANE_PX,
+  ganttBarRect,
+  ganttMonthTicks,
+  ganttRange,
+  ganttTodayLeft,
+  utcStamp,
+} from "@/lib/schedule-gantt";
+import { cn } from "@/lib/utils";
 
 /** Reserved event for a future resource-management bar. Gantt never auto-slides people. */
 export const RESOURCE_MANAGEMENT_EVENT = "resource.bar.future";
@@ -114,23 +123,15 @@ export function BidScheduleGantt({
     job.efforts.flatMap((effort) =>
       [effort.drawingsDueDate, effort.bidDueDate]
         .filter((date): date is string => Boolean(date))
-        .map((date) => new Date(`${date}T00:00:00Z`).getTime())
+        .map((date) => utcStamp(date))
     )
   );
-  const today = new Date();
-  const fallbackStart = Date.UTC(
-    today.getUTCFullYear(),
-    today.getUTCMonth(),
-    1
-  );
-  const min = timestamps.length ? Math.min(...timestamps) : fallbackStart;
-  const max = timestamps.length
-    ? Math.max(...timestamps)
-    : fallbackStart + 31 * 86_400_000;
-  const span = Math.max(max - min, 86_400_000);
+  const { start, end, span } = ganttRange(timestamps);
+  const ticks = ganttMonthTicks(start, end);
+  const todayLeft = ganttTodayLeft(start, span);
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="border-b pb-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -141,63 +142,102 @@ export function BidScheduleGantt({
             </p>
           </div>
           <p className="font-mono text-2xs text-muted-foreground">
-            {new Date(min).toLocaleDateString()} —{" "}
-            {new Date(max).toLocaleDateString()}
+            {fmtDate(new Date(start))} — {fmtDate(new Date(end))}
           </p>
         </div>
       </CardHeader>
-      <CardContent className="divide-y p-0">
-        {jobs.map((job) => (
-          <div
-            key={job.jobId}
-            className="grid min-w-[44rem] grid-cols-[14rem_1fr] gap-3 px-3 py-2"
-            data-schedule-job-id={job.jobId}
-          >
-            <div className="min-w-0">
-              <Link
-                href={`/jobs/${job.jobId}`}
-                className="block truncate text-xs font-medium hover:text-primary hover:underline"
-              >
-                {job.jobName}
-              </Link>
-              <span className="font-mono text-2xs text-muted-foreground">
-                {displayJobNumber(job.jobNumber)}
-              </span>
-            </div>
-            <div
-              className="relative min-h-8 rounded-md bg-muted/50"
-              style={{
-                minHeight: `${Math.max(32, job.efforts.length * 18 + 4)}px`,
-              }}
-            >
-              {job.efforts.map((effort, index) => (
-                <GanttEffortBar
-                  key={effort.id}
-                  effort={effort}
-                  index={index}
-                  min={min}
-                  span={span}
-                  canEdit={canEdit}
-                />
+      <CardContent className="overflow-x-auto p-0">
+        <div className="min-w-[52rem]">
+          <div className="sticky top-0 z-10 grid grid-cols-[16rem_minmax(0,1fr)] gap-4 border-b bg-card px-4 py-2">
+            <p className="self-end text-2xs font-medium text-muted-foreground">
+              Job
+            </p>
+            <div className="relative h-6">
+              {ticks.map((tick) => (
+                <span
+                  key={`${tick.label}-${tick.left}`}
+                  className="absolute top-1 -translate-x-1/2 text-2xs text-muted-foreground"
+                  style={{ left: `${tick.left}%` }}
+                >
+                  {tick.label}
+                </span>
               ))}
             </div>
           </div>
-        ))}
+          <div className="divide-y">
+            {jobs.map((job) => (
+              <div
+                key={job.jobId}
+                className={cn(
+                  "grid grid-cols-[16rem_minmax(0,1fr)] gap-4 px-4 py-2.5",
+                  job.efforts.length > 1 ? "items-start" : "items-center"
+                )}
+                data-schedule-job-id={job.jobId}
+              >
+                <div className="min-w-0">
+                  <Link
+                    href={`/jobs/${job.jobId}`}
+                    className="block truncate text-[13px] font-medium leading-5 hover:text-primary hover:underline"
+                  >
+                    {job.jobName}
+                  </Link>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {displayJobNumber(job.jobNumber)}
+                  </span>
+                </div>
+                <div
+                  className="relative rounded-md bg-muted/40"
+                  style={{
+                    minHeight: `${Math.max(GANTT_LANE_PX, job.efforts.length * GANTT_LANE_PX) + 8}px`,
+                  }}
+                >
+                  {ticks.map((tick) => (
+                    <div
+                      key={`${job.jobId}-${tick.label}-${tick.left}`}
+                      className="absolute inset-y-0 w-px bg-border/70"
+                      style={{ left: `${tick.left}%` }}
+                    />
+                  ))}
+                  {todayLeft != null ? (
+                    <div
+                      className="absolute inset-y-1 w-px bg-destructive/80"
+                      style={{ left: `${todayLeft}%` }}
+                      title="Today"
+                    />
+                  ) : null}
+                  {job.efforts.map((effort, index) => (
+                    <GanttEffortBar
+                      key={effort.id}
+                      effort={effort}
+                      index={index}
+                      rangeStart={start}
+                      span={span}
+                      canEdit={canEdit}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
+const ganttBarClass =
+  "absolute flex h-6 items-center overflow-hidden rounded-md px-2 text-xs font-medium leading-none outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-safe:transition-[filter]";
+
 function GanttEffortBar({
   effort,
   index,
-  min,
+  rangeStart,
   span,
   canEdit,
 }: {
   effort: ScheduleModeJob["efforts"][number];
   index: number;
-  min: number;
+  rangeStart: number;
   span: number;
   canEdit: boolean;
 }) {
@@ -205,42 +245,47 @@ function GanttEffortBar({
   const [open, setOpen] = useState(false);
   const [bidDueDate, setBidDueDate] = useState(effort.bidDueDate ?? "");
   const [pending, startSave] = useTransition();
+  const top = index * GANTT_LANE_PX + 4;
 
   if (!effort.bidDueDate) {
     return (
       <Link
         href={`/rounds/${effort.id}`}
-        className="absolute right-1 rounded bg-warning-soft px-1.5 py-0.5 text-2xs text-warning-foreground"
-        style={{ top: `${index * 18 + 2}px` }}
+        className={cn(
+          ganttBarClass,
+          "right-2 bg-warning-soft text-warning-foreground"
+        )}
+        style={{ top, left: "auto" }}
+        title={`${effort.estimatePhase}: bid date unclear`}
       >
         Bid date unclear
       </Link>
     );
   }
 
-  const end = new Date(`${effort.bidDueDate}T00:00:00Z`).getTime();
+  const end = utcStamp(effort.bidDueDate);
   const barStart = effort.drawingsDueDate
-    ? new Date(`${effort.drawingsDueDate}T00:00:00Z`).getTime()
+    ? utcStamp(effort.drawingsDueDate)
     : end - 7 * 86_400_000;
-  const left = Math.max(0, ((barStart - min) / span) * 100);
-  const width = Math.max(2, ((end - barStart) / span) * 100);
-  const barClass =
-    "absolute h-3.5 overflow-hidden rounded-full bg-primary px-1 text-[9px] leading-3.5 text-primary-foreground outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-safe:transition-[filter]";
+  const { left, width } = ganttBarRect(barStart, end, rangeStart, span);
+  const title = `${effort.estimatePhase}: ${fmtDate(effort.drawingsDueDate)} to ${fmtDate(effort.bidDueDate)}`;
   const barStyle = {
     left: `${left}%`,
-    top: `${index * 18 + 2}px`,
-    width: `${Math.min(width, 100 - left)}%`,
+    top,
+    width: `${width}%`,
+    minWidth: "5.75rem",
+    maxWidth: `calc(100% - ${left}% - 0.5rem)`,
   };
 
   if (!canEdit) {
     return (
       <Link
         href={`/rounds/${effort.id}`}
-        className={barClass}
+        className={cn(ganttBarClass, "bg-primary text-primary-foreground")}
         style={barStyle}
-        title={`${effort.estimatePhase}: ${fmtDate(effort.drawingsDueDate)} to ${fmtDate(effort.bidDueDate)}`}
+        title={title}
       >
-        {effort.estimatePhase}
+        <span className="truncate">{effort.estimatePhase}</span>
       </Link>
     );
   }
@@ -251,13 +296,13 @@ function GanttEffortBar({
         render={
           <button
             type="button"
-            className={barClass}
+            className={cn(ganttBarClass, "bg-primary text-primary-foreground")}
             style={barStyle}
-            title={`${effort.estimatePhase}: ${fmtDate(effort.drawingsDueDate)} to ${fmtDate(effort.bidDueDate)}. Click to edit the bid date.`}
+            title={`${title}. Click to edit the bid date.`}
           />
         }
       >
-        {effort.estimatePhase}
+        <span className="truncate">{effort.estimatePhase}</span>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-2">
         <p className="text-sm font-medium">{effort.estimatePhase}</p>
@@ -274,6 +319,7 @@ function GanttEffortBar({
           <Button
             size="sm"
             variant="outline"
+            nativeButton={false}
             render={<Link href={`/rounds/${effort.id}`} />}
           >
             Open effort

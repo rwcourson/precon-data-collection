@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toolbarSelectClass } from "@/components/ui/toolbar-controls";
 import type { UrlSelectOption } from "@/lib/select-options";
 import { cn } from "@/lib/utils";
 
@@ -52,18 +53,12 @@ export function UrlSelect({
         router.push(qs ? `${pathname}?${qs}` : pathname);
       }}
     >
-      <SelectTrigger
-        size="sm"
-        className={cn(
-          "min-w-[8.5rem] max-w-[min(22rem,100%)] border-border/80 bg-card text-[13px] *:data-[slot=select-value]:line-clamp-none",
-          className
-        )}
-      >
+      <SelectTrigger size="sm" className={cn(toolbarSelectClass, className)}>
         <SelectValue placeholder={current?.label} />
       </SelectTrigger>
       <SelectContent align="start">
         {options.map((o) => (
-          <SelectItem key={o.value} value={o.value} className="text-[13px]">
+          <SelectItem key={o.value} value={o.value} className="text-xs">
             {o.label}
           </SelectItem>
         ))}

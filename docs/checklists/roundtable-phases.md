@@ -14,7 +14,7 @@ enums to roll back.
 | 5 Modes | `scheduleModes` | Table/cards/Gantt on `/bid-schedule`, lazy Gantt, smoke job-id parity, conflict-safe date edit | Flag off keeps table |
 | 6 Phase form | `phaseAwareForm` | Schedule vs post-bid on `/rounds/[id]` | Flag off shows the full grouped card |
 | 7 Salesforce | `salesforceSuggestions` | `src/lib/salesforce-link.test.ts`, `src/lib/integrations/connect/normalize.test.ts`, `src/lib/integrations/connect/fallback.test.ts`, IJV board flag | Flag off keeps ROM create; unlink remains |
-| 8 Groups | `organizationGroups` | `src/lib/organization-visibility.test.ts` | Hide membership editors; visibility unchanged |
+| 8 Groups | `organizationGroups` | `src/lib/organization-visibility.test.ts`; round **Team** on `/rounds/[id]` is always on (not this flag) | Hide membership editors; visibility and round Team unchanged |
 | 9 Approvals | `approvalWorkflow` | `src/lib/approval.integration.test.ts`, group edit policy on Admin Access | PCM writes publish immediately |
 | 10 Lock revisions | `lockRevisions` | `src/lib/lock-lifecycle.integration.test.ts`, `src/lib/lock-revisions.test.ts` | Locked RPD in-place edits return |
 | 11 Field policy | `fieldPolicy` | `src/lib/field-policy.test.ts`, `src/lib/metrics.test.ts` N/A denominators, post-bid historical-zeros queue | Lock gate uses the previous required list |

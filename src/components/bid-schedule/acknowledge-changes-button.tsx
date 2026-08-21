@@ -10,19 +10,23 @@ export function AcknowledgeChangesButton({
   roundId,
   throughAuditId,
   count,
+  compact = false,
 }: {
   roundId: number;
   throughAuditId: number;
   count: number;
+  compact?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const label = `Acknowledge ${count} change${count === 1 ? "" : "s"}`;
   return (
     <Button
       type="button"
       variant="ghost"
-      size="xs"
+      size={compact ? "icon-sm" : "sm"}
       disabled={pending}
-      title={`Acknowledge ${count} change${count === 1 ? "" : "s"}`}
+      aria-label={compact ? label : undefined}
+      title={label}
       onClick={() =>
         startTransition(async () => {
           try {
@@ -38,8 +42,8 @@ export function AcknowledgeChangesButton({
         })
       }
     >
-      <CheckCheck className="size-3" />
-      Acknowledge
+      <CheckCheck className="size-3.5" />
+      {compact ? null : "Acknowledge"}
     </Button>
   );
 }

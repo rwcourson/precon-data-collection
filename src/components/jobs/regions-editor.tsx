@@ -44,24 +44,11 @@ export function RegionsEditor({
   const [pending, startTransition] = useTransition();
   const [addUserId, setAddUserId] = useState<string>("");
 
-  const visibleRegions = state.allRegions.filter((region) =>
-    state.regions.includes(region)
-  );
   const visibleSet = useMemo(() => new Set(state.regions), [state.regions]);
   const pinnedIds = useMemo(
     () => new Set(state.pins.map((pin) => pin.userId)),
     [state.pins]
   );
-
-  const peopleByRegion = useMemo(() => {
-    const groups = new Map<string, JobVisibilityState["directory"]>();
-    for (const region of visibleRegions) groups.set(region, []);
-    for (const user of state.directory) {
-      if (!user.region || !groups.has(user.region)) continue;
-      groups.get(user.region)!.push(user);
-    }
-    return groups;
-  }, [state.directory, visibleRegions]);
 
   const oneOffs = state.pins.filter(
     (pin) => !pin.region || !visibleSet.has(pin.region)
@@ -168,124 +155,84 @@ export function RegionsEditor({
       </div>
 
       <div>
-        <p className={SECTION_LABEL}>Team</p>
+        <p className={SECTION_LABEL}>Added individually</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Everyone in a visible region can already see this job. Add someone
-          from another region if they need access on their own.
+          Everyone in a visible region can already open this job. Pin someone
+          from another region only if they need access without turning that
+          region on.
         </p>
+        {oneOffs.length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {oneOffs.map((pin) => (
+              <Badge
+                key={pin.userId}
+                variant="secondary"
+                className="gap-1 text-sm"
+              >
+                {personLine(pin)}
+                {pin.region ? ` · ${pin.region}` : ""}
+                {state.canAssignUsers && (
+                  <button
+                    type="button"
+                    onClick={() => removePerson(pin.userId)}
+                    aria-label={`Remove ${pin.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">
+            No one-off people yet.
+          </p>
+        )}
 
-        <div className="mt-3 space-y-3">
-          {visibleRegions.map((region) => {
-            const people = peopleByRegion.get(region) ?? [];
-            return (
-              <div key={region}>
-                <p className="text-sm font-medium">
-                  {region}
-                  {region === state.homeRegion ? " · home" : ""}
-                  <span className="ml-1.5 font-normal text-muted-foreground">
-                    {people.length === 1
-                      ? "1 person"
-                      : `${people.length} people`}
-                  </span>
-                </p>
-                {people.length > 0 ? (
-                  <ul className="mt-1 max-h-40 space-y-0.5 overflow-y-auto">
-                    {people.map((user) => (
-                      <li key={user.id} className="text-sm leading-6">
-                        {user.name}
-                        {user.title ? (
-                          <span className="ml-1.5 text-muted-foreground">
-                            {user.title}
-                          </span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Everyone in {region} can see this job.
+        {state.canAssignUsers ? (
+          <div className="mt-2 flex gap-2">
+            <Select
+              items={addCandidates.flatMap(([, people]) =>
+                people.map((user) => ({
+                  value: String(user.id),
+                  label: personLine(user),
+                }))
+              )}
+              value={addUserId}
+              onValueChange={(value) => setAddUserId(value ?? "")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Add someone from another region…" />
+              </SelectTrigger>
+              <SelectContent>
+                {addCandidates.length === 0 ? (
+                  <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                    Everyone in the directory is already covered.
                   </p>
+                ) : (
+                  addCandidates.map(([region, people]) => (
+                    <SelectGroup key={region}>
+                      <SelectLabel>{region}</SelectLabel>
+                      {people.map((user) => (
+                        <SelectItem key={user.id} value={String(user.id)}>
+                          {personLine(user)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))
                 )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4">
-          <p className="text-sm font-medium">Added individually</p>
-          {oneOffs.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {oneOffs.map((pin) => (
-                <Badge
-                  key={pin.userId}
-                  variant="secondary"
-                  className="gap-1 text-sm"
-                >
-                  {personLine(pin)}
-                  {pin.region ? ` · ${pin.region}` : ""}
-                  {state.canAssignUsers && (
-                    <button
-                      type="button"
-                      onClick={() => removePerson(pin.userId)}
-                      aria-label={`Remove ${pin.name}`}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  )}
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              No one-off people yet.
-            </p>
-          )}
-
-          {state.canAssignUsers ? (
-            <div className="mt-2 flex gap-2">
-              <Select
-                items={addCandidates.flatMap(([, people]) =>
-                  people.map((user) => ({
-                    value: String(user.id),
-                    label: personLine(user),
-                  }))
-                )}
-                value={addUserId}
-                onValueChange={(value) => setAddUserId(value ?? "")}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Add someone from another region…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {addCandidates.length === 0 ? (
-                    <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                      Everyone in the directory is already covered.
-                    </p>
-                  ) : (
-                    addCandidates.map(([region, people]) => (
-                      <SelectGroup key={region}>
-                        <SelectLabel>{region}</SelectLabel>
-                        {people.map((user) => (
-                          <SelectItem key={user.id} value={String(user.id)}>
-                            {personLine(user)}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                size="sm"
-                onClick={addPerson}
-                disabled={pending || !addUserId}
-              >
-                <UserPlus className="size-3.5" /> Add
-              </Button>
-            </div>
-          ) : null}
-        </div>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              size="sm"
+              onClick={addPerson}
+              disabled={pending || !addUserId}
+            >
+              <UserPlus className="size-3.5" /> Add
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

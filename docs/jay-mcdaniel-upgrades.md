@@ -24,11 +24,11 @@ parity remain unsigned owner gates.
 | Area | What you get | Where |
 | --- | --- | --- |
 | Authorization | One `authorize()` kernel; new capabilities registered | `src/lib/authorization/` |
-| Visibility | Extra regions + person pins; Auburn-style duplicate warning | Job **Regions** editor; New Pursuit |
+| Visibility | Extra regions + person pins; Auburn-style duplicate warning | Job **Who can see this** |
 | Bid schedule | Region → market tree (`preconDepartment`); server column prefs | Filter popover; `?view=` / `?source=prefs` |
 | Notes | Chat thread + attachments on the round (`POST /api/notes`) | Round **Notes** tab |
 | Mentions | `@[userId]` tokens, bell + deep link | Composer `@`; `/rounds/{id}?tab=notes&note=` |
-| Staffing | Explicit team-assigned mark; Needs staffing queue | Overview card; `?queue=needs-staffing` |
+| Staffing | Explicit team-assigned mark; per-round Team card; Needs staffing queue | Round **Team**; Overview card; `?queue=needs-staffing` |
 | Print / reports | Latest note column; wrap CSS | Bid-schedule / upcoming presets |
 | Post-bid | Region custom tab; ready vs awaiting chips | Post-bid queue; Central — Heavy Civil tab |
 | Finalize | `finalizeRound()` lock-passthrough | [ADR 002](adr/002-post-bid-finalize-seam.md) |
@@ -50,6 +50,7 @@ SQL: `principalJobVisibilityPredicate`. Do **not** reuse `principalRegionPredica
 - Corporate Admin pins people (`visibility.assign-user`).
 - Home region cannot be removed. New pursuits stamp the **creator’s** home region, not the Salesforce house office.
 - Duplicate create returns `{ kind: "duplicates" }`. Confirm with `confirmDuplicate: true` (tests use `requireCreatedPursuit()`).
+- The job page does **not** list everyone in a visible region as the team. That roster lives on each estimate round.
 
 Migrations: `drizzle/0007_job_visibility.sql`. Inserts get a home visibility row from a trigger — a job with zero visibility rows is invisible to regional principals.
 
@@ -128,7 +129,9 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 - Dollar and count fields use `NumericInput` so commas appear while typing; stored values stay numeric.
 - Select and dropdown menus size to `--available-height` and wrap labels so they are not clipped.
 - Control height is **`h-7` (28px)** — same as the sheet **Pin** button. Buttons (default/`sm`), inputs, selects, date pickers, and header chips (`Badge` `size="md"`) share it. Dense table pills stay `Badge` `sm`.
-- Job **Access** lists visibility regions and the team for those regions; people outside the selected regions sit under **Added individually**.
+- Job **Who can see this** is region visibility plus one-off pins. It is not
+  the working team. Round **Team** on `/rounds/[id]` holds the estimate lead
+  and Concept / DD / CD assignments for that pricing effort.
 
 ## File map
 
@@ -142,7 +145,7 @@ Local Eve outside Next: `APP_ORIGIN=http://127.0.0.1:3010` (or whatever port Nex
 | Date picker | `src/components/ui/date-picker.tsx`, `src/lib/calendar-grid.ts` |
 | Report results layout | `src/lib/report-layout.ts` |
 | Copilot table labels | `src/lib/column-labels.ts` |
-| Staffing | `src/services/staffing-service.ts` |
+| Staffing | `src/services/staffing-service.ts`, `src/services/round-staffing-service.ts`, `src/components/rounds/staffing-card.tsx` |
 | Latest note (reports) | `src/lib/latest-note.ts`, `src/lib/latest-note-query.ts` |
 | Finalize seam | `src/services/finalize-round.ts` |
 | Table prefs | `src/lib/table-prefs.ts` |

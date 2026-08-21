@@ -3,8 +3,6 @@
 import {
   Check,
   Columns3,
-  FileSpreadsheet,
-  FileText,
   Filter,
   Group,
   Loader2,
@@ -23,6 +21,7 @@ import {
   type SheetGridColumn,
   saveSheetView,
 } from "@/actions/sheets";
+import { ExportActions } from "@/components/export-actions";
 import {
   type ColumnFilters,
   DataGrid,
@@ -262,24 +261,10 @@ export function ViewSheet({
           {pending && (
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={<a href={exportUrl("xlsx")} />}
-          >
-            <FileSpreadsheet className="size-4" /> Excel
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={
-              <a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />
-            }
-          >
-            <FileText className="size-4" /> PDF
-          </Button>
+          <ExportActions
+            excelHref={exportUrl("xlsx")}
+            pdfHref={exportUrl("pdf")}
+          />
           {canManage && (
             <Button
               size="sm"

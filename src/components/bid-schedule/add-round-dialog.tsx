@@ -74,9 +74,7 @@ export function AddRoundDialog({
         <DialogTrigger render={trigger as React.ReactElement} />
       ) : (
         <DialogTrigger
-          render={
-            <Button variant="ghost" size="sm" className="h-7 gap-1 px-2" />
-          }
+          render={<Button variant="ghost" size="sm" className="px-2" />}
         >
           <Layers className="size-3.5" /> Add Round
         </DialogTrigger>

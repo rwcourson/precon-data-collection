@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  FileSpreadsheet,
-  FileText,
-  Group,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Group, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -20,6 +13,7 @@ import {
   updateSheetCell,
   updateSheetColumn,
 } from "@/actions/sheets";
+import { ExportActions } from "@/components/export-actions";
 import {
   type ColumnFilters,
   DataGrid,
@@ -180,24 +174,10 @@ export function GridSheet({
           {pending && (
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={<a href={exportUrl("xlsx")} />}
-          >
-            <FileSpreadsheet className="size-4" /> Excel
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            nativeButton={false}
-            render={
-              <a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />
-            }
-          >
-            <FileText className="size-4" /> PDF
-          </Button>
+          <ExportActions
+            excelHref={exportUrl("xlsx")}
+            pdfHref={exportUrl("pdf")}
+          />
           {canEdit && (
             <Button
               size="sm"

@@ -14,7 +14,7 @@ Canonical guides for the B&G Precon data-collection app. Start here; do not trea
 | [roundtable-rollback.md](roundtable-rollback.md) | Flag, deploy, schema, PITR, and warehouse kill-switch |
 | [../README.md](../README.md) | What the app is, quick start, demo script, stack |
 | [../ROADMAP.md](../ROADMAP.md) | Shipped V1 baseline and pointers to the current roundtable direction |
-| [jay-mcdaniel-upgrades.md](jay-mcdaniel-upgrades.md) | Shipped 2026-08-14 visibility, notes, staffing, reports, and copilot baseline |
+| [jay-mcdaniel-upgrades.md](jay-mcdaniel-upgrades.md) | Shipped 2026-08-14 visibility, notes, staffing, reports, and copilot baseline. Round **Team** vs job **Who can see this** split 2026-08-21. |
 | [V1-REMAINING-QUESTIONS.md](V1-REMAINING-QUESTIONS.md) | Open decisions for Brian, Keller, Lucy, Eric |
 
 ## Operations

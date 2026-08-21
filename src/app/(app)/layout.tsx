@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { AppMain } from "@/components/app-main";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/sidebar-context";
+import { Toaster } from "@/components/ui/sonner";
 import { authMode } from "@/lib/auth";
 import { auth } from "@/lib/auth-server";
 import {
@@ -85,6 +86,7 @@ export default async function AppLayout({
           {children}
         </main>
       </AppMain>
+      <Toaster richColors position="top-right" />
     </SidebarProvider>
   );
 }

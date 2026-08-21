@@ -126,4 +126,11 @@ describe("date field validation", () => {
       value: "2026-04-15",
     });
   });
+
+  it("allows clearing a dropdown back to empty", () => {
+    expect(validateFieldValue("awardability", "", {})).toEqual({
+      ok: true,
+      value: null,
+    });
+  });
 });

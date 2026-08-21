@@ -2,8 +2,6 @@
 
 import {
   ChevronDown,
-  FileSpreadsheet,
-  FileText,
   Loader2,
   Play,
   Plus,
@@ -21,6 +19,7 @@ import {
   saveReport,
   shareReport,
 } from "@/actions/reports";
+import { ExportActions } from "@/components/export-actions";
 import { Badge, BadgeRemove } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -601,28 +600,10 @@ export function ReportBuilder({
                   )}
               </div>
               <div className="flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  nativeButton={false}
-                  render={<a href={exportUrl("xlsx")} />}
-                >
-                  <FileSpreadsheet className="size-4" /> Excel
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  nativeButton={false}
-                  render={
-                    <a
-                      href={exportUrl("pdf")}
-                      target="_blank"
-                      rel="noreferrer"
-                    />
-                  }
-                >
-                  <FileText className="size-4" /> PDF
-                </Button>
+                <ExportActions
+                  excelHref={exportUrl("xlsx")}
+                  pdfHref={exportUrl("pdf")}
+                />
                 <Button size="sm" onClick={run} disabled={running}>
                   {running ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -654,30 +635,10 @@ export function ReportBuilder({
             ) : null}
             {result.rows.length > 0 ? (
               <CardAction>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    nativeButton={false}
-                    render={<a href={exportUrl("xlsx")} />}
-                  >
-                    <FileSpreadsheet className="size-3.5" /> Excel
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    nativeButton={false}
-                    render={
-                      <a
-                        href={exportUrl("pdf")}
-                        target="_blank"
-                        rel="noreferrer"
-                      />
-                    }
-                  >
-                    <FileText className="size-3.5" /> PDF
-                  </Button>
-                </div>
+                <ExportActions
+                  excelHref={exportUrl("xlsx")}
+                  pdfHref={exportUrl("pdf")}
+                />
               </CardAction>
             ) : null}
           </CardHeader>
