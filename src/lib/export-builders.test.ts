@@ -37,7 +37,7 @@ describe("export builders and scope", () => {
     expect(buffer[1]).toBe(0x4b);
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(buffer);
+    await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     const ws = wb.worksheets[0]!;
     expect(ws.views?.[0]).toMatchObject({ state: "frozen", ySplit: 2 });
     expect(ws.autoFilter).toBeTruthy();
