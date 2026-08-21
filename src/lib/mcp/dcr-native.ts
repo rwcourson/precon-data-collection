@@ -19,6 +19,11 @@ export function isCursorRedirect(uri: string): boolean {
   return uri === CURSOR_REDIRECT_URI;
 }
 
+/** Native MCP clients: HTTP loopback and Cursor's fixed private-use callback. */
+export function isNativeRedirect(uri: string): boolean {
+  return isLoopbackRedirect(uri) || isCursorRedirect(uri);
+}
+
 /**
  * Better Auth intentionally rejects private-use URIs with a naming authority,
  * while Cursor's fixed callback uses exactly that shape. Register a same-origin
@@ -33,8 +38,9 @@ export function bridgeCursorRedirect(uri: string, origin: string): string {
 
 /**
  * Better Auth DCR defaults `application_type` to `web`, which rejects
- * `http://127.0.0.1` redirects. Local MCP CLIs (Grok, Inspector) omit the
- * field and then never reach the browser authorize step.
+ * `http://127.0.0.1` and `http://localhost` redirects. Cursor Desktop also
+ * sends `application_type: "web"` with those URIs. Force native when every
+ * redirect is loopback HTTP or Cursor's private-use callback.
  */
 export function rewriteLoopbackDcrBody(
   body: unknown,
@@ -53,25 +59,17 @@ export function rewriteLoopbackDcrBody(
   const stringUris = uris.filter(
     (uri): uri is string => typeof uri === "string"
   );
-  if (
-    origin &&
-    stringUris.length === uris.length &&
-    stringUris.some(isCursorRedirect)
-  ) {
+  if (stringUris.length !== uris.length) return next;
+  // Cursor Desktop often sends application_type=web with localhost and/or
+  // cursor:// callbacks. Better Auth then rejects both. Force native when
+  // every redirect is a native-eligible URI.
+  if (!stringUris.every(isNativeRedirect)) return next;
+  next.application_type = "native";
+  next.token_endpoint_auth_method = rec.token_endpoint_auth_method ?? "none";
+  if (origin && stringUris.some(isCursorRedirect)) {
     next.redirect_uris = stringUris.map((uri) =>
       bridgeCursorRedirect(uri, origin)
     );
-    next.token_endpoint_auth_method = rec.token_endpoint_auth_method ?? "none";
-    return next;
-  }
-  const allLoopback =
-    stringUris.length === uris.length &&
-    stringUris.every(
-      (uri) => typeof uri === "string" && isLoopbackRedirect(uri)
-    );
-  if (allLoopback) {
-    next.application_type = rec.application_type ?? "native";
-    next.token_endpoint_auth_method = rec.token_endpoint_auth_method ?? "none";
   }
   return next;
 }

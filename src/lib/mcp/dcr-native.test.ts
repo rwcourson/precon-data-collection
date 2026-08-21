@@ -72,8 +72,42 @@ describe("rewriteLoopbackDcrBody", () => {
         origin
       )
     ).toMatchObject({
+      application_type: "native",
       redirect_uris: [bridge],
       token_endpoint_auth_method: "none",
+    });
+  });
+
+  it("forces native when Cursor claims web with a localhost callback", () => {
+    expect(
+      rewriteLoopbackDcrBody({
+        application_type: "web",
+        redirect_uris: ["http://localhost:8787/callback"],
+      })
+    ).toMatchObject({
+      application_type: "native",
+      token_endpoint_auth_method: "none",
+      redirect_uris: ["http://localhost:8787/callback"],
+    });
+  });
+
+  it("forces native for mixed Cursor and localhost redirects", () => {
+    const cursorUri = "cursor://anysphere.cursor-mcp/oauth/callback";
+    const origin = "https://precon.example";
+    expect(
+      rewriteLoopbackDcrBody(
+        {
+          application_type: "web",
+          redirect_uris: [cursorUri, "http://localhost:8787/callback"],
+        },
+        origin
+      )
+    ).toMatchObject({
+      application_type: "native",
+      redirect_uris: [
+        bridgeCursorRedirect(cursorUri, origin),
+        "http://localhost:8787/callback",
+      ],
     });
   });
 
