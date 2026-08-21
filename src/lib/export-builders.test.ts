@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { applyBidScheduleExportScope } from "./bid-schedule";
-import { buildPrintHtml, buildWorkbook } from "./export-helpers";
+import {
+  buildPrintHtml,
+  buildWorkbook,
+  formatExportCell,
+} from "./export-helpers";
 import { STATUS_LABELS } from "./permissions";
 import { resolveRegionParam, type Workspace } from "./workspace";
 
@@ -31,6 +35,19 @@ describe("export builders and scope", () => {
     expect(buffer.length).toBeGreaterThan(500);
     expect(buffer[0]).toBe(0x50);
     expect(buffer[1]).toBe(0x4b);
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer);
+    const ws = wb.worksheets[0]!;
+    expect(ws.views?.[0]).toMatchObject({ state: "frozen", ySplit: 2 });
+    expect(ws.autoFilter).toBeTruthy();
+  });
+
+  it("formatExportCell prints dollars and percent for PDF tables", () => {
+    expect(formatExportCell("dollars", 1200000)).toBe("$1,200,000");
+    expect(formatExportCell("percent", 0.625)).toBe("62.5%");
+    expect(formatExportCell("number", 12)).toBe("12");
+    expect(formatExportCell("text", null)).toBe("—");
   });
 
   it("buildPrintHtml includes chosen columns and grouped rows", () => {
@@ -51,6 +68,7 @@ describe("export builders and scope", () => {
     expect(html).toContain("Alpha");
     expect(html).toContain("Bravo");
     expect(html).toContain("Job");
+    expect(html).toContain('class="brand"');
   });
 
   it("applyBidScheduleExportScope honors section, columns-adjacent filters, and sort", () => {

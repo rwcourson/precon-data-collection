@@ -14,7 +14,9 @@ export const auth = betterAuth({
   secret: "generate-only-secret-not-for-runtime!!",
   baseURL: "http://127.0.0.1:3000",
   plugins: [
-    jwt(),
+    jwt({
+      disableSettingJwtHeader: true,
+    }),
     mcp({
       loginPage: "/sign-in",
       consentPage: "/consent",

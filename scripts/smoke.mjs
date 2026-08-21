@@ -109,7 +109,7 @@ try {
     "Upcoming + Active section must be present"
   );
   assert.ok(
-    (await page.getByRole("link", { name: "Download Excel" }).count()) > 0,
+    (await page.getByRole("link", { name: "Excel" }).count()) > 0,
     "One-click Excel must be present"
   );
   const tableIds = await page

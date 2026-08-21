@@ -122,7 +122,13 @@ export const auth = betterAuth({
       process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL),
   },
   plugins: [
-    jwt(),
+    jwt({
+      // MCP already issues resource-bound access tokens. The jwt plugin's
+      // default after-hook signs every get-session with the JWKS private key,
+      // which 500s the signed-in app when BETTER_AUTH_SECRET cannot decrypt
+      // keys already stored in `jwks`.
+      disableSettingJwtHeader: true,
+    }),
     mcp({
       loginPage: "/sign-in",
       consentPage: "/consent",

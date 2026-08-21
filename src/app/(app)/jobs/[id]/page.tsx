@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/db";
-import { estimateRounds } from "@/db/schema";
+import { estimateRounds, users } from "@/db/schema";
 import { principalCanCreatePursuit } from "@/lib/authorization/decisions";
 import {
   loadAdminSectionForPrincipal,
@@ -75,8 +75,20 @@ export default async function JobPage({
     organizationGroupsEnabled,
   ] = await Promise.all([
     db
-      .select()
+      .select({
+        id: estimateRounds.id,
+        roundNumber: estimateRounds.roundNumber,
+        estimatePhase: estimateRounds.estimatePhase,
+        bidYear: estimateRounds.bidYear,
+        bidDueDate: estimateRounds.bidDueDate,
+        estimateValue: estimateRounds.estimateValue,
+        status: estimateRounds.status,
+        outcome: estimateRounds.outcome,
+        teamAssignedAt: estimateRounds.teamAssignedAt,
+        estimateLeadName: users.name,
+      })
       .from(estimateRounds)
+      .leftJoin(users, eq(estimateRounds.estimateLeadId, users.id))
       .where(eq(estimateRounds.jobId, job.id))
       .orderBy(asc(estimateRounds.roundNumber)),
     getReferenceValues(),
@@ -189,8 +201,9 @@ export default async function JobPage({
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Who can see this</CardTitle>
           <CardDescription>
-            Home region is {job.region}. Turn on a region so everyone there can
-            see this job, then add anyone from outside those regions.
+            Home region is {job.region}. Turning on a region lets everyone there
+            open this job. The team for each pricing effort lives on that
+            estimate round — GMP and Hard Bid can differ.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -250,8 +263,8 @@ export default async function JobPage({
             Estimate Rounds ({rounds.length})
           </CardTitle>
           <CardDescription>
-            Every pricing effort is its own record with its own lifecycle.
-            Combined pursuit volume across rounds:{" "}
+            Every pricing effort is its own record with its own lifecycle and
+            team. Combined pursuit volume across rounds:{" "}
             {fmtDollars(totalVolume, true)}.
           </CardDescription>
         </CardHeader>
@@ -263,6 +276,7 @@ export default async function JobPage({
                 <TableHead>Estimate Phase</TableHead>
                 <TableHead>Bid Year</TableHead>
                 <TableHead>Bid Due</TableHead>
+                <TableHead>Estimate Lead</TableHead>
                 <TableHead className="text-right">Est. Value</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Outcome</TableHead>
@@ -281,6 +295,14 @@ export default async function JobPage({
                   </TableCell>
                   <TableCell className="text-sm">
                     {fmtDate(r.bidDueDate)}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {r.estimateLeadName ?? "—"}
+                    {!r.teamAssignedAt && r.status === "upcoming" ? (
+                      <span className="ml-1.5 text-muted-foreground">
+                        · needs staffing
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right text-sm tabular-nums">
                     {fmtDollars(r.estimateValue, true)}

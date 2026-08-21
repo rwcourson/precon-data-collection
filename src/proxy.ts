@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { BA_SESSION_COOKIE } from "@/lib/auth-constants";
+import { cookiesLookLikeBetterAuthSession } from "@/lib/auth-constants";
 import { inspectRuntimeConfig, runtimeDiagnostics } from "@/lib/runtime-config";
 
 /**
@@ -25,23 +25,7 @@ function isExempt(pathname: string): boolean {
 }
 
 function hasSessionCookie(req: NextRequest): boolean {
-  const names = [
-    BA_SESSION_COOKIE,
-    `__Secure-${BA_SESSION_COOKIE}`,
-    "better-auth.session_token",
-    "__Secure-better-auth.session_token",
-    "better-auth-session_token",
-    "__Secure-better-auth-session_token",
-  ];
-  for (const name of names) {
-    const v = req.cookies.get(name)?.value;
-    if (v) return true;
-  }
-  // Chunked cookies
-  for (const c of req.cookies.getAll()) {
-    if (c.name.includes("session_token") && c.value) return true;
-  }
-  return false;
+  return cookiesLookLikeBetterAuthSession(req.cookies.getAll());
 }
 
 export function proxy(req: NextRequest) {

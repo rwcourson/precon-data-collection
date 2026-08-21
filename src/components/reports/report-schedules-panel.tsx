@@ -105,7 +105,7 @@ export function ReportSchedulesPanel({
               <Label htmlFor="sched-report">Report</Label>
               <select
                 id="sched-report"
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                className="h-7 rounded-md border border-input bg-transparent px-2.5 text-xs"
                 value={reportId}
                 onChange={(e) => setReportId(Number(e.target.value))}
               >
@@ -120,7 +120,7 @@ export function ReportSchedulesPanel({
               <Label htmlFor="sched-day">Day</Label>
               <select
                 id="sched-day"
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                className="h-7 rounded-md border border-input bg-transparent px-2.5 text-xs"
                 value={weekday}
                 onChange={(e) => setWeekday(Number(e.target.value))}
               >
@@ -135,7 +135,7 @@ export function ReportSchedulesPanel({
               <Label htmlFor="sched-hour">Hour</Label>
               <select
                 id="sched-hour"
-                className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                className="h-7 rounded-md border border-input bg-transparent px-2.5 text-xs"
                 value={hour}
                 onChange={(e) => setHour(Number(e.target.value))}
               >
@@ -146,7 +146,12 @@ export function ReportSchedulesPanel({
                 ))}
               </select>
             </div>
-            <Button type="submit" size="sm" disabled={pending || !reportId}>
+            <Button
+              type="submit"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={pending || !reportId}
+            >
               {pending && <Loader2 className="size-3.5 animate-spin" />}
               Add schedule
             </Button>

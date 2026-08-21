@@ -108,7 +108,7 @@ returns or fails. Gantt has a separate “Loading Gantt…” placeholder.
 | Dallas/Georgia and Georgia slice stay one job | `organization-visibility.test.ts` | proven |
 | Parent/child cycle rejected | `src/lib/job-parent.ts` + `job-parent.test.ts`; `setParentJob` refuses loops | proven |
 | One lead group; ops vs precon | `setJobGroupMembership` demotes other leads; group editor cycles discipline | proven |
-| Staffing never changes visibility | same file, “does not grant job visibility by staffing” | proven |
+| Staffing never changes visibility | same file, “does not grant job visibility by staffing”; job **Who can see this** has no region-wide team roster; round **Team** is always on `/rounds/[id]` | proven |
 | Legacy fallback reads | additive memberships; `job_region_visibility` remains access | proven |
 | Nested self-perform schema | mock only | deferred |
 

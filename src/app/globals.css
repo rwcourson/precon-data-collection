@@ -620,3 +620,8 @@
 .recharts-tooltip-label {
   color: inherit !important;
 }
+
+/* Vendor combo/line marks default to invisible dots — keep strokes readable. */
+.recharts-curve.recharts-line-curve {
+  stroke-width: 2.75;
+}

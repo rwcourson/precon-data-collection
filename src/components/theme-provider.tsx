@@ -1,5 +1,6 @@
 "use client";
 
+import { useServerInsertedHTML } from "next/navigation";
 import { useCallback, useSyncExternalStore } from "react";
 
 export type Theme = "light" | "dark" | "system";
@@ -16,9 +17,9 @@ const DARK_QUERY = "(prefers-color-scheme: dark)";
  *
  * This replaces next-themes, which rendered its anti-flash script inside the
  * component tree. React 19 logs an error for any <script> encountered during a
- * client render, and that script only ever needs to run from the
- * server-rendered HTML — so it lives in the document head instead. See
- * `themeScript` below and its use in app/layout.tsx.
+ * client render. `ThemeBoot` injects the same script through
+ * `useServerInsertedHTML` so it lands in <head> on the server and never
+ * appears in the client React tree.
  */
 
 const listeners = new Set<() => void>();
@@ -111,7 +112,16 @@ export function useTheme() {
 }
 
 /**
- * Runs before first paint so the page never flashes the wrong theme. Inlined
- * into <head> as a plain string, which keeps it out of React's client render.
+ * Runs before first paint so the page never flashes the wrong theme. Injected
+ * into <head> via `ThemeBoot` / `useServerInsertedHTML`, not as a React child.
  */
 export const themeScript = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}")||"dark";var d=t==="dark"||(t==="system"&&matchMedia("${DARK_QUERY}").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}})()`;
+
+/** Server-only head insertion; renders nothing on the client. */
+export function ThemeBoot() {
+  useServerInsertedHTML(() => (
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: compile-time theme boot script, not user content
+    <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+  ));
+  return null;
+}

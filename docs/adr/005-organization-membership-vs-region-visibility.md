@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-08-19  
-**Implementation:** In progress behind `organizationGroups`
+**Implementation:** Visibility vs staffing UI shipped 2026-08-21. Organization-group *membership* editors remain behind `organizationGroups`.
 
 ## Context
 
@@ -34,8 +34,13 @@ or permission.
 
 `jobs.region` remains the home region, not an access-control shortcut.
 `job_region_visibility` and person pins remain valid during additive group
-backfill and fallback reads. The job UI labels access as “Who can see this”;
-staffing moves to the round.
+backfill and fallback reads.
+
+Job **Who can see this** is region visibility plus one-off person pins only.
+It does not list everyone in a visible region as the working team. Round
+**Team** (`StaffingCard` on `/rounds/[id]`) holds the estimate lead and
+Concept / DD / CD assignments for that pricing effort. Staffing never
+changes who can open the job.
 
 ## Consequences
 

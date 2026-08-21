@@ -3,15 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DropdownSelectOptions } from "@/components/ui/dropdown-select-options";
 import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  dropdownCommitValue,
+  dropdownItems,
+  dropdownSelectValue,
+} from "@/lib/dropdown-none";
 import { parseNumericInput } from "@/lib/format";
 import { isNumericType } from "@/lib/sheet-format";
 
@@ -85,8 +90,9 @@ export function CellEditor({
     return (
       <Select
         open
-        value={draft}
-        onValueChange={(next) => commit(next ?? "")}
+        items={dropdownItems(options)}
+        value={dropdownSelectValue(draft, options)}
+        onValueChange={(next) => commit(dropdownCommitValue(next))}
         onOpenChange={(open) => {
           if (!open && !committed.current) onCancel();
         }}
@@ -95,11 +101,7 @@ export function CellEditor({
           <SelectValue placeholder="Select…" />
         </SelectTrigger>
         <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o} value={o}>
-              {o}
-            </SelectItem>
-          ))}
+          <DropdownSelectOptions options={options} />
         </SelectContent>
       </Select>
     );

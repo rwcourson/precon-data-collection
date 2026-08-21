@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
-import { CalendarRange, Download, LayoutGrid, Table2 } from "lucide-react";
+import { CalendarRange, LayoutGrid, Table2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { listBidScheduleViews } from "@/actions/bid-schedule-views";
@@ -18,10 +18,14 @@ import {
 } from "@/components/bid-schedule/schedule-modes";
 import { BidScheduleSheet } from "@/components/bid-schedule/sheet-table";
 import { TablePrefsDensitySync } from "@/components/bid-schedule/table-prefs-density-sync";
+import { ExportActions } from "@/components/export-actions";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import {
+  ToolbarField,
+  ToolbarSegment,
+  ToolbarSegmented,
+} from "@/components/ui/toolbar-controls";
 import { UrlSelect } from "@/components/url-select";
 import { db } from "@/db";
 import type { RoundStatus } from "@/db/schema";
@@ -477,9 +481,12 @@ export default async function BidSchedulePage({
     header: "Bid Schedule",
     footer: "Brasfield & Gorrie Preconstruction — Confidential",
   };
-  const currentExportHref = `/api/export/bid-schedule?format=xlsx&compact=1&config=${encodeURIComponent(
+  const currentExportConfigJson = encodeURIComponent(
     JSON.stringify(currentExportConfig)
-  )}${queryString ? `&${queryString}` : ""}`;
+  );
+  const currentExportQuery = `${queryString ? `&${queryString}` : ""}`;
+  const currentExcelHref = `/api/export/bid-schedule?format=xlsx&compact=1&config=${currentExportConfigJson}${currentExportQuery}`;
+  const currentPdfHref = `/api/export/bid-schedule?format=pdf&compact=1&config=${currentExportConfigJson}${currentExportQuery}`;
   const pendingApprovalSummaries: PendingApprovalSummary[] = approvals.map(
     (request) => {
       const pursuit = request.payload.pursuit ?? {};
@@ -539,6 +546,118 @@ export default async function BidSchedulePage({
       ? `Share with ${principal.workspace.region}`
       : "Share company-wide";
 
+  const scheduleToolbar = (
+    <>
+      <ToolbarField label="Section">
+        <ToolbarSegmented>
+          {SECTIONS.map((s) => (
+            <ToolbarSegment
+              key={s.key}
+              href={sectionHref(s.key)}
+              active={section.key === s.key}
+            >
+              {s.label}
+              <Badge variant="secondary" size="sm">
+                {counts[s.key]}
+              </Badge>
+            </ToolbarSegment>
+          ))}
+        </ToolbarSegmented>
+      </ToolbarField>
+      <ToolbarField label="View">
+        <ToolbarSegmented>
+          {(
+            [
+              { key: "table" as const, label: "Table", icon: Table2 },
+              { key: "cards" as const, label: "Cards", icon: LayoutGrid },
+              { key: "gantt" as const, label: "Gantt", icon: CalendarRange },
+            ] as const
+          ).map(({ key, label, icon: Icon }) => (
+            <ToolbarSegment
+              key={key}
+              href={modeHref(key)}
+              active={viewMode === key}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </ToolbarSegment>
+          ))}
+        </ToolbarSegmented>
+      </ToolbarField>
+      <ToolbarField label="Region">
+        <RegionMarketFilter
+          tree={regionDepartmentTree(allowedRegions)}
+          selection={hierarchy}
+          currentParams={queryParams}
+        />
+      </ToolbarField>
+      <ToolbarField label="Density">
+        <UrlSelect
+          pathname="/bid-schedule"
+          param="density"
+          value={density}
+          currentParams={queryParams}
+          omitValues={["summary"]}
+          options={[
+            { value: "summary", label: "Summary" },
+            { value: "detail", label: "Detail" },
+          ]}
+        />
+      </ToolbarField>
+      {(lists.selfPerformWorkType ?? []).length > 0 && (
+        <ToolbarField label="Self-perform">
+          <UrlSelect
+            pathname="/bid-schedule"
+            param="spIntent"
+            value={spIntent ?? "all"}
+            currentParams={queryParams}
+            omitValues={["all"]}
+            options={[
+              { value: "all", label: "Any" },
+              ...(lists.selfPerformWorkType ?? []).map((value) => ({
+                value,
+                label: value,
+              })),
+            ]}
+          />
+        </ToolbarField>
+      )}
+      <ToolbarField label="Group by">
+        <UrlSelect
+          pathname="/bid-schedule"
+          param="group"
+          value={groupBy}
+          currentParams={queryParams}
+          omitValues={["none"]}
+          options={BID_SCHEDULE_GROUP_OPTIONS}
+        />
+      </ToolbarField>
+      <ToolbarField label="Sort">
+        <UrlSelect
+          pathname="/bid-schedule"
+          param="sort"
+          value={sort.field}
+          currentParams={queryParams}
+          omitValues={["bidDueDate"]}
+          options={BID_SCHEDULE_SORT_OPTIONS}
+        />
+      </ToolbarField>
+      <ToolbarField label="Direction">
+        <UrlSelect
+          pathname="/bid-schedule"
+          param="dir"
+          value={sort.dir}
+          currentParams={queryParams}
+          omitValues={["asc"]}
+          options={[
+            { value: "asc", label: "Ascending" },
+            { value: "desc", label: "Descending" },
+          ]}
+        />
+      </ToolbarField>
+    </>
+  );
+
   return (
     <div className="space-y-3">
       <PageHeader
@@ -550,14 +669,10 @@ export default async function BidSchedulePage({
         }`}
         actions={
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href={currentExportHref} />}
-            >
-              <Download className="size-4" />
-              Download Excel
-            </Button>
+            <ExportActions
+              excelHref={currentExcelHref}
+              pdfHref={currentPdfHref}
+            />
             <AcknowledgeVisibleChangesButton
               items={[...changeMap.entries()].map(([roundId, change]) => ({
                 roundId,
@@ -604,142 +719,9 @@ export default async function BidSchedulePage({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="space-y-1">
-            <Label className="text-2xs text-muted-foreground">Section</Label>
-            <div className="flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded bg-muted p-0.5">
-              {SECTIONS.map((s) => (
-                <Link
-                  key={s.key}
-                  href={sectionHref(s.key)}
-                  className={`flex shrink-0 items-center rounded px-2.5 py-1 text-[13px] font-medium transition-colors ${
-                    section.key === s.key
-                      ? "bg-card text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {s.label}
-                  <Badge variant="secondary" size="sm" className="ml-1.5">
-                    {counts[s.key]}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-2xs text-muted-foreground">View</Label>
-            <div className="flex items-center gap-0.5 rounded bg-muted p-0.5">
-              {[
-                { key: "table" as const, label: "Table", icon: Table2 },
-                { key: "cards" as const, label: "Cards", icon: LayoutGrid },
-                {
-                  key: "gantt" as const,
-                  label: "Gantt",
-                  icon: CalendarRange,
-                },
-              ].map(({ key, label, icon: Icon }) => (
-                <Link
-                  key={key}
-                  href={modeHref(key)}
-                  className={`flex h-7 items-center gap-1 rounded px-2 text-xs font-medium ${
-                    viewMode === key
-                      ? "bg-card text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="size-3.5" />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <RegionMarketFilter
-            tree={regionDepartmentTree(allowedRegions)}
-            selection={hierarchy}
-            currentParams={queryParams}
-          />
-          <div className="space-y-1">
-            <Label className="text-2xs text-muted-foreground">Density</Label>
-            <UrlSelect
-              pathname="/bid-schedule"
-              param="density"
-              value={density}
-              currentParams={queryParams}
-              omitValues={["summary"]}
-              className="min-w-[8.5rem]"
-              options={[
-                { value: "summary", label: "Summary" },
-                { value: "detail", label: "Detail" },
-              ]}
-            />
-          </div>
-          {(lists.selfPerformWorkType ?? []).length > 0 && (
-            <div className="space-y-1">
-              <Label className="text-2xs text-muted-foreground">
-                Self-perform intent
-              </Label>
-              <UrlSelect
-                pathname="/bid-schedule"
-                param="spIntent"
-                value={spIntent ?? "all"}
-                currentParams={queryParams}
-                omitValues={["all"]}
-                className="min-w-[11rem]"
-                options={[
-                  { value: "all", label: "Any" },
-                  ...(lists.selfPerformWorkType ?? []).map((value) => ({
-                    value,
-                    label: value,
-                  })),
-                ]}
-              />
-            </div>
-          )}
-          <div className="space-y-1">
-            <Label className="text-2xs text-muted-foreground">Group by</Label>
-            <UrlSelect
-              pathname="/bid-schedule"
-              param="group"
-              value={groupBy}
-              currentParams={queryParams}
-              omitValues={["none"]}
-              className="min-w-[9.5rem]"
-              options={BID_SCHEDULE_GROUP_OPTIONS}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-2xs text-muted-foreground">Sort</Label>
-            <UrlSelect
-              pathname="/bid-schedule"
-              param="sort"
-              value={sort.field}
-              currentParams={queryParams}
-              omitValues={["bidDueDate"]}
-              className="min-w-[9.5rem]"
-              options={BID_SCHEDULE_SORT_OPTIONS}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-2xs text-muted-foreground">Direction</Label>
-            <UrlSelect
-              pathname="/bid-schedule"
-              param="dir"
-              value={sort.dir}
-              currentParams={queryParams}
-              omitValues={["asc"]}
-              className="min-w-[7.5rem]"
-              options={[
-                { value: "asc", label: "Ascending" },
-                { value: "desc", label: "Descending" },
-              ]}
-            />
-          </div>
-        </div>
-      </div>
+      {viewMode === "table" ? null : (
+        <div className="flex flex-wrap items-end gap-2">{scheduleToolbar}</div>
+      )}
 
       <TablePrefsDensitySync
         density={density}
@@ -764,6 +746,7 @@ export default async function BidSchedulePage({
           canMarkStaffing={canMarkStaffing}
           activeViewId={activeView?.id}
           defaultViewId={presentation.defaultViewId}
+          toolbar={scheduleToolbar}
           prefsHref={bidSchedulePrefsHref({
             section: section.key,
             group: groupBy,

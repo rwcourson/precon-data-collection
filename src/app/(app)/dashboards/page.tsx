@@ -1,13 +1,11 @@
-import { Download } from "lucide-react";
-import Link from "next/link";
 import {
   TrendChart,
   VolumeByGroupChart,
   VolumeByYearChart,
 } from "@/components/dashboards/charts";
+import { ExportActions } from "@/components/export-actions";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,6 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  ToolbarSegment,
+  ToolbarSegmented,
+} from "@/components/ui/toolbar-controls";
 import { UrlSelect } from "@/components/url-select";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
@@ -239,6 +241,17 @@ export default async function DashboardsPage({
     rounds: roundMode,
   };
 
+  const exportQuery = new URLSearchParams({
+    level: level.key,
+    region,
+    dept,
+    sector,
+    year,
+    phase,
+    status,
+    rounds: roundMode,
+  }).toString();
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -251,47 +264,25 @@ export default async function DashboardsPage({
               : `${region} — ${dept === "all" ? "all Divisions" : dept} by Market Sector.`
         }
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            nativeButton={false}
-            render={
-              <a
-                href={`/api/export/dashboard?${new URLSearchParams({
-                  level: level.key,
-                  region,
-                  dept,
-                  sector,
-                  year,
-                  phase,
-                  status,
-                  rounds: roundMode,
-                }).toString()}`}
-              />
-            }
-          >
-            <Download className="size-4" /> Export Excel
-          </Button>
+          <ExportActions
+            excelHref={`/api/export/dashboard?${exportQuery}`}
+            pdfHref={`/api/export/dashboard?format=pdf&${exportQuery}`}
+          />
         }
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex w-fit max-w-full items-center gap-0.5 overflow-x-auto rounded bg-muted p-0.5">
+        <ToolbarSegmented>
           {levels.map((l) => (
-            <Link
+            <ToolbarSegment
               key={l.key}
               href={qs({ level: l.key })}
-              className={`flex shrink-0 items-center rounded px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
-                level.key === l.key
-                  ? "bg-card text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              active={level.key === l.key}
             >
               {l.label}
-            </Link>
+            </ToolbarSegment>
           ))}
-        </div>
+        </ToolbarSegmented>
 
         <div className="flex flex-wrap items-center gap-2">
           {level.key !== "corporate" && workspace.region == null && (
@@ -381,15 +372,19 @@ export default async function DashboardsPage({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {kpis.map((k) => (
-          <Card key={k.label} className="gap-2 py-3">
+          <Card key={k.label} className="gap-2 py-3.5">
             <CardHeader className="pb-0">
-              <CardDescription className="text-2xs">{k.label}</CardDescription>
-              <CardTitle className="font-mono text-lg font-medium tabular-nums">
+              <CardDescription className="text-2xs tracking-wide uppercase">
+                {k.label}
+              </CardDescription>
+              <CardTitle className="font-mono text-xl font-medium tracking-tight tabular-nums">
                 {k.value}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xs text-muted-foreground">{k.sub}</p>
+              <p className="text-2xs leading-snug text-muted-foreground">
+                {k.sub}
+              </p>
             </CardContent>
           </Card>
         ))}

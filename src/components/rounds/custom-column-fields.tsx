@@ -1,17 +1,22 @@
 "use client";
 
 import { DatePicker } from "@/components/ui/date-picker";
+import { DropdownSelectOptions } from "@/components/ui/dropdown-select-options";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import type { CustomColumn } from "@/db/schema";
+import {
+  dropdownCommitValue,
+  dropdownItems,
+  dropdownSelectValue,
+} from "@/lib/dropdown-none";
 
 export function CustomColumnFields({
   columns,
@@ -31,19 +36,16 @@ export function CustomColumnFields({
           <Label className="text-xs font-medium">{col.label}</Label>
           {col.type === "dropdown" ? (
             <Select
-              value={values[col.id] ?? ""}
-              onValueChange={(v) => onChange(col.id, v ?? "")}
+              items={dropdownItems(col.options ?? [])}
+              value={dropdownSelectValue(values[col.id], col.options ?? [])}
+              onValueChange={(v) => onChange(col.id, dropdownCommitValue(v))}
               disabled={disabled}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select…" />
               </SelectTrigger>
               <SelectContent>
-                {(col.options ?? []).map((o) => (
-                  <SelectItem key={o} value={o}>
-                    {o}
-                  </SelectItem>
-                ))}
+                <DropdownSelectOptions options={col.options ?? []} />
               </SelectContent>
             </Select>
           ) : col.type === "date" ? (

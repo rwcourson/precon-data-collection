@@ -12,7 +12,7 @@ history dump is signed off.
 
 Default identity is **Brian Meyers**, Central RPD.
 
-**Live:** https://precon-data.magnus.brasfieldgorrie.app · **Repo:** [rwcourson/precon-data-collection](https://github.com/rwcourson/precon-data-collection) (private) · **Docs index:** [docs/README.md](docs/README.md)
+**Live:** https://precon-data.magnus.brasfieldgorrie.app · **Repo:** [rwcourson/precon-data-collection](https://github.com/rwcourson/precon-data-collection) (public) · **Docs index:** [docs/README.md](docs/README.md)
 
 ## What V1 is
 
@@ -21,7 +21,7 @@ Default identity is **Brian Meyers**, Central RPD.
 3. **Company systems** — Salesforce / Connect lookup first. **No job number yet (ROM)** creates an unlinked `TBD-…` record. Staged match inbox. Databricks feed is built; write-back is off.
 4. **Visualization** — Region / Division / Corporate dashboards, including a seeded Standard set. **Default = one latest/final round per job** so pricing rounds are not summed. Power BI stays for DMs; numbers must match.
 5. **Effort notes** — Chat on the pricing effort (`@[userId]` mentions, 25 MB attachments). Not project-level, not private.
-6. **Staffing** — Explicit “team assigned” mark. Overview **Needs staffing** = Upcoming + unstaffed in your scope.
+6. **Staffing** — Lives on the **estimate round**, not the job overview. Estimate lead plus Concept / DD / CD people on `/rounds/[id]`. Explicit “team assigned” mark. Overview **Needs staffing** = Upcoming + unstaffed in your scope. Job **Who can see this** is region visibility only.
 7. **Copilot** — `/copilot` (Eve locally; Magnus fallback on Vercel). Tools are Principal-scoped. Threads persist per user in the browser. PCM/lead chrome hides Copilot.
 
 **V1 demo nav (historical):** Overview, Bid Schedule, Post-Bid, Dashboards, Reports. Sheets / Studio / Forecast / DMR / Copilot live under **More**. After Aug. 19, PCM and estimate lead see Overview, Bid Schedule, and Post-Bid only (`roleChrome`). Dashboards/Reports/Copilot stay in RPD/admin Tools and More.

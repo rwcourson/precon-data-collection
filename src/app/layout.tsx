@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import type { CSSProperties } from "react";
 import "./globals.css";
-import { themeScript } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { ThemeBoot } from "@/components/theme-provider";
 import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from "@/lib/product";
 
 const manrope = localFont({
@@ -46,20 +45,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       suppressHydrationWarning
       data-chart-tokens="product"
-      className={`${manrope.variable} ${spaceMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${spaceMono.variable} dark h-full antialiased`}
       style={
         {
           "--font-heading": "var(--font-sans)",
         } as CSSProperties
       }
     >
-      <head>
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: compile-time theme boot script from theme-provider, not user content */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body className="min-h-full overflow-x-clip font-sans">
+        <ThemeBoot />
         {children}
-        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  ArrowDown,
-  ArrowUp,
-  Download,
-  FileSpreadsheet,
-  FileText,
-  Save,
-  Trash2,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, LayoutTemplate, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteReportTemplate, saveReportTemplate } from "@/actions/templates";
+import { ExportActions } from "@/components/export-actions";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -142,14 +135,15 @@ export function ExportDialog({
       <DialogTrigger
         render={<Button variant="outline" size="sm" className="gap-1.5" />}
       >
-        <Download className="size-4" /> PDF / templates
+        <LayoutTemplate className="size-4" /> Templates
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>PDF and saved export templates</DialogTitle>
+          <DialogTitle>Saved export templates</DialogTitle>
           <DialogDescription>
-            Build the Monday packet or a reusable custom export. Use Download
-            Excel on the schedule for an immediate copy of the current view.
+            Build a reusable Monday packet. Excel and PDF of the current view
+            are on the Bid Schedule header — this dialog is for column layout,
+            grouping, and saved templates.
           </DialogDescription>
         </DialogHeader>
 
@@ -371,23 +365,10 @@ export function ExportDialog({
             </Button>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              nativeButton={false}
-              render={<a href={exportUrl("xlsx")} />}
-            >
-              <FileSpreadsheet className="size-4" /> Excel
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              nativeButton={false}
-              render={
-                <a href={exportUrl("pdf")} target="_blank" rel="noreferrer" />
-              }
-            >
-              <FileText className="size-4" /> PDF
-            </Button>
+            <ExportActions
+              excelHref={exportUrl("xlsx")}
+              pdfHref={exportUrl("pdf")}
+            />
           </div>
         </div>
       </DialogContent>

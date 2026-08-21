@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { authClient } from "@/lib/auth-client";
+import { deviceAuthClient } from "@/lib/auth-client-device";
 import { mcpScopeLabel } from "@/lib/authorization/mcp-scopes";
 
 type DeviceRequest = {
@@ -40,7 +40,7 @@ export function DeviceAuthorizationClient({
     setPending("verify");
     setError(null);
     setMessage(null);
-    const result = await authClient.device({
+    const result = await deviceAuthClient.device({
       query: { user_code: formatted },
     });
     if (result.error || !result.data) {
@@ -61,8 +61,8 @@ export function DeviceAuthorizationClient({
     setPending(accept ? "approve" : "deny");
     setError(null);
     const result = accept
-      ? await authClient.device.approve({ userCode: verifiedCode })
-      : await authClient.device.deny({ userCode: verifiedCode });
+      ? await deviceAuthClient.device.approve({ userCode: verifiedCode })
+      : await deviceAuthClient.device.deny({ userCode: verifiedCode });
     if (result.error) {
       setError(
         result.error.error_description ||

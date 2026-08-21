@@ -1,7 +1,13 @@
 import type { NextRequest } from "next/server";
 import { listRoundsWithJobsForPrincipal } from "@/lib/authorization/loaders";
 import { getWebPrincipal } from "@/lib/authorization/web-principal";
-import { buildWorkbook, type ExportColumn } from "@/lib/export-helpers";
+import {
+  buildPrintHtml,
+  buildWorkbook,
+  type ExportColumn,
+  formatExportCell,
+} from "@/lib/export-helpers";
+import { pdfResponse, safeName } from "@/lib/pdf";
 import type { FlatRow } from "@/lib/report-engine";
 import { rollup, scopeRoundsForDashboardExport } from "@/lib/rollup";
 import { resolveRegionParam } from "@/lib/workspace";
@@ -128,18 +134,36 @@ export async function GET(req: NextRequest) {
         ? `${region} Region`
         : `${region} — ${dept === "all" ? "All Divisions" : dept}`;
 
+  const title = `Estimate Summary Rollup — ${scope}${year && year !== "all" ? ` — Bid Year ${year}` : ""}`;
+  const footer = "Brasfield & Gorrie Preconstruction — Confidential";
+
+  if (params.get("format") === "pdf") {
+    const html = buildPrintHtml({
+      title,
+      columns,
+      rows,
+      footer,
+      formatValue: (key, value) => {
+        const col = columns.find((c) => c.key === key);
+        return formatExportCell(col?.type ?? "text", value);
+      },
+    });
+    return pdfResponse(html, title, { footer, landscape: true });
+  }
+
   const buffer = await buildWorkbook({
-    title: `Estimate Summary Rollup — ${scope}${year && year !== "all" ? ` — Bid Year ${year}` : ""}`,
+    title,
     sheetName: "Rollup",
     columns,
     rows,
+    footer,
   });
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="estimate-summary-${level}-${Date.now()}.xlsx"`,
+      "Content-Disposition": `attachment; filename="${safeName(title)}.xlsx"`,
     },
   });
 }

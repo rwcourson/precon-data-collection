@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
+import { DropdownSelectOptions } from "@/components/ui/dropdown-select-options";
 import { FieldHelp } from "@/components/ui/field-help";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CustomColumn } from "@/db/schema";
+import {
+  dropdownCommitValue,
+  dropdownItems,
+  dropdownSelectValue,
+} from "@/lib/dropdown-none";
+import {
+  ALL_ENTRY_SECTION,
+  COMPANY_COLUMNS_SECTION,
+  matchesEntrySection,
+  sectionSlug,
+} from "@/lib/entry-view";
 import {
   type ConditionContext,
   conditionalHint,
@@ -79,6 +91,8 @@ type Props = {
    * can reject writes over data someone else changed since this page loaded.
    */
   updatedAt?: string;
+  /** Query `section` slug; `all` keeps every group visible. */
+  section?: string;
 };
 
 export function EntryForm({
@@ -104,6 +118,7 @@ export function EntryForm({
   rangeAcknowledgedKeys,
   fieldPolicy = false,
   updatedAt,
+  section = ALL_ENTRY_SECTION,
 }: Props) {
   const [values, setValues] = useState(initialValues);
   const [multi, setMulti] = useState(initialMulti);
@@ -142,6 +157,22 @@ export function EntryForm({
         [group, fields.filter((f) => fieldApplies(f, ctx))] as const
     )
     .filter(([, fields]) => fields.length > 0);
+
+  const companyCols = companyScopedColumns(customCols);
+  const sectionKnown =
+    section === ALL_ENTRY_SECTION ||
+    visibleGroups.some(([group]) => matchesEntrySection(group, section)) ||
+    (mode === "postBid" &&
+      companyCols.length > 0 &&
+      matchesEntrySection(COMPANY_COLUMNS_SECTION, section));
+  const activeSection = sectionKnown ? section : ALL_ENTRY_SECTION;
+  const groupsToRender = visibleGroups.filter(([group]) =>
+    matchesEntrySection(group, activeSection)
+  );
+  const showCompanyColumns =
+    mode === "postBid" &&
+    companyCols.length > 0 &&
+    matchesEntrySection(COMPANY_COLUMNS_SECTION, activeSection);
 
   const set = (k: string, v: string) => {
     setValues((s) => {
@@ -218,7 +249,6 @@ export function EntryForm({
     });
   }
 
-  const companyCols = companyScopedColumns(customCols);
   const disabled = !canEdit || pending;
 
   return (
@@ -280,8 +310,8 @@ export function EntryForm({
         </Alert>
       )}
 
-      {visibleGroups.map(([group, fields]) => (
-        <Card key={group}>
+      {groupsToRender.map(([group, fields]) => (
+        <Card key={group} id={`section-${sectionSlug(group)}`}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">{group}</CardTitle>
           </CardHeader>
@@ -386,19 +416,16 @@ export function EntryForm({
                       required={requiredKeys.includes(f.key)}
                     />
                     <Select
-                      value={values[f.key] ?? ""}
-                      onValueChange={(v) => set(f.key, v ?? "")}
+                      items={dropdownItems(options)}
+                      value={dropdownSelectValue(values[f.key], options)}
+                      onValueChange={(v) => set(f.key, dropdownCommitValue(v))}
                       disabled={disabled}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select…" />
                       </SelectTrigger>
                       <SelectContent>
-                        {options.map((o) => (
-                          <SelectItem key={o} value={o}>
-                            {o}
-                          </SelectItem>
-                        ))}
+                        <DropdownSelectOptions options={options} />
                       </SelectContent>
                     </Select>
                     {hint && (
@@ -500,8 +527,11 @@ export function EntryForm({
         </Card>
       ))}
 
-      {mode === "postBid" && companyCols.length > 0 && (
-        <Card className="border-dashed">
+      {showCompanyColumns && (
+        <Card
+          className="border-dashed"
+          id={`section-${sectionSlug(COMPANY_COLUMNS_SECTION)}`}
+        >
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold">
               Optional company columns

@@ -53,12 +53,12 @@ export function TeamAssignedButton({
       <Button
         type="button"
         variant="ghost"
-        size="icon-xs"
+        size="icon-sm"
         aria-label={label}
         title={label}
         disabled={pending}
         onClick={run}
-        className={cn("relative", shownAssigned && "text-success")}
+        className={cn(shownAssigned && "text-success")}
       >
         {icon}
       </Button>
