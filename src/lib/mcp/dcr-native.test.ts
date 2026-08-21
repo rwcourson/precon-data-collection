@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { GET as cursorCallback } from "@/app/api/auth/native-callback/route";
 import {
+  bridgeCursorRedirect,
+  rewriteCursorTokenBody,
   rewriteLoopbackAuthorizeUrl,
   rewriteLoopbackDcrBody,
 } from "@/lib/mcp/dcr-native";
@@ -51,6 +54,55 @@ describe("rewriteLoopbackDcrBody", () => {
       application_type: "native",
       scope: "profile:read read:pursuits offline_access",
     });
+  });
+
+  it("bridges Cursor's fixed private-use callback through registered HTTPS", () => {
+    const cursorUri = "cursor://anysphere.cursor-mcp/oauth/callback";
+    const origin = "https://precon.example";
+    const bridge = bridgeCursorRedirect(cursorUri, origin);
+    expect(bridge).toBe(
+      "https://precon.example/api/auth/native-callback?redirect_uri=cursor%3A%2F%2Fanysphere.cursor-mcp%2Foauth%2Fcallback"
+    );
+    expect(
+      rewriteLoopbackDcrBody(
+        {
+          redirect_uris: [cursorUri],
+          token_endpoint_auth_method: "none",
+        },
+        origin
+      )
+    ).toMatchObject({
+      redirect_uris: [bridge],
+      token_endpoint_auth_method: "none",
+    });
+  });
+
+  it("uses the same Cursor bridge for authorize and token exchange", () => {
+    const cursorUri = "cursor://anysphere.cursor-mcp/oauth/callback";
+    const authorize = rewriteLoopbackAuthorizeUrl(
+      new URL(
+        `https://precon.example/api/auth/oauth2/authorize?redirect_uri=${encodeURIComponent(cursorUri)}`
+      )
+    );
+    const token = rewriteCursorTokenBody(
+      new URLSearchParams({ redirect_uri: cursorUri }),
+      "https://precon.example"
+    );
+    expect(authorize.searchParams.get("redirect_uri")).toBe(
+      token.get("redirect_uri")
+    );
+  });
+
+  it("hands an HTTPS OAuth response back to Cursor's native callback", () => {
+    const response = cursorCallback(
+      new Request(
+        "https://precon.example/api/auth/native-callback?redirect_uri=cursor%3A%2F%2Fanysphere.cursor-mcp%2Foauth%2Fcallback&code=abc&state=xyz&iss=https%3A%2F%2Fprecon.example%2Fapi%2Fauth"
+      )
+    );
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe(
+      "cursor://anysphere.cursor-mcp/oauth/callback?code=abc&state=xyz&iss=https%3A%2F%2Fprecon.example%2Fapi%2Fauth"
+    );
   });
 
   it("injects offline_access on loopback authorize requests", () => {

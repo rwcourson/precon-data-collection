@@ -3,6 +3,7 @@ const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 
 /** Native MCP CLIs need a refresh token so they do not re-open a browser hourly. */
 const OFFLINE_ACCESS_SCOPE = "offline_access";
+const CURSOR_REDIRECT_URI = "cursor://anysphere.cursor-mcp/oauth/callback";
 
 export function isLoopbackRedirect(uri: string): boolean {
   try {
@@ -14,12 +15,31 @@ export function isLoopbackRedirect(uri: string): boolean {
   }
 }
 
+export function isCursorRedirect(uri: string): boolean {
+  return uri === CURSOR_REDIRECT_URI;
+}
+
+/**
+ * Better Auth intentionally rejects private-use URIs with a naming authority,
+ * while Cursor's fixed callback uses exactly that shape. Register a same-origin
+ * HTTPS trampoline and translate it back to Cursor after authorization.
+ */
+export function bridgeCursorRedirect(uri: string, origin: string): string {
+  if (!isCursorRedirect(uri)) return uri;
+  const callback = new URL("/api/auth/native-callback", origin);
+  callback.searchParams.set("redirect_uri", uri);
+  return callback.toString();
+}
+
 /**
  * Better Auth DCR defaults `application_type` to `web`, which rejects
  * `http://127.0.0.1` redirects. Local MCP CLIs (Grok, Inspector) omit the
  * field and then never reach the browser authorize step.
  */
-export function rewriteLoopbackDcrBody(body: unknown): unknown {
+export function rewriteLoopbackDcrBody(
+  body: unknown,
+  origin?: string
+): unknown {
   if (!body || typeof body !== "object" || Array.isArray(body)) return body;
   const rec = body as Record<string, unknown>;
   const uris = rec.redirect_uris;
@@ -30,9 +50,25 @@ export function rewriteLoopbackDcrBody(body: unknown): unknown {
     next.scope = OFFLINE_ACCESS_SCOPE;
   }
   if (!Array.isArray(uris) || uris.length === 0) return next;
-  const allLoopback = uris.every(
-    (uri) => typeof uri === "string" && isLoopbackRedirect(uri)
+  const stringUris = uris.filter(
+    (uri): uri is string => typeof uri === "string"
   );
+  if (
+    origin &&
+    stringUris.length === uris.length &&
+    stringUris.some(isCursorRedirect)
+  ) {
+    next.redirect_uris = stringUris.map((uri) =>
+      bridgeCursorRedirect(uri, origin)
+    );
+    next.token_endpoint_auth_method = rec.token_endpoint_auth_method ?? "none";
+    return next;
+  }
+  const allLoopback =
+    stringUris.length === uris.length &&
+    stringUris.every(
+      (uri) => typeof uri === "string" && isLoopbackRedirect(uri)
+    );
   if (allLoopback) {
     next.application_type = rec.application_type ?? "native";
     next.token_endpoint_auth_method = rec.token_endpoint_auth_method ?? "none";
@@ -54,8 +90,27 @@ function ensureOfflineAccessScope(scope: string): string {
  */
 export function rewriteLoopbackAuthorizeUrl(url: URL): URL {
   const next = new URL(url.toString());
+  const redirect = next.searchParams.get("redirect_uri");
+  if (redirect && isCursorRedirect(redirect)) {
+    next.searchParams.set(
+      "redirect_uri",
+      bridgeCursorRedirect(redirect, next.origin)
+    );
+  }
   const current = next.searchParams.get("scope") ?? "";
   const withOffline = ensureOfflineAccessScope(current);
   if (withOffline !== current) next.searchParams.set("scope", withOffline);
+  return next;
+}
+
+export function rewriteCursorTokenBody(
+  body: URLSearchParams,
+  origin: string
+): URLSearchParams {
+  const next = new URLSearchParams(body);
+  const redirect = next.get("redirect_uri");
+  if (redirect && isCursorRedirect(redirect)) {
+    next.set("redirect_uri", bridgeCursorRedirect(redirect, origin));
+  }
   return next;
 }

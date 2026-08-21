@@ -19,6 +19,7 @@ MCP client
 
 - Better Auth 1.7 `mcp()` **is** the OAuth 2.1 provider. Do not also register `oauthProvider()`.
 - Client ID Metadata Documents (CIMD, MCP 2026-07-28) are preferred and Dynamic Client Registration (RFC 7591) remains advertised for older/native clients. Loopback DCR bodies are rewritten to `application_type: native`.
+- Cursor Desktop's fixed `cursor://anysphere.cursor-mcp/oauth/callback` is registered through a same-origin HTTPS trampoline, then handed back to Cursor after authorization. The trampoline accepts only that exact native callback.
 - OAuth Device Authorization (RFC 8628) powers the repo-local stdio fallback. It uses a stable HTTPS verification page and never binds a localhost callback.
 - Resource identifier is `${APP_ORIGIN}/api/mcp` (`mcpResourceIdentifier()`).
 - The handler uses MCP SDK v2 `createMcpHandler(..., { legacy: "stateless" })`. 2025 clients that POST JSON-RPC without a 2026 `_meta` envelope still work. Unauthenticated GET/HEAD return RFC 9728 `401` + `WWW-Authenticate`. JSON-RPC is POST-only; DELETE is 405.
