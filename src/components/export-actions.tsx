@@ -1,13 +1,14 @@
 "use client";
 
 import { FileSpreadsheet, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
  * Paired Excel / PDF downloads used on dashboards, reports, sheets, and
- * Bid Schedule. PDF opens in a new tab so the HTML print fallback still works
- * when Chromium is unavailable.
+ * Bid Schedule. Real `<a>` tags so assistive tech and smoke treat them as
+ * links. PDF opens in a new tab so the HTML print fallback still works when
+ * Chromium is unavailable.
  */
 export function ExportActions({
   excelHref,
@@ -19,6 +20,10 @@ export function ExportActions({
   className?: string;
 }) {
   if (!excelHref && !pdfHref) return null;
+  const linkClass = cn(
+    buttonVariants({ variant: "ghost", size: "sm" }),
+    "h-full gap-1.5 px-2.5 text-xs"
+  );
   return (
     <div
       className={cn(
@@ -27,28 +32,21 @@ export function ExportActions({
       )}
     >
       {excelHref ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-full gap-1.5 px-2.5 text-xs"
-          nativeButton={false}
-          render={<a href={excelHref} />}
-        >
+        <a href={excelHref} className={linkClass}>
           <FileSpreadsheet className="size-3.5" />
           Excel
-        </Button>
+        </a>
       ) : null}
       {pdfHref ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-full gap-1.5 px-2.5 text-xs"
-          nativeButton={false}
-          render={<a href={pdfHref} target="_blank" rel="noreferrer" />}
+        <a
+          href={pdfHref}
+          target="_blank"
+          rel="noreferrer"
+          className={linkClass}
         >
           <FileText className="size-3.5" />
           PDF
-        </Button>
+        </a>
       ) : null}
     </div>
   );
